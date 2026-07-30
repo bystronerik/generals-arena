@@ -11,6 +11,9 @@ DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 CONVEY_MIN_ARMY = 3
 FRONTIER_NEIGHBOR_WEIGHT = 1.5
 OPPONENT_CAPTURE_MULT = 3.0
+STALEMATE_BREAK_TURN = 600
+STALEMATE_OPPONENT_MULT = 2.0
+STALEMATE_OPPONENT_MARGIN = 0
 
 
 def _is_passable(t):
@@ -49,12 +52,18 @@ class Agent:
                 if obs.owner_grid[nr][nc] == 1:
                     continue
                 dest_army = obs.army_grid[nr][nc]
-                if src_army <= dest_army + 1:
+                margin = 1
+                if obs.turn >= STALEMATE_BREAK_TURN and obs.owner_grid[nr][nc] == 2:
+                    margin = STALEMATE_OPPONENT_MARGIN
+                if src_army <= dest_army + margin:
                     continue
                 score = float(src_army) * 10.0
                 score += self._frontier_neighbor_armies(obs, r, c) * FRONTIER_NEIGHBOR_WEIGHT
                 if obs.owner_grid[nr][nc] == 2:
-                    score *= OPPONENT_CAPTURE_MULT
+                    opp_mult = OPPONENT_CAPTURE_MULT
+                    if obs.turn >= STALEMATE_BREAK_TURN:
+                        opp_mult *= STALEMATE_OPPONENT_MULT
+                    score *= opp_mult
                 if score > best_capture_score:
                     best_capture_score = score
                     best_capture = (0, r, c, d, 0)

@@ -145,3 +145,23 @@ Round 1 benchmark results (`docs/research/measurements/round1.md`):
    - Increase opponent cell capture multiplier from 2.0x to 3.0x on the active frontier.
    - Rationale: Drives faster breakthrough through enemy borders when interior armies arrive at the frontier.
 
+## Parameter revision 2
+
+### Measurement Context
+Champion stress test (`docs/research/measurements/champion-stress.md`):
+- Zero losses across 20 champion games (seeds 0–4 vs late_rush, fog_scout, expand_plus, general_hunter).
+- **Weakness:** 5/5 draws vs `fog_scout` at turn 1200 (truncated); 1/5 draw vs `late_rush` (seed 1).
+- Wins vs expand_plus and general_hunter on every seed; mean champion game ~780 turns when decisive.
+
+### What to Keep Unchanged
+- Interior-to-frontier convey distance field and convey scoring.
+- Frontier capture priority order (capture → convey → gather → fallback).
+- `CONVEY_MIN_ARMY`, `FRONTIER_NEIGHBOR_WEIGHT`, and base `OPPONENT_CAPTURE_MULT` from revision 1.
+
+### What to Tune
+1. **Stalemate opponent escalation**:
+   - Add `STALEMATE_BREAK_TURN = 600`, `STALEMATE_OPPONENT_MULT = 2.0`, and `STALEMATE_OPPONENT_MARGIN = 0`.
+   - From turn 600 onward, multiply the opponent capture score by `STALEMATE_OPPONENT_MULT` in addition to `OPPONENT_CAPTURE_MULT`.
+   - From turn 600 onward, allow opponent captures when `src_army > dest_army + STALEMATE_OPPONENT_MARGIN` (margin 0 instead of 1).
+   - Rationale: `fog_scout` avoids direct fights and expands into fog; without late-game pressure, both bots stall until truncation. Escalation favors risky breakthrough captures once interior armies have converged.
+
