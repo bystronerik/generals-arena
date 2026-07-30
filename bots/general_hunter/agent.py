@@ -3,13 +3,16 @@ general_hunter — scout, snipe, and deathtouch beeline bot.
 
 Maintains an enemy-general candidate prior, probes with split detachments,
 expands with smallest-sufficient-source scoring, and executes win checks and
-chase defence. Starts final approach when turn >= 800 - eta - 5.
+chase defence. Starts final approach at APPROACH_START (450) once the enemy
+general is known.
 
 See docs/bots/general-hunter.md and docs/research/strategies/optimize-existing.md.
 """
 from strategy_common import (
     PASS,
+    APPROACH_START,
     DEATHTOUCH_TURN,
+    DIRECTIONS,
     BeliefState,
     best_capture_move,
     chase_defence,
@@ -57,7 +60,8 @@ class Agent:
 
         if self.belief.enemy_general is not None:
             eta = eta_to_general(obs, self.belief.enemy_general)
-            if eta is not None and obs.turn >= DEATHTOUCH_TURN - eta - 5:
+            eta_deadline = DEATHTOUCH_TURN - eta - 5 if eta is not None else DEATHTOUCH_TURN
+            if obs.turn >= APPROACH_START or obs.turn >= eta_deadline:
                 approach = final_approach_move(
                     obs, self.belief.enemy_general, self.general_pos
                 )
@@ -81,19 +85,23 @@ class Agent:
             obs, self.general_pos, candidates, active_probes=self.active_probes
         )
         if probe is not None:
+            self._register_probe_dispatch(probe)
             return probe
 
         return PASS
 
     def _update_active_probes(self, obs):
-        """Track small split detachments as active probes."""
-        H, W = obs.H, obs.W
+        """Keep dispatch-tracked probe cells that remain owned."""
         still_active = set()
-        for r in range(H):
-            for c in range(W):
-                if obs.owner_grid[r][c] != 1:
-                    continue
-                army = obs.army_grid[r][c]
-                if 2 <= army <= 4 and (r, c) != self.general_pos:
-                    still_active.add((r, c))
+        for r, c in self.active_probes:
+            if obs.owner_grid[r][c] == 1:
+                still_active.add((r, c))
         self.active_probes = still_active
+
+    def _register_probe_dispatch(self, move):
+        """Record the destination of a split=1 probe dispatch."""
+        _, r, c, d, split = move
+        if split != 1:
+            return
+        dr, dc = DIRECTIONS[d]
+        self.active_probes.add((r + dr, c + dc))

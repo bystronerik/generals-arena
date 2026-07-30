@@ -18,7 +18,7 @@ def is_passable(t):
 def general_reserve(turn):
     if turn < RESERVE_OPENING_END:
         return 0
-    return min(30, 3 + (turn - RESERVE_OPENING_END) // 25)
+    return 3 + (turn - RESERVE_OPENING_END) // 25
 
 
 def can_use_general_as_source(army, turn, split):
@@ -38,7 +38,7 @@ def can_use_as_source(obs, r, c, split, general_pos, turn):
 
 def dest_value(owner, cell_type):
     if owner == 2:
-        return 12
+        return 6
     if owner == 0 and cell_type in (1, 3):
         return 6
     return 0
@@ -80,7 +80,7 @@ def locate_own_general(obs):
 def enemy_general_army(obs, pos):
     r, c = pos
     if obs.type_grid[r][c] == 0:
-        return 1
+        return 1 + obs.turn // 2
     return obs.army_grid[r][c]
 
 
@@ -335,13 +335,16 @@ def reveal_gain_at(obs, candidates, r, c):
     return count
 
 
+PROBE_CANDIDATE_SAMPLE = 25
+
+
 def probe_move(obs, general_pos, candidates, active_probes=None):
     if not candidates:
         return None
     if active_probes is not None and len(active_probes) >= 2:
         return None
     H, W = obs.H, obs.W
-    cand_list = list(candidates)
+    cand_list = list(candidates)[:PROBE_CANDIDATE_SAMPLE]
     best_ratio = -1.0
     best_target = None
     for cell in cand_list:

@@ -80,7 +80,7 @@ def locate_own_general(obs):
 def enemy_general_army(obs, pos):
     r, c = pos
     if obs.type_grid[r][c] == 0:
-        return 1
+        return 1 + obs.turn // 2
     return obs.army_grid[r][c]
 
 
@@ -335,13 +335,16 @@ def reveal_gain_at(obs, candidates, r, c):
     return count
 
 
+PROBE_CANDIDATE_SAMPLE = 25
+
+
 def probe_move(obs, general_pos, candidates, active_probes=None):
     if not candidates:
         return None
     if active_probes is not None and len(active_probes) >= 2:
         return None
     H, W = obs.H, obs.W
-    cand_list = list(candidates)
+    cand_list = list(candidates)[:PROBE_CANDIDATE_SAMPLE]
     best_ratio = -1.0
     best_target = None
     for cell in cand_list:
