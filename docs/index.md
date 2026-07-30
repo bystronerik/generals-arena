@@ -23,7 +23,10 @@ Small topic files for the Generals Arena research repo.
 ## Bots
 
 - [adding a bot](bots/adding-a-bot.md)
-- `bots/smoke.md` — filled after Phase 1 smoke runs
+- [smoke](bots/smoke.md) — Phase 1 stdio smoke test, not competitive
+- [expand_plus](bots/expand-plus.md) — greedy capture + BFS frontier march
+- [castle_builder](bots/castle-builder.md) — rested-general castle investment
+- [general_hunter](bots/general-hunter.md) — deathtouch beeline once the enemy general is sighted
 
 ## Arena
 
@@ -35,3 +38,5 @@ Small topic files for the Generals Arena research repo.
 ## Research
 
 - [experiment protocol](research/experiment-protocol.md)
+- `research/experiments/` — one note per measurable strategy choice
+- [learned bot plan (Phase 4 scaffold)](research/learned-bot-plan.md)

@@ -37,3 +37,18 @@ python competition-module/competition/matchup.py \
 ## Smoke bot
 
 Phase 1 owns `bots/smoke/`. Observation notes go in `docs/bots/smoke.md` after the first verified match.
+
+## Phase 3 heuristic bots
+
+Scaffolded with the `new-competition-bot` skill from `bots/smoke/`. One doc
+file each, one experiment note each under `docs/research/experiments/`:
+
+| Bot | Idea | Doc | Experiment note |
+| --- | --- | --- | --- |
+| `bots/expand_plus/` | expand | [`expand-plus.md`](expand-plus.md) | [`001-expand-plus-frontier-march.md`](../research/experiments/001-expand-plus-frontier-march.md) |
+| `bots/castle_builder/` | castle-aware | [`castle-builder.md`](castle-builder.md) | [`002-castle-builder-early-investment.md`](../research/experiments/002-castle-builder-early-investment.md) |
+| `bots/general_hunter/` | late-game hunt | [`general-hunter.md`](general-hunter.md) | [`003-general-hunter-deathtouch-beeline.md`](../research/experiments/003-general-hunter-deathtouch-beeline.md) |
+
+Every one of these strategy changes needs a note before merge — see
+[`docs/research/experiment-protocol.md`](../research/experiment-protocol.md)
+and skill `evaluate-bot-change`.
