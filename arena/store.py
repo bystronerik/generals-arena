@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Literal
@@ -31,6 +31,18 @@ REQUIRED_FIELDS = (
     "finished_at",
 )
 
+OPTIONAL_FIELDS = (
+    "schema_version",
+    "duration_seconds",
+    "castles_built_a",
+    "castles_built_b",
+    "final_land_a",
+    "final_land_b",
+    "final_army_a",
+    "final_army_b",
+    "metrics",
+)
+
 
 @dataclass
 class GameRecord:
@@ -49,9 +61,21 @@ class GameRecord:
     truncated: bool
     started_at: str
     finished_at: str
+    schema_version: int = 1
+    duration_seconds: float | None = None
+    castles_built_a: int | None = None
+    castles_built_b: int | None = None
+    final_land_a: int | None = None
+    final_land_b: int | None = None
+    final_army_a: int | None = None
+    final_army_b: int | None = None
+    metrics: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        data = asdict(self)
+        if not data.get("metrics"):
+            data["metrics"] = {}
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> GameRecord:
@@ -61,6 +85,11 @@ class GameRecord:
         winner = data["winner"]
         if winner not in ("a", "b", "draw"):
             raise ValueError(f"invalid winner: {winner!r}")
+        metrics = data.get("metrics")
+        if metrics is None:
+            metrics = {}
+        elif not isinstance(metrics, dict):
+            raise ValueError("metrics must be an object when present")
         return cls(
             game_id=str(data["game_id"]),
             seed=int(data["seed"]),
@@ -75,11 +104,38 @@ class GameRecord:
             truncated=bool(data["truncated"]),
             started_at=str(data["started_at"]),
             finished_at=str(data["finished_at"]),
+            schema_version=int(data.get("schema_version", 1)),
+            duration_seconds=_optional_float(data.get("duration_seconds")),
+            castles_built_a=_optional_int(data.get("castles_built_a")),
+            castles_built_b=_optional_int(data.get("castles_built_b")),
+            final_land_a=_optional_int(data.get("final_land_a")),
+            final_land_b=_optional_int(data.get("final_land_b")),
+            final_army_a=_optional_int(data.get("final_army_a")),
+            final_army_b=_optional_int(data.get("final_army_b")),
+            metrics=dict(metrics),
         )
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    return int(value)
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    return float(value)
 
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def duration_seconds_between(started_at: str, finished_at: str) -> float:
+    start = datetime.fromisoformat(started_at.replace("Z", "+00:00"))
+    end = datetime.fromisoformat(finished_at.replace("Z", "+00:00"))
+    return round((end - start).total_seconds(), 3)
 
 
 def make_game_id(bot_a: str, bot_b: str, seed: int, when: datetime | None = None) -> str:

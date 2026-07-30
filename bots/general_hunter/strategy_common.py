@@ -88,6 +88,7 @@ def enemy_general_army(obs, pos):
 class BeliefState:
     def __init__(self):
         self.enemy_general = None
+        self.first_sighting_turn = None
         self.ever_seen = set()
         self.candidates = None
         self._initialized = False
@@ -99,6 +100,8 @@ class BeliefState:
                 if obs.type_grid[r][c] != 0:
                     self.ever_seen.add((r, c))
                 if obs.owner_grid[r][c] == 2 and obs.type_grid[r][c] == 4:
+                    if self.enemy_general is None:
+                        self.first_sighting_turn = obs.turn
                     self.enemy_general = (r, c)
 
         if not self._initialized and own_general is not None:

@@ -47,16 +47,16 @@ class Agent:
 
         chase = chase_defence(obs, self.general_pos)
         if chase is not None:
-            return chase
+            return self._finish_move(chase)
 
         w1 = win_check_w1(obs, self.belief.enemy_general, self.general_pos)
         if w1 is not None:
-            return w1
+            return self._finish_move(w1)
 
         if not enemy_adjacent_to_general(obs, self.general_pos):
             w2 = win_check_w2(obs, self.belief.enemy_general, self.general_pos)
             if w2 is not None:
-                return w2
+                return self._finish_move(w2)
 
         if self.belief.enemy_general is not None:
             eta = eta_to_general(obs, self.belief.enemy_general)
@@ -66,29 +66,40 @@ class Agent:
                     obs, self.belief.enemy_general, self.general_pos
                 )
                 if approach is not None:
-                    return approach
+                    return self._finish_move(approach)
 
         capture = best_capture_move(obs, self.general_pos)
         if capture is not None:
-            return capture
+            return self._finish_move(capture)
 
         sentry = sentry_convey(obs, self.general_pos)
         if sentry is not None:
-            return sentry
+            return self._finish_move(sentry)
 
         march = march_toward_frontier(obs, self.general_pos)
         if march is not None:
-            return march
+            return self._finish_move(march)
 
         candidates = self.belief.candidates or set()
         probe = probe_move(
             obs, self.general_pos, candidates, active_probes=self.active_probes
         )
         if probe is not None:
-            self._register_probe_dispatch(probe)
-            return probe
+            return self._finish_move(probe)
 
-        return PASS
+        return self._finish_move(PASS)
+
+    def telemetry_extras(self):
+        if self.belief.first_sighting_turn is None:
+            return {"enemy_general_sighted": 0}
+        return {
+            "enemy_general_sighted": 1,
+            "first_sighting_turn": self.belief.first_sighting_turn,
+        }
+
+    def _finish_move(self, move):
+        self._advance_probe_tracking(move)
+        return move
 
     def _update_active_probes(self, obs):
         """Keep dispatch-tracked probe cells that remain owned."""
@@ -98,10 +109,17 @@ class Agent:
                 still_active.add((r, c))
         self.active_probes = still_active
 
-    def _register_probe_dispatch(self, move):
-        """Record the destination of a split=1 probe dispatch."""
-        _, r, c, d, split = move
-        if split != 1:
+    def _advance_probe_tracking(self, move):
+        """Track probe cells across split dispatches and full-stack steps."""
+        pass_flag, r, c, d, split = move
+        if pass_flag != 0:
             return
         dr, dc = DIRECTIONS[d]
-        self.active_probes.add((r + dr, c + dc))
+        dest = (r + dr, c + dc)
+        src = (r, c)
+        if src in self.active_probes:
+            self.active_probes.discard(src)
+            if split == 0:
+                self.active_probes.add(dest)
+        elif split == 1:
+            self.active_probes.add(dest)

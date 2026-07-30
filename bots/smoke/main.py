@@ -64,6 +64,22 @@ def _read_observation(stdin, H, W, scalars_line):
     )
 
 
+def _telemetry_line(player_id, last_obs, agent):
+    line = (
+        f"[telemetry] player={player_id} turn={last_obs.turn} "
+        f"my_land={last_obs.my_land} my_army={last_obs.my_army} "
+        f"opp_land={last_obs.opp_land} opp_army={last_obs.opp_army}"
+    )
+    extras = agent.telemetry_extras() if hasattr(agent, "telemetry_extras") else {}
+    sighted = extras.get("enemy_general_sighted")
+    if sighted is not None:
+        line += f" enemy_general_sighted={sighted}"
+    sighting_turn = extras.get("first_sighting_turn")
+    if sighting_turn is not None:
+        line += f" first_sighting_turn={sighting_turn}"
+    return line + "\n"
+
+
 def main():
     stdin = sys.stdin
     stdout = sys.stdout
@@ -85,11 +101,7 @@ def main():
         first = stdin.readline()
         if not first:
             if last_obs is not None:
-                sys.stderr.write(
-                    f"[telemetry] player={player_id} turn={last_obs.turn} "
-                    f"my_land={last_obs.my_land} my_army={last_obs.my_army} "
-                    f"opp_land={last_obs.opp_land} opp_army={last_obs.opp_army}\n"
-                )
+                sys.stderr.write(_telemetry_line(player_id, last_obs, agent))
             return
 
         obs = _read_observation(stdin, H, W, first)

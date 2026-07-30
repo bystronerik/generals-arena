@@ -32,6 +32,10 @@ The runner reads matchup output lines:
 
 - `player N captured the enemy general` → winner `a` (N=0) or `b` (N=1), `terminated=true`
 - `truncated at ... turns (draw)` → `winner=draw`, `truncated=true`
+- `[matchup] castles built: N (...) vs M (...)` → optional `castles_built_a` / `_b`
+- `[telemetry] player=P ...` (last line per player on stderr) → optional final land/army and sighting metrics (schema v2)
+
+See [game-record-schema.md](game-record-schema.md) for the full v2 field list.
 
 ## Schema
 
