@@ -1,12 +1,20 @@
 ---
 name: update-leaderboard
 description: >-
-  Rebuild Elo leaderboard snapshots from stored data/games/ via
-  arena/ratings.py. Use when refreshing ratings, publishing leaderboard
-  JSON/Markdown under data/ratings/, or after a tournament finishes.
+  Rebuilds Elo leaderboard snapshots from stored data/games/ through
+  arena/ratings.py and publishes JSON and Markdown under data/ratings/. Use when
+  refreshing ratings, publishing the leaderboard, or closing a tournament or
+  measurement round.
 ---
 
 # Update leaderboard
+
+## Model split
+
+- Think model: decides when a rating snapshot is worth committing
+- Composer: runs `arena/ratings.py` after games are stored
+
+**Composer must not invent a threshold.** When a value is absent from the specification, Composer stops and asks the think model.
 
 ## Preconditions
 
@@ -23,7 +31,7 @@ python arena/ratings.py     # or scripts/ CLI that wraps arena/ratings.py
 
 Typical flow after a grid:
 
-1. `arena/tournament.py` (or `arena/run_match.py`) writes `data/games/`.
+1. `arena/tournament.py` (or `arena/run_match.py` / `scripts/measure_heuristics.py`) writes `data/games/`.
 2. `arena/ratings.py` reads stored games, applies elote `EloCompetitor` (`beat` / `tied` / `lost_to`).
 3. Persist competitor state + leaderboard under `data/ratings/`.
 
@@ -33,8 +41,16 @@ Typical flow after a grid:
 | --- | --- |
 | `data/ratings/` | Competitor state + leaderboard snapshot (JSON and/or Markdown) |
 
+## Git hygiene
+
+Commit `data/ratings/` snapshots when the user asks for a commit. Do **not** commit `data/games/*.json` unless the user asks for the raw games.
+
 ## Rules
 
 - Prefer explicit result recording from the game store over opaque arena helpers that skip persistence.
 - After Phase 2, store then rate — see root `AGENTS.md` verification gate.
 - Experiment reporting: [`docs/research/experiment-protocol.md`](../../../docs/research/experiment-protocol.md).
+
+## Changelog
+
+- 2026-07-31 — Git hygiene line for data/games vs data/ratings (cause: skills-workflow build)

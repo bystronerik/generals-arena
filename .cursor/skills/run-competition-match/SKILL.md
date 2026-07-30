@@ -1,13 +1,20 @@
 ---
 name: run-competition-match
 description: >-
-  Run Generals Competition local matches with --mode competition, using
-  matchup.py or arena/run_match.py. Use when starting a match, debugging
-  stdio bots, verifying the competition gate, or writing results under
-  data/games/.
+  Runs Generals Competition local matches with --mode competition through
+  matchup.py or arena/run_match.py, and checks the result for bot faults. Use
+  when starting a match, debugging a stdio bot, verifying the competition gate,
+  swapping seat order, or writing a game record under data/games/.
 ---
 
 # Run competition match
+
+## Model split
+
+- Think model: decides when a match claim needs both seat orders or castle telemetry
+- Composer: runs the command, captures stdout/stderr, stores the game when asked
+
+**Composer must not invent a threshold.** When a value is absent from the specification, Composer stops and asks the think model.
 
 ## Environment
 
@@ -37,7 +44,36 @@ python arena/run_match.py \
   --mode competition --seed 0
 ```
 
-Thin CLIs (when present): `scripts/` → same paths.
+## Fault detection
+
+A match can finish and still fail. After every run, read stderr and stdout for:
+
+- bot faults and tracebacks
+- protocol errors
+- move-limit overruns (150 ms per move)
+
+Report a **fault** as a failure even when the engine reports a draw or records a winner.
+
+## Seat-order swap
+
+Map generation is not symmetric. For any strength claim, run both:
+
+- `A vs B`
+- `B vs A`
+
+Same seed list for both orders.
+
+## Castle telemetry
+
+When castles matter, capture stdout. The only castle signal in reports is:
+
+```text
+[matchup] castles built: <a> (<label>) vs <b> (<label>)
+```
+
+## Draw baseline
+
+Most stored games end as draws at the 1200-turn cap. A draw passes the verification gate. A draw is **not** evidence of strength.
 
 ## Outputs
 
@@ -45,7 +81,7 @@ Thin CLIs (when present): `scripts/` → same paths.
 | --- | --- |
 | stdout / stderr | Match logs from `matchup.py` / bot processes |
 | `data/games/<game_id>.json` | Stored record after arena runner finishes |
-| `data/ratings/` | Updated only after games are stored (see update-leaderboard) |
+| `data/ratings/` | Updated only after games are stored (see **update-leaderboard**) |
 
 Schema: [`docs/arena/game-record-schema.md`](../../../docs/arena/game-record-schema.md).
 
@@ -54,3 +90,7 @@ Schema: [`docs/arena/game-record-schema.md`](../../../docs/arena/game-record-sch
 - Do not treat classic / non-competition presets as verification.
 - Store the game under `data/games/` before updating ratings.
 - Domain detail: [`docs/engine/local-matchup.md`](../../../docs/engine/local-matchup.md), [`docs/competition/protocol.md`](../../../docs/competition/protocol.md).
+
+## Changelog
+
+- 2026-07-31 — Initial taxonomy alignment from skills-workflow.md (cause: skills-workflow build)

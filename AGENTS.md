@@ -65,8 +65,9 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 | Role | Owns | Skills | Done when |
 | --- | --- | --- | --- |
 | explorer | Read `docs/` + `RULES.md`; map engine APIs | `run-competition-match` to verify observations | Notes cite a finished `--mode competition` match; no unmeasured strategy claims |
-| bot-author | Add or change `bots/<name>/`; keep stdio protocol intact | `new-competition-bot`, then `run-competition-match` | New/changed `run.sh` finishes a competition match |
-| evaluator | Fixed seed grid; before/after winrate; rating delta | `evaluate-bot-change`, `update-leaderboard` | Games in `data/games/`; metrics reported; ratings only after store |
+| bot-author | Add or change `bots/<name>/`; keep stdio protocol intact | `build-bot-from-spec`, then `run-competition-match` | New/changed `run.sh` finishes a competition match |
+| strategist | Write strategy specs; enforce bot diversity | `write-strategy-spec`, `check-bot-diversity` | Spec in `docs/research/strategies/` with diversity verdict |
+| evaluator | Fixed seed grid; before/after winrate; rating delta | `run-measurement-round`, `evaluate-bot-change`, `update-leaderboard` | Games in `data/games/`; metrics reported; ratings only after store |
 | docs-keeper | Keep `docs/` small and accurate; sync with code + `RULES.md` | none required | Topic files stay single-purpose; no strategy moved into `AGENTS.md` |
 
 ### explorer
@@ -77,15 +78,21 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 
 ### bot-author
 
-1. Scaffold with skill `new-competition-bot` from `bots/smoke/`.
+1. Scaffold with skill `build-bot-from-spec` from a spec under `docs/research/strategies/`.
 2. Keep `main.py` / wire protocol stable; change decision code under `bots/<name>/`.
 3. Verify with `run-competition-match` before calling the bot ready.
+
+### strategist
+
+1. Start from [`RULES.md`](RULES.md) and [`docs/research/strategies/skills-workflow.md`](docs/research/strategies/skills-workflow.md).
+2. Write specs with `write-strategy-spec`; run `check-bot-diversity` before implementation.
+3. After a measurement round, choose parameter revisions for `tune-bot-parameters`. Do not write bot code.
 
 ### evaluator
 
 1. Follow [`docs/research/experiment-protocol.md`](docs/research/experiment-protocol.md).
-2. Use skill `evaluate-bot-change` for the seed grid and metrics.
-3. Store games via `arena/run_match.py` / `arena/tournament.py` (or `scripts/`), then `update-leaderboard`.
+2. Use `run-measurement-round` for batch grids or `evaluate-bot-change` for A/B pairs.
+3. Store games via `arena/run_match.py` / `scripts/measure_heuristics.py`, then `update-leaderboard`.
 
 ### docs-keeper
 
@@ -93,14 +100,22 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 2. Sync schema and protocol pages when arena or bot layout changes.
 3. Reject strategy content in `AGENTS.md` and skill files; move it to `docs/`.
 
-## Cursor skills (Phase 2)
+## Cursor skills (Phase 2+)
 
-| Skill | Path |
-| --- | --- |
-| run-competition-match | [`.cursor/skills/run-competition-match/`](.cursor/skills/run-competition-match/) |
-| new-competition-bot | [`.cursor/skills/new-competition-bot/`](.cursor/skills/new-competition-bot/) |
-| evaluate-bot-change | [`.cursor/skills/evaluate-bot-change/`](.cursor/skills/evaluate-bot-change/) |
-| update-leaderboard | [`.cursor/skills/update-leaderboard/`](.cursor/skills/update-leaderboard/) |
+Taxonomy: [`docs/research/strategies/skills-workflow.md`](docs/research/strategies/skills-workflow.md). Index: [`.cursor/skills/README.md`](.cursor/skills/README.md).
+
+| Skill | Model | Path |
+| --- | --- | --- |
+| write-strategy-spec | Think | [`.cursor/skills/write-strategy-spec/`](.cursor/skills/write-strategy-spec/) |
+| check-bot-diversity | Think | [`.cursor/skills/check-bot-diversity/`](.cursor/skills/check-bot-diversity/) |
+| build-bot-from-spec | Composer | [`.cursor/skills/build-bot-from-spec/`](.cursor/skills/build-bot-from-spec/) |
+| run-competition-match | Composer | [`.cursor/skills/run-competition-match/`](.cursor/skills/run-competition-match/) |
+| run-measurement-round | Composer | [`.cursor/skills/run-measurement-round/`](.cursor/skills/run-measurement-round/) |
+| tune-bot-parameters | Composer | [`.cursor/skills/tune-bot-parameters/`](.cursor/skills/tune-bot-parameters/) |
+| evaluate-bot-change | Think + Composer | [`.cursor/skills/evaluate-bot-change/`](.cursor/skills/evaluate-bot-change/) |
+| update-leaderboard | Composer | [`.cursor/skills/update-leaderboard/`](.cursor/skills/update-leaderboard/) |
+| commit-research-increment | Composer | [`.cursor/skills/commit-research-increment/`](.cursor/skills/commit-research-increment/) |
+| improve-skill-from-failure | Think (named only) | [`.cursor/skills/improve-skill-from-failure/`](.cursor/skills/improve-skill-from-failure/) |
 
 Planned CLIs and modules: `scripts/`, `arena/run_match.py`, `arena/tournament.py`, `arena/ratings.py`; data under `data/games/` and `data/ratings/`.
 

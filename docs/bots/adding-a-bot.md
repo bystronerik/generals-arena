@@ -40,7 +40,8 @@ Phase 1 owns `bots/smoke/`. Observation notes go in `docs/bots/smoke.md` after t
 
 ## Phase 3 heuristic bots
 
-Scaffolded with the `new-competition-bot` skill from `bots/smoke/`. One doc
+Scaffolded with the `build-bot-from-spec` skill from a spec under
+`docs/research/strategies/`. One doc
 file each, one experiment note each under `docs/research/experiments/`:
 
 | Bot | Idea | Doc | Experiment note |
