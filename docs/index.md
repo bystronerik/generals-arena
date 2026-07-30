@@ -43,6 +43,8 @@ Small topic files for the Generals Arena research repo.
 - [experiment protocol](research/experiment-protocol.md)
 - `research/experiments/` — one note per measurable strategy choice
 - `research/strategies/` — one strategy spec per bot, written before the code
-- [optimize the existing four bots](research/strategies/optimize-existing.md) — why every game draws, and the fixes
-- [tournament plan](research/strategies/tournament-plan.md) — seed grid, staging, and metrics that work when games draw
+- [optimize the existing four bots](research/strategies/optimize-existing.md) — root causes and `Parameter revision 1`
+- [tournament plan](research/strategies/tournament-plan.md) — seed grid, staging, metrics, and the round 2 schedule
+- [diversity constraints](research/strategies/diversity-constraints.md) — hard rules that keep the roster from converging
+- `research/measurements/` — one result set per tournament round
 - [learned bot plan (Phase 4 scaffold)](research/learned-bot-plan.md)

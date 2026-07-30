@@ -642,7 +642,7 @@ tier that overrides the stated scoring rule.
 | Order | Parameter | Now | Revision 1 | Reason |
 | --- | --- | --- | --- | --- |
 | 2 | Defect H1 | fogged general = 1 army | `1 + turn // 2` | Stops the repeated suicide attack that most likely caused the three losses. |
-| 3 | `general_reserve` cap | `min(30, ...)` | remove the cap; report the value it reaches | The cap is inert. `can_use_general_as_source` blocks every `split=0` move once the reserve exceeds 1, which happens at turn 60, so the general is never a source afterwards and the "left behind" floor never binds. Deleting dead parameters keeps the next revision readable. |
+| 3 | `general_reserve` cap | `min(30, ...)` | drop the cap, or delete the parameter | The cap is inert in both branches. For `split = 0` the check is `reserve <= 1`, which fails from turn 60 onward whatever the cap is. For `split = 1` the check is `army - army // 2 >= reserve`, and an unspent general holds about `1 + 0.5 * turn` — roughly 225 army by turn 448 — so a 30-army floor is met with room to spare. The parameter reads as a garrison size but sets nothing. Delete it or make it bind, and do not cite it as the general's defense. |
 
 **Do not raise the reserve to answer the losses.** The arithmetic says it
 cannot work: an unspent general gains 0.5 army/turn, while an opponent that

@@ -35,6 +35,14 @@ Twelve local bots plus the engine reference agent. All twelve
 Two frozen anchors (`smoke`, `expander_python`) are what make Elo movement
 interpretable. Never change them inside a measurement season.
 
+Round 1 standing, provisional — one game per pair, seed 0, no side swap
+([`../measurements/round1.md`](../measurements/round1.md)):
+`army_convey` 1616.4, `fog_scout` 1580.4, `late_rush` 1576.0,
+`castle_builder` 1495.2, `castle_rush` 1473.8, `phase_switch` 1473.7,
+`expand_plus` 1464.7, `choke_control` 1457.2, `splitter` 1455.5,
+`garrison` 1453.7, `smoke` 1453.5. `general_hunter` and `expander_python`
+played no games.
+
 ### Entry gate
 
 No bot enters the grid until it has, on its own:
@@ -234,52 +242,151 @@ in one direction and 0 in the other is strong; 5 up and 4 down is nothing.
 
 ## 5. Expected matchup structure
 
-From the specs, before any data. These are predictions to be checked, not
-findings.
+From the specs, before any data. Round 1 scored four of the five predictions;
+its round robin was one game per pair on seed 0 with no side swap, so every
+verdict is provisional.
 
-| Prediction | Falsified if |
-| --- | --- |
-| `garrison` beats `late_rush` and `general_hunter` | it loses to a deathtouch runner — its intercept logic does not work |
-| `late_rush` and `general_hunter` beat the pure economy bots (`castle_builder`, `castle_rush`) | the economy bots survive to 1200 — the rush never finds a general |
-| `fog_scout` has the earliest first-sighting turn | a bot that does not scout finds generals sooner, which would mean sightings are accidental |
-| The economy bots beat the pure expanders in long games | draws at similar land, meaning castle income never converts |
-| `smoke` and `expander_python` finish last | they do not, which means the new bots are not actually stronger |
+| Prediction | Falsified if | Round 1 verdict |
+| --- | --- | --- |
+| `garrison` beats `late_rush` and `general_hunter` | it loses to a deathtouch runner — its intercept logic does not work | **Falsified.** `garrison` lost to `late_rush` at turn 477 and finished 0-3-7. |
+| `late_rush` and `general_hunter` beat the pure economy bots (`castle_builder`, `castle_rush`) | the economy bots survive to 1200 — the rush never finds a general | **Half confirmed.** `late_rush` beat `castle_rush` at turn 769. `general_hunter` played no games. |
+| `fog_scout` has the earliest first-sighting turn | a bot that does not scout finds generals sooner, which would mean sightings are accidental | **Untested.** No bot reports a sighting turn. |
+| The economy bots beat the pure expanders in long games | draws at similar land, meaning castle income never converts | **Falsified.** Castle count and result run opposite: 4 castles → 0 wins, 3 → 0 wins, 2 → 1 win, and all three winning bots built 0. |
+| `smoke` and `expander_python` finish last | they do not, which means the new bots are not actually stronger | **Confirmed for `smoke`** — last at 1453.5. `expander_python` did not play. |
 
 If `smoke` does not finish last, stop and investigate before reading anything
 else in the table. It is the control.
 
 ---
 
-## 6. Runbook
+## 6. Round 2
+
+Round 1 was a screening grid: 58 games, one side, seed 0 for the round robin,
+and two competitors missing. Round 2 makes the ranking trustworthy and scores
+the revisions in
+[`optimize-existing.md`](optimize-existing.md#parameter-revision-1).
+
+### 6.1 What round 1 leaves open
+
+| Gap | Effect on round 1 | Round 2 answer |
+| --- | --- | --- |
+| No side swap | Every round-robin result is confounded by seat order (§2). | `--swap-sides` on every stage. |
+| One game per pair | §4 needs 9–1 over 10 games to call a pair. Round 1 called pairs on a single game. | 5 seeds × 2 sides = 10 games per pair. |
+| `general_hunter` absent | The aggression baseline has never been measured. | Full entry, after defect H2 is fixed. |
+| `expander_python` absent | The external anchor is missing, so cross-round Elo is not comparable. | Full entry, frozen. |
+| Unequal games per bot | 4 for `castle_builder`, 16 for `smoke`. Ratings are not comparable. | Complete round robin, equal games for all. |
+| No land, army, or sighting telemetry | 34 drawn games carry no ranking information. | Land §5.2 telemetry first; it is a blocker, not a nice-to-have. |
+
+### 6.2 Entry gate for round 2
+
+The §1 gate still applies, plus three conditions that come from round 1:
+
+1. **The four revised bots must pass their own A/B before entering.** Steps 4–6
+   of [`optimize-existing.md`](optimize-existing.md) R1.6 are paired
+   comparisons against the round 1 version, not part of the round robin.
+2. **`general_hunter` must fire its probe path at least once per game.** Defect
+   H2 disables it today. A bot whose differentiator never executes contributes
+   a rating but no information.
+3. **Per-move time must stay under 150 ms on a 21×21 board.** The probe search
+   runs one BFS per candidate cell. Round 2 is the first grid where that path
+   runs at all, so measure it before the grid, not during it.
+
+`smoke` and `expander_python` enter frozen. Changing either inside round 2
+voids the round.
+
+### 6.3 Schedule
+
+Thirteen competitors. Measured cost from round 1: 208 s of wall clock for 58
+games, so 3.6 s per game, consistent with the 4 s estimate in §2.
+
+| Stage | Field | Seeds | Sides | Matches | Est. time | Purpose |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2.0 — gate | the 4 revised bots + `general_hunter` + `expander_python`, each vs `smoke` | 0–1 | both | 24 | ~2 min | catch a bot broken by revision 1 |
+| 2.1 — A/B | each revised bot vs its round 1 version | 0–9 | both | 80 | ~5 min | score revision 1 by the sign test in §4 |
+| 2.2 — full | all 13 | 0–4 | both | 780 | ~47 min, ~16 min over 3 shards | the round 2 development leaderboard |
+| 2.3 — holdout | top 6 from 2.2 | 100–111 | both | 360 | ~22 min | the published leaderboard |
+
+Stage 2.2 is `C(13,2) × 2 × 5 = 780`. Shard by seed with `--no-ratings` and
+rebuild once, exactly as §2 describes. Do not run more than three shards: a
+match uses about 1.8 cores, and a CPU-starved bot records faults that belong to
+the harness.
+
+### 6.4 Extra pairings round 2 must include
+
+The round robin covers these, but report them separately — each answers an open
+question from [`../measurements/round1.md`](../measurements/round1.md).
+
+| Pairing | Question | Reading |
+| --- | --- | --- |
+| `army_convey` vs `fog_scout` | Round 1's only unresolved top-3 pair; it drew at 1200. | 10 games decide the top of the table. |
+| `castle_builder` vs `castle_rush` vs `phase_switch` | Do the economy bots separate on Elo at all? | If the three stay inside 25 points over 10 games each, the economy cluster is one bot in three copies. Apply [`diversity-constraints.md`](diversity-constraints.md) §4. |
+| Each economy bot vs `army_convey`, `fog_scout`, `late_rush` | Round 1 never tested `castle_builder` against a bot that wins. | The economy axis stands or falls here. |
+| `general_hunter` vs `late_rush` | Both end in a deathtouch execution and differ only in targeting. | If the two produce the same action trace, delete one ([`optimize-existing.md`](optimize-existing.md) §3.7). |
+| `garrison` vs `army_convey` | Round 1: `garrison` lost at turn 461 to the bot that masses army. | Tests whether a reserve can hold against a conveyed stack at all. |
+
+### 6.5 Health targets for round 2
+
+| Metric | Round 1 | Round 2 target | If missed |
+| --- | --- | --- | --- |
+| Decisive rate | 41.4% | 30–70% | Below 30%: the revisions made the pool passive. Above 70%: check that one bot is not simply sniping undefended generals. |
+| Elo spread, top to bottom | 163 points | ≥ 100 points over ≥ 60 games each | A narrower spread means the roster is converging; open [`diversity-constraints.md`](diversity-constraints.md) §4. |
+| Bots at 0% decisive rate | 1 (`castle_builder`) | 0 | A bot that can neither win nor lose is not being measured. |
+| Mean turn of a decisive game | 558 | report, no target | This number sets every turn threshold in the roster. Re-derive `APPROACH_START`, `SENTRY_FROM` and `MAX_TURN_TO_BUILD` from it after each round. |
+| Games per bot | 4 to 16 | equal for all 13 | Unequal samples make Elo incomparable. |
+
+### 6.6 Deliverables
+
+1. `docs/research/measurements/round2.md` and `round2.json`, same shape as
+   round 1, plus land, army and first-sighting turn.
+2. A rebuilt `data/ratings/leaderboard.md` from the full store.
+3. One experiment note per strategy change from R1.6, with the three
+   diversity tests recorded
+   ([`diversity-constraints.md`](diversity-constraints.md) §5).
+4. `Parameter revision 2` appended to
+   [`optimize-existing.md`](optimize-existing.md).
+
+---
+
+## 7. Runbook
 
 ```bash
 source .venv/bin/activate
 
-# Stage 0 — gate every bot against the anchor
+# Stage 2.0 — gate every bot against the anchor
 for b in bots/*/run.sh; do
   python arena/run_match.py "$b" bots/smoke/run.sh --seed 0 --timeout 120
 done
 
-# Stage 1 — screening
+# Stage 2.2 — full round robin, sharded, ratings off
 BOTS="$(ls -d bots/*/run.sh) competition-module/competition/agents/expander_python/run.sh"
-python arena/tournament.py $BOTS --seeds 0-4 --timeout 120
+python arena/tournament.py $BOTS --seeds 0-1 --swap-sides --no-ratings --timeout 120 &
+python arena/tournament.py $BOTS --seeds 2-3 --swap-sides --no-ratings --timeout 120 &
+python arena/tournament.py $BOTS --seeds 4   --swap-sides --no-ratings --timeout 120 &
+wait
 
-# Stage 2 — development leaderboard (shard per §2, then rebuild)
+# single authoritative rebuild from every stored game
 python scripts/leaderboard.py
 
-# Stage 3 — holdout, top 6 only
+# Stage 2.3 — holdout, top 6 only
 python arena/tournament.py <six run.sh paths> --seeds 100-111 --swap-sides --timeout 120
 python scripts/leaderboard.py
 ```
+
+`--swap-sides` is not optional. Round 1 omitted it, and every one of its
+round-robin results is confounded by seat order as a result (§2).
 
 Store every game before rating — `arena/tournament.py` already does this in
 the right order. Ratings are rebuildable from `data/games/` at any time, so
 the store is the source of truth and `data/ratings/` is a derived snapshot.
 
-## 7. Related
+## 8. Related
 
+- [`../measurements/round1.md`](../measurements/round1.md) — the round 1 result
+  set this plan is built on
+- [`diversity-constraints.md`](diversity-constraints.md) — the rules that stop
+  the roster collapsing into one policy between rounds
 - [`optimize-existing.md`](optimize-existing.md) — root causes of the all-draw
-  season and the schema fields this plan depends on
+  season, `Parameter revision 1`, and the schema fields this plan depends on
 - [`experiment-protocol.md`](../experiment-protocol.md) — per-change protocol
 - [`docs/arena/tournament.md`](../../arena/tournament.md) — runner reference
 - [`docs/arena/ratings.md`](../../arena/ratings.md) — Elo implementation
