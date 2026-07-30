@@ -511,3 +511,253 @@ produces only draws.
 - **One change per experiment** (`experiment-protocol.md`). §3.1 and §3.5
   interact strongly — land them as two separate measured steps, reserve
   first, so the win-check result is not attributed to the reserve.
+
+---
+
+## Parameter revision 1
+
+Source: [`../measurements/round1.md`](../measurements/round1.md) and
+[`round1.json`](../measurements/round1.json) — 58 games, generated
+2026-07-30T23:34:29Z.
+
+Read [`diversity-constraints.md`](diversity-constraints.md) before you apply
+any item here. Every revision below stays inside its bot's own axis.
+
+### R1.0 What round 1 changed about §1–§7
+
+The §3 helpers were already in the working tree when round 1 ran. Commit
+`499f7bd` landed 14 s after the last game, and `castle_builder` built 3
+castles per game, which only the revised `MAX_OWN_CASTLES = 3` allows. So
+round 1 measured **`expand_plus` v2, `castle_builder` v2 and `smoke` v1**, not
+the pre-helper code. `general_hunter` v2 played **zero** games.
+
+Confirmed by the data:
+
+| §1 claim | Round 1 verdict |
+| --- | --- |
+| The pool cannot produce decisive games | **Falsified.** Decisive rate is 24/58 = 41.4%, inside the 30–70% healthy band in [`tournament-plan.md`](tournament-plan.md) §3. Elo now separates: 1616.4 down to 1453.5. |
+| The §3 helper set makes a bot competent | **Not supported.** `expand_plus` v2 finished 0-3-5 and lost to `fog_scout`, `army_convey` and `late_rush` — three bots that carry none of the helpers. |
+| §4.3 placement fix produces ≥ 3 castles at price 35 | **Confirmed on castle count.** `castle_builder` built 3 in every game. |
+| L3: castle income buys a usable attack | **Not supported.** Castle count and result are inversely ordered: `castle_rush` 4 castles → 0 wins, `castle_builder` 3 → 0 wins, `phase_switch` 2 → 1 win, and the three winners built 0. |
+
+New population facts that drive the revisions:
+
+| Fact | Value | Consequence |
+| --- | --- | --- |
+| Decisive games | 24 of 58 | The pool is rankable. Stop optimizing for "produce a decisive game". |
+| Decisive games ending before turn 800 | 22 of 24 = 91.7% | Every turn-800 mechanism is dead in ~92% of decided games. |
+| Mean turn of a decisive game | 558 | Earliest 341, median near 528. |
+| Bots that could not beat `smoke` | 5 of 8 new bots | `smoke` is doing its anchor job. |
+| Winners' shared trait | 0 castles, army concentration or map coverage | Land-to-one-stack conversion decides games; income does not. |
+
+### R1.1 The two defects round 1 exposes in the shared helper module
+
+Both live in `bots/*/strategy_common.py`, which is duplicated in
+`expand_plus`, `castle_builder` and `general_hunter`. Fix them in all three
+copies or the copies drift.
+
+**Defect H1 — a fogged enemy general is treated as a 1-army cell.**
+
+`enemy_general_army` returns `1` when `type_grid[r][c] == 0`. `win_check_w1`
+then fires whenever any owned neighbour holds ≥ 3 army, even though an unspent
+general holds about `1 + 0.5 * turn` army — roughly 225 at turn 448. The
+attack cannot succeed, the source cell is emptied, and W1 fires again the next
+tick. §3.5 states the opposite rule ("assume it is large before turn 800"), so
+this is an implementation inversion, not a design choice.
+
+This is the most probable cause of `expand_plus` v2's three losses. It is
+reachable only after a sighting, which is exactly when the bot has a stack near
+the enemy general to throw away.
+
+| Parameter | Now | Revision 1 | Reason |
+| --- | --- | --- | --- |
+| Assumed army of a fogged general | `1` | `1 + turn // 2` | The unspent-general growth model from §D1. Blocks W1 unless the bot really can win. |
+
+**Defect H2 — `general_hunter` cannot probe.**
+
+`Agent._update_active_probes` marks **every** owned cell with `2 <= army <= 4`
+as an active probe, and `probe_move` returns `None` once `len(active_probes)
+>= 2`. Ordinary land cells hold 2–4 army all game, so the cap is met on almost
+every tick and the probe path never runs. This recreates defect D2: the hunt
+has no targeting, exactly the failure §4.4 was written to remove.
+
+| Parameter | Now | Revision 1 | Reason |
+| --- | --- | --- | --- |
+| Active-probe membership | any owned cell with `2 <= army <= 4` | only cells the bot dispatched as a probe, carried forward by the step it took | An army-size test cannot identify a probe. |
+| Active-probe cap | 2 | 2, unchanged | The cap was never the problem. |
+
+**Cost warning attached to H2.** Once probing works, `probe_move` runs one
+`bfs_distances` pass **per candidate cell**, plus a 441-cell scan inside each.
+With 100–200 candidates that is 10⁵–10⁶ operations of pure Python per tick,
+against a 150 ms budget (`RULES.md` §08). Cache the candidate loop or evaluate
+a fixed sample of candidates per tick before round 2. A fault storm would void
+the round.
+
+### R1.2 `smoke` — freeze, confirmed by measurement
+
+**Revision: no parameter change. `smoke` has no tunable constants and gains
+none.**
+
+§4.1 argued for freezing `smoke` from first principles. Round 1 supplies the
+evidence:
+
+- 16 games, the largest sample of any bot, 0 W – 5 L – 11 D.
+- It separates the field cleanly. `fog_scout`, `army_convey` and `late_rush`
+  beat it; `garrison`, `splitter`, `choke_control`, `phase_switch` and
+  `castle_rush` could not. A frozen anchor that splits the field 3–5 is
+  working exactly as intended.
+- Its round Elo, 1453.5, is last. [`tournament-plan.md`](tournament-plan.md)
+  §5 makes "`smoke` finishes last" the control condition. The control held.
+
+The only permitted edit stays the §5.2 telemetry line, which does not change
+the policy. `bots/smoke/main.py` already carries it and `bots/smoke/agent.py`
+is untouched. Keep it that way.
+
+**Read the 5 bots that cannot beat `smoke` as a finding about those bots**, not
+as a reason to weaken the anchor.
+
+### R1.3 `expand_plus` — stop paying twice for enemy land
+
+Round 1: 0 W – 3 L – 5 D over 8 games, round Elo 1464.7, lost at turns 448,
+554 and 554 to `fog_scout`, `army_convey` and `late_rush`.
+
+**Primary revision (apply alone, measure, then continue):**
+
+| Parameter | Now | Revision 1 | Reason |
+| --- | --- | --- | --- |
+| `dest_value(owner == 2)` | `12` | `6` | Equal to the neutral-plain value. |
+
+Mechanism. The capture score is
+`100 * dest_value + 15 * frontier_gain - src_army`, so an enemy tile scores
+1200 and a neutral plain scores 600. The gap is 600, while `frontier_gain`
+contributes at most 60 and `src_army` a few tens. The enemy tier therefore wins
+every comparison it enters, and the bot grinds one defended tile at a time
+while free neutral land sits next to it. Setting both tiers to 6 hands the
+decision to `frontier_gain` and `src_army`, which is the land-rate rule that
+defines this bot's axis. This is not aggression tuning; it removes a hidden
+tier that overrides the stated scoring rule.
+
+**Secondary revisions, in order, one measured step each:**
+
+| Order | Parameter | Now | Revision 1 | Reason |
+| --- | --- | --- | --- | --- |
+| 2 | Defect H1 | fogged general = 1 army | `1 + turn // 2` | Stops the repeated suicide attack that most likely caused the three losses. |
+| 3 | `general_reserve` cap | `min(30, ...)` | remove the cap; report the value it reaches | The cap is inert. `can_use_general_as_source` blocks every `split=0` move once the reserve exceeds 1, which happens at turn 60, so the general is never a source afterwards and the "left behind" floor never binds. Deleting dead parameters keeps the next revision readable. |
+
+**Do not raise the reserve to answer the losses.** The arithmetic says it
+cannot work: an unspent general gains 0.5 army/turn, while an opponent that
+funnels the 50-turn land bonus from 80 cells into one stack gains about
+1.6 army/turn. A static garrison loses that race by more than 3×. Defense
+against a massed stack belongs to [`garrison`](garrison.md), not here.
+
+**Falsifiable prediction.** With the primary revision alone, `expand_plus` v3
+holds more land at truncation than v2 on ≥ 7 of 10 paired seeds, and does not
+lose more games than v2. **Revert if** it wins no more games *and* holds no
+more land, or if the loss count rises.
+
+### R1.4 `castle_builder` — build inside the horizon that decides games
+
+Round 1: 4 games, all draws at 1200 turns, 3 castles per game, round Elo
+1495.2. Its decisive rate is 0%, which
+[`tournament-plan.md`](tournament-plan.md) §3 defines as "not being measured".
+It met only `castle_rush` and `phase_switch`; it never played a bot that wins.
+
+**Primary revision:**
+
+| Parameter | Now | Revision 1 | Reason |
+| --- | --- | --- | --- |
+| `MAX_TURN_TO_BUILD` | `1050` | `600` | The 1050 value came from a 1200-turn amortization. Round 1 says decisive games end at mean turn 558 and 92% finish before 800, so the effective horizon is ~800, not 1200. A castle built at turn `T` returns `0.5 * (800 - T)` usable army; at cost 35 that breaks even at turn 730 and needs roughly another 100 turns for the army to reach a frontier. 600 is the last turn at which a castle can still pay for itself and be spent. |
+
+After turn 600 the bot stops banking and spends castle income on captures. The
+conservative-economy identity is unchanged: it still builds few castles, at the
+floor price, with a full garrison.
+
+**Secondary revisions:**
+
+| Order | Parameter | Now | Revision 1 | Reason |
+| --- | --- | --- | --- | --- |
+| 2 | Defect H1 | fogged general = 1 army | `1 + turn // 2` | Same shared-module fix as R1.3. |
+| 3 | `MIN_TURN_TO_BUILD` | `20` | `20`, held | The first castle is not the problem; the last one is. |
+| 4 | `MAX_OWN_CASTLES` | `3` | `3`, held under review | See the diversity note below. |
+| 5 | `BANK_MIN_SPACING`, `BUILD_GARRISON` | `7`, `10` | held | Confirmed working: 3 castles per game, no castle sniped. |
+
+**Diversity note, must be checked before round 2.** `castle_builder` at cap 3
+sits one castle away from `castle_rush` at cap 4, and the two drew every game
+with a 21-point round-Elo gap. That is the parameter-drift alarm in
+[`diversity-constraints.md`](diversity-constraints.md) §4. The
+`MAX_TURN_TO_BUILD` revision restores separation on the timing axis instead —
+`castle_builder` stops at 600, `castle_rush` has no end gate at all. If round 2
+still cannot separate the two bots, cut the cap back to 2 rather than tuning
+them closer.
+
+**Falsifiable prediction.** `castle_builder` v3 records a non-zero decisive
+rate over a grid that includes `army_convey`, `fog_scout` and `late_rush`, and
+its mean turns fall below 1200. **Revert if** it builds fewer than 3 castles
+per game or its loss count exceeds `castle_rush`'s on the same grid.
+
+### R1.5 `general_hunter` — unmeasured, and its clock is set for a game that ends first
+
+Round 1: **0 games.** No result exists for this bot. Every item here comes from
+the population statistics and from code, and every one is provisional until
+`general_hunter` plays a grid.
+
+The population fact that matters: 22 of 24 decisive games ended before turn
+800, at a mean of turn 558. `general_hunter`'s whole endgame — `win_check_w2`,
+the final approach at `turn >= 800 - eta - 5`, `chase_defence` from 780, the
+sentry from 700 — activates after most games are already over. With a typical
+`eta` near 20 the approach begins at turn 775. In round 1 conditions the bot
+would be eliminated, on average, 217 turns before its first hunt move.
+
+**Primary revision:**
+
+| Parameter | Now | Revision 1 | Reason |
+| --- | --- | --- | --- |
+| Final-approach trigger | `turn >= DEATHTOUCH_TURN - eta - 5` | `turn >= APPROACH_START` with `APPROACH_START = 450`, keeping the existing trigger as an upper bound | 450 sits below the mean decisive turn of 558, so the runner is parked next to the enemy general before the game is typically decided. Parking is nearly free: the runner needs 2 army, and it touches on the first tick at or after 800. |
+
+`DEATHTOUCH_TURN = 800` is fixed by the engine and is not a tunable. The kill
+condition does not change, so the bot's identity does not change — only the
+travel schedule does.
+
+**Secondary revisions, in order:**
+
+| Order | Parameter | Now | Revision 1 | Reason |
+| --- | --- | --- | --- | --- |
+| 2 | Defect H2 | probes disabled by an army-size test | dispatch-tracked probes | Without this the bot has no targeting and `APPROACH_START` has nothing to approach. Apply **before** the primary revision if only one change fits the schedule. |
+| 3 | `probe_move` cost | one BFS per candidate | sample or cache candidates | 150 ms budget, `RULES.md` §08. |
+| 4 | Defect H1 | fogged general = 1 army | `1 + turn // 2` | Same shared-module fix. |
+| 5 | `SENTRY_FROM`, `DEFEND_FROM` | `700`, `780` | `450`, `500` | Both defend against an attack that, per round 1, arrives near turn 558. Keeping them at 700 and 780 defends an empty board. |
+
+**Falsifiable prediction.** `general_hunter` v3 sights the enemy general before
+turn 800 on ≥ 60% of seeds — the §4.4 prediction, still untested — and its
+probe path fires at least once per game. **Revert if** the probe path still
+never fires, or if per-move time exceeds 150 ms on a 21×21 board.
+
+### R1.6 Order of work
+
+Defects first, because they invalidate any measurement taken around them.
+
+| Step | Change | Bots touched | Gate |
+| --- | --- | --- | --- |
+| 1 | Defect H2 — probe dispatch tracking | `general_hunter` | Probe path fires at least once per game. |
+| 2 | `probe_move` cost reduction | all three helper copies | Per-move time under 150 ms on 21×21. |
+| 3 | Defect H1 — fogged-general army assumption | all three helper copies | W1 no longer fires against a fogged general with a small stack. |
+| 4 | R1.3 primary — `dest_value(enemy) = 6` | `expand_plus` | Paired seed grid vs v2. |
+| 5 | R1.4 primary — `MAX_TURN_TO_BUILD = 600` | `castle_builder` | Paired seed grid vs v2. |
+| 6 | R1.5 primary — `APPROACH_START = 450` | `general_hunter` | Paired seed grid vs v2. |
+
+Steps 1–3 are defect fixes and may share one experiment note. Steps 4–6 are
+strategy changes and need one note each, per
+[`experiment-protocol.md`](../experiment-protocol.md).
+
+### R1.7 Unresolvable with the current store
+
+Round 1 added `castles_a` / `castles_b` and the tag grid, which is what made
+the economy conclusion possible. Still missing, and still blocking:
+
+- Final land and army at truncation. Without them the 34 drawn games carry no
+  ranking information, and the R1.3 land prediction cannot be scored.
+- Turn of first enemy-general sighting. This is the number that decides whether
+  R1.5 worked, and no bot reports it.
+
+Both are the §5.2 telemetry line. Land it before round 2 or R1.3 and R1.5 stay
+unfalsifiable.

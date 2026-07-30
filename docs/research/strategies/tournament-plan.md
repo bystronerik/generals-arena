@@ -121,10 +121,16 @@ the bot's.
 
 ### The problem with the current metric set
 
-31 stored games, 31 draws, every bot at exactly 1500 Elo. Elo is degenerate
-under an all-draw pool: it is mathematically correct and carries no
-information. Adding more draws to it will not help. Two things fix this: a
-primary health metric, and a tiebreak that ranks draws.
+Written when the store held 31 games, 31 draws, and every bot at exactly 1500
+Elo. Elo is degenerate under an all-draw pool: it is mathematically correct and
+carries no information. Two things fix this: a primary health metric, and a
+tiebreak that ranks draws.
+
+**Round 1 resolved the degenerate case.** 58 games, 24 decisive, decisive rate
+41.4%, round Elo spread 1616.4 down to 1453.5
+([`../measurements/round1.md`](../measurements/round1.md)). Elo is now the
+primary ranking signal. The shadow leaderboard below drops to a secondary role
+and is discarded once the decisive rate holds above 30% across a full round.
 
 ### Primary: decisive rate
 
