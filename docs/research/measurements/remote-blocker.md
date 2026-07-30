@@ -1,11 +1,10 @@
 # Remote 95/100 evaluation blocker
 
-The live 95/100 evaluation is blocked until `GENERALS_USER_ID` is set in the
-environment.
+The live 95/100 **scored** block is not blocked on credentials anymore.
+`GENERALS_USER_ID` is present in `.env.agent` (local only; do not commit).
 
-Set up the credential as described in
+Setup reference:
 [`docs/engine/remote-play-setup.md`](../../engine/remote-play-setup.md).
-Do not commit the credential.
 
 ## Offline champion status
 
@@ -15,8 +14,8 @@ Do not commit the credential.
 | Selection | `human-95-plan.md` absent; round1 Elo leader (90% winrate, 0 losses) |
 | Challengers | `late_rush`, `fog_scout` (round1 rank 2–3) |
 | Revision | Parameter revision 2 — stalemate opponent escalation (turn ≥ 600) |
-| Stress test | [`champion-stress.md`](champion-stress.md) — 20 champion games, 0 losses, 6 draws |
-| Validation | 3/3 wins vs `smoke` and `expand_plus` (seeds 0–2); `fog_scout` still draws |
+| Stress test | [`champion-stress.md`](champion-stress.md) — 20 champion games, **14W-0L-6D** |
+| Classic duel | In progress (remote classic-rules harness per [`human-95-plan.md`](../strategies/human-95-plan.md)) |
 
 The offline dry run can run now:
 
@@ -26,5 +25,9 @@ The offline dry run can run now:
 
 ## Blocker
 
-Live remote play remains blocked on **`GENERALS_USER_ID`**. No credential is
-committed to this repo.
+The **95/100 human block count** stays gated on **result fidelity** (win-on-disconnect):
+disconnect and receive-error paths must not be recorded as wins. See
+[`human-95-plan.md`](../strategies/human-95-plan.md) §5.4.
+
+Until that fix ships, do not treat live remote logs as valid for the Phase 3
+headline score even though `GENERALS_USER_ID` is configured.
