@@ -9,11 +9,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
 import sys
 import time
 import traceback
-import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -28,7 +26,11 @@ from arena.remote_adapter import (  # noqa: E402
     make_remote_agent,
     verify_adapter_offline,
 )
-from generals.remote.generalsio_client import GeneralsIOClient  # noqa: E402
+from arena.remote_client import (  # noqa: E402
+    FidelityGeneralsIOClient,
+    git_head,
+    normalize_bot_endpoint_username,
+)
 
 REMOTE_GAMES_DIR = REPO_ROOT / "data" / "remote_games"
 SETUP_DOC = "docs/engine/remote-play-setup.md"
@@ -49,19 +51,6 @@ def _load_dotenv_files() -> None:
             value = value.strip().strip("'").strip('"')
             if key and key not in os.environ:
                 os.environ[key] = value
-
-
-def _git_head() -> str | None:
-    try:
-        out = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            cwd=REPO_ROOT,
-            stderr=subprocess.DEVNULL,
-            text=True,
-        )
-        return out.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return None
 
 
 def _require_user_id() -> str:
@@ -92,94 +81,6 @@ def _default_lobby_id() -> str:
     return os.environ.get("GENERALS_LOBBY_ID", "arena-test").strip()
 
 
-def _opponent_is_bot(username: str | None) -> bool | None:
-    if username is None:
-        return None
-    return username.startswith("[Bot]")
-
-
-class LoggedGeneralsIOClient(GeneralsIOClient):
-    """GeneralsIOClient that writes one JSON record per finished game."""
-
-    def __init__(
-        self,
-        agent: StdioStrategyAdapter,
-        user_id: str,
-        *,
-        bot_name: str,
-        room_mode: str,
-        log_dir: Path,
-        public_server: bool = False,
-    ):
-        super().__init__(agent, user_id, public_server=public_server)
-        self._arena_agent = agent
-        self.bot_name = bot_name
-        self.room_mode = room_mode
-        self.log_dir = log_dir
-        self._opponent_username: str | None = None
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-
-    def _initialize_game(self, data: dict) -> None:
-        super()._initialize_game(data)
-        self._arena_agent.reset()
-        idx = self.game_state.opponent_index
-        self._opponent_username = self.game_state.usernames[idx]
-
-    def _play_game(self) -> None:
-        while True:
-            try:
-                event, data, _ = self.receive()
-            except ValueError:
-                self._finish_game_logged(is_winner=True, result="disconnect")
-                return
-            match event:
-                case "game_update":
-                    self.game_state.update(data)
-                    obs = self.game_state.get_observation()
-                    action = self._generate_action(obs)
-                    if action:
-                        self.emit("attack", action)
-                case "game_lost" | "game_won":
-                    result = "win" if event == "game_won" else "loss"
-                    self._finish_game_logged(event == "game_won", result=result)
-                    return
-
-    def _finish_game_logged(self, is_winner: bool, result: str) -> None:
-        self._write_game_log(result)
-        super()._finish_game(is_winner)
-
-    def _finish_game(self, is_winner: bool) -> None:
-        result = "win" if is_winner else "loss"
-        self._finish_game_logged(is_winner, result)
-
-    def _write_game_log(self, result: str) -> None:
-        stats = self._arena_agent.session_stats()
-        record = {
-            "recorded_at": datetime.now(timezone.utc).isoformat(),
-            "session_id": uuid.uuid4().hex[:12],
-            "replay_id": self._replay_id or None,
-            "bot_id": self.bot_name,
-            "bot_commit": _git_head(),
-            "room_mode": self.room_mode,
-            "opponent_username": self._opponent_username,
-            "opponent_is_bot": _opponent_is_bot(self._opponent_username),
-            "result": result,
-            "server_turns": stats["server_turns"],
-            "peak_land": stats["peak_land"],
-            "peak_army": stats["peak_army"],
-            "final_land": stats["final_land"],
-            "final_army": stats["final_army"],
-            "saw_enemy_general_at": stats["saw_enemy_general_at"],
-            "builds_dropped": stats["builds_dropped"],
-            "faults": stats["faults"],
-            "timeouts": stats["timeouts"],
-        }
-        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        path = self.log_dir / f"{ts}_{self.bot_name}_{result}.json"
-        path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-        print(f"Logged game to {path.relative_to(REPO_ROOT)}")
-
-
 def run_lobby_session(
     agent: StdioStrategyAdapter,
     user_id: str,
@@ -188,7 +89,7 @@ def run_lobby_session(
     max_games: int | None,
 ) -> None:
     games_played = 0
-    with LoggedGeneralsIOClient(
+    with FidelityGeneralsIOClient(
         agent,
         user_id,
         bot_name=agent.bot_name,
@@ -212,7 +113,7 @@ def run_1v1_session(
     username: str,
     max_games: int,
 ) -> None:
-    with LoggedGeneralsIOClient(
+    with FidelityGeneralsIOClient(
         agent,
         user_id,
         bot_name=agent.bot_name,
@@ -319,9 +220,16 @@ def main(argv: list[str] | None = None) -> int:
 
     user_id = _require_user_id()
     username = args.username or _default_username(args.bot)
-    if not username.startswith("[Bot]"):
+    registered_as = normalize_bot_endpoint_username(username)
+    if registered_as != username:
         print(
-            "Warning: generals.io bot convention uses a [Bot] username prefix.",
+            "Note: bot endpoint strips [Bot] prefix at registration "
+            f"(will register as {registered_as!r}).",
+            file=sys.stderr,
+        )
+    elif not username.startswith("[Bot]"):
+        print(
+            "Warning: generals.io bot convention uses a [Bot] username prefix in env.",
             file=sys.stderr,
         )
 
@@ -348,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
                 {
                     "recorded_at": datetime.now(timezone.utc).isoformat(),
                     "bot_id": args.bot,
-                    "bot_commit": _git_head(),
+                    "bot_commit": git_head(),
                     "error": traceback.format_exc(),
                     "duration_s": round(time.time() - started, 2),
                 },
