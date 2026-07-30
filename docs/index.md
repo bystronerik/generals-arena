@@ -27,6 +27,8 @@ Small topic files for the Generals Arena research repo.
 - [expand_plus](bots/expand-plus.md) — greedy capture + BFS frontier march
 - [castle_builder](bots/castle-builder.md) — rested-general castle investment
 - [general_hunter](bots/general-hunter.md) — deathtouch beeline once the enemy general is sighted
+- [garrison](bots/garrison.md) — phase-based general reserve and route-aware defense
+- [late_rush](bots/late-rush.md) — rally accumulation and turn-700 committed rush
 
 ## Arena
 
