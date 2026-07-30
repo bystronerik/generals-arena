@@ -8,6 +8,10 @@ from collections import deque
 PASS = (1, 0, 0, 0, 0)
 DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
+CONVEY_MIN_ARMY = 3
+FRONTIER_NEIGHBOR_WEIGHT = 1.5
+OPPONENT_CAPTURE_MULT = 3.0
+
 
 def _is_passable(t):
     return t != 2 and t != 5
@@ -48,8 +52,9 @@ class Agent:
                 if src_army <= dest_army + 1:
                     continue
                 score = float(src_army) * 10.0
+                score += self._frontier_neighbor_armies(obs, r, c) * FRONTIER_NEIGHBOR_WEIGHT
                 if obs.owner_grid[nr][nc] == 2:
-                    score *= 2.0
+                    score *= OPPONENT_CAPTURE_MULT
                 if score > best_capture_score:
                     best_capture_score = score
                     best_capture = (0, r, c, d, 0)
@@ -68,7 +73,7 @@ class Agent:
                 if (r, c) in frontier:
                     continue
                 src_army = obs.army_grid[r][c]
-                if src_army <= 1:
+                if src_army < CONVEY_MIN_ARMY:
                     continue
                 here_dist = dist[r][c]
                 if here_dist <= 0:
@@ -97,6 +102,16 @@ class Agent:
         if first_valid is not None:
             return first_valid
         return PASS
+
+    def _frontier_neighbor_armies(self, obs, r, c):
+        total = 0.0
+        for dr, dc in DIRECTIONS:
+            nr, nc = r + dr, c + dc
+            if not (0 <= nr < obs.H and 0 <= nc < obs.W):
+                continue
+            if obs.owner_grid[nr][nc] == 1:
+                total += float(obs.army_grid[nr][nc])
+        return total
 
     def _frontier_cells(self, obs):
         H, W = obs.H, obs.W

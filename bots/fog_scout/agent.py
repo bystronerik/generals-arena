@@ -8,6 +8,12 @@ from collections import deque
 PASS = (1, 0, 0, 0, 0)
 DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
+FOG_BONUS = 3.0
+FOG_BONUS_SATURATED = 1.5
+OPPONENT_BONUS = 3.5
+FOG_MARCH_MIN_ARMY = 3
+VISION_SATURATION = 0.75
+
 
 def _is_passable(t):
     return t != 2 and t != 5
@@ -29,6 +35,7 @@ class Agent:
     def act(self, obs):
         H, W = obs.H, obs.W
         self._update_ever_seen(obs)
+        fog_bonus = self._fog_bonus(obs)
 
         general_attack = self._attack_enemy_general(obs)
         if general_attack is not None:
@@ -63,9 +70,9 @@ class Agent:
 
                     score = float(src_army) * 10.0
                     if is_fog:
-                        score *= 3.0
+                        score *= fog_bonus
                     if is_opp:
-                        score *= 2.0
+                        score *= OPPONENT_BONUS
                     if score > best_score:
                         best_score = score
                         best_move = (0, r, c, d, 0)
@@ -88,6 +95,23 @@ class Agent:
             for c in range(W):
                 if _is_visible(obs.type_grid[r][c]):
                     self.ever_seen[r][c] = True
+
+    def _fog_bonus(self, obs):
+        H, W = obs.H, obs.W
+        passable = 0
+        seen = 0
+        for r in range(H):
+            for c in range(W):
+                if not _is_passable(obs.type_grid[r][c]):
+                    continue
+                passable += 1
+                if self.ever_seen[r][c]:
+                    seen += 1
+        if passable == 0:
+            return FOG_BONUS
+        if seen / passable > VISION_SATURATION:
+            return FOG_BONUS_SATURATED
+        return FOG_BONUS
 
     def _attack_enemy_general(self, obs):
         H, W = obs.H, obs.W
@@ -144,7 +168,7 @@ class Agent:
                 if obs.owner_grid[r][c] != 1:
                     continue
                 src_army = obs.army_grid[r][c]
-                if src_army <= 1:
+                if src_army < FOG_MARCH_MIN_ARMY:
                     continue
                 here = dist[r][c]
                 if here <= 0:

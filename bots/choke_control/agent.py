@@ -1,25 +1,24 @@
 """
 choke_control — corridor claim and hold.
-
-Same greedy capture + BFS frontier march as expand_plus. One change:
-choke-aware capture scoring plus hold/deny rules for owned gate cells.
-
-See docs/bots/choke-control.md and
-docs/research/experiments/009-choke-control-corridor-hold.md.
 """
+import math
 from collections import deque
 
 PASS = (1, 0, 0, 0, 0)
 DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
-W_CHOKE = 0.5
+W_CHOKE = 0.35
 W_OPPRESS = 1.0
-K = 6
+K = 8
 HOLD_MIN_ARMY = 10
+HOLD_THREAT_MULT = 1.5
 OVERWHELM_MULT = 3
+ABANDON_MULT = 2.0
+PUSH_THROUGH_TURN = 800
 REINFORCE_BONUS = 15.0
-FOG_DECAY = 0.5
-SPLIT_MIN_ARMY = 8
+FOG_DECAY = 0.25
+SPLIT_MIN_ARMY = 16
+DEATHTOUCH_TURN = 800
 
 
 def _is_passable(t):
@@ -50,8 +49,10 @@ class Agent:
         self.player_id = player_id
         self.H = H
         self.W = W
+        self.enemy_general = None
 
     def act(self, obs):
+        self._update_enemy_general_sighting(obs)
         H, W = obs.H, obs.W
         dist = self._build_frontier_dist(obs)
         narrow = self._narrowness(obs)
@@ -59,6 +60,8 @@ class Agent:
         chokes = self._choke_scores(obs, narrow, gate, dist)
         held = self._held_chokes(obs, chokes, dist)
         threat = self._threat_map(obs, held, K)
+        hold_floors = {cell: self._hold_floor(threat.get(cell, 0)) for cell in held}
+        abandoned = self._abandoned_holds(obs, held, threat, hold_floors)
 
         best_score = -1.0
         best_move = None
@@ -82,23 +85,29 @@ class Agent:
                     dest_type = obs.type_grid[nr][nc]
                     dest_army = obs.army_grid[nr][nc]
 
-                    if (r, c) in held:
+                    if (r, c) in held and (r, c) not in abandoned:
                         if not self._allowed_from_hold(
-                            obs, r, c, nr, nc, army, held, gate, chokes, threat
+                            obs, r, c, nr, nc, army, held, gate, chokes, threat,
+                            hold_floors, abandoned,
                         ):
                             continue
 
-                    if _is_capturable(dest_owner, dest_type) and army - 1 > dest_army:
-                        is_opp = dest_owner == 2
-                        choke_val = chokes.get((nr, nc), 0.0)
-                        score = _base_score(army - 1, is_opp) * (1.0 + W_CHOKE * choke_val)
-                        split = 1 if self._two_deep_hold(
-                            obs, r, c, nr, nc, army, dest_army, narrow, gate
-                        ) else 0
-                        if score > best_score:
-                            best_score = score
-                            best_move = (0, r, c, d, split)
-                        continue
+                    if _is_capturable(dest_owner, dest_type):
+                        min_moved = self._min_moved_to_capture(
+                            obs, r, c, nr, nc, army, dest_army, held, gate, threat
+                        )
+                        if army - 1 > dest_army and min_moved <= army - 1:
+                            is_opp = dest_owner == 2
+                            choke_val = chokes.get((nr, nc), 0.0) if gate[nr][nc] else 0.0
+                            moved = army - 1
+                            score = _base_score(moved, is_opp) * (1.0 + W_CHOKE * choke_val)
+                            split = 1 if self._two_deep_hold(
+                                obs, r, c, nr, nc, army, dest_army, narrow, gate
+                            ) else 0
+                            if score > best_score:
+                                best_score = score
+                                best_move = (0, r, c, d, split)
+                            continue
 
                     if dest_owner == 1 and (nr, nc) in held:
                         score = REINFORCE_BONUS * chokes.get((nr, nc), 0.0)
@@ -117,6 +126,91 @@ class Agent:
         if first_valid is not None:
             return first_valid
         return PASS
+
+    def _update_enemy_general_sighting(self, obs):
+        for r in range(obs.H):
+            for c in range(obs.W):
+                if obs.owner_grid[r][c] == 2 and obs.type_grid[r][c] == 4:
+                    self.enemy_general = (r, c)
+                    return
+
+    def _hold_floor(self, threat_army):
+        return max(HOLD_MIN_ARMY, math.ceil(threat_army * HOLD_THREAT_MULT))
+
+    def _abandoned_holds(self, obs, held, threat, hold_floors):
+        abandoned = set()
+        for cell in held:
+            hr, hc = cell
+            army = obs.army_grid[hr][hc]
+            t = threat.get(cell, 0)
+            if t <= 0:
+                continue
+            if t > army * ABANDON_MULT and not self._can_reinforce_within(obs, cell, 2):
+                abandoned.add(cell)
+        return abandoned
+
+    def _can_reinforce_within(self, obs, cell, turns):
+        hr, hc = cell
+        q = deque([(hr, hc, 0)])
+        seen = {(hr, hc)}
+        while q:
+            cr, cc, steps = q.popleft()
+            if steps > 0 and obs.owner_grid[cr][cc] == 1 and obs.army_grid[cr][cc] >= 2:
+                return True
+            if steps >= turns:
+                continue
+            for dr, dc in DIRECTIONS:
+                nr, nc = cr + dr, cc + dc
+                if not (0 <= nr < obs.H and 0 <= nc < obs.W):
+                    continue
+                if (nr, nc) in seen:
+                    continue
+                if not _is_passable(obs.type_grid[nr][nc]):
+                    continue
+                seen.add((nr, nc))
+                q.append((nr, nc, steps + 1))
+        return False
+
+    def _min_moved_to_capture(
+        self, obs, sr, sc, dr, dc, army, dest_army, held, gate, threat
+    ):
+        if (
+            obs.turn >= PUSH_THROUGH_TURN
+            and self.enemy_general is not None
+            and (sr, sc) in held
+            and gate[dr][dc]
+            and self._route_to_general_crosses(obs, (sr, sc), (dr, dc))
+        ):
+            return 2
+        t = threat.get((sr, sc), 0)
+        if t > 0 and army - 1 >= OVERWHELM_MULT * t:
+            return dest_army + 1
+        return dest_army + 1
+
+    def _route_to_general_crosses(self, obs, hold_cell, dest_cell):
+        if self.enemy_general is None:
+            return False
+        tr, tc = self.enemy_general
+        dist = [[-1] * obs.W for _ in range(obs.H)]
+        dist[tr][tc] = 0
+        q = deque([(tr, tc)])
+        while q:
+            r, c = q.popleft()
+            for dr, dc in DIRECTIONS:
+                nr, nc = r + dr, c + dc
+                if not (0 <= nr < obs.H and 0 <= nc < obs.W):
+                    continue
+                if dist[nr][nc] != -1:
+                    continue
+                if not _is_passable(obs.type_grid[nr][nc]):
+                    continue
+                dist[nr][nc] = dist[r][c] + 1
+                q.append((nr, nc))
+        path_cells = {hold_cell, dest_cell}
+        for cell in path_cells:
+            if dist[cell[0]][cell[1]] < 0:
+                return False
+        return dist[hold_cell[0]][hold_cell[1]] >= 0 and dist[dest_cell[0]][dest_cell[1]] >= 0
 
     def _narrowness(self, obs):
         H, W = obs.H, obs.W
@@ -307,8 +401,12 @@ class Agent:
             threat[(hr, hc)] = max_opp
         return threat
 
-    def _allowed_from_hold(self, obs, sr, sc, dr, dc, army, held, gate, chokes, threat):
-        if army < HOLD_MIN_ARMY:
+    def _allowed_from_hold(
+        self, obs, sr, sc, dr, dc, army, held, gate, chokes, threat,
+        hold_floors, abandoned,
+    ):
+        floor = hold_floors.get((sr, sc), HOLD_MIN_ARMY)
+        if army < floor:
             return True
         if (dr, dc) in held or gate[dr][dc]:
             return True
@@ -316,6 +414,8 @@ class Agent:
             return True
         t = threat.get((sr, sc), 0)
         if t > 0 and army - 1 >= OVERWHELM_MULT * t:
+            return True
+        if (sr, sc) in abandoned:
             return True
         return False
 

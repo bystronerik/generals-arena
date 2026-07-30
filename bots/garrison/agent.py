@@ -15,14 +15,15 @@ PASS = (1, 0, 0, 0, 0)
 DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
 DEATHTOUCH_TURN = 800
-STALE_ENEMY_TURNS = 20
+STALE_ENEMY_TURNS = 30
 PRESSURE_CAP = 60
+PRESSURE_DIVISOR = 3
 
 PHASE1_END = 199
 PHASE2_END = 599
 PHASE3_END = 799
 
-PHASE_FLOORS = {1: 8, 2: 16, 3: 24, 4: 12}
+PHASE_FLOORS = {1: 8, 2: 14, 3: 20, 4: 10}
 PHASE_SAFE_RADIUS = {1: 2, 2: 3, 3: 4, 4: 4}
 PHASE_SCAN_RADIUS = {1: 6, 2: 8, 3: 10, 4: 10}
 
@@ -91,7 +92,7 @@ class Agent:
                 return reinforcement
 
         expansion = self._score_expansion(
-            obs, own_dist, pass_dist, phase, required, deficit, safe_radius
+            obs, own_dist, pass_dist, phase, required, deficit, safe_radius, pressure
         )
         if expansion is not None:
             return expansion
@@ -211,7 +212,7 @@ class Agent:
     def _required_general_army(self, obs, phase, pressure):
         floor = PHASE_FLOORS[phase]
         if obs.turn < DEATHTOUCH_TURN:
-            return floor + math.ceil(pressure / 4)
+            return floor + math.ceil(pressure / PRESSURE_DIVISOR)
         return floor
 
     def _threat_in_safe_radius(self, obs, pass_dist, safe_radius):
@@ -276,6 +277,13 @@ class Agent:
             if not deathtouch and enemy_adjacent_gen and src_army > dest_army + 1:
                 score += 50000
 
+            if phase in (2, 3) and dest_owner == 2 and not deathtouch:
+                src_dist = pass_dist[r][c] if pass_dist[r][c] >= 0 else 999
+                gen_dist = pass_dist[self.general_pos[0]][self.general_pos[1]]
+                if src_dist >= 0 and gen_dist >= 0 and src_dist <= gen_dist + 3:
+                    if src_army > dest_army + 1:
+                        score += 30000
+
             if dest_owner == 2 and dest_type == 4 and obs.turn < DEATHTOUCH_TURN:
                 if src_army > dest_army + 1:
                     score += 100000
@@ -333,9 +341,11 @@ class Agent:
 
         return self._pick_best(candidates)
 
-    def _score_expansion(self, obs, own_dist, pass_dist, phase, required, deficit, safe_radius):
+    def _score_expansion(self, obs, own_dist, pass_dist, phase, required, deficit, safe_radius, pressure):
         candidates = []
         gr, gc = self.general_pos
+        scan = PHASE_SCAN_RADIUS[phase]
+        threat_in_scan = pressure > 0 or self._threat_in_scan_radius(obs, pass_dist, scan)
 
         for r, c, d, nr, nc, src_army in self._iter_moves(obs):
             dest_owner = obs.owner_grid[nr][nc]
@@ -357,7 +367,10 @@ class Agent:
                 continue
 
             land_val = 1 if is_neutral else 3
-            score = 30 * land_val + 5 * src_army - 4 * dest_army
+            score = 45 * land_val + 5 * src_army - 4 * dest_army
+
+            if is_neutral and self._increases_frontier(obs, nr, nc):
+                score += 120
 
             if is_opp and dest_type == 4 and obs.turn < DEATHTOUCH_TURN:
                 score += 1000
@@ -366,7 +379,7 @@ class Agent:
             if own_dist[nr][nc] >= 0 and own_dist[nr][nc] <= 6:
                 score += 40
             if src_in_safe:
-                score -= 500
+                score -= 300 if not threat_in_scan else 500
             if (r, c) == self.general_pos:
                 score -= 1000
 
@@ -380,6 +393,33 @@ class Agent:
                                (0, r, c, d, 0)))
 
         return self._pick_best(candidates)
+
+    def _threat_in_scan_radius(self, obs, pass_dist, scan):
+        for r in range(obs.H):
+            for c in range(obs.W):
+                d = pass_dist[r][c]
+                if d < 0 or d > scan:
+                    continue
+                if obs.owner_grid[r][c] == 2:
+                    return True
+                if (r, c) in self.last_seen_enemy:
+                    return True
+        return False
+
+    def _increases_frontier(self, obs, r, c):
+        for dr, dc in DIRECTIONS:
+            nr, nc = r + dr, c + dc
+            if not (0 <= nr < obs.H and 0 <= nc < obs.W):
+                continue
+            if not _is_passable(obs.type_grid[nr][nc]):
+                continue
+            no = obs.owner_grid[nr][nc]
+            nt = obs.type_grid[nr][nc]
+            if no == 0 and nt not in (0, 5):
+                return True
+            if no == 2:
+                return True
+        return False
 
     def _score_consolidation(self, obs, own_dist, safe_radius):
         candidates = []

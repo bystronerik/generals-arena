@@ -14,19 +14,20 @@ PASS = (1, 0, 0, 0, 0)
 DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
 DEATHTOUCH_TURN = 800
-RALLY_START = 450
-ACCUM_START = 600
-COMMIT_EARLY = 650
-COMMIT_MID = 675
-COMMIT_LATE = 700
-RALLY_REFRESH = 25
-STALL_LIMIT = 12
+RALLY_START = 400
+ACCUM_START = 550
+COMMIT_EARLY = 625
+COMMIT_MID = 650
+COMMIT_LATE = 675
+RALLY_REFRESH = 20
+STALL_LIMIT = 8
 
-RESERVE_EARLY = 8
-RESERVE_RALLY = 10
+RESERVE_EARLY = 10
+RESERVE_RALLY = 12
 RESERVE_ACCUM = 12
-MAIN_STACK_MIN = 12
+MAIN_STACK_MIN = 10
 MAIN_STACK_DELAY = 25
+EMERGENCY_THREAT_MOVES = 3
 
 
 def _is_passable(t):
@@ -69,6 +70,10 @@ class Agent:
             contact = self._contact_moves(obs)
             if contact is not None:
                 return contact
+
+        emergency = self._emergency_defense(obs)
+        if emergency is not None:
+            return emergency
 
         if not self.commit_started:
             if obs.turn >= RALLY_START:
@@ -243,6 +248,23 @@ class Agent:
                 continue
             if obs.owner_grid[r][c] == 1 and obs.army_grid[r][c] >= 2:
                 candidates.append((1000000, obs.army_grid[r][c], 0, (0, r, c, d, 0), True))
+        return self._pick_best(candidates)
+
+    def _emergency_defense(self, obs):
+        if self.own_general_pos is None:
+            return None
+        pass_dist = self._passable_bfs(obs, self.own_general_pos)
+        candidates = []
+        for r, c, d, nr, nc, src_army in self._iter_moves(obs):
+            if obs.owner_grid[nr][nc] != 2:
+                continue
+            if src_army <= obs.army_grid[nr][nc] + 1:
+                continue
+            threat_dist = pass_dist[nr][nc]
+            if threat_dist < 0 or threat_dist > EMERGENCY_THREAT_MOVES:
+                continue
+            score = 80000 - 1000 * threat_dist + src_army
+            candidates.append((score, src_army, 0, (0, r, c, d, 0), False))
         return self._pick_best(candidates)
 
     def _should_commit(self, obs):
