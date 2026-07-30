@@ -14,6 +14,8 @@ Related:
 - [`optimize-existing.md`](optimize-existing.md) — the approved revisions.
 - [`tournament-plan.md`](tournament-plan.md) — the round schedule.
 - [`../experiment-protocol.md`](../experiment-protocol.md) — how to measure.
+- [`human-95-plan.md`](human-95-plan.md) — Phase 3 remote champion plan.
+- [`classic_duel.md`](classic_duel.md) — remote-only champion spec.
 
 ## 1. Why this file exists
 
@@ -108,10 +110,28 @@ change it and never treat it as a roster member.
 | Move granularity | `splitter` |
 | Terrain | `choke_control` |
 
-Every axis is taken. A new bot therefore either brings a new axis or replaces
-the current owner of an existing one. It never runs beside the current owner.
+Every axis is taken. A new **competition roster** bot therefore either brings a
+new axis or replaces the current owner of an existing one. It never runs beside
+the current owner.
 
-### 3.2 The two pairs that need active separation
+### 3.2 Remote-only carve-out: `classic_duel`
+
+`bots/classic_duel/` is the Phase 3 champion for **classic generals.io**, not
+the competition ruleset. It is exempt from the axis table above:
+
+- **Remote-only.** It never enters `arena/tournament.py` fields, never appears
+  in `data/games/`, and never receives an Elo rating.
+- **Not a roster measurement instrument.** It does not compete for an axis in
+  §3.1 and is not subject to the cross-copying table in §4 for roster bots
+  copying *from* it.
+- **No back-flow without tests.** Nothing may flow from `classic_duel` into a
+  roster bot without all three tests in §4.1.
+
+Local practice uses the classic-approximate harness in
+[`../../engine/classic-matchup.md`](../../engine/classic-matchup.md), not
+`matchup.py --mode competition`.
+
+### 3.3 The two pairs that need active separation
 
 Two pairs sit close enough that they need a stated gap, not a judgement call.
 

@@ -18,6 +18,7 @@ Small topic files for the Generals Arena research repo.
 ## Engine
 
 - [local matchup](engine/local-matchup.md)
+- [classic matchup (remote practice)](engine/classic-matchup.md)
 - [remote generals.io](engine/remote-generalsio.md)
 - [remote eval of heuristics](engine/remote-eval-heuristics.md) — playing humans on classic generals.io, and why it is not a competition result
 - [remote play setup](engine/remote-play-setup.md) — env vars, CLI, and logging for live generals.io

@@ -18,8 +18,9 @@ from generals.core.observation import Observation as RemoteObservation
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# Top round-1 heuristics plus expand_plus (cleanest remote smoke test).
+# Top round-1 heuristics plus expand_plus and the classic champion.
 REMOTE_RECOMMENDED_BOTS: tuple[str, ...] = (
+    "classic_duel",
     "army_convey",
     "late_rush",
     "fog_scout",
