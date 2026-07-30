@@ -89,3 +89,25 @@ Draw rate: 29.0% | Mean turns: 833.5
 | `late_rush` | `expand_plus` | 0 | `late_rush` | 695 | rush_vs_expand |
 | `late_rush` | `expand_plus` | 1 | `late_rush` | 689 | rush_vs_expand |
 | `late_rush` | `expand_plus` | 2 | `late_rush` | 699 | rush_vs_expand |
+
+## Findings
+
+- **Zero champion losses** across 20 games; primary weakness is draw rate vs `fog_scout` (5/5 truncated).
+- `late_rush` beats `expand_plus` 3/3; `fog_scout` beats `late_rush` 4/5 in challenger cross.
+- Parameter revision 2 applied to `army_convey` (stalemate opponent escalation) — see `docs/research/strategies/army_convey.md` § Parameter revision 2.
+
+## Post-revision validation (seeds 0–2)
+
+| Opponent | seed | Result | Turns |
+| --- | ---: | --- | ---: |
+| `smoke` | 0 | W | 447 |
+| `smoke` | 1 | W | 585 |
+| `smoke` | 2 | W | 612 |
+| `expand_plus` | 0 | W | 462 |
+| `expand_plus` | 1 | W | 1155 |
+| `expand_plus` | 2 | W | 1016 |
+| `fog_scout` | 0 | D | 1200 |
+| `fog_scout` | 1 | D | 1200 |
+| `fog_scout` | 2 | D | 1200 |
+
+Smoke and expand_plus checks pass. `fog_scout` stalemates remain — acceptable for offline champion until live credentials arrive.
