@@ -19,6 +19,7 @@ Small topic files for the Generals Arena research repo.
 
 - [local matchup](engine/local-matchup.md)
 - [remote generals.io](engine/remote-generalsio.md)
+- [remote eval of heuristics](engine/remote-eval-heuristics.md) — playing humans on classic generals.io, and why it is not a competition result
 
 ## Bots
 
@@ -41,4 +42,7 @@ Small topic files for the Generals Arena research repo.
 
 - [experiment protocol](research/experiment-protocol.md)
 - `research/experiments/` — one note per measurable strategy choice
+- `research/strategies/` — one strategy spec per bot, written before the code
+- [optimize the existing four bots](research/strategies/optimize-existing.md) — why every game draws, and the fixes
+- [tournament plan](research/strategies/tournament-plan.md) — seed grid, staging, and metrics that work when games draw
 - [learned bot plan (Phase 4 scaffold)](research/learned-bot-plan.md)
