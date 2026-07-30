@@ -1,0 +1,3 @@
+[submodule "competition-module"]
+	path = competition-module
+	url = git@github.com:strakam/generals-bots.git
