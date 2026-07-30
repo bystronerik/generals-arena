@@ -58,6 +58,25 @@ Requirements:
 
 After Phase 2, also store the game under `data/games/` before you update ratings.
 
+## Phase 3 success criterion (remote, classic rules)
+
+Phase 3 closes when one heuristic bot wins **at least 95 of 100 logged games
+against human opponents** on live generals.io through
+`competition-module/generals/remote/`.
+
+Process rules for that criterion:
+
+- The local competition gate above still applies first. Remote play never
+  replaces it.
+- A block is 100 human games played by **one immutable bot commit**. Changing
+  the bot ends the block.
+- Games are logged under `data/remote_games/` (gitignored). Publish the block
+  report under `docs/research/measurements/remote-block<N>.md`.
+- Remote games never enter `data/games/` or `data/ratings/` — different
+  ruleset.
+- Plan, gates, and task order:
+  [`docs/research/strategies/human-95-plan.md`](docs/research/strategies/human-95-plan.md).
+
 ## Subagent roles (workflow only)
 
 Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put strategy in this file or in skill bodies beyond links into `docs/`.

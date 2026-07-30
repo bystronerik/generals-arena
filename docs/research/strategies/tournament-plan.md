@@ -379,7 +379,19 @@ Store every game before rating — `arena/tournament.py` already does this in
 the right order. Ratings are rebuildable from `data/games/` at any time, so
 the store is the source of truth and `data/ratings/` is a derived snapshot.
 
-## 8. Related
+## 8. Relation to the Phase 3 remote goal
+
+This plan ranks the roster under the **competition** ruleset. It is not the
+path to the Phase 3 end goal, which is **95 wins in 100 logged games against
+human opponents** on classic generals.io. Classic removes the build action,
+adds pre-placed neutral cities, and removes deathtouch, so a competition rank
+does not carry over.
+
+The two tracks share the bots and the measurement discipline, and nothing else.
+Remote games never enter `data/games/` or `data/ratings/`. See
+[`human-95-plan.md`](human-95-plan.md).
+
+## 9. Related
 
 - [`../measurements/round1.md`](../measurements/round1.md) — the round 1 result
   set this plan is built on

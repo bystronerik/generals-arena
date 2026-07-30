@@ -47,5 +47,6 @@ Small topic files for the Generals Arena research repo.
 - [optimize the existing four bots](research/strategies/optimize-existing.md) — root causes and `Parameter revision 1`
 - [tournament plan](research/strategies/tournament-plan.md) — seed grid, staging, metrics, and the round 2 schedule
 - [diversity constraints](research/strategies/diversity-constraints.md) — hard rules that keep the roster from converging
+- [human 95/100 plan](research/strategies/human-95-plan.md) — Phase 3 goal: 95 wins in 100 logged games against humans on classic generals.io
 - `research/measurements/` — one result set per tournament round
 - [learned bot plan (Phase 4 scaffold)](research/learned-bot-plan.md)
