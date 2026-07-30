@@ -1,52 +1,37 @@
 """
-castle_builder — castle-aware economy bot.
+castle_builder — convey-funded castles at minimum spacing.
 
-Expands greedily like `expander_python`. Once land is established, it stops
-spending the *general's own* army on captures and lets it rest so army can
-accumulate there (every other turn, plus the 50-turn land bonus) — every
-other owned cell keeps expanding as normal. Once the general is holding
-enough army to afford a nearby castle, it relocates that whole stack one
-hop and builds (`pass=2`) on the next turn.
+Expands with smallest-sufficient-source scoring and general reserve.
+When idle, conveys land income into a spaced bank cell (price 35) and builds
+once the bank holds 35 + garrison army. Win checks run every tick.
 
-This reserve step exists because pure opportunistic building (build
-whenever some already-owned cell happens to have spare army) almost never
-fires under greedy expansion: any cell large enough to afford a castle is
-also the cell the expander immediately spends on the next capture, so army
-never idles long enough to reach the ~50 a castle costs. Deliberately
-resting the general is the cheapest way to grow one stack.
-
-Build cost (see RULES.md section 03 / docs/competition/build-castles.md):
-    cost = 35 + sum_over_own_structures(max(0, 14 - 2 * manhattan_dist))
-
-Only the general and this bot's own castles count toward its own price.
-
-See docs/bots/castle-builder.md and
-docs/research/experiments/002-castle-builder-early-investment.md.
+See docs/bots/castle-builder.md and docs/research/strategies/optimize-existing.md.
 """
+from collections import deque
 
-# A no-op action — used when no valid move exists.
-PASS = (1, 0, 0, 0, 0)
-
-# (dr, dc) offsets for direction codes 0..3
-DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+from strategy_common import (
+    PASS,
+    DIRECTIONS,
+    BeliefState,
+    best_capture_move,
+    bfs_distances,
+    can_use_as_source,
+    chase_defence,
+    enemy_adjacent_to_general,
+    is_passable,
+    locate_own_general,
+    win_check_w1,
+    win_check_w2,
+)
 
 BASE_BUILD_COST = 35
-PROXIMITY_PENALTY = 14
-PROXIMITY_DECAY = 2
-
-# Only consider building once we have some land, only early/mid game (a
-# castle built in the last stretch of a 1200-turn game barely produces),
-# and stop after a couple of castles so we don't keep resting the general.
+BANK_MIN_SPACING = 7
+BUILD_GARRISON = 10
 MIN_TURN_TO_BUILD = 20
-MAX_TURN_TO_BUILD = 900
+MAX_TURN_TO_BUILD = 1050
 MIN_LAND_TO_BUILD = 8
-MAX_OWN_CASTLES = 2
-BUILD_SURPLUS_MARGIN = 15
+MAX_OWN_CASTLES = 3
 BUILD_COOLDOWN_TURNS = 40
-
-
-def _is_passable(t):
-    return t != 2 and t != 5
 
 
 def _manhattan(a, b):
@@ -54,55 +39,53 @@ def _manhattan(a, b):
 
 
 class Agent:
-    """Greedy expansion, plus a rested general funding one or two castles."""
+    """Greedy expansion plus convey-funded castles away from structures."""
 
     def __init__(self, player_id, H, W):
         self.player_id = player_id
         self.H = H
         self.W = W
-        self.last_build_turn = -BUILD_COOLDOWN_TURNS
         self.general_pos = None
+        self.bank_cell = None
+        self.last_build_turn = -BUILD_COOLDOWN_TURNS
+        self.belief = BeliefState()
 
     def act(self, obs):
-        self._locate_general(obs)
-        structures, own_castle_count = self._own_structures(obs)
-        resting = self._should_rest_general(obs, own_castle_count)
-
-        build_move = self._maybe_build(obs, structures, own_castle_count)
-        if build_move is not None:
-            self.last_build_turn = obs.turn
-            return build_move
-
-        if resting:
-            relocate_move = self._maybe_relocate_general(obs, structures)
-            if relocate_move is not None:
-                return relocate_move
-
-        exclude = self.general_pos if resting else None
-        return self._expand(obs, exclude_cell=exclude)
-
-    def _locate_general(self, obs):
-        if self.general_pos is not None:
-            return
-        for r in range(obs.H):
-            for c in range(obs.W):
-                if obs.owner_grid[r][c] == 1 and obs.type_grid[r][c] == 4:
-                    self.general_pos = (r, c)
-                    return
-
-    def _should_rest_general(self, obs, own_castle_count):
         if self.general_pos is None:
-            return False
-        if own_castle_count >= MAX_OWN_CASTLES:
-            return False
-        if not (MIN_TURN_TO_BUILD <= obs.turn <= MAX_TURN_TO_BUILD):
-            return False
-        if obs.my_land < MIN_LAND_TO_BUILD:
-            return False
-        return True
+            self.general_pos = locate_own_general(obs)
+        self.belief.update(obs, self.general_pos)
+
+        chase = chase_defence(obs, self.general_pos)
+        if chase is not None:
+            return chase
+
+        w1 = win_check_w1(obs, self.belief.enemy_general, self.general_pos)
+        if w1 is not None:
+            return w1
+
+        if not enemy_adjacent_to_general(obs, self.general_pos):
+            w2 = win_check_w2(obs, self.belief.enemy_general, self.general_pos)
+            if w2 is not None:
+                return w2
+
+        structures, own_castle_count = self._own_structures(obs)
+        if self._can_build(obs, own_castle_count):
+            build = self._maybe_build(obs, structures, own_castle_count)
+            if build is not None:
+                self.last_build_turn = obs.turn
+                return build
+
+        capture = best_capture_move(obs, self.general_pos)
+        if capture is not None:
+            return capture
+
+        convey = self._convey_toward_bank(obs, structures)
+        if convey is not None:
+            return convey
+
+        return PASS
 
     def _own_structures(self, obs):
-        """Return (list of (r, c) for general + own castles, own castle count)."""
         structures = []
         castles = 0
         for r in range(obs.H):
@@ -110,131 +93,123 @@ class Agent:
                 if obs.owner_grid[r][c] != 1:
                     continue
                 t = obs.type_grid[r][c]
-                if t == 4:
+                if t in (3, 4):
                     structures.append((r, c))
-                elif t == 3:
-                    structures.append((r, c))
-                    castles += 1
+                    if t == 3:
+                        castles += 1
         return structures, castles
 
-    def _build_cost(self, cell, structures):
-        cost = BASE_BUILD_COST
-        for s in structures:
-            d = _manhattan(cell, s)
-            cost += max(0, PROXIMITY_PENALTY - PROXIMITY_DECAY * d)
-        return cost
-
-    def _maybe_build(self, obs, structures, own_castle_count):
+    def _can_build(self, obs, own_castle_count):
         if own_castle_count >= MAX_OWN_CASTLES:
-            return None
+            return False
         if not (MIN_TURN_TO_BUILD <= obs.turn <= MAX_TURN_TO_BUILD):
-            return None
+            return False
+        if obs.my_land < MIN_LAND_TO_BUILD:
+            return False
         if obs.turn - self.last_build_turn < BUILD_COOLDOWN_TURNS:
-            return None
+            return False
+        return True
 
-        best_cell = None
-        best_surplus = float("-inf")
+    def _min_structure_distance(self, cell, structures):
+        if not structures:
+            return float("inf")
+        return min(_manhattan(cell, s) for s in structures)
+
+    def _frontier_distances(self, obs):
+        H, W = obs.H, obs.W
+        dist = [[-1] * W for _ in range(H)]
+        q = deque()
+        for r in range(H):
+            for c in range(W):
+                owner = obs.owner_grid[r][c]
+                ctype = obs.type_grid[r][c]
+                if owner == 2 or (owner == 0 and ctype not in (0, 5)):
+                    dist[r][c] = 0
+                    q.append((r, c))
+        while q:
+            r, c = q.popleft()
+            for dr, dc in DIRECTIONS:
+                nr, nc = r + dr, c + dc
+                if not (0 <= nr < H and 0 <= nc < W):
+                    continue
+                if dist[nr][nc] != -1:
+                    continue
+                if not is_passable(obs.type_grid[nr][nc]):
+                    continue
+                dist[nr][nc] = dist[r][c] + 1
+                q.append((nr, nc))
+        return dist
+
+    def _choose_bank_cell(self, obs, structures):
+        frontier = self._frontier_distances(obs)
+        best = None
+        best_frontier = float("inf")
         for r in range(obs.H):
             for c in range(obs.W):
                 if obs.owner_grid[r][c] != 1:
                     continue
                 if obs.type_grid[r][c] != 1:
-                    continue  # only plain cells are buildable
-                army = obs.army_grid[r][c]
-                cost = self._build_cost((r, c), structures)
-                surplus = army - cost
-                if surplus > best_surplus:
-                    best_surplus = surplus
-                    best_cell = (r, c)
+                    continue
+                if self._min_structure_distance((r, c), structures) < BANK_MIN_SPACING:
+                    continue
+                fd = frontier[r][c]
+                if fd < 0:
+                    fd = 9999
+                if fd < best_frontier:
+                    best_frontier = fd
+                    best = (r, c)
+        return best
 
-        if best_cell is not None and best_surplus >= BUILD_SURPLUS_MARGIN:
-            r, c = best_cell
-            return (2, r, c, 0, 0)
+    def _maybe_build(self, obs, structures, own_castle_count):
+        if self.bank_cell is None or obs.owner_grid[self.bank_cell[0]][self.bank_cell[1]] != 1:
+            self.bank_cell = self._choose_bank_cell(obs, structures)
+        if self.bank_cell is None:
+            return None
+        br, bc = self.bank_cell
+        if obs.type_grid[br][bc] != 1:
+            self.bank_cell = self._choose_bank_cell(obs, structures)
+            if self.bank_cell is None:
+                return None
+            br, bc = self.bank_cell
+        if obs.army_grid[br][bc] >= BASE_BUILD_COST + BUILD_GARRISON:
+            return (2, br, bc, 0, 0)
         return None
 
-    def _maybe_relocate_general(self, obs, structures):
-        """Once the rested general can afford a nearby castle, move its whole
-        stack one hop to the cheapest neighbor so `_maybe_build` can act on
-        it next turn."""
-        gr, gc = self.general_pos
-        army = obs.army_grid[gr][gc]
-        if army <= 1:
+    def _convey_toward_bank(self, obs, structures):
+        if self.bank_cell is None or obs.owner_grid[self.bank_cell[0]][self.bank_cell[1]] != 1:
+            self.bank_cell = self._choose_bank_cell(obs, structures)
+        if self.bank_cell is None:
+            return None
+        br, bc = self.bank_cell
+        if obs.army_grid[br][bc] >= BASE_BUILD_COST + BUILD_GARRISON:
             return None
 
-        best_dir = None
-        best_cost = None
-        for d, (dr, dc) in enumerate(DIRECTIONS):
-            nr, nc = gr + dr, gc + dc
-            if not (0 <= nr < obs.H and 0 <= nc < obs.W):
-                continue
-            if not _is_passable(obs.type_grid[nr][nc]):
-                continue
-            if obs.owner_grid[nr][nc] == 2:
-                continue  # do not pick a fight to stage a build
-            if obs.type_grid[nr][nc] in (3, 4):
-                continue  # not buildable
-            cost = self._build_cost((nr, nc), structures)
-            if best_cost is None or cost < best_cost:
-                best_cost = cost
-                best_dir = d
-
-        if best_dir is None:
-            return None
-
-        transferred = army - 1  # one always stays behind on the source
-        if transferred < best_cost + BUILD_SURPLUS_MARGIN:
-            return None  # still resting; not enough to afford it yet
-        return (0, gr, gc, best_dir, 0)
-
-    def _expand(self, obs, exclude_cell=None):
-        best_score = -1.0
+        dist = bfs_distances(obs, self.bank_cell, owned_only=True)
+        H, W = obs.H, obs.W
+        best_army = -1
         best_move = None
-        first_valid = None
-
-        for r in range(obs.H):
-            for c in range(obs.W):
+        for r in range(H):
+            for c in range(W):
                 if obs.owner_grid[r][c] != 1:
-                    continue
-                if exclude_cell is not None and (r, c) == exclude_cell:
                     continue
                 src_army = obs.army_grid[r][c]
                 if src_army <= 1:
                     continue
-
+                if (r, c) == self.general_pos:
+                    if not can_use_as_source(obs, r, c, 0, self.general_pos, obs.turn):
+                        continue
+                here = dist[r][c]
+                if here <= 0:
+                    continue
                 for d, (dr, dc) in enumerate(DIRECTIONS):
                     nr, nc = r + dr, c + dc
-                    if not (0 <= nr < obs.H and 0 <= nc < obs.W):
+                    if not (0 <= nr < H and 0 <= nc < W):
                         continue
-                    if not _is_passable(obs.type_grid[nr][nc]):
+                    if obs.owner_grid[nr][nc] != 1:
                         continue
-
-                    move = (0, r, c, d, 0)
-                    if first_valid is None:
-                        first_valid = move
-
-                    dest_owner = obs.owner_grid[nr][nc]
-                    dest_type = obs.type_grid[nr][nc]
-                    dest_army = obs.army_grid[nr][nc]
-                    if src_army <= dest_army + 1:
+                    if dist[nr][nc] < 0 or dist[nr][nc] >= here:
                         continue
-
-                    is_opp = dest_owner == 2
-                    is_visible_neutral = dest_owner == 0 and dest_type not in (0, 5)
-                    is_expansion = is_opp or is_visible_neutral
-                    if not is_expansion:
-                        continue
-
-                    score = float(src_army)
-                    score *= 10.0
-                    if is_opp:
-                        score *= 2.0
-
-                    if score > best_score:
-                        best_score = score
-                        best_move = move
-
-        if best_move is not None:
-            return best_move
-        if first_valid is not None:
-            return first_valid
-        return PASS
+                    if src_army > best_army:
+                        best_army = src_army
+                        best_move = (0, r, c, d, 0)
+        return best_move

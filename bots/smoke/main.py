@@ -76,6 +76,7 @@ def main():
     player_id, H, W = (int(x) for x in handshake.split())
 
     agent = Agent(player_id=player_id, H=H, W=W)
+    last_obs = None
 
     while True:
         # readline returns "" on EOF (i.e., when the runner closes our stdin
@@ -83,9 +84,16 @@ def main():
         # new observation frame.
         first = stdin.readline()
         if not first:
+            if last_obs is not None:
+                sys.stderr.write(
+                    f"[telemetry] player={player_id} turn={last_obs.turn} "
+                    f"my_land={last_obs.my_land} my_army={last_obs.my_army} "
+                    f"opp_land={last_obs.opp_land} opp_army={last_obs.opp_army}\n"
+                )
             return
 
         obs = _read_observation(stdin, H, W, first)
+        last_obs = obs
         p, r, c, d, s = agent.act(obs)
 
         # Flush is mandatory: pipes are fully buffered by default, so without
