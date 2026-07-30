@@ -1,0 +1,114 @@
+# Agent workflow
+
+Process rules for agents that work in this repo. Put game and bot knowledge in `docs/`. Do not put strategy logic here.
+
+## Hard constraints
+
+- Competition gameplay differs from classic generals.io. Prefer `RULES.md` and `GeneralsEnv(mode="competition")` over classic lore.
+- `README.md`: structure, install, how to run. No deep strategy.
+- `AGENTS.md` (this file): phases, file placement, verification. No game/bot strategy.
+- All game and bot knowledge lives under `docs/` as many small files.
+- Do not edit `competition-module` internals unless a bug blocks work. Wrap and document instead.
+- Remote play via `competition-module/generals/remote/` targets **live generals.io**, not the competition sandbox. Keep that distinction explicit.
+
+## Phases
+
+| Phase | Goal | Owns |
+| --- | --- | --- |
+| 0 | Rules + docs foundation | root docs, `RULES.md`, `README.md`, this file |
+| 1 | Smoke stdio bot | `bots/smoke/` |
+| 2 | Arena + ratings + skills | `arena/`, `data/`, `.cursor/skills/` |
+| 3 | Heuristic bots | `bots/<name>/` |
+| 4 | Learned bots | later |
+
+Finish Phase N verification before starting Phase N+1 work that depends on it.
+
+## File placement
+
+| Kind | Where |
+| --- | --- |
+| Competition rules (processed) | `RULES.md` |
+| Agent process only | `AGENTS.md` |
+| Repo intro / install / run | `README.md` |
+| Game, protocol, engine, research notes | `docs/**` (small topic files) |
+| Stdio bots | `bots/<name>/` with `agent.py`, `main.py`, `run.sh` |
+| Match runner, ratings, store | `arena/` |
+| Match JSON / rating snapshots | `data/games/`, `data/ratings/` |
+| Cursor skills | `.cursor/skills/` |
+| Phase kickoff prompts | `prompts/` |
+
+Do not put strategy content in `AGENTS.md` or skill files beyond process pointers that link into `docs/`.
+
+## Verification gate
+
+Every bot or arena change must prove a match finishes under competition mode:
+
+```bash
+python competition-module/competition/matchup.py \
+  <bot_a/run.sh> \
+  <bot_b/run.sh> \
+  --mode competition --seed 0
+```
+
+Requirements:
+
+- Use `--mode competition`.
+- The match must reach a normal end (win, loss, or draw / truncation).
+- Do not treat a classic or non-competition preset run as sufficient.
+
+After Phase 2, also store the game under `data/games/` before you update ratings.
+
+## Subagent roles (workflow only)
+
+Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put strategy in this file or in skill bodies beyond links into `docs/`.
+
+| Role | Owns | Skills | Done when |
+| --- | --- | --- | --- |
+| explorer | Read `docs/` + `RULES.md`; map engine APIs | `run-competition-match` to verify observations | Notes cite a finished `--mode competition` match; no unmeasured strategy claims |
+| bot-author | Add or change `bots/<name>/`; keep stdio protocol intact | `new-competition-bot`, then `run-competition-match` | New/changed `run.sh` finishes a competition match |
+| evaluator | Fixed seed grid; before/after winrate; rating delta | `evaluate-bot-change`, `update-leaderboard` | Games in `data/games/`; metrics reported; ratings only after store |
+| docs-keeper | Keep `docs/` small and accurate; sync with code + `RULES.md` | none required | Topic files stay single-purpose; no strategy moved into `AGENTS.md` |
+
+### explorer
+
+1. Start at [`docs/index.md`](docs/index.md) and [`RULES.md`](RULES.md).
+2. Map APIs from `competition-module` docs and DeepWiki; do not edit submodule internals unless a bug blocks work.
+3. Confirm claims with `run-competition-match` (or raw `matchup.py --mode competition`).
+
+### bot-author
+
+1. Scaffold with skill `new-competition-bot` from `bots/smoke/`.
+2. Keep `main.py` / wire protocol stable; change decision code under `bots/<name>/`.
+3. Verify with `run-competition-match` before calling the bot ready.
+
+### evaluator
+
+1. Follow [`docs/research/experiment-protocol.md`](docs/research/experiment-protocol.md).
+2. Use skill `evaluate-bot-change` for the seed grid and metrics.
+3. Store games via `arena/run_match.py` / `arena/tournament.py` (or `scripts/`), then `update-leaderboard`.
+
+### docs-keeper
+
+1. Prefer many small files under `docs/`.
+2. Sync schema and protocol pages when arena or bot layout changes.
+3. Reject strategy content in `AGENTS.md` and skill files; move it to `docs/`.
+
+## Cursor skills (Phase 2)
+
+| Skill | Path |
+| --- | --- |
+| run-competition-match | [`.cursor/skills/run-competition-match/`](.cursor/skills/run-competition-match/) |
+| new-competition-bot | [`.cursor/skills/new-competition-bot/`](.cursor/skills/new-competition-bot/) |
+| evaluate-bot-change | [`.cursor/skills/evaluate-bot-change/`](.cursor/skills/evaluate-bot-change/) |
+| update-leaderboard | [`.cursor/skills/update-leaderboard/`](.cursor/skills/update-leaderboard/) |
+
+Planned CLIs and modules: `scripts/`, `arena/run_match.py`, `arena/tournament.py`, `arena/ratings.py`; data under `data/games/` and `data/ratings/`.
+
+## Sources of truth (priority)
+
+1. `RULES.md` + `GeneralsEnv(mode="competition")` + modifiers
+2. `competition-module/competition/protocol.py` + `matchup.py` for submission-shaped bots
+3. DeepWiki / submodule README for JAX env, in-process agents, remote classic play
+4. Classic generals.io lore only when it does not conflict with (1)
+
+See [`docs/sources.md`](docs/sources.md).

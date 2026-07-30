@@ -1,15 +1,32 @@
-# Exact Python library versions of the competition sandbox (CPython 3.12),
-# verified against the live evaluation image on 2026-07-27.
+# Arena dependencies (Phase 2+)
+#
+# Install the editable engine first:
+#     pip install -e competition-module
+# Then:
+#     pip install -r requirements.txt
+#
+# Elo ratings for the local bot arena
+elote
+
+# ---------------------------------------------------------------------------
+# Submitted-bot / competition sandbox pins
+#
+# Canonical copy:
+#     competition-module/competition/requirements.txt
+#
+# Install those when you need your local env to match the evaluation image:
+#     pip install -r competition-module/competition/requirements.txt
+#
 # Full environment docs: https://generals.bot/docs#environment
 #
-# Make your local environment match what your submitted bot runs against:
-#
-#     pip install -r requirements.txt
+# Exact Python library versions of the competition sandbox (CPython 3.12),
+# verified against the live evaluation image on 2026-07-27.
 #
 # The sandbox runs the CPU build of torch (matches have no GPU). To match it
 # bit-for-bit on Linux, install torch separately from the CPU index first:
 #
 #     pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cpu
+# ---------------------------------------------------------------------------
 numpy==2.4.6
 scipy==1.18.0
 pandas==3.0.5
