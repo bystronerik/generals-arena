@@ -10,3 +10,6 @@ __pycache__/
 data/games/*.json
 data/ratings/*.json
 data/ratings/leaderboard.md
+
+# Live generals.io session logs (classic rules; not arena Elo)
+data/remote_games/*.json

@@ -73,12 +73,14 @@ good against humans".
 
 ---
 
-## 3. Adapter design (for a bot-author agent to implement)
+## 3. Adapter design
 
-Proposed files, neither of which exists yet:
+Implemented:
 
-- `arena/remote_adapter.py` — the translation layer.
-- `scripts/remote_play.py` — thin CLI wrapper.
+- `arena/remote_adapter.py` — observation translation and `StdioStrategyAdapter`.
+- `scripts/remote_play.py` — CLI, credential checks, JSON logging to `data/remote_games/`.
+
+Setup guide: [`remote-play-setup.md`](remote-play-setup.md).
 
 ### 3.1 Observation translation
 
@@ -179,14 +181,17 @@ source .venv/bin/activate
 pip install -e competition-module      # brings python-socketio[client]>=5.11.4
 
 export GENERALS_USER_ID='<your long random secret>'
-export GENERALS_USERNAME='[Bot] arena_expand_plus'
+export GENERALS_USERNAME='[Bot] arena_army_convey'
 export GENERALS_LOBBY_ID='arena-test'
 
+# offline verify first (no credentials needed)
+python scripts/remote_play.py --mode dry-run --bot army_convey
+
 # private lobby, human joins the same lobby id (safe first test)
-python scripts/remote_play.py --bot expand_plus --mode lobby
+python scripts/remote_play.py --bot army_convey --mode lobby
 
 # public 1v1 queue against real players (only after the lobby test passes)
-python scripts/remote_play.py --bot expand_plus --mode 1v1
+python scripts/remote_play.py --bot army_convey --mode 1v1 --max-games 5
 ```
 
 Rules for handling the secret:
@@ -209,7 +214,8 @@ Rules for handling the secret:
 
 Remote games must **not** go into `data/games/` or the Elo book — different
 ruleset, and mixing them corrupts the competition leaderboard. Use a separate
-store, `data/remote/<session_id>.json`, and a separate summary table.
+store, `data/remote_games/<timestamp>_<bot>_<result>.json`, and a separate
+summary table.
 
 Per game:
 
