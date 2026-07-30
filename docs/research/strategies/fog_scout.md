@@ -115,3 +115,29 @@ FUNCTION act(obs):
 ## 7. Experiment Hypothesis
 
 Directing idle stacks toward fog frontiers reveals the enemy general earlier in the match compared to `expand_plus`, providing actionable targeting data before turn 800 deathtouch.
+
+## Parameter revision 1
+
+### Measurement Context
+Round 1 benchmark results (`docs/research/measurements/round1.md`):
+- Winrate: 60.0% (6 wins, 0 losses, 4 draws out of 10 games).
+- Mean turns: 753.4. Elo: 1580.4 (Rank 2).
+- Key observation: High performance, but draws in 40% of games due to slow conversion after initial scouting and thin stack dispersion during fog marches.
+
+### What to Keep Unchanged
+- **Core Identity**: Fog-probing and information-seeking behavior driven by persistent vision history.
+- **Vision Tracking**: Persistent maintenance of `ever_seen_grid` across turns.
+- **Priority Hierarchy**: Immediate Enemy General Attack (Priority 1) -> Direct Expansion (Priority 2 & 3) -> Fog Frontier March (Priority 4) -> Fallback (Priority 5).
+- **Fog Base Bonus**: `FOG_BONUS` multiplier of 3.0x for unrevealed or currently fogged destination cells.
+
+### What to Tune
+1. **Opponent Contact Bonus**:
+   - Increase `OPPONENT_BONUS` multiplier from 2.0x to 3.5x when destination cell is owned by opponent.
+   - Rationale: Accelerates victory conversion once enemy territory or general location is discovered through scouting.
+2. **Fog March Army Threshold**:
+   - Set minimum army threshold for Priority 4 Fog Frontier March to `army >= 3`.
+   - Rationale: Prevents single-unit scouting stacks from marching into fog and dying to hidden neutral or opponent cells.
+3. **Vision Saturation Scaling**:
+   - When revealed map coverage exceeds 75%, reduce `FOG_BONUS` from 3.0x to 1.5x and increase direct capture priority for visible opponent cells.
+   - Rationale: Prevents late-game lingering on isolated fog corners when opponent positions are already known.
+

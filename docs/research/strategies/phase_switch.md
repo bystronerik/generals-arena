@@ -253,3 +253,27 @@ winner/turns/terminated/truncated, not final land/army or per-tick army. The
 income claim cannot be measured from stored games alone; proving it needs a
 schema follow-up (see `002-castle-builder-early-investment.md`'s open note).
 The winrate / fault / castle-count claims can be measured today.
+
+## Parameter revision 1
+
+Source: [`round1.md`](../measurements/round1.md) + [`round1.json`](../measurements/round1.json). 14 games: 1 W, 3 L, 10 D. Winrate 7.1%, Elo 1473.7, mean turns 1063.5.
+
+### What the data says
+
+- **Castles built: 2 per game (every game).** The `MAX_OWN_CASTLES = 2` cap is the binding constraint. `castle_builder` builds 3 and `castle_rush` builds 4 in the same grid; `phase_switch` is the weakest economy in the economy cluster.
+- **The one win fired from the late phase.** `phase_switch` beat `garrison` at turn 1089 — past `LATE_START = 800`. The deathtouch hunt mechanism works when it gets a sighting and reaches turn 800. This is positive evidence for the phase gate; do not weaken it.
+- **The three losses are all mid-phase, to aggressive scouts.** `fog_scout` won at turn 442, `army_convey` at 549, `late_rush` at 809. All three close before the late hunt can fire. `phase_switch` is economically behind in mid-phase because it builds only 2 castles while the opponents out-scout or out-economy it.
+- **Economy-cluster games all draw at 1200.** vs `castle_builder` (×2), vs `castle_rush` (×4). The phase gate does not break the build mechanism (no faults), but the 2-castle cap leaves `phase_switch` unable to press an economy advantage.
+
+### Tweaks (preserve gated early/mid/late phases)
+
+| Parameter | Was | Now | Rationale |
+| --- | --- | --- | --- |
+| `MAX_OWN_CASTLES` | 2 | 3 | The mid window (turn 80–800 = 720 ticks) with a 40-turn cooldown fits a third castle. Matches `castle_builder`'s economy while keeping the phase gate as the defining feature. The 2-castle cap was the conservative default; the data shows the mid window has unused capacity. |
+| `EARLY_END` | 80 | 60 | Start mid-phase economy 20 ticks earlier so the third castle amortizes within the window. Still a hard phase gate; still pure expand before turn 60. The 20-tick shift gives ~10 extra army-growth ticks of castle income by mid-game, addressing the economic deficit behind the aggressive scouts. |
+
+Unchanged: `LATE_START = 800` (rule-fixed), `BUILD_COOLDOWN = 40`, `BUILD_SURPLUS_MARGIN = 15`, `MIN_LAND_TO_BUILD = 8`. The hunt, build, relocate, and expand sub-procedures stay verbatim from `castle_builder` / `expand_plus` / `general_hunter`.
+
+### What this tests
+
+Does a third castle in the mid window convert any of the 3 mid-phase losses into draws or wins, without breaking the clean-draw record in the economy cluster? The hypothesis is unchanged — the phase gate is still the one change vs `castle_builder`; the cap raise only lets the existing mid-phase build mechanism fire one more time.

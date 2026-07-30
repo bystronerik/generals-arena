@@ -298,6 +298,38 @@ reserve stack unless the capture is clearly legal.
 intercept stacks on the last two route cells and capture the runner source.
 Army on the general alone is not sufficient.
 
+## Parameter revision 1
+
+Round 1 produced `0` wins, `3` losses, and `7` draws in `10` games. Both games
+against `smoke` and the game against `expand_plus` reached the 1,200-turn
+limit. The losses occurred against `army_convey` on turn 461, `late_rush` on
+turn 477, and `phase_switch` on turn 1,089. These results show that the first
+parameters preserve the general in passive games, but do not convert that
+security into wins and do not stop all timed attacks.
+
+Use these revisions for the next measurement:
+
+- Keep the four defensive phases and the no-castle rule.
+- Change the phase reserve floors from `8`, `16`, `24`, and `12` to `8`, `14`,
+  `20`, and `10`.
+- Keep the safe radii and threat scan radii unchanged.
+- Change the visible-pressure divisor in `required_general_army` from `4` to
+  `3`. This change gives visible pressure more weight while the lower base
+  floors release army when no threat is visible.
+- Keep recent enemy entries for `30` turns instead of `20` turns.
+- Permit the local counterattack in phases 2 and 3 when a visible enemy stack
+  can reach the general in `3` moves instead of `2` moves.
+- Increase the neutral-plain base value from `30` to `45`.
+- Increase the new-frontier bonus from `80` to `120`.
+- Reduce the safe-radius source penalty from `-500` to `-300` only when no
+  visible or recent threat exists inside the phase threat scan radius.
+- Keep the reserve check, defense-deficit rejection, route denial, and
+  deathtouch interception rules unchanged.
+
+This revision must remain a defensive strategy with careful expansion. It must
+not add a fixed commitment turn, a main rush stack, or an irreversible attack
+phase.
+
 ## Experiment hypothesis
 
 The primary hypothesis is:

@@ -1,7 +1,8 @@
 # splitter — split-move strategy spec
 
-Status: **spec only, not implemented**. Target bot path: `bots/splitter/`
-(fork `bots/expand_plus/`; keep `main.py` / `run.sh` protocol intact).
+Status: **implemented** at `bots/splitter/` (fork of `bots/expand_plus/`;
+`main.py` / `run.sh` protocol intact). Measured in round 1 — see
+`## Parameter revision 1` below.
 Baseline: `expand_plus` (greedy capture + BFS frontier march, `split=0`
 everywhere). One change only: a split-flag decision layer plus the scoring
 adjustments it needs.
@@ -222,3 +223,67 @@ python competition-module/competition/matchup.py \
 
 Match must finish (win, loss, or draw at 1200). Bot code is out of scope
 for this spec change; only docs are written now.
+
+## Parameter revision 1
+
+### Measurement Context
+
+Round 1 benchmark results ([`round1.md`](../measurements/round1.md),
+58 games, grids `new_vs_smoke` / `new_vs_expand_plus` / `new_round_robin`):
+
+- Winrate: 0.0% (0 wins, 3 losses, 7 draws out of 10 games).
+- Mean turns: 982.5. Elo: 1455.5 (Rank 9 of 11).
+- All three losses went to concentrated single-stack bots: `army_convey`
+  in **341 turns** (seed 0, the fastest decisive game of round 1),
+  `fog_scout` in 504, `late_rush` in 580. Halved split armies lost every
+  direct fight.
+- Both `smoke` games drew at 1200. Splitter never threatened the smoke
+  general; the deathtouch runner-split gate (`turn >= 800` and enemy
+  general known) never fired because splitter has no sighting.
+- Round 1 open question "which new bots beat smoke on both seeds 0 and
+  1": splitter beat smoke on **neither** seed.
+
+### What to Keep Unchanged
+
+- **Core identity**: split-aware multi-front pressure as one split-flag
+  decision layer on the `expand_plus` baseline. No choke detection —
+  corridor policy stays with [`choke_control`](choke_control.md).
+- **Engine semantics**: `split=1` moves `A // 2`, leaves the ceil;
+  capture needs moved army strictly greater than the defender.
+- **Scoring shape**: `base(moved, dest)` times `split_bonus(s, dest)`
+  with named weights; exact ties resolve to `split=0`.
+- **The three split triggers**: `extra_fronts`, `contested`, `overkill`
+  on neutral destinations.
+- **`split=0` commitments**: opponent stacks, castles, the enemy general,
+  any source that is our general, and all BFS consolidation steps.
+
+### What to Tune
+
+1. **Threat-gated split suppression** (new guard constant):
+   - Never propose `split=1` when a visible opponent stack with army
+     `>= A // 2` sits within `SPLIT_THREAT_RADIUS = 2` passable-BFS steps
+     of the source or the destination.
+   - Rationale: the 341-turn loss to `army_convey` shows splits fired
+     near a concentrated enemy stack donate half armies piecemeal.
+     `W_GARRISON` prices recapture by 2-army pokes; it does not price an
+     adjacent 40-army stack.
+2. **Survivable halves**:
+   - `SPLIT_MIN_ARMY` 8 → 16 and `SPLIT_MARGIN` 2 → 4.
+   - Rationale: under the v1 constants a legal half is 4 army; it cannot
+     hold a captured cell against a one-step enemy poke, and all three
+     losses show split fronts collapsing before turn 600. With 16/4 each
+     half starts at 8 and captures with margin 4.
+3. **Late probe-runner gate** (win-condition conversion):
+   - Keep the existing runner split (`turn >= 800`, enemy general known).
+     Add a second gate: at `turn >= PROBE_SPLIT_TURN = 1000` with the
+     enemy general unknown, the largest frontier stack with
+     `A >= SPLIT_MIN_ARMY` may split into two runners aimed at the two
+     frontier cells farthest from the own general (passable BFS),
+     preferring cells adjacent to fog; each runner keeps
+     `A // 2 >= SPLIT_MIN_ARMY // 2`. One runner pair at a time.
+   - Rationale: 0% winrate with 70% draws. The known-general gate
+     requires a sighting splitter never gets (both smoke games drew at
+     1200). Two independent runners preserve the multi-front identity and
+     create the contact threats that `army_convey`, `late_rush`, and
+     `fog_scout` used to convert wins. This is a conversion gate, not a
+     scouting system.

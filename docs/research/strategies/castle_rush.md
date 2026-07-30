@@ -258,3 +258,27 @@ land/army. The income claim ("higher late-game income") cannot be measured
 from stored games alone; it needs a schema follow-up (final land/army at
 truncation, or per-tick army). The castle-count and winrate claims can be
 measured today from the matchup logs and the stored record.
+
+## Parameter revision 1
+
+Source: [`round1.md`](../measurements/round1.md) + [`round1.json`](../measurements/round1.json). 14 games: 0 W, 2 L, 12 D. Winrate 0%, Elo 1473.8, mean turns 1132.4.
+
+### What the data says
+
+- **Castles built: 4 in 13 of 14 games, 3 in the other.** The `RUSH_CAP = 4` cap is reached reliably. The rush parameters (`RUSH_START`, `RUSH_COOLDOWN`, `RUSH_MIN_LAND`) work as designed — the build mechanism is not starved.
+- **Zero wins.** 4 castles of income never convert to a win. 12 of 14 games draw at 1200. The income bet (the core hypothesis) does not pay off against this opponent pool; the bot lacks any win condition beyond economy.
+- **Both losses are to aggressive hunters in mid-game.** `army_convey` won at turn 684 (castle_rush built 4); `late_rush` won at turn 769 (castle_rush built only 3 that game). Both close well before turn 800. The pattern points at thin-garrison castles feeding runner stacks to hunters, not at the rush timing.
+- **Economy-cluster games all draw at 1200.** vs `castle_builder` (×2), vs `phase_switch` (×4). The 4-castle economy does not press an advantage over `castle_builder`'s 3 or `phase_switch`'s 2; the extra income is not convertible.
+
+### Tweaks (preserve aggressive castle count/timing)
+
+| Parameter | Was | Now | Rationale |
+| --- | --- | --- | --- |
+| `RUSH_SURPLUS_MARGIN` | 5 | 8 | The thin garrison (5) leaves new castles with near-zero defenders. Raising to 8 puts ~3 more army on each new castle without changing the rush timing. This directly targets the 2 hunter losses — fewer free runner stacks handed to `army_convey` / `late_rush`. The rush identity (early start, high cap, short cooldown) is unchanged. |
+| `RUSH_MIN_LAND` | 5 | 6 | One more cell of territory before the first build makes the first castle cell less exposed to a raid. Still well below `castle_builder`'s 8, so the rush stays aggressive. |
+
+Unchanged: `RUSH_START = 10`, `RUSH_CAP = 4`, `RUSH_COOLDOWN = 25`. These three knobs define the aggressive count/timing core; they stay. No deathtouch hunt is added — `castle_rush` remains an economy bot, distinct from `phase_switch`.
+
+### What this tests
+
+Does a slightly thicker garrison on rush castles cut the 2 hunter losses without dropping the 4-castle build rate? The hypothesis is unchanged — the one change vs `castle_builder` is still the build parameters; the surplus-margin and min-land shifts only adjust how much garrison each castle starts with, not how many castles get built or when.

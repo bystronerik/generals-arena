@@ -403,6 +403,41 @@ before its direct beeline. `late_rush` should gain the first sighting through
 the committed probe. `late_rush` has more home risk because its main army moves
 away from the own general.
 
+## Parameter revision 1
+
+Round 1 produced `8` wins, `2` losses, and no draws in `10` games. The strategy
+beat `smoke` on turns 685 and 683, beat `expand_plus` on turn 554, and beat
+`garrison`, `splitter`, `choke_control`, `phase_switch`, and `castle_rush` on
+turns 477 through 809. The losses against `army_convey` on turn 480 and
+`fog_scout` on turn 509 occurred before the default commitment window. These
+results support the timed-rush identity, but they show that the first
+accumulation schedule can wait too long against fast pressure.
+
+Use these revisions for the next measurement:
+
+- Start rally selection at turn `400` instead of turn `450`.
+- Start accumulation at turn `550` instead of turn `600`.
+- Start commitment at turn `625` when the enemy general is known.
+- Start commitment at turn `650` when a visible or remembered enemy route gives
+  a stable target.
+- Start commitment at turn `675` in all other cases instead of turn `700`.
+- Change the home reserve floors from `8`, `10`, and `12` to `10`, `12`, and
+  `12` for expansion, rally selection, and accumulation.
+- Change the minimum eligible main-stack army from `12` to `10`. Keep the
+  25-turn maximum consolidation delay.
+- Refresh the rally cell every `20` turns instead of every `25` turns.
+- Change the stalled-target threshold from `12` turns to `8` turns after
+  commitment.
+- Permit the one-move emergency defense before or after commitment when a
+  visible enemy can reach the own general in at most `3` moves. Resume the same
+  commitment on the next turn.
+- Keep all deathtouch contact priorities and the irreversible commitment rule
+  unchanged.
+
+This revision must remain a timed commitment strategy. It must not keep
+reinforcement near the own general after the immediate emergency ends, and it
+must not return to broad expansion after commitment.
+
 ## Experiment hypothesis
 
 The primary hypothesis is:

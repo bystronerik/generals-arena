@@ -1,9 +1,10 @@
 # choke_control — corridor control strategy spec
 
-Status: **spec only, not implemented**. Target bot path:
-`bots/choke_control/` (fork `bots/expand_plus/`; keep `main.py` /
-`run.sh` protocol intact). Baseline: `expand_plus`. One change only:
-choke-aware capture scoring plus a hold/deny rule for owned choke cells.
+Status: **implemented** at `bots/choke_control/` (fork of
+`bots/expand_plus/`; `main.py` / `run.sh` protocol intact). Measured in
+round 1 — see `## Parameter revision 1` below. Baseline: `expand_plus`.
+One change only: choke-aware capture scoring plus a hold/deny rule for
+owned choke cells.
 
 ## Goal
 
@@ -257,3 +258,79 @@ python competition-module/competition/matchup.py \
 
 Match must finish (win, loss, or draw at 1200). Bot code is out of scope
 for this spec change; only docs are written now.
+
+## Parameter revision 1
+
+### Measurement Context
+
+Round 1 benchmark results ([`round1.md`](../measurements/round1.md),
+58 games):
+
+- Winrate: 0.0% (0 wins, 3 losses, 7 draws out of 10 games).
+- Mean turns: 978.7. Elo: 1457.2 (Rank 8 of 11) — below its own baseline
+  `expand_plus` (1464.7, Rank 7).
+- Same three executioners as `splitter`: `army_convey` in 429 turns,
+  `fog_scout` in 430, `late_rush` in 528 — all concentrated-stack bots.
+  Static holds of 10–20 army died to 40+ stacks; the `K = 6` deny
+  reinforcement reacted too late.
+- Both `smoke` games drew at 1200: holding corridors against a passive
+  opponent splits the board instead of ending the game.
+- The choke capture preference produced no measurable gain on the round 1
+  grid — measurement confirms the spec's own "chokes everywhere" and
+  "parallel corridors" edge cases.
+
+### What to Keep Unchanged
+
+- **Core identity**: corridor/deny geography on the `expand_plus`
+  baseline — claim gates, hold them, deny passage. Not a generic
+  movement or split tweak.
+- **Detector**: layer-1 `narrow`, layer-2 `gate` articulation proxy,
+  layer-3 frontier relevance, fog decay over visible neighbors only.
+- **Hold rule shape**: a held choke emits only same-line shifts,
+  overwhelming attacks, or sub-floor fights.
+- **Split policy**: `split=0` default; the two-deep hold split only into
+  corridor mouths; never split when attacking through a choke.
+
+### What to Tune
+
+1. **Threat-scaled hold floor**:
+   - Replace the flat `HOLD_MIN_ARMY = 10` with
+     `hold_floor(x) = max(HOLD_MIN_ARMY, ceil(threat(x) * HOLD_THREAT_MULT))`,
+     `HOLD_THREAT_MULT = 1.5`; widen `K` 6 → 8 so deny reinforcement
+     starts two turns earlier. Raise the two-deep hold split floor
+     (`SPLIT_MIN_ARMY`, shared vocabulary with
+     [`splitter`](splitter.md)) 8 → 16 so each stacked layer holds at
+     least 8.
+   - Rationale: the 429- and 528-turn losses show a 10–20 army hold
+     cannot stop a concentrated 40+ stack; the hold must grow with the
+     visible threat or it just donates army later.
+2. **Abandon-hold release** (deny-rule parameter):
+   - New constant `ABANDON_MULT = 2.0`: when
+     `threat(x) > A * ABANDON_MULT` and no own stack can reinforce `x`
+     within 2 turns, lift the hold rule for `x` — the stack counterattacks
+     the threat source or retreat-merges along the corridor line instead
+     of dying in place. Re-evaluate every turn (the "useless holds"
+     re-check, now threat-driven).
+   - Rationale: parked hold stacks donated their army in all three
+     losses. The gate test keeps deciding *where* to hold; threat
+     arithmetic decides *whether*. Geography stays the identity.
+3. **Gate-only capture weight**:
+   - Restrict `W_CHOKE` to destinations that pass the layer-2 `gate`
+     test (drop the narrowness-only half credit for bends) and lower
+     `W_CHOKE` 0.5 → 0.35, `FOG_DECAY` 0.5 → 0.25.
+   - Rationale: round 1 Elo below plain `expand_plus` says the corridor
+     preference bought cells that were not real cut vertices; at 24–26%
+     mountains `narrow >= 2` fires constantly and fog edges fabricate
+     phantom chokes.
+4. **Late push-through gate** (draw conversion, corridor-scoped):
+   - New constant `PUSH_THROUGH_TURN = 800`: from turn 800, when the
+     enemy general is known and a shortest passable route to it crosses a
+     held choke, attacks *through that choke* replace the
+     `OVERWHELM_MULT` gate with the deathtouch contact rule (any source
+     with `A >= 2` may push). No scouting is added; an unknown general
+     changes nothing, so smoke-style draws can persist — pairing with a
+     scout stays a composition question, out of scope here.
+   - Rationale: 70% of games drew at 1200. Holding never ends a game;
+     this converts a held corridor into the execute route the spec's
+     deathtouch edge case already names, without turning the bot into a
+     general hunter.

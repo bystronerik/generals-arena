@@ -119,3 +119,29 @@ FUNCTION act(obs):
 ## 7. Experiment Hypothesis
 
 Funneling interior armies along convey paths to the frontier increases total army force at expansion tips, yielding higher total captured land and higher winrates against static expanders.
+
+## Parameter revision 1
+
+### Measurement Context
+Round 1 benchmark results (`docs/research/measurements/round1.md`):
+- Winrate: 90.0% (9 wins, 0 losses, 1 draw out of 10 games).
+- Mean turns: 569.0. Elo: 1616.4 (Rank 1).
+- Key observation: Highest performing bot in round 1; fast games (341 turns vs splitter), with only 1 draw (vs `fog_scout` at turn 1200).
+
+### What to Keep Unchanged
+- **Core Identity**: Interior-to-frontier funnel concept using distance field gradients.
+- **Conveyance Metric**: Distance field generation using BFS from active frontier cells back through owned territory.
+- **Convey Scoring**: Interior stack movement scored by `army_size / (distance_to_frontier + 1)`.
+- **Frontier Expansion**: Direct frontier capture priority with 10.0 base score and 2.0x opponent multiplier.
+
+### What to Tune
+1. **Minimum Convey Stack Threshold**:
+   - Set minimum interior army size for conveyance to `army >= 3`.
+   - Rationale: Eliminates single-unit micro-conveyance moves that consume turns without meaningfully strengthening the frontier.
+2. **Frontier Stack Priority Weighting**:
+   - Add a stack consolidation weight to Priority 1 frontier captures: `score = float(army) * 10.0 + float(frontier_neighbor_armies) * 1.5`.
+   - Rationale: Focuses expansion on frontier tips supported by nearby interior stacks, breaking long stalemate draws against defensive or scouting bots.
+3. **Enemy Frontier Focus**:
+   - Increase opponent cell capture multiplier from 2.0x to 3.0x on the active frontier.
+   - Rationale: Drives faster breakthrough through enemy borders when interior armies arrive at the frontier.
+
