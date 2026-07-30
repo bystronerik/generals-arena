@@ -25,13 +25,12 @@ generals-arena/
 
 ## Install
 
+Prefer **CPython 3.12**. System Python 3.14 can fail on pygame / engine pins. Use the project venv:
+
 ```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
 pip install -e competition-module
-```
-
-For arena tools (Phase 2+), also install root deps:
-
-```bash
 pip install -r requirements.txt
 ```
 
@@ -39,22 +38,43 @@ Submitted-bot sandbox pins live in [`competition-module/competition/requirements
 
 ## Smoke match
 
-After Phase 1 adds `bots/smoke/`:
+Direct matchup (no store):
 
 ```bash
+source .venv/bin/activate
 python competition-module/competition/matchup.py \
   bots/smoke/run.sh \
   competition-module/competition/agents/expander_python/run.sh \
   --mode competition --seed 0
 ```
 
-Until then, run two reference expanders:
+Arena store (writes `data/games/<game_id>.json`):
 
 ```bash
-python competition-module/competition/matchup.py --mode competition --seed 0
+python arena/run_match.py \
+  bots/smoke/run.sh \
+  competition-module/competition/agents/expander_python/run.sh \
+  --mode competition --seed 0
+
+# or
+python scripts/smoke_match.py --seed 0 --update-ratings
 ```
 
-A valid competition match must finish under `--mode competition`.
+A valid competition match must finish under `--mode competition`. Full games can run to 1200 turns.
+
+## Tournament and leaderboard
+
+```bash
+source .venv/bin/activate
+python scripts/tournament.py \
+  bots/smoke/run.sh \
+  competition-module/competition/agents/expander_python/run.sh \
+  --seeds 0-2
+
+python scripts/leaderboard.py
+```
+
+See [`docs/arena/tournament.md`](docs/arena/tournament.md) and [`docs/arena/ratings.md`](docs/arena/ratings.md).
 
 ## Docs
 

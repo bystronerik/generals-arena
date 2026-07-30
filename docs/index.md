@@ -28,6 +28,9 @@ Small topic files for the Generals Arena research repo.
 ## Arena
 
 - [game record schema](arena/game-record-schema.md)
+- [match runner](arena/match-runner.md)
+- [ratings (elote)](arena/ratings.md)
+- [tournament](arena/tournament.md)
 
 ## Research
 

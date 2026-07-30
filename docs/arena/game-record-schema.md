@@ -25,3 +25,11 @@ Optional later: per-turn stats, fault counts, duration seconds.
 - Store every game **before** updating ratings.
 - Arena code lives in `arena/store.py` (Phase 2).
 - Do not invent extra required fields without updating this page.
+- Arena matches set `mode` to `"competition"` only.
+
+## Related
+
+- [match-runner.md](match-runner.md)
+- [ratings.md](ratings.md)
+- [tournament.md](tournament.md)
+
