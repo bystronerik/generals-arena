@@ -1,12 +1,15 @@
-"""Table-driven tests for arena/run_match.py bot-telemetry parsers."""
+"""Table-driven tests for arena/telemetry.py bot-telemetry parsers."""
 from __future__ import annotations
 
-from arena.run_match import (
+from types import SimpleNamespace
+
+from arena.store import CURRENT_SCHEMA_VERSION, GameRecord
+from arena.telemetry import (
     BotTelemetry,
     apply_telemetry_to_record,
     parse_bot_telemetry,
+    record_from_match_result,
 )
-from arena.store import GameRecord
 
 
 TELEM_P0 = (
@@ -104,3 +107,36 @@ def test_apply_telemetry_generic_extras_and_land_margin():
     assert record.metrics["first_city_capture_turn_a"] == 450
     assert record.metrics["land_margin_a"] == 20
     assert record.metrics["land_margin_b"] == -20
+
+
+def test_record_from_match_result_fills_identity_timing_and_telemetry():
+    """The shared builder used by run_and_store and tournament_worker."""
+    result = SimpleNamespace(
+        winner="a",
+        turns=137,
+        terminated=True,
+        truncated=False,
+        castles_built_a=2,
+        castles_built_b=1,
+        stderr=TELEM_P0 + TELEM_P1,
+    )
+    record = record_from_match_result(
+        result,
+        bot_a="blitz",
+        bot_b="smoke",
+        seed=7,
+        mode="competition",
+        bot_a_commit="abc1234",
+        bot_b_commit="abc1234",
+        started_at="2026-01-01T00:00:00Z",
+        finished_at="2026-01-01T00:01:30Z",
+    )
+    assert (record.bot_a, record.bot_b, record.seed) == ("blitz", "smoke", 7)
+    assert record.winner == "a" and record.turns == 137
+    assert record.schema_version == CURRENT_SCHEMA_VERSION
+    assert record.duration_seconds == 90.0
+    assert (record.castles_built_a, record.castles_built_b) == (2, 1)
+    # telemetry merged from stderr, not passed in separately
+    assert record.final_land_a == 50
+    assert record.final_land_b == 30
+    assert record.metrics["first_sighting_turn_a"] == 200

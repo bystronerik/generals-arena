@@ -1,11 +1,9 @@
-"""Run an in-process competition match and store the game record."""
+"""Run one in-process competition match and store the game record."""
 
 from __future__ import annotations
 
 import argparse
-import re
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -14,122 +12,14 @@ if str(_REPO_ROOT) not in sys.path:
 
 from arena.competition_match import run_competition_match
 from arena.store import (
-    CURRENT_SCHEMA_VERSION,
     GAMES_DIR,
     GameRecord,
     bot_id_from_run_sh,
-    duration_seconds_between,
     git_commit_or_tag,
-    make_game_id,
     save_game,
     utc_now_iso,
 )
-
-_TELEMETRY_PREFIX_RE = re.compile(
-    r"\[telemetry\] player=(?P<player>[01]) turn=(?P<turn>\d+) "
-    r"my_land=(?P<my_land>\d+) my_army=(?P<my_army>\d+) "
-    r"opp_land=(?P<opp_land>\d+) opp_army=(?P<opp_army>\d+)"
-)
-_EXTRA_KV_RE = re.compile(r"(\w+)=(\S+)")
-
-
-@dataclass
-class BotTelemetry:
-    my_land: int
-    my_army: int
-    opp_land: int
-    opp_army: int
-    enemy_general_sighted: int | None = None
-    first_sighting_turn: int | None = None
-    extras: dict[str, str] | None = None
-
-    def all_extras(self) -> dict[str, str]:
-        merged: dict[str, str] = dict(self.extras or {})
-        if self.enemy_general_sighted is not None:
-            merged.setdefault("enemy_general_sighted", str(self.enemy_general_sighted))
-        if self.first_sighting_turn is not None:
-            merged.setdefault("first_sighting_turn", str(self.first_sighting_turn))
-        return merged
-
-
-def _parse_telemetry_extras(tail: str) -> dict[str, str]:
-    return {match.group(1): match.group(2) for match in _EXTRA_KV_RE.finditer(tail)}
-
-
-def _coerce_metric_value(key: str, raw: str) -> bool | int | str:
-    if key == "enemy_general_sighted":
-        return bool(int(raw))
-    try:
-        return int(raw)
-    except ValueError:
-        return raw
-
-
-def parse_bot_telemetry(combined: str) -> dict[int, BotTelemetry]:
-    """Return the last telemetry line per player id (0 or 1)."""
-    last: dict[int, BotTelemetry] = {}
-    for line in combined.splitlines():
-        match = _TELEMETRY_PREFIX_RE.search(line)
-        if match is None:
-            continue
-        player = int(match.group("player"))
-        extras = _parse_telemetry_extras(line[match.end() :])
-        sighted = extras.get("enemy_general_sighted")
-        sighting_turn = extras.get("first_sighting_turn")
-        last[player] = BotTelemetry(
-            my_land=int(match.group("my_land")),
-            my_army=int(match.group("my_army")),
-            opp_land=int(match.group("opp_land")),
-            opp_army=int(match.group("opp_army")),
-            enemy_general_sighted=int(sighted) if sighted is not None else None,
-            first_sighting_turn=int(sighting_turn) if sighting_turn is not None else None,
-            extras=extras,
-        )
-    return last
-
-
-def apply_telemetry_to_record(
-    record: GameRecord,
-    telemetry_by_player: dict[int, BotTelemetry],
-) -> None:
-    """Fill optional land/army and sighting metrics from bot stderr telemetry."""
-    if not telemetry_by_player:
-        return
-
-    t0 = telemetry_by_player.get(0)
-    t1 = telemetry_by_player.get(1)
-
-    if t0 is not None:
-        record.final_land_a = t0.my_land
-        record.final_army_a = t0.my_army
-    if t1 is not None:
-        record.final_land_b = t1.my_land
-        record.final_army_b = t1.my_army
-    if t0 is not None and t1 is None:
-        record.final_land_b = t0.opp_land
-        record.final_army_b = t0.opp_army
-    elif t1 is not None and t0 is None:
-        record.final_land_a = t1.opp_land
-        record.final_army_a = t1.opp_army
-
-    metrics = dict(record.metrics)
-    for player_id, suffix in ((0, "_a"), (1, "_b")):
-        telemetry = telemetry_by_player.get(player_id)
-        if telemetry is None:
-            continue
-        for key, raw in telemetry.all_extras().items():
-            metrics[f"{key}{suffix}"] = _coerce_metric_value(key, raw)
-
-    if (
-        record.truncated
-        and record.winner == "draw"
-        and record.final_land_a is not None
-        and record.final_land_b is not None
-    ):
-        metrics["land_margin_a"] = record.final_land_a - record.final_land_b
-        metrics["land_margin_b"] = record.final_land_b - record.final_land_a
-
-    record.metrics = metrics
+from arena.telemetry import record_from_match_result
 
 
 def run_and_store(
@@ -160,26 +50,17 @@ def run_and_store(
     )
     finished_at = utc_now_iso()
 
-    record = GameRecord(
-        game_id=make_game_id(bot_a, bot_b, seed),
-        seed=seed,
-        mode=mode,
+    record = record_from_match_result(
+        result,
         bot_a=bot_a,
         bot_b=bot_b,
-        bot_a_commit_or_tag=commit_a,
-        bot_b_commit_or_tag=commit_b,
-        winner=result.winner,
-        turns=result.turns,
-        terminated=result.terminated,
-        truncated=result.truncated,
+        seed=seed,
+        mode=mode,
+        bot_a_commit=commit_a,
+        bot_b_commit=commit_b,
         started_at=started_at,
         finished_at=finished_at,
-        schema_version=CURRENT_SCHEMA_VERSION,
-        duration_seconds=duration_seconds_between(started_at, finished_at),
-        castles_built_a=result.castles_built_a,
-        castles_built_b=result.castles_built_b,
     )
-    apply_telemetry_to_record(record, parse_bot_telemetry(result.stderr or ""))
     path = save_game(record, games_dir or GAMES_DIR)
     print(f"[run_match] stored {path}")
     print(
