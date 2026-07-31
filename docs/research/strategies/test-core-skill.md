@@ -35,8 +35,9 @@ Shipped state at the time of this design: commit `4c5f0ff` added
 `tests/test_tournament.py`, `tests/test_remote_block.py`,
 `tests/test_classic_match.py`, `arena/remote_block.py`, and a first
 `.cursor/skills/analyze-and-test-core/SKILL.md`. That commit closes most of T1
-and all of T2. The suite holds 54 tests. Section 15 lists the delta between the
-shipped skill file and this design.
+and all of T2. The suite held 54 tests then; it holds 266 today, and the core
+surface in section 5 has since gained C11 (see the 2026-07-31 note there).
+Section 15 lists the delta between the shipped skill file and this design.
 
 ## 2. Skill name
 
@@ -112,6 +113,15 @@ is not in it.
 | C8 | Classic match result contract | `arena/classic_match.py` | `run_classic_match` return contract, and the record writer that arrives with A1 | Classic results use a different ruleset and must never reach `data/games/` |
 | C9 | Remote human-count filter | `arena/remote_block.py` | `counts_as_human_block_game`, `count_human_block_games` | The filter defines a human block; T2 lived here |
 | C10 | Grid construction helpers | `arena/tournament.py`, `scripts/measure_heuristics.py` | `parse_seeds`, `bot_pairs`, `build_grid` | A wrong seed set or pair set silently changes what a round measures |
+| C11 | Bot version registry | `arena/records/registry.py` | `Registry.register` (idempotent, revert case), `require_registered`, `verify` | The registry is the only thing that maps a rated hash back to source; a wrong entry makes a measured delta unattributable |
+
+**2026-07-31.** The refactor at `docs/arena/ratings-refactor-plan.md` rewrote C5
+and added C11. C5 used to be "rating idempotence by `game_id`" — a property the
+old sequential model passed while being badly broken, since it says nothing
+about whether the ratings depend on the order matches finished in. The module
+paths in the table above predate the `arena/` reorganisation; the shipped
+`.cursor/skills/analyze-and-test-core/SKILL.md` carries the current ones and is
+the file the skill actually reads.
 
 `scripts/remote_lobby_watch.py:_counted_human_games_since` is a thin delegate to
 C9 and needs no separate test. Test the module, not the delegate.
@@ -124,13 +134,17 @@ Existing coverage, so that the skill does not duplicate work:
 | `tests/test_remote_client.py` | C7 reason mapping, `opponent_is_bot`, win, loss, disconnect records | `stall` and `receive_error` records; a null `opponent_is_bot` in the written record |
 | `tests/test_telemetry_parsers.py` | C1, C2, C3 | Two castle lines in one capture; telemetry with one player only |
 | `tests/test_store.py` | C4 | — |
-| `tests/test_ratings.py` | C5 | count-table canonicality under any ordering; pooling policy; reproducible artifacts |
-| `tests/test_tournament.py` | C10 for `parse_seeds` and `bot_pairs` | `build_grid` seat coverage after E2 lands |
+| `tests/test_ratings.py` | C5 order-invariance, count-table canonicality, pooling policy, reproducible artifacts | — |
+| `tests/test_ratings_model.py` | C5 likelihood derivatives, anchor stability, strength/seat/draw recovery, sparse cases, the elote oracle | — |
+| `tests/test_ratings_cache.py` | C5 per-round caches: same answer, less work | — |
+| `tests/test_ratings_lineage.py` | C5 lineage ordering, the revert case, `inherited` steps | — |
+| `tests/test_registry.py` | C11 hash to closure to git ref to diff; idempotent registration; `--strict`; `verify` | — |
+| `tests/test_tournament.py` | C10 for `parse_seeds` and `bot_pairs`, plus seat policy and orientation-independent `_pair_rng` | — |
 | `tests/test_remote_block.py` | C9 including the null case | — |
 | `tests/test_classic_match.py` | C8 smoke, marked `slow` | The classic record writer that arrives with A1 |
 
 Priority order when the change does not point at one target: **C1, C9, C4, C5,
-C3, C2, C10, C7 gap, C6 gap, C8**.
+C11, C3, C2, C10, C7 gap, C6 gap, C8**.
 
 ## 6. Out of scope
 
@@ -210,23 +224,30 @@ Mocks stay for one purpose only: the remote client boundary
 | New test functions per invocation | 8 |
 | Cases per table | 4 |
 | Lines per test function | 25 |
-| Whole suite runtime after the change | under 3 seconds with a warm cache |
+| Whole suite runtime after the change | under 7 seconds with a warm cache |
 | New dependencies | 0 |
 
 When the analysis names more than eight tests, Composer writes the top eight by
 the section 5 priority order and reports the rest as a remainder list.
 
-Runtime note (superseded): the arena's rating code no longer imports `elote` at
-all — it is a test-only oracle. The paragraph below described the old cost.
+Runtime note. 266 tests run in about 7 seconds with a warm cache. The budget
+was 3 seconds until the 2026-07-31 ratings refactor, which added three tests
+that cannot be made cheap without giving up what they check: the registry round
+trip needs a real `git` sandbox, the solver oracle needs a second,
+independently written implementation to disagree with, and the determinism
+check needs a subprocess with a different thread count. `AGENTS.md` § tester is
+the authority; treat 7 seconds as a ceiling to defend, not a number to ratchet.
 
-Historical: 54 tests ran in about 2 seconds with a warm cache. `arena/ratings.py`
-imported `elote`, `elote` imports Matplotlib, and Matplotlib builds a font cache on
-a first run in a fresh environment. That first run costs about 11 seconds. The
-skill must report the warm number and must not treat the cold run as a
-regression. Any test that needs more than 1 second belongs behind
-`@pytest.mark.slow`, and the quick loop is `python -m pytest -q -m "not slow"`.
-Declare the marker in `pytest.ini` so that pytest raises no unknown-mark
-warning.
+Two caveats the skill must respect. A cold first run in a fresh environment
+costs about 11 seconds extra, because something in the import graph pulls in
+Matplotlib and it builds a font cache — report the warm number and do not treat
+the cold run as a regression. And any *new* test that needs more than 1 second
+belongs behind `@pytest.mark.slow`, with the quick loop as
+`python -m pytest -q -m "not slow"`; the marker is declared in `pytest.ini`.
+The three tests named above are the standing exceptions, not a precedent.
+
+Superseded detail: the arena's rating code no longer imports `elote` at all —
+it is a test-only oracle, and it is not what makes the suite slow.
 
 ## 8. Procedure the skill must give
 
@@ -297,7 +318,7 @@ Add one row to the subagent role table in `AGENTS.md`:
 
 | Role | Owns | Skills | Done when |
 | --- | --- | --- | --- |
-| tester | Core coverage under `tests/`; fixtures under `tests/fixtures/` | `analyze-and-test-core` | New tests pass, the suite stays under 3 s, and every untested core target is named |
+| tester | Core coverage under `tests/`; fixtures under `tests/fixtures/` | `analyze-and-test-core` | New tests pass, the suite stays under 7 s, and every untested core target is named |
 
 Add one role subsection after `docs-keeper`:
 
@@ -353,7 +374,7 @@ The skill is complete when every line is true.
     section 14.
 11. `AGENTS.md` and `.cursor/skills/README.md` name the skill and the `tester`
     role.
-12. `python -m pytest -q` passes on the current tree and stays under 3 seconds
+12. `python -m pytest -q` passes on the current tree and stays under 7 seconds
     with a warm cache.
 
 ## 14. Changelog seed
