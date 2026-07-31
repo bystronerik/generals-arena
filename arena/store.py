@@ -1,4 +1,4 @@
-"""Game record schema and IO for `data/games/<game_id>.json`."""
+"""Game record schema and IO for `data/games/<round>/<game_id>.json`."""
 
 from __future__ import annotations
 
@@ -12,6 +12,18 @@ from typing import Any, Iterable, Literal
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GAMES_DIR = REPO_ROOT / "data" / "games"
+
+_ROUND_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def round_games_dir(round_name: str, *, games_root: Path | None = None) -> Path:
+    """Return `data/games/<round_name>/` for a measurement or tournament round."""
+    name = round_name.strip()
+    if not name or not _ROUND_NAME_RE.match(name):
+        raise ValueError(
+            f"invalid round name {round_name!r}; use letters, digits, . _ -"
+        )
+    return (games_root or GAMES_DIR) / name
 
 Winner = Literal["a", "b", "draw"]
 
@@ -173,10 +185,36 @@ def load_game(path: Path) -> GameRecord:
 
 
 def list_game_paths(games_dir: Path | None = None) -> list[Path]:
+    """
+    List game JSON files under `games_dir`.
+
+    When `games_dir` is the arena root `data/games/` (or omitted), scan
+    recursively so per-round subfolders are included. Legacy flat JSON at the
+    root still loads. When `games_dir` is a round folder, scan that folder only
+    (non-recursive), skipping `manifest.json`.
+    """
     directory = games_dir or GAMES_DIR
     if not directory.exists():
         return []
-    return sorted(directory.glob("*.json"))
+    root = GAMES_DIR.resolve()
+    try:
+        is_games_root = directory.resolve() == root
+    except OSError:
+        is_games_root = False
+
+    if is_games_root:
+        paths = [
+            p
+            for p in directory.rglob("*.json")
+            if p.is_file() and p.name != "manifest.json"
+        ]
+    else:
+        paths = [
+            p
+            for p in directory.glob("*.json")
+            if p.is_file() and p.name != "manifest.json"
+        ]
+    return sorted(paths)
 
 
 def load_all_games(games_dir: Path | None = None) -> list[GameRecord]:

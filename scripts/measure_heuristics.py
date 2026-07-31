@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Smart-grid heuristic bot measurement suite (round 1).
+"""Heuristic bot measurement suite via the parallel competition tournament API.
 
-Runs a fixed matchup grid via arena.run_match, stores games under data/games/,
-updates ratings, and writes docs/research/measurements/round1.{json,md}.
+Default grid: unordered pairs among the heuristic roster, games-per-pair random
+map seeds (Rule C), stored under data/games/<round>/, Elo rebuilt once.
 """
 
 from __future__ import annotations
@@ -22,9 +22,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from arena.parallel import default_jobs
 from arena.ratings import RatingBook
-from arena.run_match import run_and_store
-from arena.store import GameRecord
+from arena.store import GameRecord, round_games_dir
+from arena.tournament import DEFAULT_GAMES_PER_PAIR, parse_seeds
 
 MEASUREMENTS_DIR = REPO_ROOT / "docs" / "research" / "measurements"
 
@@ -49,6 +50,9 @@ BASELINE_BOTS = ["smoke", "expand_plus", "castle_builder", "general_hunter"]
 BENCHMARK_BOTS = ["cm_random", "cm_expander", "cm_hunter", "cm_harvester"]
 
 BENCHMARK_ANCHOR = "army_convey"
+
+# Default measurement roster: new heuristics + baselines (no cm_* unless listed).
+DEFAULT_ROSTER = NEW_BOTS + BASELINE_BOTS
 
 EXPANDER_PYTHON = (
     REPO_ROOT / "competition-module" / "competition" / "agents" / "expander_python" / "run.sh"
@@ -109,7 +113,7 @@ def wait_for_bots(
 
 
 def both_seat_orders(specs: list[MatchSpec]) -> list[MatchSpec]:
-    """Emit A vs B and B vs A for each spec (evaluate-bot-change seat-swap rule)."""
+    """Emit A vs B and B vs A for each spec (legacy seat-swap grid)."""
     out: list[MatchSpec] = []
     seen: set[tuple[str, str, int, str]] = set()
     for spec in specs:
@@ -123,6 +127,7 @@ def both_seat_orders(specs: list[MatchSpec]) -> list[MatchSpec]:
 
 
 def build_grid() -> list[MatchSpec]:
+    """Legacy tagged grid (optional --legacy-grid)."""
     base: list[MatchSpec] = []
 
     for bot in NEW_BOTS:
@@ -178,7 +183,9 @@ def game_entry_from_record(record: GameRecord, *, tag: str = "") -> GameEntry:
     )
 
 
-def run_one(spec: MatchSpec, *, update_ratings: bool) -> GameEntry:
+def run_one(spec: MatchSpec, *, update_ratings: bool, games_dir: Path | None = None) -> GameEntry:
+    from arena.run_match import run_and_store
+
     a_path = bot_run_sh(spec.bot_a)
     b_path = bot_run_sh(spec.bot_b)
     record = run_and_store(
@@ -186,6 +193,7 @@ def run_one(spec: MatchSpec, *, update_ratings: bool) -> GameEntry:
         b_path,
         seed=spec.seed,
         mode="competition",
+        games_dir=games_dir,
         update_ratings=update_ratings,
     )
     return game_entry_from_record(record, tag=spec.tag)
@@ -286,7 +294,12 @@ def round_leaderboard_snippet(games: list[GameEntry]) -> str:
     return "\n".join(lines)
 
 
-def write_reports(games: list[GameEntry], *, round_name: str = "round1") -> tuple[Path, Path]:
+def write_reports(
+    games: list[GameEntry],
+    *,
+    round_name: str,
+    grid_desc: dict[str, Any] | None = None,
+) -> tuple[Path, Path]:
     MEASUREMENTS_DIR.mkdir(parents=True, exist_ok=True)
     stats = aggregate_stats(games)
     notable = notable_matchups(games)
@@ -295,13 +308,10 @@ def write_reports(games: list[GameEntry], *, round_name: str = "round1") -> tupl
     payload = {
         "round": round_name,
         "generated_at": now,
-        "grid": {
-            "new_vs_smoke": "each new bot vs smoke seeds 0,1",
-            "new_vs_expand_plus": "each new bot vs expand_plus seed 0",
-            "new_round_robin": "round-robin among 8 new bots seed 0",
-            "economy_cluster": "castle_builder vs castle_rush vs phase_switch seeds 0,1",
-            "benchmark_vs_smoke": "each cm_* bot vs smoke seeds 0,1",
-            "benchmark_vs_army_convey": "each cm_* bot vs army_convey seed 0",
+        "grid": grid_desc
+        or {
+            "rule": "C",
+            "games_per_pair": "random map seeds per unordered pair; no seat swap",
         },
         "summary": stats,
         "notable_matchups": notable,
@@ -380,10 +390,9 @@ def write_reports(games: list[GameEntry], *, round_name: str = "round1") -> tupl
             "",
             "## Open questions",
             "",
-            "- Do economy-cluster bots (castle_builder, castle_rush, phase_switch) separate on Elo?",
-            "- Which new bots beat smoke on both seeds 0 and 1?",
+            "- Which bots separate on Elo with games-per-pair sampling?",
             "- Are draw-heavy matchups truncating before strategic differences show?",
-            "- Should the next round add expander_python or general_hunter as anchors?",
+            "- Should the next round add expander_python or cm_* anchors?",
             "",
             f"Machine-readable: [`{round_name}.json`]({round_name}.json)",
             "",
@@ -395,8 +404,42 @@ def write_reports(games: list[GameEntry], *, round_name: str = "round1") -> tupl
     return json_path, md_path
 
 
+def _run_legacy_grid(
+    *,
+    round_name: str,
+    update_ratings: bool,
+) -> list[GameEntry]:
+    specs = build_grid()
+    games_dir = round_games_dir(round_name)
+    print(f"[measure] legacy grid: {len(specs)} match(es) -> {games_dir}")
+    games: list[GameEntry] = []
+    for i, spec in enumerate(specs, start=1):
+        print(
+            f"[measure] ({i}/{len(specs)}) {spec.bot_a} vs {spec.bot_b} "
+            f"seed={spec.seed} [{spec.tag}]"
+        )
+        entry = run_one(spec, update_ratings=False, games_dir=games_dir)
+        games.append(entry)
+        print(
+            f"[measure]   -> {entry.winner_bot} turns={entry.turns} "
+            f"terminated={entry.terminated} truncated={entry.truncated}"
+        )
+    if update_ratings:
+        from arena.ratings import rebuild_from_games
+        from arena.store import GAMES_DIR
+
+        book = rebuild_from_games(games_dir=GAMES_DIR)
+        print(f"[measure] rebuilt ratings ({len(book.rated_game_ids)} game(s))")
+    return games
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run round-1 heuristic measurement grid.")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run heuristic measurement via parallel tournament "
+            "(games-per-pair × roster pairs)."
+        )
+    )
     parser.add_argument(
         "--wait",
         action="store_true",
@@ -417,19 +460,64 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--no-ratings",
         action="store_true",
-        help="store games only; skip global Elo update",
+        help="store games only; skip global Elo rebuild",
     )
     parser.add_argument(
         "--round",
         default=None,
-        help="output basename under docs/research/measurements/ "
+        help="round name under data/games/<round>/ and docs/research/measurements/ "
         "(default: round-YYYYMMDDTHHMMSSZ)",
+    )
+    parser.add_argument(
+        "--games-per-pair",
+        type=int,
+        default=DEFAULT_GAMES_PER_PAIR,
+        help=f"random map seeds per unordered pair (default: {DEFAULT_GAMES_PER_PAIR})",
+    )
+    parser.add_argument(
+        "--round-seed",
+        type=int,
+        default=0,
+        help="RNG seed for map-seed generation (default: 0)",
+    )
+    parser.add_argument(
+        "--seeds",
+        default=None,
+        help="optional fixed seed list/ranges (overrides --games-per-pair RNG)",
+    )
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=None,
+        help=f"parallel workers (default: physical cores = {default_jobs()})",
+    )
+    parser.add_argument(
+        "--bots",
+        nargs="+",
+        default=None,
+        help="bot ids to include (default: NEW_BOTS + BASELINE_BOTS)",
+    )
+    parser.add_argument(
+        "--legacy-grid",
+        action="store_true",
+        help="run the old tagged seat-swap grid instead of Rule C",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help="optional per-match wall-clock timeout in seconds",
     )
     args = parser.parse_args(argv)
 
     round_name = args.round or datetime.now(timezone.utc).strftime("round-%Y%m%dT%H%M%SZ")
+    roster = list(args.bots) if args.bots else list(DEFAULT_ROSTER)
 
-    required = NEW_BOTS + BASELINE_BOTS + BENCHMARK_BOTS
+    if args.legacy_grid:
+        required = NEW_BOTS + BASELINE_BOTS + BENCHMARK_BOTS
+    else:
+        required = roster
+
     if args.wait:
         wait_for_bots(required, poll_seconds=args.poll_seconds, timeout_seconds=args.wait_timeout)
     else:
@@ -438,22 +526,57 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[measure] missing bots: {', '.join(missing)}", file=sys.stderr)
             return 1
 
-    specs = build_grid()
-    print(f"[measure] running {len(specs)} match(es) (round={round_name})")
-    games: list[GameEntry] = []
-    for i, spec in enumerate(specs, start=1):
-        print(
-            f"[measure] ({i}/{len(specs)}) {spec.bot_a} vs {spec.bot_b} "
-            f"seed={spec.seed} [{spec.tag}]"
+    if args.legacy_grid:
+        games = _run_legacy_grid(
+            round_name=round_name,
+            update_ratings=not args.no_ratings,
         )
-        entry = run_one(spec, update_ratings=not args.no_ratings)
-        games.append(entry)
-        print(
-            f"[measure]   -> {entry.winner_bot} turns={entry.turns} "
-            f"terminated={entry.terminated} truncated={entry.truncated}"
-        )
+        grid_desc = {
+            "legacy": True,
+            "new_vs_smoke": "each new bot vs smoke seeds 0,1",
+            "new_vs_expand_plus": "each new bot vs expand_plus seed 0",
+            "new_round_robin": "round-robin among new bots seed 0",
+            "economy_cluster": "castle_builder vs castle_rush vs phase_switch seeds 0,1",
+            "benchmark_vs_smoke": "each cm_* bot vs smoke seeds 0,1",
+            "benchmark_vs_army_convey": "each cm_* bot vs army_convey seed 0",
+        }
+    else:
+        if args.games_per_pair < 1:
+            print("[measure] --games-per-pair must be >= 1", file=sys.stderr)
+            return 2
+        if args.jobs is not None and args.jobs < 1:
+            print("[measure] --jobs must be >= 1", file=sys.stderr)
+            return 2
 
-    json_path, md_path = write_reports(games, round_name=round_name)
+        from arena.tournament import run_tournament
+
+        fixed = parse_seeds(args.seeds) if args.seeds else None
+        run_scripts = [bot_run_sh(n) for n in roster]
+        records = run_tournament(
+            run_scripts,
+            round_name=round_name,
+            games_per_pair=args.games_per_pair,
+            round_seed=args.round_seed,
+            fixed_seeds=fixed,
+            games_dir=round_games_dir(round_name),
+            update_ratings=not args.no_ratings,
+            timeout=args.timeout,
+            swap_sides=False,
+            jobs=args.jobs,
+        )
+        games = [game_entry_from_record(r, tag="pair") for r in records]
+        grid_desc = {
+            "rule": "C",
+            "roster": roster,
+            "games_per_pair": args.games_per_pair if fixed is None else len(fixed),
+            "round_seed": args.round_seed,
+            "fixed_seeds": fixed,
+            "swap_sides": False,
+            "jobs": args.jobs if args.jobs is not None else default_jobs(),
+            "games_dir": str(round_games_dir(round_name)),
+        }
+
+    json_path, md_path = write_reports(games, round_name=round_name, grid_desc=grid_desc)
     print(f"[measure] wrote {json_path}")
     print(f"[measure] wrote {md_path}")
     return 0

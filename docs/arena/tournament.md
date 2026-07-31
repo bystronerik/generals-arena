@@ -1,8 +1,12 @@
 # Tournament
 
-`arena/tournament.py` runs N seeds × bot pairs under competition mode. Each match is stored, then rated.
+`arena/tournament.py` runs games-per-pair × bot pairs under competition mode
+with a ProcessPool of in-process match workers. Each match is stored under
+`data/games/<round>/`. Elo rebuilds once after the pool finishes (unless
+`--no-ratings`).
 
-Full competition games can run to **1200** turns (draw/truncation). Plan long timeouts for smoke vs expander grids.
+Full competition games can run to **1200** turns (draw/truncation). Plan long
+timeouts when you need hang detection.
 
 ## Command
 
@@ -10,26 +14,58 @@ Full competition games can run to **1200** turns (draw/truncation). Plan long ti
 source .venv/bin/activate
 python arena/tournament.py \
   bots/smoke/run.sh \
-  competition-module/competition/agents/expander_python/run.sh \
-  --seeds 0-2
+  bots/expand_plus/run.sh \
+  --round parallel-smoke \
+  --games-per-pair 50 \
+  --round-seed 1
 
 # thin CLI
 python scripts/tournament.py \
   bots/smoke/run.sh \
-  competition-module/competition/agents/expander_python/run.sh \
-  --seeds 0
+  bots/expand_plus/run.sh \
+  --round my-round \
+  --games-per-pair 2 \
+  --round-seed 0 \
+  --no-ratings
 ```
 
 ## Flags
 
 | Flag | Meaning |
 | --- | --- |
-| `--seeds` | `0,1,2` or `0-3` (or mixed) |
-| `--no-ratings` | store only |
-| `--swap-sides` | also play B vs A |
-| `--timeout` | per-match seconds limit |
+| `--round` | **required**; games store under `data/games/<round>/` |
+| `--games-per-pair` | random map seeds per unordered pair (default: **50**) |
+| `--round-seed` | RNG seed for map-seed generation (default: 0) |
+| `--seeds` | optional fixed seed list/ranges; overrides random generation |
+| `--jobs` | parallel workers (default: physical CPU cores; capped to that) |
+| `--no-ratings` | store only; skip Elo rebuild |
+| `--swap-sides` | also play B vs A (off by default; Rule C uses random seeds instead) |
+| `--timeout` | per-match wall-clock seconds limit |
 | `--include-self` | every ordered pair including self-play |
+| `--games-dir` | override output directory |
+
+## Parallelism
+
+- Workers run [`arena/competition_match.py`](../../arena/competition_match.py)
+  (in-process JAX + stdio bots), not a fresh `matchup.py` per match.
+- Each worker pins BLAS/OpenMP/XLA to one thread so packing can reach one
+  match per physical core.
+- Default `--jobs` equals physical core count and is hard-capped there.
+- Do not raise `--jobs` past physical cores: a CPU-starved bot can miss the
+  150 ms move budget and look faulty.
+
+## Round layout
+
+```
+data/games/<round>/
+  manifest.json          # round_seed, assignments, jobs, bots
+  <game_id>.json         # one file per match
+```
+
+`arena/ratings.py` rebuild scans `data/games/` recursively (skips
+`manifest.json`). Legacy flat JSON at `data/games/*.json` still loads.
 
 ## Verification
 
-Every match uses `--mode competition` via `arena/run_match.py`. After the grid, check `data/games/` and `data/ratings/leaderboard.md`.
+Every match uses competition mode via the in-process runner. After the grid,
+check `data/games/<round>/` and `data/ratings/leaderboard.md`.

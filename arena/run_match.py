@@ -1,4 +1,4 @@
-"""Wrap competition-module matchup.py and store the game record."""
+"""Run an in-process competition match and store the game record."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from arena.competition_match import run_competition_match
 from arena.store import (
     GAMES_DIR,
     REPO_ROOT,
@@ -279,9 +280,10 @@ def run_and_store(
     commit_b = bot_b_commit if bot_b_commit is not None else commit_a
 
     started_at = utc_now_iso()
-    result = run_matchup(a_path, b_path, seed=seed, mode=mode, timeout=timeout)
+    result = run_competition_match(
+        a_path, b_path, seed=seed, mode=mode, timeout=timeout
+    )
     finished_at = utc_now_iso()
-    combined = (result.stdout or "") + "\n" + (result.stderr or "")
 
     record = GameRecord(
         game_id=make_game_id(bot_a, bot_b, seed),
@@ -291,7 +293,7 @@ def run_and_store(
         bot_b=bot_b,
         bot_a_commit_or_tag=commit_a,
         bot_b_commit_or_tag=commit_b,
-        winner=result.winner,  # type: ignore[arg-type]
+        winner=result.winner,
         turns=result.turns,
         terminated=result.terminated,
         truncated=result.truncated,
@@ -299,12 +301,10 @@ def run_and_store(
         finished_at=finished_at,
         schema_version=2,
         duration_seconds=duration_seconds_between(started_at, finished_at),
+        castles_built_a=result.castles_built_a,
+        castles_built_b=result.castles_built_b,
     )
-
-    castles_a, castles_b = parse_castles_built(combined)
-    record.castles_built_a = castles_a
-    record.castles_built_b = castles_b
-    apply_telemetry_to_record(record, parse_bot_telemetry(combined))
+    apply_telemetry_to_record(record, parse_bot_telemetry(result.stderr or ""))
     path = save_game(record, games_dir or GAMES_DIR)
     print(f"[run_match] stored {path}")
     print(
@@ -318,11 +318,6 @@ def run_and_store(
         rate_stored_game(record)
         print("[run_match] ratings updated")
 
-    # Relay matchup logs after the store summary (stdout only, keep order stable).
-    if result.stderr:
-        print(result.stderr, end="" if result.stderr.endswith("\n") else "\n")
-    if result.stdout:
-        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
     return record
 
 

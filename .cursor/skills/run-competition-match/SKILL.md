@@ -35,7 +35,8 @@ Always pass `--mode competition`. The match must finish (win, loss, or draw / tr
 
 ## Arena store (Phase 2+)
 
-Prefer the wrapper when rating or logging:
+Prefer the wrapper when rating or logging. Single matches use the in-process
+runner (`arena/competition_match.py`) via `run_and_store`:
 
 ```bash
 python arena/run_match.py \
@@ -43,6 +44,9 @@ python arena/run_match.py \
   bots/<bot_b>/run.sh \
   --mode competition --seed 0
 ```
+
+Batch grids use `arena/tournament.py` / `scripts/measure_heuristics.py` with
+`--round <name>` (games under `data/games/<round>/`).
 
 ## Fault detection
 
@@ -56,12 +60,9 @@ Report a **fault** as a failure even when the engine reports a draw or records a
 
 ## Seat-order swap
 
-Map generation is not symmetric. For any strength claim, run both:
-
-- `A vs B`
-- `B vs A`
-
-Same seed list for both orders.
+Map generation is not symmetric. For a small fixed-seed A/B claim, run both
+seat orders (`A vs B` and `B vs A`) on the same seeds. Large Rule C rounds
+(`--games-per-pair` with random seeds) skip seat swap by default.
 
 ## Castle telemetry
 
@@ -80,7 +81,7 @@ Most stored games end as draws at the 1200-turn cap. A draw passes the verificat
 | Path | Contents |
 | --- | --- |
 | stdout / stderr | Match logs from `matchup.py` / bot processes |
-| `data/games/<game_id>.json` | Stored record after arena runner finishes |
+| `data/games/<game_id>.json` or `data/games/<round>/<game_id>.json` | Stored record after arena runner finishes |
 | `data/ratings/` | Updated only after games are stored (see **update-leaderboard**) |
 
 Schema: [`docs/arena/game-record-schema.md`](../../../docs/arena/game-record-schema.md).
@@ -93,4 +94,5 @@ Schema: [`docs/arena/game-record-schema.md`](../../../docs/arena/game-record-sch
 
 ## Changelog
 
+- 2026-07-31 — In-process runner + per-round batch paths
 - 2026-07-31 — Initial taxonomy alignment from skills-workflow.md (cause: skills-workflow build)

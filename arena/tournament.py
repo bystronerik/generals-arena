@@ -1,19 +1,32 @@
-"""N seeds × bot pairs; store each game, then update ratings."""
+"""N games × bot pairs under competition mode; parallel worker pool."""
 
 from __future__ import annotations
 
 import argparse
 import itertools
+import json
+import random
 import sys
 from pathlib import Path
+from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from arena.ratings import rate_stored_game
-from arena.run_match import run_and_store
-from arena.store import GAMES_DIR, GameRecord, bot_id_from_run_sh
+from arena.parallel import cap_jobs, default_jobs, run_pool
+from arena.ratings import rebuild_from_games
+from arena.store import (
+    GAMES_DIR,
+    GameRecord,
+    bot_id_from_run_sh,
+    git_commit_or_tag,
+    round_games_dir,
+    utc_now_iso,
+)
+from arena.tournament_worker import run_one_worker
+
+DEFAULT_GAMES_PER_PAIR = 50
 
 
 def parse_seeds(spec: str) -> list[int]:
@@ -36,7 +49,9 @@ def parse_seeds(spec: str) -> list[int]:
     return sorted(seeds)
 
 
-def bot_pairs(run_scripts: list[Path], *, include_self: bool = False) -> list[tuple[Path, Path]]:
+def bot_pairs(
+    run_scripts: list[Path], *, include_self: bool = False
+) -> list[tuple[Path, Path]]:
     """Unordered unique pairs (A,B) with A before B in the input list order."""
     scripts = [p.resolve() for p in run_scripts]
     if len(scripts) < 2 and not include_self:
@@ -52,56 +67,188 @@ def bot_pairs(run_scripts: list[Path], *, include_self: bool = False) -> list[tu
     return pairs
 
 
+def _pair_rng(round_seed: int, bot_a: str, bot_b: str) -> random.Random:
+    """Deterministic RNG stream for one pair, derived from the round seed."""
+    material = f"{round_seed}:{bot_a}\0{bot_b}".encode()
+    # Prefer hashlib for stable cross-platform mix; avoid Python hash salt.
+    import hashlib
+
+    digest = hashlib.sha256(material).digest()
+    return random.Random(int.from_bytes(digest[:8], "big"))
+
+
+def expand_pair_seeds(
+    pairs: list[tuple[Path, Path]],
+    *,
+    games_per_pair: int,
+    round_seed: int,
+    fixed_seeds: list[int] | None = None,
+) -> list[tuple[Path, Path, int]]:
+    """
+    Expand pairs into (bot_a, bot_b, map_seed) match specs.
+
+    When `fixed_seeds` is set, every pair plays that seed list.
+    Otherwise each pair draws `games_per_pair` distinct random map seeds.
+    """
+    if games_per_pair < 1:
+        raise ValueError(f"games_per_pair must be >= 1 (got {games_per_pair})")
+
+    specs: list[tuple[Path, Path, int]] = []
+    if fixed_seeds is not None:
+        for a, b in pairs:
+            for seed in fixed_seeds:
+                specs.append((a, b, seed))
+        return specs
+
+    for a, b in pairs:
+        a_id = bot_id_from_run_sh(a)
+        b_id = bot_id_from_run_sh(b)
+        rng = _pair_rng(round_seed, a_id, b_id)
+        chosen: set[int] = set()
+        while len(chosen) < games_per_pair:
+            chosen.add(rng.randrange(0, 2**31 - 1))
+        for seed in sorted(chosen):
+            specs.append((a, b, seed))
+    return specs
+
+
+def write_round_manifest(
+    games_dir: Path,
+    *,
+    round_name: str,
+    round_seed: int,
+    games_per_pair: int,
+    jobs: int,
+    bots: list[str],
+    specs: list[tuple[Path, Path, int]],
+    swap_sides: bool,
+    fixed_seeds: list[int] | None,
+) -> Path:
+    """Write `manifest.json` describing the round grid."""
+    assignments: list[dict[str, Any]] = []
+    for a, b, seed in specs:
+        assignments.append(
+            {
+                "bot_a": bot_id_from_run_sh(a),
+                "bot_b": bot_id_from_run_sh(b),
+                "seed": seed,
+            }
+        )
+    payload = {
+        "round": round_name,
+        "round_seed": round_seed,
+        "games_per_pair": games_per_pair,
+        "jobs": jobs,
+        "bots": bots,
+        "swap_sides": swap_sides,
+        "fixed_seeds": fixed_seeds,
+        "match_count": len(assignments),
+        "assignments": assignments,
+        "written_at": utc_now_iso(),
+    }
+    games_dir.mkdir(parents=True, exist_ok=True)
+    path = games_dir / "manifest.json"
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
 def run_tournament(
     run_scripts: list[Path],
-    seeds: list[int],
     *,
+    round_name: str,
+    games_per_pair: int = DEFAULT_GAMES_PER_PAIR,
+    round_seed: int = 0,
+    fixed_seeds: list[int] | None = None,
     games_dir: Path | None = None,
     update_ratings: bool = True,
     timeout: float | None = None,
     include_self: bool = False,
     swap_sides: bool = False,
+    jobs: int | None = None,
 ) -> list[GameRecord]:
     """
-    Run every seed × pair under competition mode.
+    Run games_per_pair (or fixed_seeds) × pairs under competition mode.
 
-    Store each game under data/games/, then rate when update_ratings is True.
+    Stores each game under data/games/<round>/, then rebuilds Elo once when
+    update_ratings is True.
     """
     pairs = bot_pairs(run_scripts, include_self=include_self)
     if swap_sides:
         mirrored = [(b, a) for a, b in pairs if a != b]
         pairs = pairs + mirrored
 
-    records: list[GameRecord] = []
-    total = len(seeds) * len(pairs)
-    n = 0
-    for seed in seeds:
-        for a, b in pairs:
-            n += 1
-            a_id = bot_id_from_run_sh(a)
-            b_id = bot_id_from_run_sh(b)
-            print(f"[tournament] ({n}/{total}) {a_id} vs {b_id} seed={seed}")
-            # Always store first; rate after store when requested.
-            record = run_and_store(
-                a,
-                b,
-                seed=seed,
-                mode="competition",
-                games_dir=games_dir or GAMES_DIR,
-                timeout=timeout,
-                update_ratings=False,
-            )
-            records.append(record)
-            if update_ratings:
-                rate_stored_game(record)
-                print(f"[tournament] rated game_id={record.game_id}")
+    specs = expand_pair_seeds(
+        pairs,
+        games_per_pair=games_per_pair,
+        round_seed=round_seed,
+        fixed_seeds=fixed_seeds,
+    )
+    directory = games_dir or round_games_dir(round_name)
+    worker_jobs = cap_jobs(default_jobs() if jobs is None else jobs)
+    commit = git_commit_or_tag()
+    bot_ids = [bot_id_from_run_sh(p) for p in run_scripts]
+
+    manifest_path = write_round_manifest(
+        directory,
+        round_name=round_name,
+        round_seed=round_seed,
+        games_per_pair=games_per_pair if fixed_seeds is None else len(fixed_seeds),
+        jobs=worker_jobs,
+        bots=bot_ids,
+        specs=specs,
+        swap_sides=swap_sides,
+        fixed_seeds=fixed_seeds,
+    )
+    print(f"[tournament] wrote {manifest_path}")
+    print(
+        f"[tournament] round={round_name} matches={len(specs)} "
+        f"jobs={worker_jobs} games_dir={directory}"
+    )
+
+    payloads = [
+        {
+            "bot_a_run": str(a.resolve()),
+            "bot_b_run": str(b.resolve()),
+            "seed": seed,
+            "games_dir": str(directory),
+            "mode": "competition",
+            "timeout": timeout,
+            "commit": commit,
+        }
+        for a, b, seed in specs
+    ]
+
+    def _on_result(done: int, total: int, record: GameRecord) -> None:
+        print(
+            f"[tournament] ({done}/{total}) {record.bot_a} vs {record.bot_b} "
+            f"seed={record.seed} -> {record.winner} turns={record.turns} "
+            f"game_id={record.game_id}"
+        )
+
+    records = run_pool(
+        payloads,
+        run_one_worker,
+        jobs=worker_jobs,
+        on_result=_on_result,
+    )
+    records.sort(key=lambda r: (r.seed, r.bot_a, r.bot_b, r.game_id))
     print(f"[tournament] finished {len(records)} game(s)")
+
+    if update_ratings:
+        book = rebuild_from_games(games_dir=GAMES_DIR)
+        print(
+            f"[tournament] rebuilt ratings from {GAMES_DIR} "
+            f"({len(book.rated_game_ids)} rated game(s))"
+        )
     return records
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Run N seeds × bot pairs under --mode competition; store then rate."
+        description=(
+            "Run games-per-pair × bot pairs under --mode competition "
+            "(parallel workers); store under data/games/<round>/, then rate."
+        )
     )
     parser.add_argument(
         "bots",
@@ -110,26 +257,49 @@ def main(argv: list[str] | None = None) -> int:
         help="two or more bot run.sh paths",
     )
     parser.add_argument(
+        "--round",
+        required=True,
+        help="round name; games store under data/games/<round>/",
+    )
+    parser.add_argument(
+        "--games-per-pair",
+        type=int,
+        default=DEFAULT_GAMES_PER_PAIR,
+        help=f"random map seeds per unordered pair (default: {DEFAULT_GAMES_PER_PAIR})",
+    )
+    parser.add_argument(
+        "--round-seed",
+        type=int,
+        default=0,
+        help="RNG seed for map-seed generation (default: 0)",
+    )
+    parser.add_argument(
         "--seeds",
-        default="0",
-        help="comma list and/or ranges, e.g. 0-3,10 (default: 0)",
+        default=None,
+        help="optional fixed seed list/ranges (overrides --games-per-pair RNG)",
     )
     parser.add_argument(
         "--games-dir",
         type=Path,
-        default=GAMES_DIR,
-        help=f"game JSON directory (default: {GAMES_DIR})",
+        default=None,
+        help="override output directory (default: data/games/<round>/)",
+    )
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=None,
+        help="parallel workers (default: physical CPU cores; capped to that)",
     )
     parser.add_argument(
         "--no-ratings",
         action="store_true",
-        help="store games only; do not update Elo",
+        help="store games only; do not rebuild Elo",
     )
     parser.add_argument(
         "--timeout",
         type=float,
         default=None,
-        help="optional per-match subprocess timeout in seconds",
+        help="optional per-match wall-clock timeout in seconds",
     )
     parser.add_argument(
         "--include-self",
@@ -139,19 +309,31 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--swap-sides",
         action="store_true",
-        help="also play each pair with sides swapped",
+        help="also play each pair with sides swapped (off by default)",
     )
     args = parser.parse_args(argv)
 
-    seeds = parse_seeds(args.seeds)
+    if args.games_per_pair < 1:
+        print("[tournament] --games-per-pair must be >= 1", file=sys.stderr)
+        return 2
+    if args.jobs is not None and args.jobs < 1:
+        print("[tournament] --jobs must be >= 1", file=sys.stderr)
+        return 2
+
+    fixed = parse_seeds(args.seeds) if args.seeds else None
+    games_dir = args.games_dir or round_games_dir(args.round)
     run_tournament(
         args.bots,
-        seeds,
-        games_dir=args.games_dir,
+        round_name=args.round,
+        games_per_pair=args.games_per_pair,
+        round_seed=args.round_seed,
+        fixed_seeds=fixed,
+        games_dir=games_dir,
         update_ratings=not args.no_ratings,
         timeout=args.timeout,
         include_self=args.include_self,
         swap_sides=args.swap_sides,
+        jobs=args.jobs,
     )
     return 0
 

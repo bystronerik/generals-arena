@@ -1,9 +1,17 @@
 """GameRecord round-trip and schema migration tests."""
 from __future__ import annotations
 
+import json
+
 import pytest
 
-from arena.store import GameRecord
+from arena.store import (
+    GameRecord,
+    list_game_paths,
+    load_all_games,
+    round_games_dir,
+    save_game,
+)
 
 
 V1_MINIMAL = {
@@ -69,3 +77,51 @@ def test_from_dict_rejects_invalid_winner():
     bad = dict(V1_MINIMAL, winner="x")
     with pytest.raises(ValueError, match="invalid winner"):
         GameRecord.from_dict(bad)
+
+
+def test_round_games_dir(tmp_path):
+    path = round_games_dir("round3", games_root=tmp_path)
+    assert path == tmp_path / "round3"
+
+
+def test_round_games_dir_rejects_bad_name():
+    with pytest.raises(ValueError, match="invalid round name"):
+        round_games_dir("../escape")
+
+
+def test_list_game_paths_recursive_skips_manifest(monkeypatch, tmp_path):
+    monkeypatch.setattr("arena.store.GAMES_DIR", tmp_path)
+    legacy = tmp_path / "legacy.json"
+    legacy.write_text(json.dumps(V1_MINIMAL) + "\n", encoding="utf-8")
+    round_dir = tmp_path / "roundX"
+    round_dir.mkdir()
+    (round_dir / "manifest.json").write_text("{}", encoding="utf-8")
+    game = dict(V1_MINIMAL, game_id="g2")
+    (round_dir / "g2.json").write_text(json.dumps(game) + "\n", encoding="utf-8")
+
+    paths = list_game_paths(tmp_path)
+    names = {p.name for p in paths}
+    assert names == {"legacy.json", "g2.json"}
+    assert "manifest.json" not in names
+
+    records = load_all_games(tmp_path)
+    assert len(records) == 2
+
+
+def test_list_game_paths_round_dir_non_recursive(tmp_path):
+    round_dir = tmp_path / "roundY"
+    nested = round_dir / "nested"
+    nested.mkdir(parents=True)
+    (round_dir / "manifest.json").write_text("{}", encoding="utf-8")
+    (round_dir / "top.json").write_text(json.dumps(V1_MINIMAL) + "\n", encoding="utf-8")
+    (nested / "deep.json").write_text(json.dumps(V1_MINIMAL) + "\n", encoding="utf-8")
+
+    paths = list_game_paths(round_dir)
+    assert [p.name for p in paths] == ["top.json"]
+
+
+def test_save_game_round_folder(tmp_path):
+    record = GameRecord.from_dict(V2_FULL)
+    path = save_game(record, tmp_path / "roundZ")
+    assert path.parent.name == "roundZ"
+    assert path.exists()

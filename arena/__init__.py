@@ -1,27 +1,7 @@
-"""Local bot arena: store games, run matches, rate bots, run tournaments."""
+"""Local bot arena: store games, run matches, rate bots, run tournaments.
 
-from arena import (
-    bot_api,
-    classic_match,
-    classic_tournament,
-    ratings,
-    remote_block,
-    remote_bridge,
-    remote_client,
-    run_match,
-    store,
-    tournament,
-)
+Import submodules directly (for example `from arena.store import save_game`).
+Heavy modules such as match runners are not imported here.
+"""
 
-__all__ = [
-    "bot_api",
-    "classic_match",
-    "classic_tournament",
-    "ratings",
-    "remote_block",
-    "remote_bridge",
-    "remote_client",
-    "run_match",
-    "store",
-    "tournament",
-]
+__all__: list[str] = []

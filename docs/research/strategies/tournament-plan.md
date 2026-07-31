@@ -95,33 +95,30 @@ while bots are still changing. Stage it:
 Stage 2 can be skipped for a single-bot change; use the pairwise A/B in
 `.cursor/skills/evaluate-bot-change/` instead.
 
-### Sharding without corrupting ratings
+### Parallel workers (do not shell-shard)
 
-`data/ratings/competitors.json` is one file, so two concurrent tournament
-processes will race and lose games. Shard by seed with ratings **off**, then
-rebuild once from the store:
+`arena/tournament.py` runs an in-process worker pool. Default `--jobs` equals
+physical CPU cores and is capped there. Workers pin JAX/OpenMP to one thread
+each. Elo rebuilds once after the pool (omit `--no-ratings` for that, or pass
+`--no-ratings` and run `scripts/leaderboard.py` yourself).
 
 ```bash
 source .venv/bin/activate
 BOTS="$(ls -d bots/*/run.sh) competition-module/competition/agents/expander_python/run.sh"
 
-# shard: one process per seed group, ratings disabled
-python arena/tournament.py $BOTS --seeds 0-2 --swap-sides --no-ratings --timeout 120 &
-python arena/tournament.py $BOTS --seeds 3-5 --swap-sides --no-ratings --timeout 120 &
-python arena/tournament.py $BOTS --seeds 6-9 --swap-sides --no-ratings --timeout 120 &
-wait
-
-# single authoritative rebuild from every stored game
-python scripts/leaderboard.py
+python arena/tournament.py $BOTS \
+  --round stage2-dev \
+  --games-per-pair 50 \
+  --round-seed 1 \
+  --timeout 120
 ```
 
 `--timeout 120` is ~30× the measured match time, so it only fires on a hung
 bot. Without it one deadlocked bot stalls the whole grid.
 
-A match uses ~1.8 cores (measured 178% CPU, JAX threading), so three shards
-saturate a 6-core machine. Do not oversubscribe: a bot starved of CPU can
-exceed the 150 ms budget and record faults that are the harness's fault, not
-the bot's.
+Do not raise `--jobs` past physical cores: a bot starved of CPU can exceed the
+150 ms budget and record faults that are the harness's fault, not the bot's.
+Do not launch multiple tournament processes that update ratings at once.
 
 ---
 
@@ -357,27 +354,29 @@ for b in bots/*/run.sh; do
   python arena/run_match.py "$b" bots/smoke/run.sh --seed 0 --timeout 120
 done
 
-# Stage 2.2 — full round robin, sharded, ratings off
+# Stage 2.2 — full round robin via worker pool (Rule C)
 BOTS="$(ls -d bots/*/run.sh) competition-module/competition/agents/expander_python/run.sh"
-python arena/tournament.py $BOTS --seeds 0-1 --swap-sides --no-ratings --timeout 120 &
-python arena/tournament.py $BOTS --seeds 2-3 --swap-sides --no-ratings --timeout 120 &
-python arena/tournament.py $BOTS --seeds 4   --swap-sides --no-ratings --timeout 120 &
-wait
+python arena/tournament.py $BOTS \
+  --round stage2-dev \
+  --games-per-pair 50 \
+  --round-seed 1 \
+  --timeout 120
 
-# single authoritative rebuild from every stored game
-python scripts/leaderboard.py
-
-# Stage 2.3 — holdout, top 6 only
-python arena/tournament.py <six run.sh paths> --seeds 100-111 --swap-sides --timeout 120
-python scripts/leaderboard.py
+# Stage 2.3 — holdout, top 6 only (fixed seeds if desired)
+python arena/tournament.py <six run.sh paths> \
+  --round stage2-holdout \
+  --seeds 100-111 \
+  --timeout 120
 ```
 
-`--swap-sides` is not optional. Round 1 omitted it, and every one of its
-round-robin results is confounded by seat order as a result (§2).
+Default rounds use Rule C (random map seeds, no seat swap). Pass `--seeds` for
+a fixed holdout list. Pass `--swap-sides` only when you want both seat orders
+on a fixed-seed A/B grid.
 
-Store every game before rating — `arena/tournament.py` already does this in
-the right order. Ratings are rebuildable from `data/games/` at any time, so
-the store is the source of truth and `data/ratings/` is a derived snapshot.
+Store every game before rating — `arena/tournament.py` stores under
+`data/games/<round>/` and rebuilds Elo once after the pool. Ratings are
+rebuildable from `data/games/` at any time, so the store is the source of
+truth and `data/ratings/` is a derived snapshot.
 
 ## 8. Relation to the Phase 3 remote goal
 

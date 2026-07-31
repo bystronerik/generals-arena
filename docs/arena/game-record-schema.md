@@ -1,6 +1,8 @@
 # Game record schema (Phase 2)
 
-Minimum fields for one stored match under `data/games/<game_id>.json`.
+Minimum fields for one stored match under
+`data/games/<round>/<game_id>.json` (batch rounds) or
+`data/games/<game_id>.json` (legacy / single-match store).
 
 ## Required fields (schema v1)
 

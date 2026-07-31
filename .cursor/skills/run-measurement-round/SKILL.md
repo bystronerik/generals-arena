@@ -1,8 +1,9 @@
 ---
 name: run-measurement-round
 description: >-
-  Runs the fixed heuristic measurement grid through scripts/measure_heuristics.py,
-  stores games under data/games/, updates ratings, and writes
+  Runs the heuristic measurement grid through scripts/measure_heuristics.py
+  with a parallel competition worker pool, stores games under
+  data/games/<round>/, rebuilds ratings once, and writes
   docs/research/measurements/round<N>.json and .md. Use when measuring a batch of
   bots, starting a new round, or refreshing the round report after bots change.
 ---
@@ -25,22 +26,34 @@ source .venv/bin/activate   # if present; prefer python3.12
 ## Command
 
 ```bash
-python scripts/measure_heuristics.py --round round<N>
+python scripts/measure_heuristics.py \
+  --round round<N> \
+  --games-per-pair 50 \
+  --round-seed <int>
 ```
 
+Default grid is Rule C: unordered pairs among `DEFAULT_ROSTER`, random map
+seeds per pair, no seat swap. Games land in `data/games/<round>/`.
+
 Prefer `arena/run_match.run_and_store` (schema v2 with bot telemetry) when
-adding single matches outside the grid script. Stored v2 fields include
-`final_land_*`, `final_army_*`, and sighting metrics parsed from `[telemetry]`
-stderr lines.
+adding single matches outside the grid script.
 
 Flags:
 
-- `--wait` — poll until every bot `run.sh` exists (default: fail fast if missing)
-- `--no-ratings` — store games without a global Elo update
+- `--games-per-pair` — random seeds per pair (default: 50)
+- `--round-seed` — RNG seed for map-seed generation
+- `--jobs` — workers (default: physical cores; capped)
+- `--bots` — override roster bot ids
+- `--seeds` — fixed seed list (overrides random generation)
+- `--wait` — poll until every bot `run.sh` exists
+- `--no-ratings` — store games without a global Elo rebuild
+- `--legacy-grid` — old tagged seat-swap grid (sequential)
 
 ## Grid
 
-The `NEW_BOTS` and `BASELINE_BOTS` lists in `scripts/measure_heuristics.py` define the grid. Edit those lists in the script; do not pass an ad-hoc grid.
+The `DEFAULT_ROSTER` / `NEW_BOTS` / `BASELINE_BOTS` lists in
+`scripts/measure_heuristics.py` define the default roster. Pass `--bots` to
+override.
 
 Create [`docs/research/measurements/`](../../../docs/research/measurements/) when the directory is absent.
 
@@ -54,18 +67,15 @@ Read `docs/research/measurements/round<N>.md` and report:
 - any bot with zero decisive games
 - whether stored games use schema v2 telemetry (`final_land_a`, sighting fields)
 
-`scripts/measure_heuristics.py` stores schema v2 through `run_and_store`. Legacy
-games under `data/games/` from before E1 may still be v1 until the grid is
-re-run.
-
 ## Rules
 
 - Never update ratings from stdout. Store first, then rate (see **update-leaderboard**).
-- Always `--mode competition` (enforced by the script).
+- Always competition mode (enforced by the script).
 - Do not write a new runner — use the script.
 
 Authority: [`docs/research/strategies/skills-workflow.md`](../../../docs/research/strategies/skills-workflow.md).
 
 ## Changelog
 
+- 2026-07-31 — Rule C parallel pool + per-round game folders
 - 2026-07-31 — Initial skill from skills-workflow taxonomy (cause: skills-workflow build)
