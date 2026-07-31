@@ -9,6 +9,9 @@ from arena.records.store import CURRENT_SCHEMA_VERSION
 from arena.records.telemetry import engine_metrics, record_from_match_result
 
 IDENTITY = {
+    # Minted before the match, not by the record builder: a trajectory is keyed
+    # by the game it belongs to.
+    "game_id": "20260101T000000Z_blitz_vs_smoke_s7_abcd1234",
     "bot_a": "blitz",
     "bot_b": "smoke",
     "seed": 7,
@@ -40,6 +43,7 @@ def _result(**overrides) -> SimpleNamespace:
 def test_record_carries_identity_outcome_and_engine_metrics():
     record = record_from_match_result(_result(), **IDENTITY)
 
+    assert record.game_id == IDENTITY["game_id"]
     assert (record.bot_a, record.bot_b, record.seed) == ("blitz", "smoke", 7)
     assert (record.winner, record.turns, record.truncated) == ("a", 137, False)
     assert (record.round, record.engine_version) == ("round5", "9e3b9d1")

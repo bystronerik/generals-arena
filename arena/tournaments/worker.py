@@ -30,8 +30,9 @@ def _required(payload: dict[str, Any], key: str) -> str:
 
 def run_one_worker(payload: dict[str, Any]) -> GameRecord:
     """One in-process competition match + store (ProcessPool entry point)."""
-    from arena.matches.competition import run_competition_match
+    from arena.matches.competition import RecordRequest, run_competition_match
     from arena.records.registry import Registry
+    from arena.records.store import make_game_id
     from arena.records.telemetry import record_from_match_result
 
     a = Path(payload["bot_a_run"])
@@ -54,16 +55,32 @@ def run_one_worker(payload: dict[str, Any]) -> GameRecord:
     registry.require_registered(bot_a, hash_a)
     registry.require_registered(bot_b, hash_b)
 
+    game_id = make_game_id(bot_a, bot_b, seed)
+    record_request = None
+    trajectories_dir = payload.get("trajectories_dir")
+    if trajectories_dir:
+        # This worker is the only writer of this game's trajectory files, into
+        # a directory the parent already created — the same pattern that makes
+        # `save_game` pool-safe. No shared file, no lock, no manifest.
+        record_request = RecordRequest(
+            game_id=game_id,
+            round_name=round_name,
+            engine_version=engine,
+            directory=Path(trajectories_dir),
+        )
+
     result = run_competition_match(
         a,
         b,
         seed=seed,
         mode=mode,
         timeout=float(timeout) if timeout is not None else None,
+        record=record_request,
     )
 
     record = record_from_match_result(
         result,
+        game_id=game_id,
         bot_a=bot_a,
         bot_b=bot_b,
         seed=seed,

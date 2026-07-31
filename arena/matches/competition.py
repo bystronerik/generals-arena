@@ -19,7 +19,8 @@ if str(_COMP) not in sys.path:
     sys.path.insert(0, str(_COMP))
 
 from arena.matches.loop import run_stdio_match  # noqa: E402
-from arena.records.store import Winner  # noqa: E402
+from arena.records.store import Winner, bot_id_from_run_sh  # noqa: E402
+from arena.records.trajectories import TrajectoryRecorder  # noqa: E402
 from generals import GeneralsEnv  # noqa: E402
 
 LOG_TAG = "competition_match"
@@ -43,6 +44,23 @@ class CompetitionMatchResult:
     stderr: str
 
 
+@dataclass(frozen=True)
+class RecordRequest:
+    """
+    Everything a trajectory needs that is decided before the match starts.
+
+    Constructing this is what turns recording on. It carries `game_id` because
+    a trajectory is keyed by the game it belongs to, which means the id has to
+    exist before the first turn rather than being minted with the record
+    afterwards.
+    """
+
+    game_id: str
+    round_name: str
+    engine_version: str
+    directory: Path
+
+
 def run_competition_match(
     bot_a_run: Path,
     bot_b_run: Path,
@@ -50,15 +68,33 @@ def run_competition_match(
     seed: int = 0,
     mode: str = "competition",
     timeout: float | None = None,
+    record: RecordRequest | None = None,
 ) -> CompetitionMatchResult:
     """
     Run one competition-mode stdio match in-process.
 
-    Returns a structured result (winner seat, turns, castles, bot stderr).
+    Returns a structured result (winner seat, turns, castles, engine finals,
+    bot stderr). With `record` set, the match also writes a per-turn trajectory
+    (and probe traces for seats whose bot has one) under `record.directory`.
+    This is the **only** function in the repo that builds a recorder: classic
+    and remote paths cannot record, by construction.
     """
     if mode != "competition":
         raise ValueError(
             f"arena matches require mode='competition' (got {mode!r})"
+        )
+
+    recorder = None
+    if record is not None:
+        recorder = TrajectoryRecorder(
+            game_id=record.game_id,
+            seed=seed,
+            mode=mode,
+            round_name=record.round_name,
+            engine_version=record.engine_version,
+            bot_a=bot_id_from_run_sh(bot_a_run),
+            bot_b=bot_id_from_run_sh(bot_b_run),
+            directory=record.directory,
         )
 
     result = run_stdio_match(
@@ -68,6 +104,7 @@ def run_competition_match(
         seed=seed,
         log_tag=LOG_TAG,
         timeout=timeout,
+        recorder=recorder,
     )
     return CompetitionMatchResult(
         winner=result.winner,

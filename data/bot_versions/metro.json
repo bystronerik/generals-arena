@@ -5,6 +5,11 @@
       "at": "2026-07-31T16:05:58Z",
       "content_hash": "7eacb26546e7",
       "seq": 1
+    },
+    {
+      "at": "2026-07-31T20:12:48Z",
+      "content_hash": "b2ab1e936cb1",
+      "seq": 2
     }
   ],
   "version": 1,
@@ -57,6 +62,56 @@
       ],
       "first_seen_at": "2026-07-31T16:05:58Z",
       "git_commit": "141d4f08b407198b19ad1a0f5ac6235ace645118",
+      "git_dirty": false
+    },
+    {
+      "closure_ref": "refs/bot-versions/b2ab1e936cb1",
+      "closure_tree": "d48a4d0a45467cebac29866edd948bad49f811cd",
+      "content_hash": "b2ab1e936cb1",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "aa2a1e7ad3907e3a05929d073035c7a3499f272d",
+          "path": "bots/_common/oppmodel.py",
+          "sha256": "dcc368d4467d0ea9a75890e1b53bd56b8b395f0330b78de16c97c8074b8eb6ad"
+        },
+        {
+          "blob": "cb6c3a876ef807d9e727299cc02c2b37f0029ee9",
+          "path": "bots/_common/strategy_common.py",
+          "sha256": "b2e424533aebc44fac5f6edb7205f21cb8431fcd6e557a4d965445d6f1138590"
+        },
+        {
+          "blob": "f6f0039947e2af2a2f331a80a9bb99818cdf3552",
+          "path": "bots/_common/tactics.py",
+          "sha256": "24fc3bd20b5a5b4f5d8fa17a206d2ae9ae9f8e927d63e19673d90311150be9b6"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "f7df628a0df6f4da196a31fd78a937897abec143",
+          "path": "bots/metro/agent.py",
+          "sha256": "968df0bfade7c6ae391959db050afa57bbf63b68f3bc5ec582f43bc0ce8afd8b"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/metro/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "e7d78ac169a30678efe60bdb108611f9d932e630",
+          "path": "bots/metro/run.sh",
+          "sha256": "3a4eb8902a76a3bd1a8e9292feef29339976c72786d157da3a20edfcbf296f56"
+        }
+      ],
+      "first_seen_at": "2026-07-31T20:12:48Z",
+      "git_commit": "84a1039c955b0b4827dae7947ae98ce1065821de",
       "git_dirty": false
     }
   ]

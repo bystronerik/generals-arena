@@ -17,6 +17,7 @@ from arena.records.store import (
     round_games_dir,
     utc_now_iso,
 )
+from arena.records.trajectories import round_trajectory_dir
 from arena.tournaments.parallel import cap_jobs, default_jobs, run_pool
 from arena.tournaments.worker import run_one_worker
 
@@ -219,6 +220,7 @@ def run_tournament(
     seat_policy: str = RANDOM_SEATS,
     strict_versions: bool = False,
     jobs: int | None = None,
+    record_trajectories: bool = False,
 ) -> list[GameRecord]:
     """
     Run games_per_pair (or fixed_seeds) × pairs under competition mode.
@@ -265,6 +267,14 @@ def run_tournament(
         f"jobs={worker_jobs} games_dir={directory}"
     )
 
+    # The parent creates the round's trajectory directory once; each worker
+    # then writes only its own game's files into it.
+    trajectories_dir = None
+    if record_trajectories:
+        trajectories_dir = round_trajectory_dir(round_name)
+        trajectories_dir.mkdir(parents=True, exist_ok=True)
+        print(f"[tournament] recording trajectories under {trajectories_dir}")
+
     payloads = [
         {
             "bot_a_run": str(a.resolve()),
@@ -277,6 +287,7 @@ def run_tournament(
             "engine_version": engine,
             "bot_a_content_hash": content_hashes[bot_id_from_run_sh(a)],
             "bot_b_content_hash": content_hashes[bot_id_from_run_sh(b)],
+            "trajectories_dir": str(trajectories_dir) if trajectories_dir else None,
         }
         for a, b, seed in specs
     ]
@@ -394,6 +405,14 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="refuse to run if any bot's closure differs from HEAD (published rounds)",
     )
+    parser.add_argument(
+        "--record",
+        action="store_true",
+        help=(
+            "also write per-turn trajectories under data/trajectories/<round>/ "
+            "(off by default; see docs/arena/trajectories.md)"
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.games_per_pair < 1:
@@ -416,6 +435,7 @@ def main(argv: list[str] | None = None) -> int:
         seat_policy=args.seat_policy,
         strict_versions=args.strict_versions,
         jobs=args.jobs,
+        record_trajectories=args.record,
     )
     return 0
 

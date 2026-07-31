@@ -14,6 +14,7 @@ neither result shape changes, and only competition results may enter
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -23,8 +24,15 @@ from pathlib import Path
 from typing import IO
 
 import jax.numpy as jnp
+import numpy as np
 
 from arena.paths import REPO_ROOT
+from arena.records.fingerprint import PROBE_FILENAME
+from arena.records.trajectories import (
+    SEATS,
+    TrajectoryRecorder,
+    gzip_into_place,
+)
 
 _COMP = REPO_ROOT / "competition-module"
 for _path in (_COMP, _COMP / "competition"):
@@ -76,6 +84,34 @@ def venv_path_env() -> dict[str, str]:
     return env
 
 
+def has_probe(run_sh: Path) -> bool:
+    """Whether this bot can be traced at all. `cm_*` wrappers never can."""
+    return (run_sh.parent / PROBE_FILENAME).is_file()
+
+
+def agent_command(run_sh: Path, trace: Path | None) -> tuple[list[str], Path]:
+    """
+    The command and working directory for one seat.
+
+    Without a trace this is `bash run.sh`, byte for byte what every unrecorded
+    match has always run. With one it is the arena's instrumented runner, which
+    drives the identical protocol from the identical parsing code and
+    additionally samples the bot's probe. The runner needs `arena` importable,
+    so it runs from the repo root.
+    """
+    if trace is None:
+        return ["bash", str(run_sh)], run_sh.parent
+    command = [
+        sys.executable,
+        "-m",
+        "arena.instrument.runner",
+        str(run_sh.parent),
+        "--trace",
+        str(trace),
+    ]
+    return command, REPO_ROOT
+
+
 def spawn_agent(
     run_sh: Path,
     player_id: int,
@@ -86,24 +122,27 @@ def spawn_agent(
     stderr_file: IO[str],
     *,
     log_tag: str,
+    trace: Path | None = None,
 ) -> subprocess.Popen:
     """Spawn a stdio bot; stderr goes to a temp file (avoids PIPE deadlock)."""
+    command, cwd = agent_command(run_sh, trace)
     proc = subprocess.Popen(
-        ["bash", str(run_sh)],
+        command,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=stderr_file,
         bufsize=1,
         text=True,
-        cwd=str(run_sh.parent),
+        cwd=str(cwd),
         env=env,
     )
     assert proc.stdin is not None
     proc.stdin.write(encode_handshake(player_id, H, W))
     proc.stdin.flush()
+    how = "instrumented" if trace is not None else str(run_sh)
     print(
         f"[{log_tag}] spawned {label} as player {player_id} "
-        f"(pid={proc.pid}, {run_sh})",
+        f"(pid={proc.pid}, {how})",
         file=sys.stderr,
     )
     return proc
@@ -118,6 +157,17 @@ def winner_seat(winner_player_id: int, *, truncated: bool) -> Winner:
     if truncated or winner_player_id < 0:
         return "draw"
     raise ValueError(f"invalid winner_player_id: {winner_player_id}")
+
+
+def _ints(array) -> list[int]:
+    """
+    A small JAX array as Python ints, in one device-to-host transfer.
+
+    `[int(x) for x in array]` would pay a transfer per element; on the recorded
+    path that is 14 per turn instead of 4, which is the difference between
+    fitting the wall-clock budget and not.
+    """
+    return np.asarray(array).tolist()
 
 
 def _final_scalars(
@@ -152,6 +202,7 @@ def run_stdio_match(
     seed: int,
     log_tag: str,
     timeout: float | None = None,
+    recorder: TrajectoryRecorder | None = None,
 ) -> MatchLoopResult:
     """
     Play one stdio match on `env` and return its outcome.
@@ -161,6 +212,13 @@ def run_stdio_match(
     `GameInfo`, so a record never depends on a bot reporting its own score.
     Bot stderr is captured for the caller — it is debug output now, nothing
     parses it — rather than streamed to the terminal.
+
+    With `recorder=None` (the default) the loop body is exactly what it has
+    always been and every seat is spawned via `run.sh`. With a recorder, each
+    turn's applied actions and engine scalars are logged, and seats whose bot
+    carries a `probe.py` are spawned through `arena.instrument.runner` instead
+    so their internals are traced too. Only the competition path ever passes
+    one — see docs/arena/trajectories.md.
     """
     a0_path = bot_a_run.resolve()
     a1_path = bot_b_run.resolve()
@@ -183,9 +241,26 @@ def run_stdio_match(
         tempfile.TemporaryFile(mode="w+", encoding="utf-8"),
         tempfile.TemporaryFile(mode="w+", encoding="utf-8"),
     ]
+    # Scratch trace files, one per traceable seat. The runner writes plain
+    # jsonl here; the harness gzips them into the trajectory directory once the
+    # process is closed.
+    trace_scratch: list[Path | None] = [None, None]
+    if recorder is not None:
+        recorder.set_dims(H, W)
+        scratch_root = Path(tempfile.mkdtemp(prefix="arena-trace-"))
+        for index, path in enumerate((a0_path, a1_path)):
+            if has_probe(path):
+                trace_scratch[index] = scratch_root / f"{SEATS[index]}.jsonl"
+
     agents = [
-        spawn_agent(a0_path, 0, H, W, labels[0], venv_env, stderr_files[0], log_tag=log_tag),
-        spawn_agent(a1_path, 1, H, W, labels[1], venv_env, stderr_files[1], log_tag=log_tag),
+        spawn_agent(
+            a0_path, 0, H, W, labels[0], venv_env, stderr_files[0],
+            log_tag=log_tag, trace=trace_scratch[0],
+        ),
+        spawn_agent(
+            a1_path, 1, H, W, labels[1], venv_env, stderr_files[1],
+            log_tag=log_tag, trace=trace_scratch[1],
+        ),
     ]
 
     transition = make_transition(env)
@@ -217,6 +292,16 @@ def run_stdio_match(
             last_info = info
             turn += 1
 
+            if recorder is not None:
+                recorder.record_turn(
+                    turn,
+                    _ints(a_0),
+                    _ints(a_1),
+                    _ints(info.land),
+                    _ints(info.army),
+                    state=state,
+                )
+
             if env.build_castles:
                 born = state.castles & ~prev_castles
                 if bool(born.any()):
@@ -238,9 +323,26 @@ def run_stdio_match(
             err.close()
 
     land, army = _final_scalars(last_info)
+    winner = winner_seat(winner_player, truncated=truncated)
+
+    if recorder is not None:
+        # After close_agent: the runner writes its trace when its stdin reaches
+        # EOF, so the file does not exist until the process has exited.
+        recorder.finish(
+            winner=winner,
+            turns=turn,
+            terminated=winner_player >= 0,
+            truncated=truncated,
+            state=state,
+        )
+        recorder.write()
+        for index, scratch in enumerate(trace_scratch):
+            if scratch is not None:
+                gzip_into_place(scratch, recorder.trace_destination(SEATS[index]))
+        shutil.rmtree(scratch_root, ignore_errors=True)
 
     return MatchLoopResult(
-        winner=winner_seat(winner_player, truncated=truncated),
+        winner=winner,
         winner_player_id=winner_player,
         turns=turn,
         terminated=winner_player >= 0,

@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from arena.matches.competition import run_competition_match
+from arena.matches.competition import RecordRequest, run_competition_match
 from arena.records.fingerprint import bot_content_hash
 from arena.records.registry import Registry, is_registerable
 from arena.records.store import (
@@ -13,9 +13,11 @@ from arena.records.store import (
     GameRecord,
     bot_id_from_run_sh,
     engine_version,
+    make_game_id,
     save_game,
 )
 from arena.records.telemetry import record_from_match_result
+from arena.records.trajectories import round_trajectory_dir
 
 # Round name for one-off matches that belong to no measurement round. Stored
 # explicitly so the eligibility filter never has to guess from a path.
@@ -58,6 +60,8 @@ def run_and_store(
     bot_b_content_hash: str | None = None,
     timeout: float | None = None,
     update_ratings: bool = False,
+    record_trajectory: bool = False,
+    trajectories_dir: Path | None = None,
 ) -> GameRecord:
     """Run one competition match, store JSON, optionally refit ratings."""
     a_path = bot_a_run.resolve()
@@ -66,13 +70,25 @@ def run_and_store(
     bot_b = bot_b_id or bot_id_from_run_sh(b_path)
     hash_a = bot_a_content_hash or _register(a_path)
     hash_b = bot_b_content_hash or _register(b_path)
+    engine = engine_version()
+    game_id = make_game_id(bot_a, bot_b, seed)
+
+    record_request = None
+    if record_trajectory:
+        record_request = RecordRequest(
+            game_id=game_id,
+            round_name=round_name,
+            engine_version=engine,
+            directory=trajectories_dir or round_trajectory_dir(round_name),
+        )
 
     result = run_competition_match(
-        a_path, b_path, seed=seed, mode=mode, timeout=timeout
+        a_path, b_path, seed=seed, mode=mode, timeout=timeout, record=record_request
     )
 
     record = record_from_match_result(
         result,
+        game_id=game_id,
         bot_a=bot_a,
         bot_b=bot_b,
         seed=seed,
@@ -80,7 +96,7 @@ def run_and_store(
         round_name=round_name,
         bot_a_content_hash=hash_a,
         bot_b_content_hash=hash_b,
-        engine_version=engine_version(),
+        engine_version=engine,
     )
     path = save_game(record, games_dir or GAMES_DIR)
     print(f"[run_match] stored {path}")
@@ -88,6 +104,8 @@ def run_and_store(
         f"[run_match] winner={record.winner} turns={record.turns} "
         f"terminated={record.terminated} truncated={record.truncated}"
     )
+    if record_request is not None:
+        print(f"[run_match] recorded trajectory under {record_request.directory}")
 
     if update_ratings:
         # Refit, not "apply one update". There is no incremental path: a
@@ -137,6 +155,21 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="after storing the game, refit ratings and rewrite the leaderboard",
     )
+    parser.add_argument(
+        "--record",
+        action="store_true",
+        help=(
+            "also write a per-turn trajectory under "
+            "data/trajectories/<round>/ (off by default; see "
+            "docs/arena/trajectories.md)"
+        ),
+    )
+    parser.add_argument(
+        "--trajectories-dir",
+        type=Path,
+        default=None,
+        help="override the trajectory output directory (implies --record)",
+    )
     args = parser.parse_args(argv)
 
     run_and_store(
@@ -150,6 +183,8 @@ def main(argv: list[str] | None = None) -> int:
         bot_b_id=args.bot_b_id,
         timeout=args.timeout,
         update_ratings=args.update_ratings,
+        record_trajectory=args.record or args.trajectories_dir is not None,
+        trajectories_dir=args.trajectories_dir,
     )
     return 0
 

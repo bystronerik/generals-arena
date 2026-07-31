@@ -184,12 +184,22 @@ class TrajectoryRecorder:
     engine_version: str
     bot_a: str
     bot_b: str
-    H: int
-    W: int
     directory: Path
+    # Board dimensions are not known until the loop has built the board, so the
+    # caller constructs the recorder and the loop fills these in.
+    H: int = 0
+    W: int = 0
     digest_every: int = DIGEST_EVERY
     _lines: list[dict[str, Any]] = field(default_factory=list, init=False)
     _finished: bool = field(default=False, init=False)
+
+    def set_dims(self, H: int, W: int) -> None:
+        self.H = int(H)
+        self.W = int(W)
+
+    def trace_destination(self, seat: str) -> Path:
+        """Where this game's probe trace for `seat` belongs."""
+        return trace_path(self.game_id, seat, self.directory)
 
     def header(self) -> dict[str, Any]:
         return {

@@ -23,7 +23,6 @@ from typing import Any
 from arena.records.store import (
     CURRENT_SCHEMA_VERSION,
     GameRecord,
-    make_game_id,
 )
 
 
@@ -60,6 +59,7 @@ def engine_metrics(result) -> dict[str, Any]:
 def record_from_match_result(
     result,
     *,
+    game_id: str,
     bot_a: str,
     bot_b: str,
     seed: int,
@@ -75,9 +75,12 @@ def record_from_match_result(
     Callers supply only the identity fields the match itself does not carry.
     Those are required — `GameRecord` rejects a record whose bot hashes or
     engine era are unknown, because it could never be rated.
+
+    `game_id` is passed in rather than minted here: a trajectory is keyed by
+    the game it belongs to, so the id has to exist before the first turn.
     """
     return GameRecord(
-        game_id=make_game_id(bot_a, bot_b, seed),
+        game_id=game_id,
         seed=seed,
         mode=mode,
         round=round_name,
