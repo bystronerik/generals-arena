@@ -22,7 +22,7 @@ Measured facts: 202 stored games (118 draws at turn 1200; seat a 75 wins, b 9);
 | 4 | E2 | Competition grid produces decisive answers |
 | 5 | R3, R1, R2 | Remove contradictions that mislead agents |
 | 6 | S1 | Encode Phase 3 loop as skills after tools exist |
-| 7 | T1, T2, A4, A5, A6 | Durability and debuggability |
+| 7 | T1, T2, A4, A5, A6, A9 | Durability and debuggability |
 | 8 | Remaining P2 | Low cost, low urgency |
 
 ## P0 findings
@@ -43,6 +43,7 @@ Measured facts: 202 stored games (118 draws at turn 1200; seat a 75 wins, b 9);
 | A4 | Arena | `ArenaGameClient` copies `_on_game_update` | Hours on divergence | Hook in generals-client |
 | A5 | Arena | `StrategySession` swallows exceptions | Blind → diagnosable block | Log traceback; store in stats |
 | A6 | Bots | `strategy_common.py` triplicated | 1 vs 3 edits | Shared module + named constants |
+| A9 | Code | No formal ABC/Protocol for arena stdio bots; contract is duck-typed (`Agent` + `__init__(player_id,H,W)` + `act(obs)->5-tuple`); competition-module JAX Agent unused by `bots/` | Fewer broken scaffolds; clearer Composer contracts | `typing.Protocol` in `arena/bot_api.py` (optional runtime import); update `docs/engine/unified-bot-api.md` |
 | R1 | Repo | `.gitignore` vs skills on `data/ratings/` | Fewer commit dead-ends | Pick one rule |
 | R2 | Repo | `requirements.txt` mixes torch sandbox | Clean setup seconds | Split requirements files |
 | R3 | Repo | AGENTS/human-95 stale remote path | Minutes/session | Point to `client/generals_client` |
