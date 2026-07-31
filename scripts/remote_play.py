@@ -112,6 +112,8 @@ def run_1v1_session(
     user_id: str,
     username: str,
     max_games: int,
+    *,
+    public_server: bool = False,
 ) -> None:
     with FidelityGeneralsIOClient(
         agent,
@@ -119,6 +121,7 @@ def run_1v1_session(
         bot_name=agent.bot_name,
         room_mode="1v1",
         log_dir=REMOTE_GAMES_DIR,
+        public_server=public_server,
     ) as client:
         client.register_agent(username)
         for _ in range(max_games):
@@ -199,6 +202,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Run offline adapter checks before connecting",
     )
+    parser.add_argument(
+        "--public-server",
+        action="store_true",
+        help="Use ws.generals.io instead of botws.generals.io (default: bot endpoint)",
+    )
     args = parser.parse_args(argv)
 
     if args.bot not in REMOTE_RECOMMENDED_BOTS:
@@ -243,8 +251,18 @@ def main(argv: list[str] | None = None) -> int:
             run_lobby_session(agent, user_id, lobby_id, username, args.max_games)
         else:
             max_games = args.max_games if args.max_games is not None else 1
-            print(f"Starting {agent.id} in 1v1 queue as {username!r} ({max_games} game(s))...")
-            run_1v1_session(agent, user_id, username, max_games)
+            endpoint = "ws.generals.io" if args.public_server else "botws.generals.io"
+            print(
+                f"Starting {agent.id} in 1v1 queue on {endpoint} "
+                f"as {username!r} ({max_games} game(s))..."
+            )
+            run_1v1_session(
+                agent,
+                user_id,
+                username,
+                max_games,
+                public_server=args.public_server,
+            )
     except KeyboardInterrupt:
         print("\nStopped by user.")
         return 130

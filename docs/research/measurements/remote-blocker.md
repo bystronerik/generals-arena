@@ -32,14 +32,9 @@ The offline dry run can run now:
 
 Current live blockers for the 95/100 human block:
 
-1. **`chat_message` receive_error** — batch 2 matched 2 human games on botws but
-   both ended at turn 0 because `FidelityGeneralsIOClient` treats
-   `chat_message` as fatal (upstream ignores unknown events). See
-   [`remote-batch2.md`](remote-batch2.md).
-2. **Queue intermittency** — batch 1 had 0 matches in 25+ min; batch 2 matched
-   2 games in ~2 min then waited ~18 min for game 3. Retest after chat fix.
-3. **`GENERALS_BOT_KEY`** — not set in `.env.agent`; placeholder key may affect
-   sustained queue access (§5.1). Set when an operator key is available.
+1. ~~**`chat_message` receive_error**~~ — **Fixed** in `658fbb4`; upstream-style ignore for benign events. Live proof pending (batch 3 queue idle). See [`remote-batch3.md`](remote-batch3.md).
+2. **Queue intermittency** — batch 1 had 0 matches in 25+ min; batch 2 matched 2 games in ~2 min; batch 3 waited ~34 min with 0 matches. Retest at peak hours or `--mode lobby`.
+3. **`GENERALS_BOT_KEY`** — not set in `.env.agent`; placeholder key may affect sustained queue access (§5.1). Set when an operator key is available.
 
 Only logs with `counts_toward_block: true` and human opponents count toward
 Phase 3.
