@@ -1,7 +1,8 @@
 # Arena dependencies (Phase 2+)
 #
-# Install the editable engine first:
-#     pip install -e competition-module
+# Install editable packages first:
+#     pip install -e competition-module   # local competition matches
+#     pip install -e client               # generals_client wire for live play
 # Then:
 #     pip install -r requirements.txt
 #

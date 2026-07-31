@@ -30,7 +30,8 @@ Prefer **CPython 3.12**. System Python 3.14 can fail on pygame / engine pins. Us
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -e competition-module
+pip install -e competition-module   # local competition matches
+pip install -e client               # generals_client wire for live play (optional)
 pip install -r requirements.txt
 ```
 

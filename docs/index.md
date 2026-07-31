@@ -17,6 +17,7 @@ Small topic files for the Generals Arena research repo.
 
 ## Engine
 
+- [unified bot API](engine/unified-bot-api.md) — one observation/action shape for stdio and live generals.io
 - [local matchup](engine/local-matchup.md)
 - [classic matchup (remote practice)](engine/classic-matchup.md)
 - [remote generals.io](engine/remote-generalsio.md)
