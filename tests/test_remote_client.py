@@ -14,6 +14,7 @@ from arena.remote_client import (
     opponent_is_bot,
     result_from_reason,
 )
+from generals.remote.generalsio_client import GeneralsIOClient
 
 
 def test_normalize_bot_endpoint_username_strips_prefix():
@@ -117,6 +118,20 @@ def test_game_lost_counts_toward_block(fidelity_client, tmp_path: Path):
     record = json.loads(list(tmp_path.glob("*.json"))[0].read_text())
     assert record["result"] == "loss"
     assert record["counts_toward_block"] is True
+
+
+def test_register_agent_continues_when_username_already_bound():
+    with patch.object(FidelityGeneralsIOClient, "__init__", lambda self, *a, **k: None):
+        client = FidelityGeneralsIOClient.__new__(FidelityGeneralsIOClient)
+        with patch.object(
+            GeneralsIOClient,
+            "register_agent",
+            side_effect=ValueError(
+                "Failed to register the agent: You already have a username! "
+                "Only Supporters can change usernames.."
+            ),
+        ):
+            client.register_agent("[Bot] BOBTHEAGENT")
 
 
 def test_decided_reasons_set():

@@ -104,7 +104,17 @@ class FidelityGeneralsIOClient(GeneralsIOClient):
                 "Note: bot endpoint registration strips the [Bot] prefix "
                 f"(registering as {normalized!r}).",
             )
-        super().register_agent(normalized)
+        try:
+            super().register_agent(normalized)
+        except ValueError as exc:
+            message = str(exc)
+            if "already have a username" in message.lower():
+                print(
+                    "Note: user id already has a bound username on generals.io; "
+                    "continuing with existing registration.",
+                )
+                return
+            raise
 
     def _initialize_game(self, data: dict) -> None:
         super()._initialize_game(data)
