@@ -123,6 +123,7 @@ class FidelityGeneralsIOClient(GeneralsIOClient):
         self._opponent_username = self.game_state.usernames[idx]
 
     def _play_game(self) -> None:
+        """Game loop matching upstream terminal events; ignore benign server noise."""
         while True:
             try:
                 received = self.receive()
@@ -135,16 +136,17 @@ class FidelityGeneralsIOClient(GeneralsIOClient):
                 return
 
             event = received[0]
-            if len(received) != 3:
-                self._finish_with_reason(
-                    "receive_error",
-                    detail=f"expected 3-tuple, got {len(received)} for event {event!r}",
-                )
-                return
-
-            _, data, _ = received
             match event:
                 case "game_update":
+                    if len(received) != 3:
+                        self._finish_with_reason(
+                            "receive_error",
+                            detail=(
+                                f"expected 3-tuple for game_update, got {len(received)}"
+                            ),
+                        )
+                        return
+                    _, data, _ = received
                     self.game_state.update(data)
                     obs = self.game_state.get_observation()
                     action = self._generate_action(obs)
@@ -157,11 +159,8 @@ class FidelityGeneralsIOClient(GeneralsIOClient):
                     self._finish_with_reason("game_lost")
                     return
                 case _:
-                    self._finish_with_reason(
-                        "receive_error",
-                        detail=f"unexpected event {event!r}",
-                    )
-                    return
+                    # Upstream has no default case — chat_message and similar are skipped.
+                    continue
 
     def _finish_with_reason(self, result_reason: str, *, detail: str | None = None) -> None:
         self._last_finish_detail = detail

@@ -89,8 +89,27 @@ def test_malformed_receive_is_not_a_win(fidelity_client, tmp_path: Path):
     assert record["counts_toward_block"] is False
 
 
-def test_short_receive_tuple_is_not_a_win(fidelity_client, tmp_path: Path):
-    fidelity_client.receive = MagicMock(return_value=("chat_message", {"text": "hi"}))
+def test_chat_message_is_ignored_mid_game(fidelity_client, tmp_path: Path):
+    fidelity_client.receive = MagicMock(
+        side_effect=[
+            ("chat_message", {"text": "hi"}, None),
+            ("chat_message", {"text": "gg"}, None),
+            ("game_won", {}, None),
+        ],
+    )
+    fidelity_client._play_game()
+
+    assert fidelity_client._score_wins == 1
+    assert fidelity_client._score_losses == 0
+    logs = list(tmp_path.glob("*.json"))
+    assert len(logs) == 1
+    record = json.loads(logs[0].read_text())
+    assert record["result_reason"] == "game_won"
+    assert record["counts_toward_block"] is True
+
+
+def test_malformed_game_update_is_not_a_win(fidelity_client, tmp_path: Path):
+    fidelity_client.receive = MagicMock(return_value=("game_update", {"turn": 1}))
     fidelity_client._play_game()
 
     assert fidelity_client._score_wins == 0
