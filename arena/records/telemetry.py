@@ -20,8 +20,6 @@ from arena.records.store import (
     GameRecord,
     duration_seconds_between,
     make_game_id,
-    require_content_hash,
-    require_non_empty,
 )
 
 _TELEMETRY_PREFIX_RE = re.compile(
@@ -150,8 +148,8 @@ def record_from_match_result(
 
     Applies bot telemetry from `result.stderr`, so callers only supply the
     identity and timing fields the match itself does not carry. The identity
-    fields are required: a record whose bot hashes or engine era are unknown
-    cannot be rated (schema v4).
+    fields are required — `GameRecord` rejects a record whose bot hashes or
+    engine era are unknown, because it could never be rated (schema v4).
     """
     record = GameRecord(
         game_id=make_game_id(bot_a, bot_b, seed),
@@ -160,9 +158,9 @@ def record_from_match_result(
         round=round_name,
         bot_a=bot_a,
         bot_b=bot_b,
-        bot_a_content_hash=require_content_hash(bot_a_content_hash, "bot_a"),
-        bot_b_content_hash=require_content_hash(bot_b_content_hash, "bot_b"),
-        engine_version=require_non_empty(engine_version, "engine_version"),
+        bot_a_content_hash=bot_a_content_hash,
+        bot_b_content_hash=bot_b_content_hash,
+        engine_version=engine_version,
         winner=result.winner,
         turns=result.turns,
         terminated=result.terminated,

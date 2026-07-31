@@ -9,5 +9,7 @@
 # Optional sandbox pins (torch, jax, …) live in requirements-sandbox.txt.
 # Submitted-bot canonical copy: competition-module/competition/requirements.txt
 
-elote
-pytest
+# The ratings fit needs cholesky/solve/inv on a matrix of a few hundred rows.
+# Nothing here needs SciPy. numpy already arrives via competition-module; this
+# makes the arena's own dependency on it explicit.
+numpy

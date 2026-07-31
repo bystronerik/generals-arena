@@ -22,7 +22,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from arena.tournaments.parallel import default_jobs
-from arena.records.ratings import RatingBook
+from arena.records.ratings.policy import Policy
 from arena.records.reporting import (
     aggregate_stats,
     bot_run_sh,
@@ -225,29 +225,50 @@ def notable_matchups(games: list[GameEntry]) -> list[dict[str, Any]]:
     return notes[:20]
 
 
-def round_leaderboard_snippet(games: list[GameEntry]) -> str:
-    book = RatingBook()
-    for g in games:
-        record = GameRecord(
-            game_id=g.game_id,
-            seed=g.seed,
-            mode="competition",
-            round="round-local",
-            bot_a=g.bot_a,
-            bot_b=g.bot_b,
-            bot_a_content_hash="0" * 12,
-            bot_b_content_hash="0" * 12,
-            engine_version="round-local",
-            winner=g.winner,  # type: ignore[arg-type]
-            turns=g.turns,
-            terminated=g.terminated,
-            truncated=g.truncated,
-            started_at="",
-            finished_at="",
-        )
-        book.apply_game(record, skip_if_rated=False)
+ROUND_LOCAL_BANNER = (
+    "**Round-local ratings.** Fitted over this round's games only and anchored "
+    "on the round's most-played bot, keyed on `bot_id` rather than on the "
+    "content hash. They are **not comparable** to `data/ratings/leaderboard.md` "
+    "or to any other round. Use the global fit for decisions."
+)
 
-    return "\n".join(leaderboard_table_lines(book.leaderboard()))
+
+def round_leaderboard_snippet(games: list[GameEntry]) -> str:
+    """
+    Ratings from this round's games alone, explicitly labelled as such.
+
+    The old version built a fresh sequential Elo book in list order, so every
+    published round report showed numbers that disagreed with the global
+    leaderboard *and* with any other run of the same round. This one is a real
+    batch fit, but it is still round-local: it sees a fraction of the games and
+    a different anchor, so it carries a banner saying so.
+    """
+    from arena.records.ratings.counts import build
+    from arena.records.ratings.fit import fit_ratings
+    from arena.records.ratings.io import leaderboard_rows
+
+    tallies: dict[tuple[str, str], list[int]] = {}
+    appearances: dict[str, int] = {}
+    for g in games:
+        cell = tallies.setdefault((g.bot_a, g.bot_b), [0, 0, 0])
+        cell[0 if g.winner == "a" else 1 if g.winner == "b" else 2] += 1
+        for bot in (g.bot_a, g.bot_b):
+            appearances[bot] = appearances.get(bot, 0) + 1
+    if not tallies:
+        return "_no games in this round_"
+
+    table = build({k: (v[0], v[1], v[2]) for k, v in tallies.items()})
+    anchor = max(sorted(appearances), key=lambda b: appearances[b])
+    fit = fit_ratings(table, anchor=anchor, policy=Policy(min_games_display=0))
+    return "\n".join(
+        [
+            ROUND_LOCAL_BANNER,
+            "",
+            f"Anchor: `{anchor}` pinned at 1500.0.",
+            "",
+            *leaderboard_table_lines(leaderboard_rows(fit)),
+        ]
+    )
 
 
 def write_reports(
@@ -376,11 +397,11 @@ def _run_legacy_grid(
             f"terminated={entry.terminated} truncated={entry.truncated}"
         )
     if update_ratings:
-        from arena.records.ratings import rebuild_from_games
+        from arena.records.ratings.cli import refit
         from arena.records.store import GAMES_DIR
 
-        book = rebuild_from_games(games_dir=GAMES_DIR)
-        print(f"[measure] rebuilt ratings ({len(book.rated_game_ids)} game(s))")
+        fit = refit(games_dir=GAMES_DIR)
+        print(f"[measure] refitted ratings ({fit.counts.games} game(s))")
     return games
 
 

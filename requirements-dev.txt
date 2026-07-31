@@ -1,0 +1,12 @@
+# Development and test dependencies.
+#
+#     pip install -r requirements.txt -r requirements-dev.txt
+
+pytest
+
+# Test-only oracle, not a runtime dependency. `tests/test_ratings_model.py`
+# checks our damped-Newton Bradley-Terry fit against elote's independently
+# written minorization-maximization implementation of the same estimator —
+# something no self-consistency test can do. The arena's own rating code does
+# not import it.
+elote

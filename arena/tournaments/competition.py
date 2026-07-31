@@ -8,7 +8,6 @@ import random
 from pathlib import Path
 from typing import Any
 
-from arena.records.ratings import rebuild_from_games
 from arena.records.registry import Registry
 from arena.records.store import (
     GAMES_DIR,
@@ -299,10 +298,12 @@ def run_tournament(
     print(f"[tournament] finished {len(records)} game(s)")
 
     if update_ratings:
-        book = rebuild_from_games(games_dir=GAMES_DIR)
+        from arena.records.ratings.cli import refit
+
+        fit = refit(games_dir=GAMES_DIR)
         print(
-            f"[tournament] rebuilt ratings from {GAMES_DIR} "
-            f"({len(book.rated_game_ids)} rated game(s))"
+            f"[tournament] refitted ratings from {GAMES_DIR} "
+            f"({fit.counts.games} rated game(s), {len(fit.entities)} entit(ies))"
         )
     return records
 

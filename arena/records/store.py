@@ -109,6 +109,15 @@ class GameRecord:
     final_army_b: int | None = None
     metrics: dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        # Validate at construction, not only at load: the identity fields are
+        # what the fit keys on, so there must be no way to build a record that
+        # cannot be rated — including through the dataclass constructor.
+        self.bot_a_content_hash = require_content_hash(self.bot_a_content_hash, "bot_a")
+        self.bot_b_content_hash = require_content_hash(self.bot_b_content_hash, "bot_b")
+        self.engine_version = require_non_empty(self.engine_version, "engine_version")
+        self.round = require_non_empty(self.round, "round")
+
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
         if not data.get("metrics"):
@@ -137,9 +146,9 @@ class GameRecord:
             round=str(data["round"]),
             bot_a=str(data["bot_a"]),
             bot_b=str(data["bot_b"]),
-            bot_a_content_hash=require_content_hash(data["bot_a_content_hash"], "bot_a"),
-            bot_b_content_hash=require_content_hash(data["bot_b_content_hash"], "bot_b"),
-            engine_version=require_non_empty(data["engine_version"], "engine_version"),
+            bot_a_content_hash=str(data["bot_a_content_hash"]),
+            bot_b_content_hash=str(data["bot_b_content_hash"]),
+            engine_version=str(data["engine_version"]),
             winner=winner,
             turns=int(data["turns"]),
             terminated=bool(data["terminated"]),

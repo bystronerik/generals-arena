@@ -3,7 +3,7 @@ Shared measurement aggregation and markdown table rendering.
 
 Used by `scripts/measure_heuristics.py` (competition rounds),
 `scripts/measure_classic.py` (classic rounds), and
-`arena.records.ratings.write_leaderboard`. The aggregation helpers are duck-typed on
+`arena.records.ratings.io`. The aggregation helpers are duck-typed on
 anything carrying `bot_a`, `bot_b`, `winner`, and `turns` — GameRecord,
 ClassicGameRecord, and the measure scripts' GameEntry all qualify — so the two
 round types share one definition of winrate and one table layout.
@@ -27,8 +27,8 @@ WINRATE_TABLE_HEADER = (
 )
 
 LEADERBOARD_TABLE_HEADER = (
-    "| Rank | Bot | Elo | Games | W | L | D |",
-    "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
+    "| Rank | Entity | Rating | 95% CI | Games | W | L | D | Prov. |",
+    "| ---: | --- | ---: | --- | ---: | ---: | ---: | ---: | --- |",
 )
 
 
@@ -156,11 +156,21 @@ def matchup_table_lines(rows: list[dict[str, Any]]) -> list[str]:
 
 
 def leaderboard_table_lines(rows) -> list[str]:
-    """Render `RatingBook.leaderboard()` rows as a markdown table."""
+    """
+    Render `ratings.io.leaderboard_rows()` as a markdown table.
+
+    The interval is the point of the table: a 20-Elo gap over 30 games is
+    indistinguishable from noise, and the old point-estimate-only layout gave
+    a reader no way to see that. Provisional rows carry a `—` rank because
+    they are in the fit but deliberately not ranked.
+    """
     lines = list(LEADERBOARD_TABLE_HEADER)
     for r in rows:
+        rank = "—" if r.provisional else str(r.rank)
         lines.append(
-            f"| {r.rank} | `{r.bot_id}` | {r.rating:.1f} | {r.games} "
-            f"| {r.wins} | {r.losses} | {r.draws} |"
+            f"| {rank} | `{r.entity}` | {r.rating:.1f} "
+            f"| [{r.ci_low:.0f}, {r.ci_high:.0f}] | {r.games} "
+            f"| {r.wins} | {r.losses} | {r.draws} "
+            f"| {'yes' if r.provisional else ''} |"
         )
     return lines

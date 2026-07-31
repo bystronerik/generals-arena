@@ -95,10 +95,13 @@ def run_and_store(
     )
 
     if update_ratings:
-        from arena.records.ratings import rate_stored_game
+        # Refit, not "apply one update". There is no incremental path: a
+        # path-dependent estimator has no single right answer, and the two
+        # paths it used to have silently disagreed.
+        from arena.records.ratings.cli import refit
 
-        rate_stored_game(record)
-        print("[run_match] ratings updated")
+        fit = refit()
+        print(f"[run_match] refitted ratings over {fit.counts.games} game(s)")
 
     return record
 
