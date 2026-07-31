@@ -88,6 +88,7 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 | strategist | Write strategy specs; enforce bot diversity | `write-strategy-spec`, `check-bot-diversity` | Spec in `docs/research/strategies/` with diversity verdict |
 | evaluator | Fixed seed grid; before/after winrate; rating delta | `run-measurement-round`, `evaluate-bot-change`, `update-leaderboard` | Games in `data/games/`; metrics reported; ratings only after store |
 | docs-keeper | Keep `docs/` small and accurate; sync with code + `RULES.md` | none required | Topic files stay single-purpose; no strategy moved into `AGENTS.md` |
+| tester | Core coverage under `tests/`; fixtures under `tests/fixtures/` | `analyze-and-test-core` | New tests pass, the suite stays under 3 s, and every untested core target is named |
 
 ### explorer
 
@@ -119,6 +120,14 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 2. Sync schema and protocol pages when arena or bot layout changes.
 3. Reject strategy content in `AGENTS.md` and skill files; move it to `docs/`.
 
+### tester
+
+1. Start from the core surface table in
+   [`docs/research/strategies/test-core-skill.md`](docs/research/strategies/test-core-skill.md).
+2. Test core logic only: parsers, store, ratings idempotence, bot_api mapping,
+   fidelity classification, classic match results, remote human-count filter.
+3. Report a proven defect; do not fix production code inside the test step.
+
 ## Cursor skills (Phase 2+)
 
 Taxonomy: [`docs/research/strategies/skills-workflow.md`](docs/research/strategies/skills-workflow.md). Index: [`.cursor/skills/README.md`](.cursor/skills/README.md).
@@ -134,7 +143,7 @@ Taxonomy: [`docs/research/strategies/skills-workflow.md`](docs/research/strategi
 | evaluate-bot-change | Think + Composer | [`.cursor/skills/evaluate-bot-change/`](.cursor/skills/evaluate-bot-change/) |
 | update-leaderboard | Composer | [`.cursor/skills/update-leaderboard/`](.cursor/skills/update-leaderboard/) |
 | commit-research-increment | Composer | [`.cursor/skills/commit-research-increment/`](.cursor/skills/commit-research-increment/) |
-| analyze-and-test-core | Composer | [`.cursor/skills/analyze-and-test-core/`](.cursor/skills/analyze-and-test-core/) |
+| analyze-and-test-core | Think + Composer | [`.cursor/skills/analyze-and-test-core/`](.cursor/skills/analyze-and-test-core/) |
 | improve-skill-from-failure | Think (named only) | [`.cursor/skills/improve-skill-from-failure/`](.cursor/skills/improve-skill-from-failure/) |
 
 Planned CLIs and modules: `scripts/`, `arena/run_match.py`, `arena/tournament.py`, `arena/ratings.py`; data under `data/games/` and `data/ratings/`.
