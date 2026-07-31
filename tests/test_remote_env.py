@@ -23,10 +23,6 @@ def test_resolve_server_url_explicit():
     assert resolve_server_url(server_url="https://example.test") == "https://example.test"
 
 
-def test_resolve_server_url_public_alias():
-    assert resolve_server_url(public_server=True) == PUBLIC_SERVER_URL
-
-
 def test_default_username_from_env(monkeypatch):
     monkeypatch.setenv("GENERALS_USERNAME", "[Bot] custom")
     assert default_username("smoke") == "[Bot] custom"

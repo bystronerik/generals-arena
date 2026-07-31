@@ -177,9 +177,11 @@ Record this carve-out in `diversity-constraints.md` before the bot is written.
 ### 3.1 Endpoint and opponent mix
 
 Play on the **bot endpoint** `https://botws.generals.io/`, the client default,
-with the `[Bot]` username prefix. Do not set `public_server=True`. The human
-endpoint is for humans; running a bot there breaks the site convention and is
-the fastest way to lose access.
+with the `[Bot]` username prefix. The arena has no flag that switches endpoints:
+`resolve_server_url()` returns the bot endpoint unless you pass an explicit
+`--server-url`. Do not point it at the human endpoint; that is for humans, and
+running a bot there breaks the site convention and is the fastest way to lose
+access.
 
 The consequence must be stated up front: the bot endpoint's 1v1 queue holds
 both bots and humans. **Only games against human opponents count toward the

@@ -31,10 +31,10 @@ Composer must not change production code to make a test pass.
 
 | ID | Target | Module | Symbols |
 | --- | --- | --- | --- |
-| C1 | Match result parse | `arena/run_match.py` | `parse_matchup_output` |
-| C2 | Castle metric parse | `arena/run_match.py`, `scripts/measure_heuristics.py` | `parse_castles_built`, `parse_castles` |
+| C1 | Match result mapping | `arena/competition_match.py` | `competition_winner_seat`, `CompetitionMatchResult` fields |
+| C2 | Castle metric counting | `arena/competition_match.py` | castle tally in `run_competition_match` (`castles_built_a/b`) |
 | C3 | Telemetry parse and merge | `arena/run_match.py` | `parse_bot_telemetry`, `apply_telemetry_to_record` |
-| C4 | Game record store | `arena/store.py` | `GameRecord.from_dict`, `save_game`, `load_game`, `validate_record_dict` |
+| C4 | Game record store | `arena/store.py` | `GameRecord.from_dict`, `save_game`, `load_game` |
 | C5 | Rating idempotence | `arena/ratings.py` | `RatingBook.apply_game`, `apply_games`, `to_state`, `from_state`, `rebuild_from_games` |
 | C6 | Unified bot API mapping | `arena/bot_api.py` | `from_game_state`, `from_competition_remote_obs`, `to_client_move`, `translate_action_for_remote`, `StrategySession.act` fault path |
 | C7 | Fidelity session classification | `arena/remote_client.py` | `result_from_reason`, `opponent_is_bot`, `DECIDED_REASONS`, `FidelityRemoteSession._finish_with_reason` |
@@ -63,15 +63,15 @@ One `pytest.mark.parametrize` table per behavior, two to four rows with short la
 
 ```python
 @pytest.mark.parametrize(
-    "label, combined, expected",
+    "label, winner_player_id, truncated, expected",
     [
-        ("player 0 capture", CAPTURE_P0, ("a", 137, True, False)),
-        ("player 1 capture", CAPTURE_P1, ("b", 402, True, False)),
-        ("truncation draw", TRUNCATION, ("draw", 1200, False, True)),
+        ("player 0 capture", 0, False, "a"),
+        ("player 1 capture", 1, False, "b"),
+        ("truncation draw", -1, True, "draw"),
     ],
 )
-def test_parse_matchup_output(label, combined, expected):
-    assert parse_matchup_output(combined) == expected
+def test_competition_winner_seat(label, winner_player_id, truncated, expected):
+    assert competition_winner_seat(winner_player_id, truncated=truncated) == expected
 ```
 
 **Fixtures:** prefer real captured snippets over mocks. Place under `tests/fixtures/<name>.txt` or `.json`, one file per snippet, under 20 lines. Trim to lines the parser reads. One-line comment in the test names the source match or record. Redact every username and credential. Mocks only at the remote client boundary (`FidelityRemoteSession.client`) and for strategies that must raise.

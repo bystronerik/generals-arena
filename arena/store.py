@@ -8,7 +8,7 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Literal
+from typing import Any, Literal
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GAMES_DIR = REPO_ROOT / "data" / "games"
@@ -244,12 +244,3 @@ def git_commit_or_tag(repo_root: Path | None = None) -> str:
     except OSError:
         pass
     return "unknown"
-
-
-def validate_record_dict(data: dict[str, Any]) -> None:
-    """Raise ValueError if `data` is not a valid game record."""
-    GameRecord.from_dict(data)
-
-
-def iter_winners(records: Iterable[GameRecord]) -> list[Winner]:
-    return [r.winner for r in records]

@@ -50,10 +50,6 @@ class UnifiedObservation:
     army_grid: List[List[int]]
 
 
-# Backward-compatible alias used by older docs and adapters.
-StdioObservation = UnifiedObservation
-
-
 @runtime_checkable
 class ArenaAgent(Protocol):
     """Contract for ``bots/<name>/agent.py`` strategy classes."""

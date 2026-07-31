@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import math
-from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -158,7 +157,6 @@ def format_markdown_report(
 ) -> str:
     """Render a human-block markdown report."""
     ts = generated_at or datetime.now(timezone.utc)
-    decided = stats.wins + stats.losses
     win_rate_pct = f"{100.0 * stats.win_rate:.1f}%" if stats.win_rate is not None else "n/a"
     wilson_pct = f"{100.0 * stats.wilson_lb:.1f}%"
 

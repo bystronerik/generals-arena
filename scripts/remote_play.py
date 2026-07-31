@@ -199,21 +199,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Bot server URL (default: https://botws.generals.io)",
     )
     parser.add_argument(
-        "--public-server",
-        action="store_true",
-        help="Alias for the public bot server (https://botws.generals.io)",
-    )
-    parser.add_argument(
         "--verify-offline",
         action="store_true",
         help="Run offline adapter checks before connecting",
     )
     args = parser.parse_args(argv)
 
-    server_url = resolve_server_url(
-        server_url=args.server_url,
-        public_server=args.public_server,
-    )
+    server_url = resolve_server_url(server_url=args.server_url)
 
     if args.bot not in REMOTE_RECOMMENDED_BOTS:
         print(

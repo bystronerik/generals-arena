@@ -17,7 +17,6 @@ import numpy as np
 from arena.bot_api import (
     PASS,
     StrategySession,
-    UnifiedObservation,
     from_competition_remote_obs,
     list_bots,
     to_competition_action_array,
@@ -40,11 +39,8 @@ REMOTE_RECOMMENDED_BOTS: tuple[str, ...] = (
 
 REMOTE_BUILD_BOTS: frozenset[str] = frozenset({"castle_builder", "castle_rush", "phase_switch"})
 
-# Backward-compatible aliases
-StdioObservation = UnifiedObservation
-to_stdio_observation = from_competition_remote_obs
+# Backward-compatible alias kept for scripts/remote_play.py.
 list_remote_bots = list_bots
-translate_action = translate_action_for_remote
 
 _AdapterClass: type[Any] | None = None
 

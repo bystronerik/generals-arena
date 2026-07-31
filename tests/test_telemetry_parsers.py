@@ -1,61 +1,19 @@
-"""Table-driven tests for arena/run_match.py stdout parsers."""
+"""Table-driven tests for arena/run_match.py bot-telemetry parsers."""
 from __future__ import annotations
-
-import pytest
 
 from arena.run_match import (
     BotTelemetry,
     apply_telemetry_to_record,
     parse_bot_telemetry,
-    parse_castles_built,
-    parse_matchup_output,
 )
 from arena.store import GameRecord
 
 
-WIN_A = "[matchup] turn 42: player 0 captured opponent general\n"
-WIN_B = "[matchup] turn 17: player 1 captured opponent general\n"
-DRAW = "[matchup] turn 1200: truncated\n"
-CASTLE_LINE = "[matchup] castles built: 2 (smoke) vs 1 (rush)\n"
 TELEM_P0 = (
     "[telemetry] player=0 turn=1199 my_land=50 my_army=100 "
     "opp_land=30 opp_army=80 enemy_general_sighted=1 first_sighting_turn=200\n"
 )
 TELEM_P1 = "[telemetry] player=1 turn=1199 my_land=30 my_army=80 opp_land=50 opp_army=100\n"
-
-
-@pytest.mark.parametrize(
-    ("combined", "expected"),
-    [
-        (WIN_A, ("a", 42, True, False)),
-        (WIN_B, ("b", 17, True, False)),
-        (DRAW, ("draw", 1200, False, True)),
-        (WIN_A + DRAW, ("a", 42, True, False)),
-        (DRAW + WIN_B, ("b", 17, True, False)),
-    ],
-    ids=["win_a", "win_b", "draw", "win_then_draw", "draw_then_win"],
-)
-def test_parse_matchup_output(combined, expected):
-    assert parse_matchup_output(combined) == expected
-
-
-def test_parse_matchup_output_raises_on_missing_result():
-    with pytest.raises(ValueError, match="could not parse matchup result"):
-        parse_matchup_output("no result lines here\n")
-
-
-@pytest.mark.parametrize(
-    ("combined", "expected"),
-    [
-        ("", (None, None)),
-        ("no castles\n", (None, None)),
-        (CASTLE_LINE, (2, 1)),
-        (CASTLE_LINE + "[matchup] castles built: 9 (a) vs 8 (b)\n", (9, 8)),
-    ],
-    ids=["empty", "missing", "single", "last_wins"],
-)
-def test_parse_castles_built(combined, expected):
-    assert parse_castles_built(combined) == expected
 
 
 def test_parse_bot_telemetry_last_line_per_player():

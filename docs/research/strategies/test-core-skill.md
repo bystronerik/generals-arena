@@ -102,10 +102,10 @@ is not in it.
 
 | ID | Target | Module | Symbols | Why it is core |
 | --- | --- | --- | --- | --- |
-| C1 | Match result parse | `arena/run_match.py` | `parse_matchup_output` | A wrong winner or turn count enters `data/games/` and Elo forever |
-| C2 | Castle metric parse | `arena/run_match.py`, `scripts/measure_heuristics.py` | `parse_castles_built`, `parse_castles` | The only castle signal that reaches a round report |
+| C1 | Match result mapping | `arena/competition_match.py` | `competition_winner_seat`, `CompetitionMatchResult` fields | A wrong winner or turn count enters `data/games/` and Elo forever |
+| C2 | Castle metric counting | `arena/competition_match.py` | castle tally in `run_competition_match` (`castles_built_a/b`) | The only castle signal that reaches a round report |
 | C3 | Telemetry parse and merge | `arena/run_match.py` | `parse_bot_telemetry`, `apply_telemetry_to_record` | Schema v2 fields; generic extras (e.g. `first_city_capture_turn`) |
-| C4 | Game record store | `arena/store.py` | `GameRecord.from_dict`, `save_game`, `load_game`, `validate_record_dict` | A malformed record breaks a whole round load |
+| C4 | Game record store | `arena/store.py` | `GameRecord.from_dict`, `save_game`, `load_game` | A malformed record breaks a whole round load |
 | C5 | Rating idempotence | `arena/ratings.py` | `RatingBook.apply_game`, `apply_games`, `to_state`, `from_state`, `rebuild_from_games` | A double-counted game moves Elo with no visible error |
 | C6 | Unified bot API mapping | `arena/bot_api.py` | `from_game_state`, `from_competition_remote_obs`, `to_client_move`, `translate_action_for_remote`, `StrategySession.act` fault path | The single observation and action contract for every bot |
 | C7 | Fidelity session classification | `arena/remote_client.py` | `result_from_reason`, `opponent_is_bot`, `DECIDED_REASONS`, `FidelityRemoteSession._finish_with_reason` | Decides `counts_toward_block`, which defines the 95/100 claim |
@@ -160,15 +160,15 @@ Each row carries a short label. The template the skill must give:
 
 ```python
 @pytest.mark.parametrize(
-    "label, combined, expected",
+    "label, winner_player_id, truncated, expected",
     [
-        ("player 0 capture", CAPTURE_P0, ("a", 137, True, False)),
-        ("player 1 capture", CAPTURE_P1, ("b", 402, True, False)),
-        ("truncation draw", TRUNCATION, ("draw", 1200, False, True)),
+        ("player 0 capture", 0, False, "a"),
+        ("player 1 capture", 1, False, "b"),
+        ("truncation draw", -1, True, "draw"),
     ],
 )
-def test_parse_matchup_output(label, combined, expected):
-    assert parse_matchup_output(combined) == expected
+def test_competition_winner_seat(label, winner_player_id, truncated, expected):
+    assert competition_winner_seat(winner_player_id, truncated=truncated) == expected
 ```
 
 Case selection rule, in this order: one normal case, one boundary case, one

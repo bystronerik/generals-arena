@@ -73,7 +73,7 @@ def _counted_human_games_since(since: float) -> int:
     return count_human_block_games(REMOTE_GAMES_DIR, since_mtime=since)
 
 
-def _lobby_cleared_while_running(started_at: float, initial_lobby_id: str) -> bool:
+def _lobby_cleared_while_running(initial_lobby_id: str) -> bool:
     current = _lobby_id_from_agent_file()
     return current is None or current != initial_lobby_id
 
@@ -96,7 +96,6 @@ class LobbyWatchSession:
         self.poll_interval = poll_interval
         self.server_url = server_url
         self.started_at = time.time()
-        self.counted_at_start = _counted_human_games_since(self.started_at)
 
     def counted_this_session(self) -> int:
         return _counted_human_games_since(self.started_at)
@@ -124,7 +123,7 @@ class LobbyWatchSession:
 
         games_joined = 0
         while self.remaining() > 0:
-            if _lobby_cleared_while_running(self.started_at, self.lobby_id):
+            if _lobby_cleared_while_running(self.lobby_id):
                 print("GENERALS_LOBBY_ID cleared or changed; stopping.", flush=True)
                 break
 
@@ -154,7 +153,7 @@ class LobbyWatchSession:
                     flush=True,
                 )
 
-            if _lobby_cleared_while_running(self.started_at, self.lobby_id):
+            if _lobby_cleared_while_running(self.lobby_id):
                 print("GENERALS_LOBBY_ID cleared or changed; stopping.", flush=True)
                 break
 
@@ -250,11 +249,6 @@ def main(argv: list[str] | None = None) -> int:
         help="Bot server URL (default: https://botws.generals.io)",
     )
     parser.add_argument(
-        "--public-server",
-        action="store_true",
-        help="Alias for the public bot server (https://botws.generals.io)",
-    )
-    parser.add_argument(
         "--verify-offline",
         action="store_true",
         help="Run offline adapter checks before watching",
@@ -272,10 +266,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.max_watch_minutes is not None:
         max_watch_s = args.max_watch_minutes * 60.0
 
-    server_url = resolve_server_url(
-        server_url=args.server_url,
-        public_server=args.public_server,
-    )
+    server_url = resolve_server_url(server_url=args.server_url)
 
     return watch_for_lobby(
         bot=args.bot,

@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import os
 import re
-import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,7 +15,6 @@ if str(_REPO_ROOT) not in sys.path:
 from arena.competition_match import run_competition_match
 from arena.store import (
     GAMES_DIR,
-    REPO_ROOT,
     GameRecord,
     bot_id_from_run_sh,
     duration_seconds_between,
@@ -27,17 +24,6 @@ from arena.store import (
     utc_now_iso,
 )
 
-MATCHUP_PY = REPO_ROOT / "competition-module" / "competition" / "matchup.py"
-
-_WIN_RE = re.compile(
-    r"\[matchup\] turn (?P<turns>\d+): player (?P<player>\d+) captured"
-)
-_DRAW_RE = re.compile(
-    r"\[matchup\] turn (?P<turns>\d+): truncated"
-)
-_CASTLE_RE = re.compile(
-    r"\[matchup\] castles built: (?P<a>\d+) \([^)]+\) vs (?P<b>\d+)"
-)
 _TELEMETRY_PREFIX_RE = re.compile(
     r"\[telemetry\] player=(?P<player>[01]) turn=(?P<turn>\d+) "
     r"my_land=(?P<my_land>\d+) my_army=(?P<my_army>\d+) "
@@ -63,15 +49,6 @@ class BotTelemetry:
         if self.first_sighting_turn is not None:
             merged.setdefault("first_sighting_turn", str(self.first_sighting_turn))
         return merged
-
-
-def parse_castles_built(combined: str) -> tuple[int | None, int | None]:
-    match = None
-    for found in _CASTLE_RE.finditer(combined):
-        match = found
-    if match is None:
-        return None, None
-    return int(match.group("a")), int(match.group("b"))
 
 
 def _parse_telemetry_extras(tail: str) -> dict[str, str]:
@@ -154,109 +131,6 @@ def apply_telemetry_to_record(
     record.metrics = metrics
 
 
-@dataclass
-class MatchResult:
-    winner: str  # a | b | draw
-    turns: int
-    terminated: bool
-    truncated: bool
-    stdout: str
-    stderr: str
-    returncode: int
-
-
-def _venv_path_env() -> dict[str, str]:
-    env = os.environ.copy()
-    # Keep .venv/bin on PATH; resolve() follows symlinks to the system framework.
-    venv_bin = str(Path(sys.executable).parent)
-    env["PATH"] = venv_bin + os.pathsep + env.get("PATH", "")
-    env["PYTHON"] = sys.executable
-    env["PYTHONUNBUFFERED"] = "1"
-    return env
-
-
-def parse_matchup_output(combined: str) -> tuple[str, int, bool, bool]:
-    """Parse matchup stdout/stderr into (winner, turns, terminated, truncated)."""
-    win = None
-    for match in _WIN_RE.finditer(combined):
-        win = match
-    draw = None
-    for match in _DRAW_RE.finditer(combined):
-        draw = match
-
-    if win is not None:
-        player = int(win.group("player"))
-        if player not in (0, 1):
-            raise ValueError(f"unexpected winner player id: {player}")
-        winner = "a" if player == 0 else "b"
-        return winner, int(win.group("turns")), True, False
-    if draw is not None:
-        return "draw", int(draw.group("turns")), False, True
-    raise ValueError(
-        "could not parse matchup result; expected a capture or truncation line"
-    )
-
-
-def run_matchup(
-    bot_a_run: Path,
-    bot_b_run: Path,
-    *,
-    seed: int = 0,
-    mode: str = "competition",
-    timeout: float | None = None,
-) -> MatchResult:
-    """Run matchup.py --mode competition (or the given mode)."""
-    if mode != "competition":
-        raise ValueError(
-            f"arena matches require mode='competition' (got {mode!r})"
-        )
-    if not MATCHUP_PY.exists():
-        raise FileNotFoundError(f"matchup.py not found: {MATCHUP_PY}")
-    a = bot_a_run.resolve()
-    b = bot_b_run.resolve()
-    if not a.exists():
-        raise FileNotFoundError(f"bot A run.sh not found: {a}")
-    if not b.exists():
-        raise FileNotFoundError(f"bot B run.sh not found: {b}")
-
-    cmd = [
-        sys.executable,
-        str(MATCHUP_PY),
-        str(a),
-        str(b),
-        "--mode",
-        mode,
-        "--seed",
-        str(seed),
-    ]
-    proc = subprocess.run(
-        cmd,
-        cwd=str(MATCHUP_PY.parent),
-        capture_output=True,
-        text=True,
-        env=_venv_path_env(),
-        timeout=timeout,
-        check=False,
-    )
-    combined = (proc.stdout or "") + "\n" + (proc.stderr or "")
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"matchup.py exited {proc.returncode}\n"
-            f"--- stdout ---\n{proc.stdout}\n"
-            f"--- stderr ---\n{proc.stderr}"
-        )
-    winner, turns, terminated, truncated = parse_matchup_output(combined)
-    return MatchResult(
-        winner=winner,
-        turns=turns,
-        terminated=terminated,
-        truncated=truncated,
-        stdout=proc.stdout or "",
-        stderr=proc.stderr or "",
-        returncode=proc.returncode,
-    )
-
-
 def run_and_store(
     bot_a_run: Path,
     bot_b_run: Path,
@@ -323,7 +197,7 @@ def run_and_store(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Run a competition matchup and store data/games/<game_id>.json."
+        description="Run a competition match and store data/games/<game_id>.json."
     )
     parser.add_argument("bot_a", type=Path, help="path to bot A run.sh")
     parser.add_argument("bot_b", type=Path, help="path to bot B run.sh")
@@ -332,7 +206,7 @@ def main(argv: list[str] | None = None) -> int:
         default="competition",
         help="must be competition (default: competition)",
     )
-    parser.add_argument("--seed", type=int, default=0, help="matchup seed (default: 0)")
+    parser.add_argument("--seed", type=int, default=0, help="match seed (default: 0)")
     parser.add_argument(
         "--games-dir",
         type=Path,
@@ -355,7 +229,7 @@ def main(argv: list[str] | None = None) -> int:
         "--timeout",
         type=float,
         default=None,
-        help="optional subprocess timeout in seconds",
+        help="optional wall-clock match timeout in seconds",
     )
     parser.add_argument(
         "--update-ratings",

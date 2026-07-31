@@ -69,14 +69,8 @@ def default_lobby_id() -> str:
     return os.environ.get("GENERALS_LOBBY_ID", "arena-test").strip()
 
 
-def resolve_server_url(
-    *,
-    server_url: str | None = None,
-    public_server: bool = False,
-) -> str:
-    """Resolve the bot server URL from CLI flags."""
+def resolve_server_url(*, server_url: str | None = None) -> str:
+    """Resolve the bot server URL, defaulting to the public bot server."""
     if server_url:
         return server_url.strip()
-    if public_server:
-        return PUBLIC_SERVER_URL
     return PUBLIC_SERVER_URL
