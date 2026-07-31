@@ -39,7 +39,7 @@ class ClassicMatchSpec:
 
 @dataclass
 class ClassicGameRecord:
-    """One stored classic-approximate match (never enters data/games/ or Elo)."""
+    """One stored classic-approximate match (never enters data/games/ or the fit)."""
 
     game_id: str
     seed: int
@@ -263,7 +263,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Run N seeds × bot pairs under the classic harness; "
-            "store JSON under data/classic_games/ (not Elo)."
+            "store JSON under data/classic_games/ (never rated)."
         )
     )
     parser.add_argument(

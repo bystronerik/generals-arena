@@ -2,7 +2,7 @@
 In-process competition match runner for arena batch workers.
 
 Configures the shared loop in `arena.matches.loop` with a competition-mode
-GeneralsEnv, without spawning matchup.py. Results may enter data/games/ and Elo.
+GeneralsEnv, without spawning matchup.py. Results may enter data/games/ and the rating fit.
 """
 
 from __future__ import annotations

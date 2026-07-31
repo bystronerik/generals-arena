@@ -365,7 +365,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--no-ratings",
         action="store_true",
-        help="store games only; do not rebuild Elo",
+        help="store games only; do not refit ratings",
     )
     parser.add_argument(
         "--timeout",

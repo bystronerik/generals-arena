@@ -33,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--update-ratings",
         action="store_true",
-        help="apply Elo after the game is stored",
+        help="refit ratings after the game is stored",
     )
     args = parser.parse_args(argv)
     run_and_store(

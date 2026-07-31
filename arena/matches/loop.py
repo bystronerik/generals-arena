@@ -8,7 +8,7 @@ constructed, so each one configures this loop instead of reimplementing it.
 
 ``arena.matches.competition`` and ``arena.matches.classic`` are the entry points;
 neither result shape changes, and only competition results may enter
-``data/games/`` and Elo.
+``data/games/`` and the rating fit.
 """
 
 from __future__ import annotations

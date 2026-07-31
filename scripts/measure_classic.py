@@ -3,7 +3,7 @@
 
 Runs N seeds × bot pairs via arena.tournaments.classic, stores games under
 data/classic_games/, and writes docs/research/measurements/<round>.{json,md}.
-Classic results never enter data/games/ or Elo.
+Classic results never enter data/games/ or the rating fit.
 """
 
 from __future__ import annotations

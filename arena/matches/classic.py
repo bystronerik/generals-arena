@@ -4,7 +4,7 @@ Classic-approximate local harness for remote-only bots.
 Configures the shared loop in `arena.matches.loop` with a GeneralsEnv built for
 classic rules: build_castles=False, deathtouch_turn=None, and neutral
 pre-placed cities. This is NOT competition matchup — results do not enter
-data/games/ or Elo.
+data/games/ or the rating fit.
 
 See docs/engine/classic-matchup.md and docs/research/strategies/human-95-plan.md §4.2.
 """
