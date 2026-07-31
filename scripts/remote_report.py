@@ -11,10 +11,12 @@ import argparse
 import sys
 from pathlib import Path
 
-from arena.remote_env import REMOTE_GAMES_DIR, REPO_ROOT, ensure_repo_on_path, load_dotenv_files
-from arena.remote_report import aggregate_remote_games, format_markdown_report, load_remote_records
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-ensure_repo_on_path()
+from arena.remote_env import REMOTE_GAMES_DIR, REPO_ROOT, load_dotenv_files
+from arena.remote_report import aggregate_remote_games, format_markdown_report, load_remote_records
 
 
 def main(argv: list[str] | None = None) -> int:

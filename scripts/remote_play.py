@@ -13,6 +13,11 @@ import sys
 import time
 import traceback
 from datetime import datetime, timezone
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 from arena.remote_adapter import (
     REMOTE_RECOMMENDED_BOTS,
@@ -34,13 +39,10 @@ from arena.remote_env import (
     SETUP_DOC,
     default_lobby_id,
     default_username,
-    ensure_repo_on_path,
     load_dotenv_files,
     require_user_id,
     resolve_server_url,
 )
-
-ensure_repo_on_path()
 
 DEFAULT_QUEUE_TIMEOUT_S = 600.0
 
@@ -64,8 +66,17 @@ def _make_session(
     )
 
 
-def run_dry_run(bot: str) -> int:
+def run_dry_run(
+    bot: str,
+    *,
+    username: str | None = None,
+    lobby_id: str | None = None,
+) -> int:
     print("Dry-run: offline adapter verification (no network).")
+    registered_as = ensure_bot_username(username or _default_username(bot))
+    lobby = lobby_id or _default_lobby_id()
+    print(f"Live username would register as: {registered_as!r}")
+    print(f"Lobby mode would use lobby_id: {lobby!r}")
     errors = verify_adapter_offline()
     if errors:
         print("Offline verification FAILED:", file=sys.stderr)
@@ -212,7 +223,11 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     if args.mode == "dry-run":
-        return run_dry_run(args.bot)
+        return run_dry_run(
+            args.bot,
+            username=args.username,
+            lobby_id=args.lobby_id,
+        )
 
     if args.verify_offline:
         errors = verify_adapter_offline()

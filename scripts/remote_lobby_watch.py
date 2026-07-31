@@ -17,6 +17,10 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 from arena.remote_adapter import verify_adapter_offline
 from arena.remote_block import count_human_block_games
 from arena.remote_bridge import make_unified_bot
@@ -25,13 +29,10 @@ from arena.remote_env import (
     REMOTE_GAMES_DIR,
     REPO_ROOT,
     default_username,
-    ensure_repo_on_path,
     load_dotenv_files,
     require_user_id,
     resolve_server_url,
 )
-
-ensure_repo_on_path()
 
 ENV_AGENT = REPO_ROOT / ".env.agent"
 SECRET_KEYS = frozenset(
