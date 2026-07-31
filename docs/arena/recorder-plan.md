@@ -4,9 +4,9 @@ Give heuristic tuning per-turn evidence and a later RL bot trajectories to
 train on, without touching the rating identity: a game's per-turn history is
 recorded **beside** its `GameRecord`, keyed by `game_id`, off by default.
 
-Status: **decided, 2026-08-01 — ready to implement.** All design questions
-were resolved the same day (§8: four decided explicitly, four applied
-defaults); no implementation yet. Modelled on
+Status: **implemented, 2026-08-01.** Steps 1–7 of §5 landed as seven commits;
+step 8's docs are synced. The one thing left is the regeneration round that
+step 2's hash fork requires — see "What shipped" below. Modelled on
 [ratings-refactor-plan.md](ratings-refactor-plan.md); like that document, every
 audit claim below was verified against the repo on the stated date, and numbers
 marked *(measured)* come from throwaway probes run on 2026-08-01.
@@ -780,3 +780,68 @@ Overridable, but the plan now assumes these.
 | O2 | gzip vs zstd | **gzip** — stdlib, and at ~130 MB worst case the difference is noise. Revisit only if RL-scale materialization measurably bottlenecks on decompression. |
 | O5 | Trajectory retention | **Manual.** A round's trajectory dir is deletable once its experiment note is published, kept while tuning or RL work references it; no auto-GC. Revisit when `data/trajectories/` first crosses ~2 GB. |
 | O8 | The "11 bots" figure | **9 is the count of record** (§1 A2; `classic_duel` among them never reaches `data/games/`). If more bots were intended (e.g. `garrison`, `late_rush`), each is a new `probe.py` plus a schema entry, per §3.4. |
+
+---
+
+## 9. What shipped (2026-08-01)
+
+Seven commits, one per §5 step, each independently committable on `main`.
+
+| Step | Commit | Landed |
+| --- | --- | --- |
+| 1 | `e45dab4` | schema v5; 10,500 stored records projected in place |
+| 2 | `cca19df` | closure stripped; all 22 bot hashes forked once |
+| 3 | `6e2f7c5` | `telemetry_schema.py` |
+| 4 | `84a1039` | trajectory format, writer, reader |
+| 5 | `58aa88a` | recorder hook, instrumented runner, `--record` |
+| 6 | `f320295` | replay, verify, materialize, era guard |
+| 7 | `dd69185` | series reducers merged into `metrics` |
+
+### Measured, not estimated
+
+- **Overhead: mean +1.41%, max +3.02%** (budget ≤ 2%). metro vs blitz — both
+  probed, so both seats instrumented — 10 seeds, paired, each seed warmed
+  first. Warming matters: board dimensions vary per seed and the first match on
+  a new shape pays ~1.3 s of jit, which without a warm-up lands in whichever
+  arm ran first and swings a naive A/B by ±200%. The max sits on the shortest
+  game, because the ~40 ms of extra process startup is fixed and amortizes
+  worst over few turns.
+- **Outcomes unchanged** off vs on for all 10 seeds, plus 9 further games
+  across three bot pairs. The instrumented spawn does not change the game.
+- **Storage: 8.2 KB per game** at a ~450-turn average, on track for the ~12 KB
+  the §1 table projected at 1200 turns.
+- **Suite: 362 tests, ~7.0 s warm**, against the 7 s ceiling. The replay test
+  is marked and excluded (`pytest tests -m replay -q`, 2 passed in 3.5 s).
+
+### Where the plan met reality
+
+1. **A name collision the audit missed.** v4's top-level `castles_built_a/_b`
+   (engine tally) and `metrics["castles_built_a"]` (metro's own counter,
+   flattened out of stderr) were the same key for two different measurements.
+   They disagree on 16 of the 1000 games carrying both. The migration keeps the
+   engine tally under the plain name and moves the bot's belief to
+   `castles_built_probe_a/_b`; metro's probe emits `castles_built_probe`
+   accordingly, not the §3.2 table's `castles_built`.
+2. **`game_id` moved earlier.** A trajectory is keyed by its game, so the id
+   must exist before the first turn. `record_from_match_result` now takes it
+   instead of minting it.
+3. **Reducers coerce at record build too**, not only at trace time — otherwise
+   a BOOL01 read back from a file as `0`/`1` reduces to `0`/`1` rather than to
+   a bool.
+4. **Engine series are seat-relative.** `land_margin_b` means B's lead, so it
+   agrees with the engine-truth final of the same name. Keys reachable from two
+   sources are merged with an equality check that raises on disagreement rather
+   than letting one silently win.
+5. **`arena/instrument/probes.py`** was split out of `runner.py`: the probe
+   loader is needed by tests and by the runner, and one loader beats two.
+6. **`terminated` is a derived property** on `GameRecord`, not a dropped field
+   every reader re-derives.
+
+### Still open
+
+- **The regeneration round.** Step 2 forked all 22 bot hashes, so the
+  leaderboard is stale until one measurement round repopulates it (§8 O4 —
+  fold it into the next planned round; ~60 min). Old rounds' games stay on
+  disk and rate exactly as before.
+- Applied defaults O1, O2, O5 are unchanged and unrevisited: no dense-state
+  storage, gzip, manual retention.

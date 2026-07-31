@@ -24,6 +24,7 @@ Process rules for agents that work in this repo. Put game and bot knowledge in `
 | Stdio bots | `bots/<name>/` with `agent.py`, `main.py`, `run.sh` |
 | Match runner, ratings, store | `arena/` |
 | Match JSON / rating snapshots (derived, gitignored) | `data/games/`, `data/ratings/` |
+| Per-turn trajectories (derived, gitignored, opt-in `--record`) | `data/trajectories/` |
 | Bot version registry (committed) | `data/bot_versions/` |
 | Cursor skills | `.cursor/skills/` |
 

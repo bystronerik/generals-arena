@@ -8,10 +8,37 @@ How to add a bot under `bots/<name>/`.
 bots/<name>/
 ├── agent.py    # decide actions from observation
 ├── main.py     # stdio protocol IO
+├── probe.py    # optional: per-turn introspection (NOT part of the bot)
 └── run.sh      # entry the matchup runner executes
 ```
 
 Optional: `build.sh` beside `run.sh` for compile / weight prep.
+
+## Per-turn introspection
+
+Add `bots/<name>/probe.py` to see inside the bot on recorded matches:
+
+```python
+def extras(agent) -> dict:
+    return {"phase": agent._core.memory.phase}
+```
+
+It sits beside the agent but is **not part of it**:
+
+- excluded from the source closure, so it is in no content hash and no
+  submission bundle — editing it never forks the bot's rating identity;
+- loaded only by `arena.instrument.runner`, and only when a match runs with
+  `--record`;
+- **must never be imported by the agent.** `arena/records/fingerprint.py`
+  raises if it is: unhashed code must be unreachable from the hashed program,
+  or a probe could change how the bot plays without moving its hash;
+- passive — read attributes, return them, change nothing;
+- every key needs an entry in `arena/records/telemetry_schema.py`. An
+  undeclared key fails the recorded match rather than landing untyped.
+
+Bots emit no telemetry themselves. `main.py` and `_common/wire.py` are the
+protocol and nothing else, because everything in them ships to the judge.
+See [`docs/arena/trajectories.md`](../arena/trajectories.md).
 
 ## Pattern
 

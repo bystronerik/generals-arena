@@ -30,16 +30,32 @@ Thin smoke CLI:
 python scripts/smoke_match.py --seed 0
 ```
 
-## Result parsing
+## Recording a per-turn trajectory
 
-The runner reads matchup output lines:
+```bash
+python -m arena.matches.run_match bots/metro/run.sh bots/blitz/run.sh \
+  --seed 13 --record
+```
 
-- `player N captured the enemy general` → winner `a` (N=0) or `b` (N=1), `terminated=true`
-- `truncated at ... turns (draw)` → `winner=draw`, `truncated=true`
-- `[matchup] castles built: N (...) vs M (...)` → optional `castles_built_a` / `_b`
-- `[telemetry] player=P ...` (last line per player on stderr) → optional final land/army and sighting metrics
+Off by default. With `--record` the match also writes
+`data/trajectories/<round>/<game_id>.*`, and each seat whose bot carries a
+`probe.py` is spawned through `arena.instrument.runner` instead of `run.sh` so
+its internals are traced. The record then carries the reducer output for every
+recorded series. Costs ~1.4% wall clock; the game itself is unchanged.
+`--trajectories-dir` overrides where the files land.
 
-See [game-record-schema.md](game-record-schema.md) for the full schema v4 field list.
+See [trajectories.md](trajectories.md).
+
+## Where the result comes from
+
+- winner, turns, and `truncated` come from the loop's own outcome, not from
+  parsed text;
+- `castles_built_a` / `_b` are the engine's tally of castle births;
+- `final_land_*` / `final_army_*` are the engine's terminal `GameInfo` — the
+  bots are never asked, so a crashed seat is still scored;
+- everything else in `metrics` needs `--record`.
+
+See [game-record-schema.md](game-record-schema.md) for the schema v5 field list.
 
 ## Schema
 

@@ -105,7 +105,7 @@ is not in it.
 | --- | --- | --- | --- | --- |
 | C1 | Match result mapping | `arena/match_loop.py` | `winner_seat`, `MatchLoopResult` fields | A wrong winner or turn count enters `data/games/` and Elo forever |
 | C2 | Castle metric counting | `arena/competition_match.py` | castle tally in `run_competition_match` (`castles_built_a/b`) | The only castle signal that reaches a round report |
-| C3 | Telemetry parse and merge | `arena/telemetry.py` | `parse_bot_telemetry`, `apply_telemetry_to_record` | Schema v2 fields; generic extras (e.g. `first_city_capture_turn`) |
+| C3 | Telemetry schema and series reducers | `arena/records/telemetry_schema.py`, `arena/records/telemetry.py` | `coerce`, `reduce_series`, `metric_keys`, `engine_metrics`, `series_metrics` | Every observational number in a record is typed and reduced here; a wrong reducer is invisible in the match output and permanent in `data/games/` |
 | C4 | Game record store | `arena/store.py` | `GameRecord.from_dict`, `save_game`, `load_game` | A malformed record breaks a whole round load |
 | C5 | Rating order-invariance | `arena/records/ratings/` | `counts.count_table` digest, `counts.merge`, `fit.fit_ratings`, `policy.rejection_reason` | A rating that depends on match order makes the leaderboard a readout of worker scheduling |
 | C6 | Unified bot API mapping | `arena/bot_api.py` | `from_game_state`, `from_competition_remote_obs`, `to_client_move`, `translate_action_for_remote`, `StrategySession.act` fault path | The single observation and action contract for every bot |
@@ -114,6 +114,20 @@ is not in it.
 | C9 | Remote human-count filter | `arena/remote_block.py` | `counts_as_human_block_game`, `count_human_block_games` | The filter defines a human block; T2 lived here |
 | C10 | Grid construction helpers | `arena/tournament.py`, `scripts/measure_heuristics.py` | `parse_seeds`, `bot_pairs`, `build_grid` | A wrong seed set or pair set silently changes what a round measures |
 | C11 | Bot version registry | `arena/records/registry.py` | `Registry.register` (idempotent, revert case), `require_registered`, `verify` | The registry is the only thing that maps a rated hash back to source; a wrong entry makes a measured delta unattributable |
+| C12 | Trajectory writer and replay | `arena/records/trajectories.py` | `TrajectoryRecorder.write`, `read_trajectory`, `Trajectory.series`, `verify_trajectory`, `require_same_era` | A trajectory that does not replay is evidence that silently is not the game it claims to be |
+| C13 | Closure exclusion for probes | `arena/records/fingerprint.py` | `bot_source_closure` probe exclusion, `ProbeInClosureError` | The rating identity's own definition; an under-hash pools two different programs |
+
+**2026-08-01.** The recorder work at `docs/arena/recorder-plan.md` rewrote C3
+and added C12 and C13. C3 used to be stderr parsing; bots emit no telemetry at
+all now, so the core surface moved to the declared schema and its reducers. The
+replay determinism test (C12) is marked `@pytest.mark.replay` and is
+**excluded from the default suite** — it plays and replays a real match, which
+costs ~1.6 s of one-time JAX jit that cannot be made cheap against a 7 s
+ceiling. It runs in the verification gate instead:
+
+```bash
+python -m pytest tests -m replay -q
+```
 
 **2026-07-31.** The refactor at `docs/arena/ratings-refactor-plan.md` rewrote C5
 and added C11. C5 used to be "rating idempotence by `game_id`" — a property the
@@ -132,7 +146,10 @@ Existing coverage, so that the skill does not duplicate work:
 | --- | --- | --- |
 | `tests/test_bot_api.py` | C6 mapping for remote obs, game state, client move, pass | `StrategySession.act` fault counting; build action on the remote path |
 | `tests/test_remote_client.py` | C7 reason mapping, `opponent_is_bot`, win, loss, disconnect records | `stall` and `receive_error` records; a null `opponent_is_bot` in the written record |
-| `tests/test_telemetry_parsers.py` | C1, C2, C3 | Two castle lines in one capture; telemetry with one player only |
+| `tests/test_record_build.py` | C1, C2, C3 | — |
+| `tests/test_telemetry_schema.py` | C3 kinds, unknown keys, reducers | — |
+| `tests/test_trajectories.py`, `tests/test_trajectory_replay.py` | C12 | — |
+| `tests/test_fingerprint.py` | C13 | — |
 | `tests/test_store.py` | C4 | — |
 | `tests/test_ratings.py` | C5 order-invariance, count-table canonicality, pooling policy, reproducible artifacts | — |
 | `tests/test_ratings_model.py` | C5 likelihood derivatives, anchor stability, strength/seat/draw recovery, sparse cases, the elote oracle | — |

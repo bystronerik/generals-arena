@@ -33,7 +33,7 @@ Composer must not change production code to make a test pass.
 | --- | --- | --- | --- |
 | C1 | Match result mapping | `arena/matches/loop.py` | `winner_seat`, `MatchLoopResult` fields |
 | C2 | Castle metric counting | `arena/matches/competition.py` | castle tally in `run_competition_match` (`castles_built_a/b`) |
-| C3 | Telemetry parse and merge | `arena/records/telemetry.py` | `parse_bot_telemetry`, `apply_telemetry_to_record` |
+| C3 | Telemetry schema and series reducers | `arena/records/telemetry_schema.py`, `arena/records/telemetry.py` | `coerce`, `reduce_series`, `metric_keys`, `engine_metrics`, `series_metrics` |
 | C4 | Game record store | `arena/records/store.py` | `GameRecord.from_dict`, `save_game`, `load_game` |
 | C5 | Rating order-invariance | `arena/records/ratings/` | `counts.count_table` digest, `counts.merge`, `fit.fit_ratings` (ratings, SEs, covariance), `policy.rejection_reason` |
 | C11 | Bot version registry | `arena/records/registry.py` | `Registry.register` (idempotent, revert case), `require_registered`, `verify` |
@@ -42,8 +42,15 @@ Composer must not change production code to make a test pass.
 | C8 | Classic match result contract | `arena/matches/classic.py` | `run_classic_match` return contract, classic record writer |
 | C9 | Remote human-count filter | `arena/remote/block.py` | `counts_as_human_block_game`, `count_human_block_games` |
 | C10 | Grid construction helpers | `arena/tournaments/competition.py`, `scripts/measure_heuristics.py` | `parse_seeds`, `bot_pairs`, `build_grid` |
+| C12 | Trajectory writer and replay | `arena/records/trajectories.py` | `TrajectoryRecorder.write`, `read_trajectory`, `Trajectory.series`, `verify_trajectory`, `require_same_era` |
+| C13 | Closure exclusion for probes | `arena/records/fingerprint.py` | `bot_source_closure` probe exclusion, `ProbeInClosureError` |
 
-Priority when the change does not point at one target: **C1, C9, C4, C5, C11, C3, C2, C10, C7 gap, C6 gap, C8**.
+Priority when the change does not point at one target: **C1, C9, C4, C5, C11, C13, C3, C12, C2, C10, C7 gap, C6 gap, C8**.
+
+A C12 test that needs a real replay belongs behind `@pytest.mark.replay`, which
+is excluded from the default suite and run in the gate
+(`python -m pytest tests -m replay -q`). It costs ~1.6 s of one-time JAX jit,
+which the 7 s ceiling has no room for.
 
 Existing coverage — extend only gaps; see design file section 5 for the full map.
 

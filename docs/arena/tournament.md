@@ -44,6 +44,7 @@ python scripts/tournament.py \
 | `--timeout` | per-match wall-clock seconds limit |
 | `--include-self` | also play each bot against itself |
 | `--games-dir` | override output directory |
+| `--record` | also write per-turn trajectories under `data/trajectories/<round>/` |
 
 ## Seat policy
 
@@ -82,6 +83,19 @@ data/games/<round>/
   manifest.json          # round_seed, seat_policy, assignments, jobs, bots, hashes
   <game_id>.json         # one file per match
 ```
+
+With `--record`, alongside it:
+
+```
+data/trajectories/<round>/
+  <game_id>.traj.jsonl.gz      # engine truth, per turn
+  <game_id>.trace.{a,b}.jsonl.gz  # probe trace, per probed seat
+```
+
+The parent creates the round's trajectory directory once; each worker then
+writes only its own game's files into it, the same pattern that makes
+`save_game` pool-safe — no shared writer, no lock. Recording costs ~1.4% wall
+clock and never changes a game's outcome. See [trajectories.md](trajectories.md).
 
 The rating refit scans `data/games/` recursively (skipping `manifest.json`)
 and filters on each record's own `mode`, `round`, `engine_version` and content

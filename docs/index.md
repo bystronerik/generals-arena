@@ -54,6 +54,7 @@ Small topic files for the Generals Arena research repo.
 - [ratings](arena/ratings.md) — batch Bradley–Terry + Davidson draws + seat term
 - [decision rule](arena/decision-rule.md) — the keep/revert thresholds, in one place
 - [bot version registry](arena/bot-version-registry.md) — content hash → source, commit, git ref
+- [trajectories](arena/trajectories.md) — per-turn recording, probes, replay
 - [tournament](arena/tournament.md)
 - [classic tournament](arena/classic-tournament.md)
 
