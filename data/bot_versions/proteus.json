@@ -10,6 +10,23 @@
       "at": "2026-07-31T20:34:06Z",
       "content_hash": "78bfa6234921",
       "seq": 2
+    },
+    {
+      "at": "2026-07-31T22:38:59Z",
+      "content_hash": "7ae237e99d34",
+      "seq": 3
+    },
+    {
+      "at": "2026-07-31T22:45:28Z",
+      "content_hash": "78bfa6234921",
+      "note": "revert to seq 2",
+      "seq": 4
+    },
+    {
+      "at": "2026-07-31T22:51:36Z",
+      "content_hash": "7ae237e99d34",
+      "note": "revert to seq 3",
+      "seq": 5
     }
   ],
   "version": 1,
@@ -172,6 +189,81 @@
       ],
       "first_seen_at": "2026-07-31T20:34:06Z",
       "git_commit": "d38034a54773f11038f841a8d21f2c4d0f3594ee",
+      "git_dirty": false
+    },
+    {
+      "closure_ref": "refs/bot-versions/7ae237e99d34",
+      "closure_tree": "322f9bc8dfab9b1d4837060a6c22e1c3c64f8c41",
+      "content_hash": "7ae237e99d34",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "aa2a1e7ad3907e3a05929d073035c7a3499f272d",
+          "path": "bots/_common/oppmodel.py",
+          "sha256": "dcc368d4467d0ea9a75890e1b53bd56b8b395f0330b78de16c97c8074b8eb6ad"
+        },
+        {
+          "blob": "cb6c3a876ef807d9e727299cc02c2b37f0029ee9",
+          "path": "bots/_common/strategy_common.py",
+          "sha256": "b2e424533aebc44fac5f6edb7205f21cb8431fcd6e557a4d965445d6f1138590"
+        },
+        {
+          "blob": "f6f0039947e2af2a2f331a80a9bb99818cdf3552",
+          "path": "bots/_common/tactics.py",
+          "sha256": "24fc3bd20b5a5b4f5d8fa17a206d2ae9ae9f8e927d63e19673d90311150be9b6"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "b567243ea17c05f890d3263b17d67cd03321dcb3",
+          "path": "bots/blitz/agent.py",
+          "sha256": "5cea218fa5b93e4c384b7294f461232de070f00d93b5afb95c54b7a3a53c9473"
+        },
+        {
+          "blob": "0ef10b64987fd48899e369fa50e2ec73e683b7c4",
+          "path": "bots/boom/agent.py",
+          "sha256": "0ea50f87d3ac21bfddca5a638c0f4f72a4b5de43be47a92deda1a2c4c8e8f3c5"
+        },
+        {
+          "blob": "a66d6eada41f761b6856744309a1b031a3d7fdd0",
+          "path": "bots/proteus/agent.py",
+          "sha256": "8329fd2b307fc6e8b447df9e961d09b5bd17d642558c9d4fc7f6f65b5215ea98"
+        },
+        {
+          "blob": "fdcdd14379744031d02c81a6fca9f1f487dd88bc",
+          "path": "bots/proteus/classifier.py",
+          "sha256": "fa20461d92016fd642ba21d34acec703d78cc20e7c28aad559500d95c3f35745"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/proteus/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "e7d78ac169a30678efe60bdb108611f9d932e630",
+          "path": "bots/proteus/run.sh",
+          "sha256": "3a4eb8902a76a3bd1a8e9292feef29339976c72786d157da3a20edfcbf296f56"
+        },
+        {
+          "blob": "21cd37c3c0678e25e420b2b9b3e3b30ee133f9e8",
+          "path": "bots/proteus/signals.py",
+          "sha256": "918d6e67972e03195480cd1fd910b733ebf90c30d649650c1358f4ea46490fb7"
+        },
+        {
+          "blob": "edaea54e078ad3b4113572cf4b03ac296591b9a8",
+          "path": "bots/proteus/switcher.py",
+          "sha256": "99d9f4eec6d94b999ebba1b0819003b92cf7d35d7d07c96ff27a1a3edded3c93"
+        }
+      ],
+      "first_seen_at": "2026-07-31T22:38:59Z",
+      "git_commit": "2bce97d24ce56900506dc6897c78b666d906cca2",
       "git_dirty": false
     }
   ]
