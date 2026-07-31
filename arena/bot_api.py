@@ -11,12 +11,16 @@ See ``docs/engine/unified-bot-api.md``.
 from __future__ import annotations
 
 import importlib.util
+import logging
 import sys
+import traceback
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Sequence, Type
+from typing import List, Protocol, Sequence, Type, runtime_checkable
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -50,6 +54,15 @@ class UnifiedObservation:
 StdioObservation = UnifiedObservation
 
 
+@runtime_checkable
+class ArenaAgent(Protocol):
+    """Contract for ``bots/<name>/agent.py`` strategy classes."""
+
+    def __init__(self, player_id: int, H: int, W: int) -> None: ...
+
+    def act(self, obs: UnifiedObservation) -> UnifiedAction: ...
+
+
 def list_bots() -> list[str]:
     """All bots with ``agent.py`` under ``bots/``."""
     bots_dir = REPO_ROOT / "bots"
@@ -74,12 +87,16 @@ def load_strategy_class(bot_name: str) -> Type:
         raise ImportError(f"Cannot load {agent_path}")
 
     module = importlib.util.module_from_spec(spec)
+    bots_dir = REPO_ROOT / "bots"
+    sys.path.insert(0, str(bots_dir))
     sys.path.insert(0, str(bot_dir))
     try:
         spec.loader.exec_module(module)
     finally:
         if str(bot_dir) in sys.path:
             sys.path.remove(str(bot_dir))
+        if str(bots_dir) in sys.path:
+            sys.path.remove(str(bots_dir))
 
     agent_cls = getattr(module, "Agent", None)
     if agent_cls is None:
@@ -318,6 +335,7 @@ class StrategySession:
         self._last_land = 0
         self._last_army = 0
         self._last_turn = 0
+        self._first_fault_traceback: str | None = None
 
     def act(self, obs: UnifiedObservation) -> UnifiedAction:
         """Run strategy and rewrite build actions for remote play."""
@@ -335,6 +353,9 @@ class StrategySession:
             return action
         except Exception:
             self.faults += 1
+            if self._first_fault_traceback is None:
+                self._first_fault_traceback = traceback.format_exc()
+                logger.exception("StrategySession fault in %s", self.bot_name)
             return PASS
 
     def _track_scalars(self, obs: UnifiedObservation) -> None:
@@ -354,7 +375,7 @@ class StrategySession:
                     return
 
     def session_stats(self) -> dict:
-        return {
+        stats = {
             "builds_dropped": self.builds_dropped,
             "faults": self.faults,
             "timeouts": self.timeouts,
@@ -365,6 +386,9 @@ class StrategySession:
             "final_army": self._last_army,
             "server_turns": self._last_turn,
         }
+        if self._first_fault_traceback is not None:
+            stats["first_fault_traceback"] = self._first_fault_traceback
+        return stats
 
     def reset(self) -> None:
         self.strategy = None
@@ -377,3 +401,4 @@ class StrategySession:
         self._last_land = 0
         self._last_army = 0
         self._last_turn = 0
+        self._first_fault_traceback = None

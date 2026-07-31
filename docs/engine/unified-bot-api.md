@@ -7,9 +7,11 @@ One observation and action shape for every arena bot. Strategy code lives in
 
 ```
 bots/<name>/agent.py     Agent.act(UnifiedObservation) -> UnifiedAction
+bots/_common/wire.py     shared stdio loop + generic telemetry
+bots/_common/strategy_common.py   shared strategy helpers (StrategyContext)
         │
         ▼
-arena/bot_api.py         UnifiedObservation, UnifiedAction, StrategySession, mappers
+arena/bot_api.py         UnifiedObservation, UnifiedAction, ArenaAgent, StrategySession, mappers
         │
    ┌────┴────┐
    ▼         ▼
@@ -18,6 +20,33 @@ bots/<name>/   arena/remote_bridge.py  →  generals_client GameClient
 main.py        (UnifiedBot)
 (competition
  matchup)
+```
+
+## Agent contract
+
+Arena bots implement a duck-typed class named ``Agent`` in ``bots/<name>/agent.py``.
+The formal contract is :class:`arena.bot_api.ArenaAgent` — a :class:`typing.Protocol`
+for static checking and docs. Bots do **not** need to import or inherit from it at
+runtime.
+
+| Method | Signature | Notes |
+| --- | --- | --- |
+| ``__init__`` | ``(player_id: int, H: int, W: int)`` | Called once after the stdio handshake |
+| ``act`` | ``(obs) -> UnifiedAction`` | Return a 5-tuple each turn |
+| ``telemetry_extras`` | ``() -> dict`` | Optional; keys appended to ``[telemetry]`` stderr line |
+
+Example (runtime — no Protocol import):
+
+```python
+class Agent:
+    def __init__(self, player_id, H, W):
+        ...
+
+    def act(self, obs):
+        return (1, 0, 0, 0, 0)  # pass
+
+    def telemetry_extras(self):
+        return {"enemy_general_sighted": 0}
 ```
 
 ## Types
@@ -31,8 +60,8 @@ main.py        (UnifiedBot)
 
 ## How bots plug in
 
-1. Implement `class Agent` in `bots/<name>/agent.py` with `act(self, obs)` returning a 5-tuple.
-2. Keep `main.py` / `run.sh` unchanged for local competition stdio.
+1. Implement `class Agent` in `bots/<name>/agent.py` matching :class:`ArenaAgent`.
+2. Keep `main.py` as a thin call to ``bots/_common/wire.run_stdio``; keep `run.sh` unchanged.
 3. For live play, use `scripts/remote_play.py` — it loads the same `agent.py` through `StrategySession`.
 
 No per-bot wire code is required.
@@ -41,7 +70,7 @@ No per-bot wire code is required.
 
 | Bridge | Module | Wire |
 | --- | --- | --- |
-| Stdio | `bots/<name>/main.py` | competition `matchup.py` line protocol |
+| Stdio | `bots/_common/wire.py` via `bots/<name>/main.py` | competition `matchup.py` line protocol |
 | Remote | `arena/remote_bridge.UnifiedBot` | `generals_client` (`GeneralsTransport` / `GameClient`) |
 | Legacy remote | `arena/remote_adapter.StdioStrategyAdapter` | competition-module `generals.agents.Agent` (local harness only) |
 

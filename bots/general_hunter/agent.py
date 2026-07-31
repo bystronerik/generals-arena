@@ -8,23 +8,27 @@ general is known.
 
 See docs/bots/general-hunter.md and docs/research/strategies/optimize-existing.md.
 """
-from strategy_common import (
+from _common.strategy_common import (
     PASS,
-    APPROACH_START,
-    DEATHTOUCH_TURN,
     DIRECTIONS,
-    BeliefState,
-    best_capture_move,
-    chase_defence,
+    StrategyContext,
     enemy_adjacent_to_general,
-    eta_to_general,
-    final_approach_move,
     locate_own_general,
-    march_toward_frontier,
-    probe_move,
-    sentry_convey,
-    win_check_w1,
-    win_check_w2,
+)
+
+RESERVE_OPENING_END = 60
+DEFEND_FROM = 500
+SENTRY_FROM = 450
+DEATHTOUCH_TURN = 800
+APPROACH_START = 450
+MIN_GENERAL_DISTANCE = 17
+
+_STRATEGY = StrategyContext(
+    reserve_opening_end=RESERVE_OPENING_END,
+    defend_from=DEFEND_FROM,
+    sentry_from=SENTRY_FROM,
+    deathtouch_turn=DEATHTOUCH_TURN,
+    min_general_distance=MIN_GENERAL_DISTANCE,
 )
 
 
@@ -36,7 +40,7 @@ class Agent:
         self.H = H
         self.W = W
         self.general_pos = None
-        self.belief = BeliefState()
+        self.belief = _STRATEGY.BeliefState()
         self.active_probes = set()
 
     def act(self, obs):
@@ -45,43 +49,43 @@ class Agent:
         self.belief.update(obs, self.general_pos)
         self._update_active_probes(obs)
 
-        chase = chase_defence(obs, self.general_pos)
+        chase = _STRATEGY.chase_defence(obs, self.general_pos)
         if chase is not None:
             return self._finish_move(chase)
 
-        w1 = win_check_w1(obs, self.belief.enemy_general, self.general_pos)
+        w1 = _STRATEGY.win_check_w1(obs, self.belief.enemy_general, self.general_pos)
         if w1 is not None:
             return self._finish_move(w1)
 
         if not enemy_adjacent_to_general(obs, self.general_pos):
-            w2 = win_check_w2(obs, self.belief.enemy_general, self.general_pos)
+            w2 = _STRATEGY.win_check_w2(obs, self.belief.enemy_general, self.general_pos)
             if w2 is not None:
                 return self._finish_move(w2)
 
         if self.belief.enemy_general is not None:
-            eta = eta_to_general(obs, self.belief.enemy_general)
+            eta = _STRATEGY.eta_to_general(obs, self.belief.enemy_general)
             eta_deadline = DEATHTOUCH_TURN - eta - 5 if eta is not None else DEATHTOUCH_TURN
             if obs.turn >= APPROACH_START or obs.turn >= eta_deadline:
-                approach = final_approach_move(
+                approach = _STRATEGY.final_approach_move(
                     obs, self.belief.enemy_general, self.general_pos
                 )
                 if approach is not None:
                     return self._finish_move(approach)
 
-        capture = best_capture_move(obs, self.general_pos)
+        capture = _STRATEGY.best_capture_move(obs, self.general_pos)
         if capture is not None:
             return self._finish_move(capture)
 
-        sentry = sentry_convey(obs, self.general_pos)
+        sentry = _STRATEGY.sentry_convey(obs, self.general_pos)
         if sentry is not None:
             return self._finish_move(sentry)
 
-        march = march_toward_frontier(obs, self.general_pos)
+        march = _STRATEGY.march_toward_frontier(obs, self.general_pos)
         if march is not None:
             return self._finish_move(march)
 
         candidates = self.belief.candidates or set()
-        probe = probe_move(
+        probe = _STRATEGY.probe_move(
             obs, self.general_pos, candidates, active_probes=self.active_probes
         )
         if probe is not None:

@@ -1,14 +1,18 @@
 """Tests for unified bot API mapping."""
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 import pytest
 
 from arena.bot_api import (
     PASS,
+    ArenaAgent,
     StrategySession,
     from_competition_remote_obs,
     from_game_state,
+    load_strategy_class,
     to_client_move,
     translate_action_for_remote,
 )
@@ -130,3 +134,36 @@ def test_strategy_session_smoke():
     obs = from_game_state(_make_game_state())
     action = session.act(obs)
     assert len(action) == 5
+
+
+def test_arena_agent_protocol_smoke():
+    agent_cls = load_strategy_class("smoke")
+    agent = agent_cls(player_id=0, H=3, W=3)
+    assert isinstance(agent, ArenaAgent)
+
+
+def test_strategy_session_records_first_fault_traceback(caplog):
+    class BrokenAgent:
+        def __init__(self, player_id, H, W):
+            pass
+
+        def act(self, obs):
+            raise RuntimeError("boom")
+
+    session = StrategySession("smoke")
+    session._strategy_class = BrokenAgent
+    obs = from_game_state(_make_game_state())
+
+    with caplog.at_level(logging.ERROR):
+        action = session.act(obs)
+
+    assert action == PASS
+    assert session.faults == 1
+    stats = session.session_stats()
+    assert "first_fault_traceback" in stats
+    assert "RuntimeError: boom" in stats["first_fault_traceback"]
+    assert "StrategySession fault" in caplog.text
+
+    session.act(obs)
+    assert session.faults == 2
+    assert stats["first_fault_traceback"] == session.session_stats()["first_fault_traceback"]

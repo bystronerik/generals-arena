@@ -9,20 +9,21 @@ See docs/bots/castle-builder.md and docs/research/strategies/optimize-existing.m
 """
 from collections import deque
 
-from strategy_common import (
+from _common.strategy_common import (
     PASS,
     DIRECTIONS,
-    BeliefState,
-    best_capture_move,
+    StrategyContext,
     bfs_distances,
-    can_use_as_source,
-    chase_defence,
     enemy_adjacent_to_general,
     is_passable,
     locate_own_general,
-    win_check_w1,
-    win_check_w2,
 )
+
+RESERVE_OPENING_END = 60
+DEFEND_FROM = 780
+SENTRY_FROM = 700
+DEATHTOUCH_TURN = 800
+MIN_GENERAL_DISTANCE = 17
 
 BASE_BUILD_COST = 35
 BANK_MIN_SPACING = 7
@@ -32,6 +33,14 @@ MAX_TURN_TO_BUILD = 600
 MIN_LAND_TO_BUILD = 8
 MAX_OWN_CASTLES = 3
 BUILD_COOLDOWN_TURNS = 40
+
+_STRATEGY = StrategyContext(
+    reserve_opening_end=RESERVE_OPENING_END,
+    defend_from=DEFEND_FROM,
+    sentry_from=SENTRY_FROM,
+    deathtouch_turn=DEATHTOUCH_TURN,
+    min_general_distance=MIN_GENERAL_DISTANCE,
+)
 
 
 def _manhattan(a, b):
@@ -48,23 +57,23 @@ class Agent:
         self.general_pos = None
         self.bank_cell = None
         self.last_build_turn = -BUILD_COOLDOWN_TURNS
-        self.belief = BeliefState()
+        self.belief = _STRATEGY.BeliefState()
 
     def act(self, obs):
         if self.general_pos is None:
             self.general_pos = locate_own_general(obs)
         self.belief.update(obs, self.general_pos)
 
-        chase = chase_defence(obs, self.general_pos)
+        chase = _STRATEGY.chase_defence(obs, self.general_pos)
         if chase is not None:
             return chase
 
-        w1 = win_check_w1(obs, self.belief.enemy_general, self.general_pos)
+        w1 = _STRATEGY.win_check_w1(obs, self.belief.enemy_general, self.general_pos)
         if w1 is not None:
             return w1
 
         if not enemy_adjacent_to_general(obs, self.general_pos):
-            w2 = win_check_w2(obs, self.belief.enemy_general, self.general_pos)
+            w2 = _STRATEGY.win_check_w2(obs, self.belief.enemy_general, self.general_pos)
             if w2 is not None:
                 return w2
 
@@ -75,7 +84,7 @@ class Agent:
                 self.last_build_turn = obs.turn
                 return build
 
-        capture = best_capture_move(obs, self.general_pos)
+        capture = _STRATEGY.best_capture_move(obs, self.general_pos)
         if capture is not None:
             return capture
 
@@ -204,7 +213,7 @@ class Agent:
                 if src_army <= 1:
                     continue
                 if (r, c) == self.general_pos:
-                    if not can_use_as_source(obs, r, c, 0, self.general_pos, obs.turn):
+                    if not _STRATEGY.can_use_as_source(obs, r, c, 0, self.general_pos, obs.turn):
                         continue
                 here = dist[r][c]
                 if here <= 0:
