@@ -235,3 +235,61 @@ def test_verify_flags_a_step_pointing_at_an_unknown_hash(sandbox):
     sandbox.registry.save(entry)
 
     assert "step-unknown-hash" in [i["kind"] for i in sandbox.registry.verify()]
+
+
+# --- step 4: workers assert, they never write ------------------------------
+
+
+def test_worker_refuses_a_match_whose_bots_are_unregistered(sandbox, monkeypatch):
+    """A pool worker must fail the match rather than store an unrateable game."""
+    import arena.records.registry as registry_module
+    from arena.tournaments.worker import run_one_worker
+
+    monkeypatch.setattr(registry_module, "REGISTRY_DIR", sandbox.registry.directory)
+    payload = {
+        "bot_a_run": str(sandbox.bot_dir / "run.sh"),
+        "bot_b_run": str(sandbox.bot_dir / "run.sh"),
+        "seed": 0,
+        "games_dir": str(sandbox.repo / "games"),
+        "round": "roundT",
+        "engine_version": "9e3b9d1",
+        "bot_a_content_hash": "deadbeefcafe",
+        "bot_b_content_hash": "deadbeefcafe",
+    }
+    with pytest.raises(RegistryError, match="not registered"):
+        run_one_worker(payload)
+
+
+@pytest.mark.parametrize(
+    "key", ["round", "engine_version", "bot_a_content_hash", "bot_b_content_hash"]
+)
+def test_worker_refuses_a_payload_missing_identity(sandbox, key):
+    """The parent supplies identity; a worker never invents it."""
+    from arena.tournaments.worker import run_one_worker
+
+    payload = {
+        "bot_a_run": str(sandbox.bot_dir / "run.sh"),
+        "bot_b_run": str(sandbox.bot_dir / "run.sh"),
+        "seed": 0,
+        "games_dir": str(sandbox.repo / "games"),
+        "round": "roundT",
+        "engine_version": "9e3b9d1",
+        "bot_a_content_hash": "deadbeefcafe",
+        "bot_b_content_hash": "deadbeefcafe",
+    }
+    del payload[key]
+    with pytest.raises(ValueError, match=key):
+        run_one_worker(payload)
+
+
+def test_expander_python_is_not_registerable(sandbox):
+    """It lives outside bots/, so its closure — and its hash — mean nothing."""
+    from arena.records.registry import is_registerable
+
+    assert is_registerable(sandbox.bot_dir) is True
+    assert is_registerable(sandbox.repo / "elsewhere" / "expander_python") is False
+
+    with pytest.raises(RegistryError, match="not under"):
+        sandbox.registry.register_run_scripts(
+            [sandbox.repo / "elsewhere" / "expander_python" / "run.sh"]
+        )

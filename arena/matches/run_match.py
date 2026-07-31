@@ -7,6 +7,7 @@ from pathlib import Path
 
 from arena.matches.competition import run_competition_match
 from arena.records.fingerprint import bot_content_hash
+from arena.records.registry import Registry, is_registerable
 from arena.records.store import (
     GAMES_DIR,
     GameRecord,
@@ -20,6 +21,28 @@ from arena.records.telemetry import record_from_match_result
 # Round name for one-off matches that belong to no measurement round. Stored
 # explicitly so the eligibility filter never has to guess from a path.
 ADHOC_ROUND = "adhoc"
+
+
+def _register(run_sh: Path) -> str:
+    """
+    Hash the bot and record the version, in this (parent) process.
+
+    A bot outside `bots/` — only `competition-module`'s own `expander_python`
+    — still gets a hash and still plays, but no registry entry, so its games
+    are counted under `excluded.unregistered_hash` rather than silently pooled.
+    """
+    bot_dir = run_sh.parent
+    if not is_registerable(bot_dir):
+        digest = bot_content_hash(run_sh)
+        print(
+            f"[run_match] {bot_dir.name} is outside bots/; not registered, so this "
+            f"game will be excluded from ratings"
+        )
+        return digest
+    version, is_new = Registry().register(bot_dir)
+    if is_new:
+        print(f"[run_match] registered {bot_dir.name}@{version.content_hash}")
+    return version.content_hash
 
 
 def run_and_store(
@@ -42,8 +65,8 @@ def run_and_store(
     b_path = bot_b_run.resolve()
     bot_a = bot_a_id or bot_id_from_run_sh(a_path)
     bot_b = bot_b_id or bot_id_from_run_sh(b_path)
-    hash_a = bot_a_content_hash if bot_a_content_hash is not None else bot_content_hash(a_path)
-    hash_b = bot_b_content_hash if bot_b_content_hash is not None else bot_content_hash(b_path)
+    hash_a = bot_a_content_hash or _register(a_path)
+    hash_b = bot_b_content_hash or _register(b_path)
 
     started_at = utc_now_iso()
     result = run_competition_match(

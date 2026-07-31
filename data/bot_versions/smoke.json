@@ -1,0 +1,48 @@
+{
+  "bot_id": "smoke",
+  "steps": [
+    {
+      "at": "2026-07-31T15:40:16Z",
+      "content_hash": "c0299275ce2a",
+      "seq": 1
+    }
+  ],
+  "version": 1,
+  "versions": [
+    {
+      "closure_ref": "refs/bot-versions/c0299275ce2a",
+      "closure_tree": "d69fa12be504b3c5188941c0ca8adb739b2c047c",
+      "content_hash": "c0299275ce2a",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "e2ccd9493b92b3f99c1db291c48d81d524cb22f5",
+          "path": "bots/_common/wire.py",
+          "sha256": "1f63791441e04d5efeb1999ce5308405491686132a20277dabbf6f68aac78c92"
+        },
+        {
+          "blob": "77a129c30a4970e1a1f4a13bb2bcdc936b4d5812",
+          "path": "bots/smoke/agent.py",
+          "sha256": "5377baa31ad11f89db34ad8b1efa0a50cc8513a15edd6e942cf4bfe1fd0361fd"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/smoke/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "e7d78ac169a30678efe60bdb108611f9d932e630",
+          "path": "bots/smoke/run.sh",
+          "sha256": "3a4eb8902a76a3bd1a8e9292feef29339976c72786d157da3a20edfcbf296f56"
+        }
+      ],
+      "first_seen_at": "2026-07-31T15:40:16Z",
+      "git_commit": "ab78479c1c0445c69f02efe80a9e3a14385629f9",
+      "git_dirty": false
+    }
+  ]
+}

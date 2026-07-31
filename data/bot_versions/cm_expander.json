@@ -1,0 +1,58 @@
+{
+  "bot_id": "cm_expander",
+  "steps": [
+    {
+      "at": "2026-07-31T15:40:16Z",
+      "content_hash": "f362433e8187",
+      "seq": 1
+    }
+  ],
+  "version": 1,
+  "versions": [
+    {
+      "closure_ref": "refs/bot-versions/f362433e8187",
+      "closure_tree": "79de11537d3d8f0afc91b427c1ef6b9cb1804247",
+      "content_hash": "f362433e8187",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "7256f6c208014c288d515019136e1a5c97d54aa0",
+          "path": "bots/_common/cm_adapter.py",
+          "sha256": "c6c517fdc5f8244a4df297211a989fbfb6c144c8c09450a7df8aa0798e91ef1c"
+        },
+        {
+          "blob": "727f791e4c1bd60e356a870cfba676fb13125e2f",
+          "path": "bots/_common/cm_run.sh",
+          "sha256": "d9c1b5d945b89e740dafb81c7e9a065f17aa8d8731348e35162b1945322b4f3d"
+        },
+        {
+          "blob": "e2ccd9493b92b3f99c1db291c48d81d524cb22f5",
+          "path": "bots/_common/wire.py",
+          "sha256": "1f63791441e04d5efeb1999ce5308405491686132a20277dabbf6f68aac78c92"
+        },
+        {
+          "blob": "343cf15ae188d41ddae0273b3cbaa97ca0fa57ea",
+          "path": "bots/cm_expander/agent.py",
+          "sha256": "f67530df128005e96d5ac7293ee3211e33d15fbd46db835f3e00a80f2ccb297a"
+        },
+        {
+          "blob": "c7faed2d31e2adc846dedbeaac140d10d34746e0",
+          "path": "bots/cm_expander/main.py",
+          "sha256": "b46bb95732c97ffc985fe48afb8e308221a97b74841ece3281a6de69d8fb2e90"
+        },
+        {
+          "blob": "997c2d2ea937023fea8a366890c06a0d22f895cd",
+          "path": "bots/cm_expander/run.sh",
+          "sha256": "dd83a69eb4bfc98cea76d6490c16fad6649d6d4bb23c8db6637fd9cc3df8bd15"
+        }
+      ],
+      "first_seen_at": "2026-07-31T15:40:16Z",
+      "git_commit": "ab78479c1c0445c69f02efe80a9e3a14385629f9",
+      "git_dirty": false
+    }
+  ]
+}

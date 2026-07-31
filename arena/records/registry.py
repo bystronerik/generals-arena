@@ -464,10 +464,21 @@ class Registry:
     def register_run_scripts(
         self, run_scripts: Iterable[Path], *, strict: bool = False
     ) -> dict[str, str]:
-        """Register a whole roster once, returning `{bot_id: content_hash}`."""
+        """
+        Register a whole roster once, returning `{bot_id: content_hash}`.
+
+        Called by the tournament runner in the parent process, before the pool
+        starts, so the roster is hashed and registered exactly once per round.
+        """
         hashes: dict[str, str] = {}
         for run_sh in run_scripts:
             bot_dir = Path(run_sh).resolve().parent
+            if not is_registerable(bot_dir):
+                raise RegistryError(
+                    f"{bot_dir} is not under {fingerprint.BOTS_DIR}, so its source "
+                    f"closure cannot be resolved and it has no rating identity; "
+                    f"drop it from the roster (see the plan's q1)"
+                )
             entry, _ = self.register(bot_dir, strict=strict)
             hashes[bot_dir.name] = entry.content_hash
         return hashes
@@ -548,6 +559,22 @@ class Registry:
                         }
                     )
         return issues
+
+
+def is_registerable(bot_dir: Path) -> bool:
+    """
+    True for bots under `bots/`, whose closure `fingerprint` can resolve.
+
+    `competition-module`'s own `expander_python` lives outside `bots/`, so its
+    imports do not resolve and its hash names nothing useful. It stays runnable
+    ad hoc; it just never becomes a rated entity — `bots/cm_expander/` is the
+    in-repo wrapper over the same upstream agent, and it is the anchor.
+    """
+    try:
+        bot_dir.resolve().relative_to(fingerprint.BOTS_DIR.resolve())
+    except (ValueError, OSError):
+        return False
+    return True
 
 
 def _sha256_file(path: Path) -> str:

@@ -32,6 +32,7 @@ def _required(payload: dict[str, Any], key: str) -> str:
 def run_one_worker(payload: dict[str, Any]) -> GameRecord:
     """One in-process competition match + store (ProcessPool entry point)."""
     from arena.matches.competition import run_competition_match
+    from arena.records.registry import Registry
     from arena.records.telemetry import record_from_match_result
 
     a = Path(payload["bot_a_run"])
@@ -47,6 +48,12 @@ def run_one_worker(payload: dict[str, Any]) -> GameRecord:
     hash_a = _required(payload, "bot_a_content_hash")
     hash_b = _required(payload, "bot_b_content_hash")
     engine = _required(payload, "engine_version")
+
+    # Assert-only: fail the match rather than store a game whose bots have no
+    # reviewable version. The parent registered them before the pool started.
+    registry = Registry()
+    registry.require_registered(bot_a, hash_a)
+    registry.require_registered(bot_b, hash_b)
 
     started_at = utc_now_iso()
     result = run_competition_match(

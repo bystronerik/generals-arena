@@ -9,8 +9,8 @@ import random
 from pathlib import Path
 from typing import Any
 
-from arena.records.fingerprint import bot_content_hashes
 from arena.records.ratings import rebuild_from_games
+from arena.records.registry import Registry
 from arena.records.store import (
     GAMES_DIR,
     GameRecord,
@@ -162,6 +162,7 @@ def run_tournament(
     timeout: float | None = None,
     include_self: bool = False,
     swap_sides: bool = False,
+    strict_versions: bool = False,
     jobs: int | None = None,
 ) -> list[GameRecord]:
     """
@@ -185,10 +186,13 @@ def run_tournament(
     worker_jobs = cap_jobs(default_jobs() if jobs is None else jobs)
     engine = engine_version()
     bot_ids = [bot_id_from_run_sh(p) for p in run_scripts]
-    # Hash each roster entry once here rather than per match in every worker:
-    # one hash for the whole round cannot go stale mid-round the way a
-    # long-lived worker's own hash could.
-    content_hashes = bot_content_hashes(run_scripts)
+    # Hash and register the roster once here, in the parent, rather than per
+    # match in every worker: one hash for the whole round cannot go stale
+    # mid-round the way a long-lived worker's own hash could, and one writer
+    # means no concurrent writes to the registry.
+    content_hashes = Registry().register_run_scripts(
+        run_scripts, strict=strict_versions
+    )
 
     manifest_path = write_round_manifest(
         directory,
@@ -317,6 +321,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="also play each pair with sides swapped (off by default)",
     )
+    parser.add_argument(
+        "--strict-versions",
+        action="store_true",
+        help="refuse to run if any bot's closure differs from HEAD (published rounds)",
+    )
     args = parser.parse_args(argv)
 
     if args.games_per_pair < 1:
@@ -337,6 +346,7 @@ def main(argv: list[str] | None = None) -> int:
         timeout=args.timeout,
         include_self=args.include_self,
         swap_sides=args.swap_sides,
+        strict_versions=args.strict_versions,
         jobs=args.jobs,
     )
     return 0
