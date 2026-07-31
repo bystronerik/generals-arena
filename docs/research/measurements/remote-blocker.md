@@ -33,20 +33,27 @@ The offline dry run can run now:
 Current live blockers for the 95/100 human block:
 
 1. ~~**`chat_message` receive_error**~~ — **Fixed** in `658fbb4`; upstream-style ignore for benign events. Live proof pending (batch 3–4 queue idle). See [`remote-batch3.md`](remote-batch3.md).
-2. **Queue intermittency** — batch 1 had 0 matches in 25+ min; batch 2 matched 2 games in ~2 min; batches 3–4 waited 34–62 min with 0 matches. Do **not** idle public 1v1 queue without a lobby id. Use [`scripts/remote_lobby_watch.py`](../../../scripts/remote_lobby_watch.py) or set `GENERALS_LOBBY_ID` in `.env.agent` and `--mode lobby`.
-3. **`GENERALS_BOT_KEY`** — not set in `.env.agent`; placeholder key may affect sustained queue access (§5.1). Set when an operator key is available.
+2. **Public lobby support in `client/`** — remote eval waits on public-lobby join in `generals_client`, not private custom games. Do **not** run two bots in a private lobby to prove the wire; that adds latency and does not count toward the human block. Use competition-module / classic harness for local bot-vs-bot.
+3. **Queue intermittency** — batch 1 had 0 matches in 25+ min; batch 2 matched 2 games in ~2 min; batches 3–4 waited 34–62 min with 0 matches. After public-lobby support lands, retry 1v1 or public lobby; do not idle queue for hours without a match.
+4. **`GENERALS_BOT_KEY`** — not set in `.env.agent`; placeholder key may affect sustained queue access (§5.1). Set when an operator key is available.
 
-### Lobby watch (preferred over idle 1v1)
+### Out of scope: private bot-vs-bot
 
-When an operator sets `GENERALS_LOBBY_ID` in `.env.agent`, run:
+Private custom lobbies with two bots and force-start were attempted in batch 5
+and **stopped**. They do not help the 95/100 human goal. A second bot identity
+(`GENERALS_USER_ID_B` in local `.env.agent` only) was created during that probe;
+do not build on it. Local match proof belongs in `arena/classic_match.py` and
+competition-module harnesses.
+
+### Next step (blocked on `client/`)
+
+When `client/` adds **public lobby** support, re-run:
 
 ```bash
-python scripts/remote_lobby_watch.py --bot classic_duel --max-games 20
+.venv/bin/python scripts/remote_play.py --mode 1v1 --bot classic_duel --max-games 10
 ```
 
-Poll interval: 15 s. Exit when counted human games reach `--max-games` or the
-lobby id is cleared. Optional `--max-watch-minutes 15` for a timed wait with
-no lobby id.
+Or use `remote_lobby_watch.py` once public lobby ids are supported the same way.
 
-Only logs with `counts_toward_block: true` and human opponents count toward
+Only logs with `counts_toward_block: true` and **human** opponents count toward
 Phase 3.
