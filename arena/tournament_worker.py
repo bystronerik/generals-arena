@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from arena.store import (
+    CURRENT_SCHEMA_VERSION,
     GameRecord,
     bot_id_from_run_sh,
     duration_seconds_between,
@@ -59,7 +60,7 @@ def run_one_worker(payload: dict[str, Any]) -> GameRecord:
         truncated=result.truncated,
         started_at=started_at,
         finished_at=finished_at,
-        schema_version=2,
+        schema_version=CURRENT_SCHEMA_VERSION,
         duration_seconds=duration_seconds_between(started_at, finished_at),
         castles_built_a=result.castles_built_a,
         castles_built_b=result.castles_built_b,

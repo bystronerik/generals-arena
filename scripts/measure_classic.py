@@ -12,7 +12,6 @@ import argparse
 import json
 import sys
 from collections import defaultdict
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +25,7 @@ from arena.classic_tournament import (
     build_match_specs,
     run_classic_tournament,
 )
-from arena.store import bot_id_from_run_sh
+from arena.store import bot_id_from_run_sh, utc_now_iso
 from arena.tournament import parse_seeds
 
 MEASUREMENTS_DIR = REPO_ROOT / "docs" / "research" / "measurements"
@@ -119,7 +118,7 @@ def write_reports(
     MEASUREMENTS_DIR.mkdir(parents=True, exist_ok=True)
     stats = aggregate_stats(records)
     matchups = matchup_table(records)
-    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    now = utc_now_iso()
 
     payload = {
         "round": round_name,

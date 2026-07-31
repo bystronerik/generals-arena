@@ -1,0 +1,26 @@
+{
+  "assignments": [
+    {
+      "bot_a": "smoke",
+      "bot_b": "expand_plus",
+      "seed": 991782938
+    },
+    {
+      "bot_a": "smoke",
+      "bot_b": "expand_plus",
+      "seed": 1887304058
+    }
+  ],
+  "bots": [
+    "smoke",
+    "expand_plus"
+  ],
+  "fixed_seeds": null,
+  "games_per_pair": 2,
+  "jobs": 2,
+  "match_count": 2,
+  "round": "parallel-smoke",
+  "round_seed": 1,
+  "swap_sides": false,
+  "written_at": "2026-07-31T10:50:09Z"
+}

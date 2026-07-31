@@ -24,7 +24,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from arena.parallel import default_jobs
 from arena.ratings import RatingBook
-from arena.store import GameRecord, round_games_dir
+from arena.store import GameRecord, round_games_dir, utc_now_iso
 from arena.tournament import DEFAULT_GAMES_PER_PAIR, parse_seeds
 
 MEASUREMENTS_DIR = REPO_ROOT / "docs" / "research" / "measurements"
@@ -303,7 +303,7 @@ def write_reports(
     MEASUREMENTS_DIR.mkdir(parents=True, exist_ok=True)
     stats = aggregate_stats(games)
     notable = notable_matchups(games)
-    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    now = utc_now_iso()
 
     payload = {
         "round": round_name,

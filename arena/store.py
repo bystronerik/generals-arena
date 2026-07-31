@@ -27,6 +27,10 @@ def round_games_dir(round_name: str, *, games_root: Path | None = None) -> Path:
 
 Winner = Literal["a", "b", "draw"]
 
+# Schema version stamped on records this code writes. Records without the
+# field predate it and read back as 1. See docs/arena/game-record-schema.md.
+CURRENT_SCHEMA_VERSION = 2
+
 REQUIRED_FIELDS = (
     "game_id",
     "seed",

@@ -15,17 +15,20 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Literal
+from typing import IO
 
 import jax.numpy as jnp
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _COMP = _REPO_ROOT / "competition-module"
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 if str(_COMP) not in sys.path:
     sys.path.insert(0, str(_COMP))
 if str(_COMP / "competition") not in sys.path:
     sys.path.insert(0, str(_COMP / "competition"))
 
+from arena.store import Winner  # noqa: E402
 from generals import GeneralsEnv  # noqa: E402
 from generals.core import game  # noqa: E402
 from matchup import (  # noqa: E402
@@ -36,8 +39,6 @@ from matchup import (  # noqa: E402
     make_transition,
 )
 from protocol import encode_handshake  # noqa: E402
-
-Winner = Literal["a", "b", "draw"]
 
 
 @dataclass
