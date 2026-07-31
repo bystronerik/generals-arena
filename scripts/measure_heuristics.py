@@ -12,7 +12,6 @@ import itertools
 import json
 import sys
 import time
-from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,6 +23,13 @@ if str(REPO_ROOT) not in sys.path:
 
 from arena.parallel import default_jobs
 from arena.ratings import RatingBook
+from arena.reporting import (
+    aggregate_stats,
+    bot_run_sh,
+    leaderboard_table_lines,
+    winner_bot_id,
+    winrate_table_lines,
+)
 from arena.store import GameRecord, round_games_dir, utc_now_iso
 from arena.tournament import DEFAULT_GAMES_PER_PAIR, parse_seeds
 
@@ -54,10 +60,6 @@ BENCHMARK_ANCHOR = "army_convey"
 # Default measurement roster: new heuristics + baselines (no cm_* unless listed).
 DEFAULT_ROSTER = NEW_BOTS + BASELINE_BOTS
 
-EXPANDER_PYTHON = (
-    REPO_ROOT / "competition-module" / "competition" / "agents" / "expander_python" / "run.sh"
-)
-
 
 @dataclass
 class MatchSpec:
@@ -83,12 +85,6 @@ class GameEntry:
     land_margin_b: int | None = None
     game_id: str = ""
     tag: str = ""
-
-
-def bot_run_sh(name: str) -> Path:
-    if name == "expander_python":
-        return EXPANDER_PYTHON
-    return REPO_ROOT / "bots" / name / "run.sh"
 
 
 def wait_for_bots(
@@ -155,14 +151,6 @@ def build_grid() -> list[MatchSpec]:
     return both_seat_orders(base)
 
 
-def winner_bot_id(record: GameRecord) -> str:
-    if record.winner == "a":
-        return record.bot_a
-    if record.winner == "b":
-        return record.bot_b
-    return "draw"
-
-
 def game_entry_from_record(record: GameRecord, *, tag: str = "") -> GameEntry:
     metrics = record.metrics or {}
     return GameEntry(
@@ -197,42 +185,6 @@ def run_one(spec: MatchSpec, *, update_ratings: bool, games_dir: Path | None = N
         update_ratings=update_ratings,
     )
     return game_entry_from_record(record, tag=spec.tag)
-
-
-def aggregate_stats(games: list[GameEntry]) -> dict[str, Any]:
-    bot_games: dict[str, list[GameEntry]] = defaultdict(list)
-    for g in games:
-        bot_games[g.bot_a].append(g)
-        bot_games[g.bot_b].append(g)
-
-    rows: list[dict[str, Any]] = []
-    for bot_id in sorted(bot_games):
-        played = bot_games[bot_id]
-        wins = sum(1 for g in played if g.winner_bot == bot_id)
-        draws = sum(1 for g in played if g.winner == "draw")
-        losses = len(played) - wins - draws
-        turns = [g.turns for g in played]
-        rows.append(
-            {
-                "bot_id": bot_id,
-                "games": len(played),
-                "wins": wins,
-                "losses": losses,
-                "draws": draws,
-                "winrate": round(wins / len(played), 3) if played else 0.0,
-                "draw_rate": round(draws / len(played), 3) if played else 0.0,
-                "mean_turns": round(sum(turns) / len(turns), 1) if turns else 0.0,
-            }
-        )
-    rows.sort(key=lambda r: (-r["winrate"], r["bot_id"]))
-
-    total_draws = sum(1 for g in games if g.winner == "draw")
-    return {
-        "total_games": len(games),
-        "draw_rate": round(total_draws / len(games), 3) if games else 0.0,
-        "mean_turns": round(sum(g.turns for g in games) / len(games), 1) if games else 0.0,
-        "by_bot": rows,
-    }
 
 
 def notable_matchups(games: list[GameEntry]) -> list[dict[str, Any]]:
@@ -281,17 +233,7 @@ def round_leaderboard_snippet(games: list[GameEntry]) -> str:
         )
         book.apply_game(record, skip_if_rated=False)
 
-    rows = book.leaderboard()
-    lines = [
-        "| Rank | Bot | Elo | Games | W | L | D |",
-        "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
-    ]
-    for r in rows:
-        lines.append(
-            f"| {r.rank} | `{r.bot_id}` | {r.rating:.1f} | {r.games} "
-            f"| {r.wins} | {r.losses} | {r.draws} |"
-        )
-    return "\n".join(lines)
+    return "\n".join(leaderboard_table_lines(book.leaderboard()))
 
 
 def write_reports(
@@ -347,15 +289,8 @@ def write_reports(
         "",
         "## Winrate by bot",
         "",
-        "| Bot | Games | W | L | D | Winrate | Draw rate | Mean turns |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        *winrate_table_lines(stats["by_bot"]),
     ]
-    for row in stats["by_bot"]:
-        md_lines.append(
-            f"| `{row['bot_id']}` | {row['games']} | {row['wins']} | {row['losses']} "
-            f"| {row['draws']} | {row['winrate']:.1%} | {row['draw_rate']:.1%} "
-            f"| {row['mean_turns']} |"
-        )
 
     md_lines.extend(
         [

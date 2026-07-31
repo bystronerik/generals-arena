@@ -15,6 +15,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from elote import EloCompetitor
 
+from arena.reporting import leaderboard_table_lines
 from arena.store import (
     GAMES_DIR,
     REPO_ROOT,
@@ -204,15 +205,9 @@ def write_leaderboard(book: RatingBook, ratings_dir: Path | None = None) -> tupl
         f"Rated games: {payload['rated_games']}",
         f"Initial Elo: {payload['initial_rating']}",
         "",
-        "| Rank | Bot | Elo | Games | W | L | D |",
-        "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
+        *leaderboard_table_lines(rows),
+        "",
     ]
-    for r in rows:
-        lines.append(
-            f"| {r.rank} | `{r.bot_id}` | {r.rating:.1f} | {r.games} "
-            f"| {r.wins} | {r.losses} | {r.draws} |"
-        )
-    lines.append("")
     md_path = directory / LEADERBOARD_MD
     md_path.write_text("\n".join(lines), encoding="utf-8")
     return json_path, md_path
