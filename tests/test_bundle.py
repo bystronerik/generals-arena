@@ -1,6 +1,7 @@
 """Submission bundler: closure selection, zip layout, limits, standalone run."""
 from __future__ import annotations
 
+import hashlib
 import tempfile
 import zipfile
 from pathlib import Path
@@ -32,11 +33,17 @@ def test_smoke_bot_bundle_layout(tmp_path):
     info = write_bundle("smoke", tmp_path / "smoke.zip")
     names = set(_names(info.zip_path))
 
-    assert {"run.sh", "bots/smoke/run.sh", "bots/smoke/main.py",
+    assert {"run.sh", "bots/smoke/main.py",
             "bots/smoke/agent.py", "bots/_common/wire.py"} <= names
     # Nothing outside the closure: no repo dirs, caches, or other bots.
     assert all(n == "run.sh" or n.startswith(("bots/smoke/", "bots/_common/")) for n in names)
     assert not any("__pycache__" in n for n in names)
+    # The repo-harness launcher stays out; the generated root run.sh is the
+    # exact shape the competition server's validation accepts.
+    assert "bots/smoke/run.sh" not in names
+    with zipfile.ZipFile(info.zip_path) as zf:
+        root = zf.read("run.sh").decode("ascii")
+    assert root == "#!/usr/bin/env bash\nexec python -u bots/smoke/main.py\n"
 
 
 def test_shell_scripts_keep_executable_bit(tmp_path):
@@ -108,9 +115,12 @@ def test_default_output_path_carries_content_hash():
 @pytest.mark.slow
 def test_bundle_runs_standalone(tmp_path):
     info = write_bundle("smoke", tmp_path / "smoke.zip")
-    # Hash-keyed extract dir survives across runs so macOS's first-exec script
-    # assessment (~0.4 s) is a cold-cache cost, not part of the warm 7 s budget.
-    extract_dir = Path(tempfile.gettempdir()) / f"generals-bundle-smoke-{info.content_hash}"
+    # Digest-keyed extract dir survives across runs so macOS's first-exec
+    # script assessment (~0.4 s) is a cold-cache cost, not part of the warm
+    # 7 s budget. Keyed on the zip bytes, not the source hash: the bundler
+    # itself changing must invalidate the cache too.
+    digest = hashlib.sha256(info.zip_path.read_bytes()).hexdigest()[:12]
+    extract_dir = Path(tempfile.gettempdir()) / f"generals-bundle-smoke-{digest}"
     action = smoke_check(info.zip_path, extract_dir, reuse_extracted=True)
     assert len(action) == 5
     kind, row, col, direction, split = action

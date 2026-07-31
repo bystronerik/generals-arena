@@ -3,12 +3,17 @@ Package one bot from ``bots/<name>/`` into a standalone submission zip for
 generals.bot.
 
 The zip mirrors the repo-root layout, so every path a bot resolves at runtime
-(`main.py` finds ``bots/`` via ``Path(__file__).parent.parent``, `run.sh` finds
-`main.py` beside itself) keeps working with the repo gone:
+(`main.py` finds ``bots/`` via ``Path(__file__).parent.parent``) keeps working
+with the repo gone:
 
-    run.sh              # generated: delegates to bots/<name>/run.sh
+    run.sh              # generated: `exec python -u bots/<name>/main.py`
     bots/_common/...    # only the source closure
-    bots/<name>/...
+    bots/<name>/...     # without its run.sh — that launcher is repo harness
+
+The root `run.sh` uses a relative path and bare `python`: the competition
+server's validation wants that exact shape, and the docs guarantee the bot
+"runs from within its submission directory". The per-bot `run.sh` is excluded
+because the server's validation rejects bundles that ship it.
 
 What goes in is exactly `arena.records.fingerprint.bot_source_closure` — the
 file set behind the bot's rating identity — so the bundle of hash X is the
@@ -24,6 +29,7 @@ in competition-module/competition/requirements.txt preinstalled; no network.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -72,6 +78,25 @@ _ZIP_DATE = (2020, 1, 1, 0, 0, 0)
 _SMOKE_TIMEOUT_SECONDS = 30
 
 
+def _path_with_python(path: str, workdir: Path) -> str:
+    """
+    PATH that resolves bare `python`, as the generated run.sh and the judge
+    expect. macOS often ships only `python3`; shim it beside the extract dir
+    rather than rewriting the bundle, so the smoke runs the submitted bytes.
+    """
+    if shutil.which("python", path=path):
+        return path
+    python3 = shutil.which("python3", path=path)
+    if python3 is None:
+        raise BundleError("neither `python` nor `python3` on PATH for the smoke run")
+    shim_dir = workdir.with_name(workdir.name + "-bin")
+    shim_dir.mkdir(parents=True, exist_ok=True)
+    shim = shim_dir / "python"
+    shim.unlink(missing_ok=True)
+    shim.symlink_to(python3)
+    return f"{shim_dir}{os.pathsep}{path}"
+
+
 class BundleError(RuntimeError):
     """The bot cannot be bundled, or the bundle failed validation."""
 
@@ -87,11 +112,7 @@ class BundleInfo:
 
 
 def _root_run_sh(bot_id: str) -> str:
-    return (
-        "#!/usr/bin/env bash\n"
-        'DIR="$(cd "$(dirname "$0")" && pwd)"\n'
-        f'exec "$DIR/bots/{bot_id}/run.sh"\n'
-    )
+    return f"#!/usr/bin/env bash\nexec python -u bots/{bot_id}/main.py\n"
 
 
 def bundle_members(bot_id: str, extra_includes: list[str] | None = None) -> list[tuple[Path, str]]:
@@ -111,6 +132,8 @@ def bundle_members(bot_id: str, extra_includes: list[str] | None = None) -> list
                 f"{bot_id} depends on the competition-module submodule "
                 "(closure contains _common/cm_adapter.py); cm bots are not bundleable"
             )
+        if arcname == f"bots/{bot_id}/run.sh":
+            continue  # repo harness launcher; the generated root run.sh replaces it
         members.append((path, arcname))
 
     for rel in extra_includes or []:
@@ -260,6 +283,7 @@ def smoke_check(
                     target.chmod(mode)
 
     env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "PYTHON", "VIRTUAL_ENV")}
+    env["PATH"] = _path_with_python(env.get("PATH", os.defpath), extract_dir)
     proc = subprocess.Popen(
         ["./run.sh"],
         cwd=extract_dir,
