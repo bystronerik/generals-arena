@@ -10,7 +10,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+from arena.paths import REPO_ROOT
+
 GAMES_DIR = REPO_ROOT / "data" / "games"
 
 _ROUND_NAME_RE = re.compile(r"^[A-Za-z0-9._-]+$")

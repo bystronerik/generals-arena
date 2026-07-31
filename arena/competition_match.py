@@ -12,8 +12,9 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-_COMP = _REPO_ROOT / "competition-module"
+from arena.paths import REPO_ROOT
+
+_COMP = REPO_ROOT / "competition-module"
 if str(_COMP) not in sys.path:
     sys.path.insert(0, str(_COMP))
 

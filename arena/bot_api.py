@@ -20,9 +20,9 @@ from typing import List, Protocol, Sequence, Type, runtime_checkable
 
 import numpy as np
 
-logger = logging.getLogger(__name__)
+from arena.paths import REPO_ROOT
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+logger = logging.getLogger(__name__)
 
 # Action tuple: (pass_flag, row, col, direction, split)
 # pass_flag: 0 = move, 1 = pass, 2 = build (competition only; rewritten for remote)

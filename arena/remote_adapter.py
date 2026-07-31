@@ -9,7 +9,6 @@ See ``docs/engine/remote-eval-heuristics.md`` and ``docs/engine/unified-bot-api.
 """
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -26,7 +25,7 @@ if TYPE_CHECKING:
     from generals.agents import Agent as RemoteAgent
     from generals.core.observation import Observation as RemoteObservation
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+from arena.paths import REPO_ROOT  # noqa: F401  (re-export; no local use)
 
 REMOTE_RECOMMENDED_BOTS: tuple[str, ...] = (
     "classic_duel",

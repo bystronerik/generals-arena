@@ -27,9 +27,8 @@ from arena.remote_bridge import (
     opponent_username,
     register_username_safe,
 )
+from arena.paths import REPO_ROOT
 from arena.store import git_head_sha, utc_now_iso
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
 
 DECIDED_REASONS = frozenset({"game_won", "game_lost"})
 QUEUE_TIMEOUT_DETAIL = "did not finish within"

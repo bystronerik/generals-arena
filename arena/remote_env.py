@@ -8,7 +8,8 @@ from pathlib import Path
 
 from generals_client.transport import DEFAULT_SERVER
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+from arena.paths import REPO_ROOT
+
 REMOTE_GAMES_DIR = REPO_ROOT / "data" / "remote_games"
 SETUP_DOC = "docs/engine/remote-play-setup.md"
 PUBLIC_SERVER_URL = DEFAULT_SERVER

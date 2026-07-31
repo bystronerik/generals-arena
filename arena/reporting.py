@@ -15,7 +15,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Iterable, Protocol
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+from arena.paths import REPO_ROOT
 
 EXPANDER_PYTHON = (
     REPO_ROOT / "competition-module" / "competition" / "agents" / "expander_python" / "run.sh"
