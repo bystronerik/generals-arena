@@ -134,6 +134,7 @@ Taxonomy: [`docs/research/strategies/skills-workflow.md`](docs/research/strategi
 | evaluate-bot-change | Think + Composer | [`.cursor/skills/evaluate-bot-change/`](.cursor/skills/evaluate-bot-change/) |
 | update-leaderboard | Composer | [`.cursor/skills/update-leaderboard/`](.cursor/skills/update-leaderboard/) |
 | commit-research-increment | Composer | [`.cursor/skills/commit-research-increment/`](.cursor/skills/commit-research-increment/) |
+| analyze-and-test-core | Composer | [`.cursor/skills/analyze-and-test-core/`](.cursor/skills/analyze-and-test-core/) |
 | improve-skill-from-failure | Think (named only) | [`.cursor/skills/improve-skill-from-failure/`](.cursor/skills/improve-skill-from-failure/) |
 
 Planned CLIs and modules: `scripts/`, `arena/run_match.py`, `arena/tournament.py`, `arena/ratings.py`; data under `data/games/` and `data/ratings/`.

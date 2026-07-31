@@ -31,6 +31,7 @@ from remote_play import (  # noqa: E402
     run_lobby_session,
 )
 from arena.remote_adapter import verify_adapter_offline  # noqa: E402
+from arena.remote_block import count_human_block_games  # noqa: E402
 from arena.remote_bridge import make_unified_bot  # noqa: E402
 from arena.remote_client import FidelityRemoteSession  # noqa: E402
 
@@ -70,24 +71,7 @@ def _apply_env_file(path: Path) -> None:
 
 
 def _counted_human_games_since(since: float) -> int:
-    if not REMOTE_GAMES_DIR.is_dir():
-        return 0
-    total = 0
-    for path in REMOTE_GAMES_DIR.glob("*.json"):
-        if path.name.startswith("session_error_"):
-            continue
-        try:
-            if path.stat().st_mtime < since:
-                continue
-            record = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        if not record.get("counts_toward_block"):
-            continue
-        if record.get("opponent_is_bot") is True:
-            continue
-        total += 1
-    return total
+    return count_human_block_games(REMOTE_GAMES_DIR, since_mtime=since)
 
 
 def _lobby_cleared_while_running(started_at: float, initial_lobby_id: str) -> bool:

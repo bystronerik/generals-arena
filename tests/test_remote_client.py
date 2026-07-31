@@ -42,6 +42,19 @@ def test_opponent_is_bot():
     assert opponent_is_bot(None) is None
 
 
+def test_null_opponent_is_bot_does_not_count_toward_human_block():
+    from arena.remote_block import counts_as_human_block_game
+
+    record = {
+        "counts_toward_block": True,
+        "result": "win",
+        "opponent_username": None,
+        "opponent_is_bot": opponent_is_bot(None),
+    }
+    assert record["opponent_is_bot"] is None
+    assert counts_as_human_block_game(record) is False
+
+
 @pytest.fixture
 def fidelity_session(tmp_path: Path):
     from arena.remote_bridge import UnifiedBot
