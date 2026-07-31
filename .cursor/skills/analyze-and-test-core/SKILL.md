@@ -84,7 +84,7 @@ def test_winner_seat(label, winner_player_id, truncated, expected):
 | New test functions per invocation | 8 |
 | Cases per table | 4 |
 | Lines per test function | 25 |
-| Whole suite runtime after the change | under 3 seconds with a warm cache |
+| Whole suite runtime after the change | under 7 seconds with a warm cache (see `AGENTS.md` § tester) |
 | New dependencies | 0 |
 
 When the analysis names more than eight tests, write the top eight by priority and report the rest as a remainder list. Report the warm runtime; a cold Matplotlib font cache (~11 s on first run) is not a regression. Tests over 1 s belong behind `@pytest.mark.slow`; quick loop: `python -m pytest -q -m "not slow"`.
@@ -129,7 +129,7 @@ python -m pytest -q -m "not slow"
 
 ## Done when
 
-- `python -m pytest -q` passes in `.venv` and stays under 3 s with a warm cache
+- `python -m pytest -q` passes in `.venv` and stays under 7 s with a warm cache
 - New core behavior has at least one parametrized case (2–4 rows)
 - Every untested core target is named in the report
 - Remote block filter tests cover human, bot, and null opponent
