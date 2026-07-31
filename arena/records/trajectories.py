@@ -374,6 +374,187 @@ def read_trajectory(path: Path) -> Trajectory:
     return Trajectory(header=header, frames=tuple(frames), digests=digests, end=end)
 
 
+# --- replay -----------------------------------------------------------------
+#
+# The engine is imported lazily throughout this section: `arena.matches.loop`
+# imports this module on every match, recorded or not, and paying a jax import
+# to write four dicts a turn would be absurd.
+
+
+class EraMismatch(RuntimeError):
+    """The trajectory was recorded under a different engine than this checkout."""
+
+
+def require_same_era(traj: Trajectory, *, engine: str | None = None) -> None:
+    """
+    Refuse to replay across a `competition-module` bump.
+
+    A rules or engine change moves what a state transitions to, so replaying an
+    old trajectory under a new engine produces a different game while looking
+    like a successful reconstruction. Same reasoning as the rating era
+    boundary: records from two eras never pool.
+    """
+    from arena.records.store import engine_version
+
+    current = engine or engine_version()
+    if traj.engine_version != current:
+        raise EraMismatch(
+            f"{traj.game_id} was recorded under engine {traj.engine_version} but "
+            f"this checkout is {current}; check out that submodule revision to "
+            f"replay it"
+        )
+
+
+def replay_states(traj: Trajectory) -> Iterator[tuple[int, Any, Any]]:
+    """
+    Yield `(turn, state, info)` for the recorded game, turn by turn.
+
+    Turn 0 is the starting board with no `info`. This is also the RL
+    materializer: `get_observation(state, player)` turns any yielded state into
+    either seat's fog view, which is why observations are not stored.
+    """
+    import jax.numpy as jnp
+
+    from arena.matches.loop import make_board, make_transition  # engine imports
+    from generals import GeneralsEnv
+
+    env = GeneralsEnv(mode=str(traj.header["mode"]))
+    state = make_board(env, traj.seed)
+    transition = make_transition(env)
+
+    yield 0, state, None
+    for frame in traj.frames:
+        actions = jnp.stack(
+            [
+                jnp.array(frame.action_a, dtype=jnp.int32),
+                jnp.array(frame.action_b, dtype=jnp.int32),
+            ]
+        )
+        state, info = transition(state, actions)
+        yield frame.turn, state, info
+
+
+@dataclass(frozen=True)
+class VerifyReport:
+    """The outcome of replaying one trajectory against what it recorded."""
+
+    game_id: str
+    turns: int
+    digests_checked: int
+    mismatches: tuple[str, ...]
+
+    @property
+    def ok(self) -> bool:
+        return not self.mismatches
+
+    def summary(self) -> str:
+        if self.ok:
+            return (
+                f"{self.game_id}: replayed {self.turns} turn(s), scalars and "
+                f"{self.digests_checked} digest(s) match"
+            )
+        return f"{self.game_id}: {len(self.mismatches)} mismatch(es)\n  " + "\n  ".join(
+            self.mismatches
+        )
+
+
+def verify_trajectory(traj: Trajectory, *, engine: str | None = None) -> VerifyReport:
+    """
+    Replay and check every claim the trajectory makes.
+
+    A game reconstructs **iff** all four hold: the scalars match on every turn,
+    every recorded digest matches, the turn count matches, and the outcome
+    matches. Anything less is a divergence, and the digests say which century
+    it started in.
+    """
+    from arena.matches.loop import winner_seat
+
+    require_same_era(traj, engine=engine)
+
+    mismatches: list[str] = []
+    checked = 0
+    by_turn = {frame.turn: frame for frame in traj.frames}
+    winner_player = -1
+    last_turn = 0
+    info = None
+
+    for turn, state, info in replay_states(traj):
+        if turn == 0:
+            continue
+        last_turn = turn
+        frame = by_turn[turn]
+        land = (int(info.land[0]), int(info.land[1]))
+        army = (int(info.army[0]), int(info.army[1]))
+        if land != frame.land:
+            mismatches.append(f"turn {turn}: land {land} != recorded {frame.land}")
+        if army != frame.army:
+            mismatches.append(f"turn {turn}: army {army} != recorded {frame.army}")
+        if turn in traj.digests:
+            checked += 1
+            got = state_digest(state)
+            if got != traj.digests[turn]:
+                mismatches.append(f"turn {turn}: state digest differs")
+        if bool(info.is_done):
+            winner_player = int(info.winner)
+            break
+
+    recorded = traj.end
+    truncated = winner_player < 0
+    replayed = {
+        "winner": winner_seat(winner_player, truncated=truncated),
+        "turns": last_turn,
+        "terminated": winner_player >= 0,
+        "truncated": truncated,
+    }
+    for field_name, value in replayed.items():
+        if recorded.get(field_name) != value:
+            mismatches.append(
+                f"end.{field_name}: {value!r} != recorded {recorded.get(field_name)!r}"
+            )
+
+    return VerifyReport(
+        game_id=traj.game_id,
+        turns=last_turn,
+        digests_checked=checked,
+        mismatches=tuple(mismatches),
+    )
+
+
+def materialize(traj: Trajectory, path: Path, *, engine: str | None = None) -> Path:
+    """
+    Write the replayed game as dense per-turn arrays (`.npz`).
+
+    A cache, not a primary: it is regenerable from the trajectory at any time,
+    which is exactly why states are not stored in the first place. Layout is
+    deliberately unopinionated — the RL work decides its own shard format when
+    it starts.
+    """
+    import numpy as np
+
+    require_same_era(traj, engine=engine)
+
+    armies, ownership, castles = [], [], []
+    for _turn, state, _info in replay_states(traj):
+        armies.append(np.asarray(state.armies, dtype=np.int16))
+        ownership.append(np.asarray(state.ownership, dtype=bool))
+        castles.append(np.asarray(state.castles, dtype=bool))
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(
+        path,
+        armies=np.stack(armies),
+        ownership=np.stack(ownership),
+        castles=np.stack(castles),
+        actions=np.array([[f.action_a, f.action_b] for f in traj.frames], dtype=np.int16),
+        land=np.array([f.land for f in traj.frames], dtype=np.int32),
+        army=np.array([f.army for f in traj.frames], dtype=np.int32),
+        winner=str(traj.end.get("winner", "")),
+        game_id=traj.game_id,
+        seed=traj.seed,
+    )
+    return path
+
+
 def read_trace(path: Path) -> dict[str, list[Any]]:
     """
     A seat's probe trace as `{key: [value per recorded turn]}`.
@@ -389,3 +570,69 @@ def read_trace(path: Path) -> dict[str, list[Any]]:
                 continue
             series.setdefault(name, []).append(value)
     return series
+
+
+# --- cli --------------------------------------------------------------------
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "Inspect, verify, or materialize a recorded trajectory "
+            "(see docs/arena/trajectories.md)."
+        )
+    )
+    parser.add_argument("trajectory", type=Path, help="path to a .traj.jsonl.gz")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--verify",
+        action="store_true",
+        help="replay and assert the recorded scalars, digests, and outcome",
+    )
+    group.add_argument(
+        "--replay",
+        action="store_true",
+        help="replay and print one line per turn",
+    )
+    group.add_argument(
+        "--materialize",
+        type=Path,
+        metavar="OUT.npz",
+        help="replay into dense per-turn arrays (a regenerable cache)",
+    )
+    args = parser.parse_args(argv)
+
+    traj = read_trajectory(args.trajectory)
+
+    if args.materialize:
+        print(f"[trajectories] wrote {materialize(traj, args.materialize)}")
+        return 0
+
+    if args.replay:
+        require_same_era(traj)
+        for turn, _state, info in replay_states(traj):
+            if turn == 0:
+                continue
+            print(f"turn {turn:>5}  land={_ints2(info.land)}  army={_ints2(info.army)}")
+        return 0
+
+    if args.verify:
+        report = verify_trajectory(traj)
+        print(report.summary())
+        return 0 if report.ok else 1
+
+    print(
+        f"{traj.game_id}: seed={traj.seed} engine={traj.engine_version} "
+        f"turns={len(traj.frames)} digests={len(traj.digests)} end={traj.end}"
+    )
+    return 0
+
+
+def _ints2(array) -> tuple[int, int]:
+    return int(array[0]), int(array[1])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
