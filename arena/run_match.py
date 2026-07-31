@@ -166,8 +166,10 @@ class MatchResult:
 
 def _venv_path_env() -> dict[str, str]:
     env = os.environ.copy()
-    venv_bin = str(Path(sys.executable).resolve().parent)
+    # Keep .venv/bin on PATH; resolve() follows symlinks to the system framework.
+    venv_bin = str(Path(sys.executable).parent)
     env["PATH"] = venv_bin + os.pathsep + env.get("PATH", "")
+    env["PYTHON"] = sys.executable
     env["PYTHONUNBUFFERED"] = "1"
     return env
 

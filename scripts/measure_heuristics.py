@@ -41,6 +41,10 @@ NEW_BOTS = [
 
 BASELINE_BOTS = ["smoke", "expand_plus", "castle_builder", "general_hunter"]
 
+BENCHMARK_BOTS = ["cm_random", "cm_expander", "cm_hunter", "cm_harvester"]
+
+BENCHMARK_ANCHOR = "army_convey"
+
 EXPANDER_PYTHON = (
     REPO_ROOT / "competition-module" / "competition" / "agents" / "expander_python" / "run.sh"
 )
@@ -130,6 +134,13 @@ def build_grid() -> list[MatchSpec]:
     for a, b in itertools.combinations(economy, 2):
         for seed in (0, 1):
             base.append(MatchSpec(a, b, seed, "economy_cluster"))
+
+    for bot in BENCHMARK_BOTS:
+        for seed in (0, 1):
+            base.append(MatchSpec(bot, "smoke", seed, "benchmark_vs_smoke"))
+
+    for bot in BENCHMARK_BOTS:
+        base.append(MatchSpec(bot, BENCHMARK_ANCHOR, 0, "benchmark_vs_army_convey"))
 
     return both_seat_orders(base)
 
@@ -284,6 +295,8 @@ def write_reports(games: list[GameEntry], *, round_name: str = "round1") -> tupl
             "new_vs_expand_plus": "each new bot vs expand_plus seed 0",
             "new_round_robin": "round-robin among 8 new bots seed 0",
             "economy_cluster": "castle_builder vs castle_rush vs phase_switch seeds 0,1",
+            "benchmark_vs_smoke": "each cm_* bot vs smoke seeds 0,1",
+            "benchmark_vs_army_convey": "each cm_* bot vs army_convey seed 0",
         },
         "summary": stats,
         "notable_matchups": notable,
@@ -411,7 +424,7 @@ def main(argv: list[str] | None = None) -> int:
 
     round_name = args.round or datetime.now(timezone.utc).strftime("round-%Y%m%dT%H%M%SZ")
 
-    required = NEW_BOTS + BASELINE_BOTS
+    required = NEW_BOTS + BASELINE_BOTS + BENCHMARK_BOTS
     if args.wait:
         wait_for_bots(required, poll_seconds=args.poll_seconds, timeout_seconds=args.wait_timeout)
     else:
