@@ -384,6 +384,10 @@ class LoadedFit:
     prior: Prior
     policy: Policy
     excluded: dict[str, int]
+    # The connectivity grouping, as stored in `fit.json`. `None` means the file
+    # predates the field: the games are not in the payload, so the grouping
+    # cannot be recomputed here, and `comparable` refuses rather than guesses.
+    components: tuple[tuple[str, ...], ...] | None = None
 
     def rating(self, entity: str) -> float:
         return self.ratings[entity]
@@ -394,12 +398,37 @@ class LoadedFit:
     def games(self, entity: str) -> int:
         return sum(self.records[entity])
 
+    @property
+    def connected(self) -> bool:
+        """False when the pool is split — or when the file cannot say."""
+        return self.components is not None and len(self.components) <= 1
+
+    def comparable(self, a: str, b: str) -> bool:
+        """
+        Whether a contrast between these two is supported by any games.
+
+        A file without the grouping gets a refusal, not a benefit of the doubt:
+        assuming "connected" is exactly the bug the guard exists to stop, and a
+        refit rewrites `fit.json` with the grouping in it.
+        """
+        if a == b:
+            return True
+        if self.components is None:
+            return False
+        member = {name: k for k, group in enumerate(self.components) for name in group}
+        try:
+            return member[a] == member[b]
+        except KeyError as exc:
+            raise KeyError(f"{exc.args[0]!r} is not in this fit") from None
+
     def delta(self, a: str, b: str) -> Delta:
+        """Same refusal as `RatingFit.delta`: no contrast across groups."""
         i, j = self.entities.index(a), self.entities.index(b)
+        value = self.ratings[b] - self.ratings[a]
+        if not self.comparable(a, b):
+            return Delta(a=a, b=b, value=value, se=math.inf, comparable=False)
         variance = self.covariance[i, i] + self.covariance[j, j] - 2.0 * self.covariance[i, j]
-        return Delta(
-            a=a, b=b, value=self.ratings[b] - self.ratings[a], se=math.sqrt(max(variance, 0.0))
-        )
+        return Delta(a=a, b=b, value=value, se=math.sqrt(max(variance, 0.0)))
 
 
 __all__ = [

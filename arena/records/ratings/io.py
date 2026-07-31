@@ -154,6 +154,8 @@ def fit_payload(fit: RatingFit) -> dict[str, Any]:
         "prior": fit.prior.to_dict(),
         "policy": fit.policy.to_dict(),
         "counts_digest": fit.counts.digest,
+        "connected": fit.connected,
+        "components": [list(group) for group in fit.components],
         "solver": {
             "iterations": fit.solver.iterations,
             "max_abs_grad": fit.solver.max_abs_grad,
@@ -192,6 +194,15 @@ def fit_from_payload(data: dict[str, Any]) -> LoadedFit:
         errors[entity] = float(row["se"])
         records[entity] = (int(row["wins"]), int(row["losses"]), int(row["draws"]))
 
+    # Absent in files written before the connectivity guard. `LoadedFit` then
+    # refuses cross-entity contrasts instead of assuming a connected pool.
+    raw_components = data.get("components")
+    components = (
+        None
+        if raw_components is None
+        else tuple(tuple(group) for group in raw_components)
+    )
+
     policy_data = data.get("policy", {})
     return LoadedFit(
         anchor=data["anchor"],
@@ -212,6 +223,7 @@ def fit_from_payload(data: dict[str, Any]) -> LoadedFit:
             min_games_display=policy_data.get("min_games_display", 30),
         ),
         excluded=dict(data.get("excluded", {})),
+        components=components,
     )
 
 

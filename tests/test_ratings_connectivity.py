@@ -200,3 +200,74 @@ def test_games_to_resolve_answers_the_question_the_guard_raises():
     fit = fit_for(SPLIT)
     needed = fit.games_to_resolve("a", "c", target_se=12.75)
     assert needed > 0
+
+
+# --- the stored fit ----------------------------------------------------------
+
+
+def roundtrip(fit):
+    """`fit.json` and back, through actual JSON so types survive nothing."""
+    import json
+
+    return io.fit_from_payload(json.loads(json.dumps(io.fit_payload(fit))))
+
+
+def test_fit_json_records_the_grouping():
+    payload = io.fit_payload(fit_for(SPLIT))
+    assert payload["connected"] is False
+    assert payload["components"] == [["a", "b"], ["c", "d"]]
+
+
+def test_a_reloaded_split_fit_refuses_the_same_contrast():
+    """
+    The guard must survive `fit.json`.
+
+    Without this, the stored covariance hands back a small finite SE for the
+    cross-group pair — the exact confident number the guard exists to refuse,
+    resurfacing one file-read later.
+    """
+    loaded = roundtrip(fit_for(SPLIT))
+    assert not loaded.connected
+    assert loaded.components == (("a", "b"), ("c", "d"))
+    delta = loaded.delta("a", "c")
+    assert not delta.comparable
+    assert delta.se == math.inf
+    assert delta.p_stronger == 0.5
+
+
+def test_a_reloaded_connected_fit_still_answers():
+    loaded = roundtrip(fit_for(CONNECTED))
+    assert loaded.connected
+    delta = loaded.delta("a", "c")
+    assert delta.comparable
+    assert math.isfinite(delta.se) and delta.se > 0
+
+
+def test_a_reloaded_fit_keeps_within_group_contrasts():
+    delta = roundtrip(fit_for(SPLIT)).delta("a", "b")
+    assert delta.comparable
+    assert math.isfinite(delta.se)
+
+
+def test_a_legacy_payload_without_the_grouping_refuses_rather_than_guesses():
+    """
+    A file written before the guard cannot say which entities share games,
+    and the games are not in the payload to recompute it. Assuming
+    "connected" is exactly the bug; the honest answer is a refusal, and a
+    refit rewrites the file with the grouping in it.
+    """
+    payload = io.fit_payload(fit_for(SPLIT))
+    del payload["components"]
+    del payload["connected"]
+    loaded = io.fit_from_payload(payload)
+
+    assert loaded.components is None
+    assert not loaded.connected
+    delta = loaded.delta("a", "b")  # linked by games, but the file lost that
+    assert not delta.comparable
+    assert delta.se == math.inf
+
+
+def test_a_reloaded_fit_rejects_an_unknown_entity():
+    with pytest.raises(KeyError):
+        roundtrip(fit_for(SPLIT)).comparable("a", "never-played")

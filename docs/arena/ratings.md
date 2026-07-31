@@ -122,6 +122,12 @@ because a single ranked list asserts that every row is comparable to every
 other. The remedy is games between the groups; `fit.games_to_resolve` says how
 many. See [decision-rule.md](decision-rule.md).
 
+The grouping is stored in `fit.json`, and a fit read back with `load_fit`
+applies the same refusal — the guard survives the file. A `fit.json` written
+before the field existed cannot say which entities share games (the games are
+not in the payload), so a reloaded legacy fit refuses **every** cross-entity
+contrast until a refit rewrites the file with the grouping in it.
+
 The usual cause is a *whole roster* forking at once — a change to a file every
 bot's closure contains — followed by a round that plays only the new hashes.
 A normal decision arm shares an opponent panel and stays connected by
