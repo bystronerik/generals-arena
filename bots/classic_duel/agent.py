@@ -22,6 +22,10 @@ FRONTIER_NEIGHBOR_WEIGHT = 1.5
 OPPONENT_CAPTURE_MULT = 3.0
 ENEMY_GENERAL_SCORE = 10000
 GENERAL_ATTACK_MIN_MARGIN = 1
+SCOUT_UNSIGHTED_LAND = 80
+SCOUT_FOG_CAPTURE_MULT = 2.5
+SCOUT_MARCH_MIN_ARMY = 3
+SCOUT_RESERVE_FACTOR = 0.75
 
 
 def _is_passable(t):
@@ -56,26 +60,38 @@ class Agent:
         self.enemy_general_pos = None
         self.first_city_capture_turn = None
         self.first_sighting_turn = None
+        self.ever_seen = [[False] * W for _ in range(H)]
 
     def act(self, obs):
         self._locate_own_general(obs)
         self._update_enemy_general(obs)
+        self._update_ever_seen(obs)
+        scouting = self._in_scout_mode(obs)
         reserve = _required_reserve(obs.my_land)
+        if scouting:
+            reserve = max(RESERVE_BASE, int(reserve * SCOUT_RESERVE_FACTOR))
 
         kill = self._enemy_general_capture(obs, reserve)
         if kill is not None:
             return kill
 
-        city = self._neutral_city_capture(obs, reserve)
-        if city is not None:
-            if self.first_city_capture_turn is None:
-                self.first_city_capture_turn = obs.turn
-            return city
+        if not scouting:
+            city = self._neutral_city_capture(obs, reserve)
+            if city is not None:
+                if self.first_city_capture_turn is None:
+                    self.first_city_capture_turn = obs.turn
+                return city
 
         frontier = self._frontier_cells(obs)
-        capture = self._frontier_capture(obs, frontier, reserve)
+        fog_mult = SCOUT_FOG_CAPTURE_MULT if scouting else 1.0
+        capture = self._frontier_capture(obs, frontier, reserve, fog_mult=fog_mult)
         if capture is not None:
             return capture
+
+        if scouting:
+            march = self._fog_march(obs)
+            if march is not None:
+                return march
 
         convey = self._interior_convey(obs, frontier)
         if convey is not None:
@@ -119,6 +135,18 @@ class Agent:
                     if self.first_sighting_turn is None:
                         self.first_sighting_turn = obs.turn
                     return
+
+    def _update_ever_seen(self, obs):
+        for r in range(obs.H):
+            for c in range(obs.W):
+                if obs.type_grid[r][c] != 0:
+                    self.ever_seen[r][c] = True
+
+    def _in_scout_mode(self, obs):
+        return (
+            self.enemy_general_pos is None
+            and obs.my_land >= SCOUT_UNSIGHTED_LAND
+        )
 
     def _enemy_general_capture(self, obs, reserve):
         if self.enemy_general_pos is None:
@@ -183,7 +211,7 @@ class Agent:
                         best = (0, r, c, d, 0)
         return best
 
-    def _frontier_capture(self, obs, frontier, reserve):
+    def _frontier_capture(self, obs, frontier, reserve, fog_mult=1.0):
         best_score = -1.0
         best_capture = None
         margin = GENERAL_ATTACK_MIN_MARGIN
@@ -211,10 +239,68 @@ class Agent:
                 score += self._frontier_neighbor_armies(obs, r, c) * FRONTIER_NEIGHBOR_WEIGHT
                 if obs.owner_grid[nr][nc] == 2:
                     score *= OPPONENT_CAPTURE_MULT
+                is_fog = obs.type_grid[nr][nc] == 0 or not self.ever_seen[nr][nc]
+                if is_fog and fog_mult > 1.0:
+                    score *= fog_mult
                 if score > best_score:
                     best_score = score
                     best_capture = (0, r, c, d, 0)
         return best_capture
+
+    def _fog_march(self, obs):
+        H, W = obs.H, obs.W
+        dist = [[-1] * W for _ in range(H)]
+        q = deque()
+        for r in range(H):
+            for c in range(W):
+                if self.ever_seen[r][c]:
+                    continue
+                if not _is_passable(obs.type_grid[r][c]):
+                    continue
+                dist[r][c] = 0
+                q.append((r, c))
+        if not q:
+            return None
+
+        while q:
+            r, c = q.popleft()
+            for dr, dc in DIRECTIONS:
+                nr, nc = r + dr, c + dc
+                if not (0 <= nr < H and 0 <= nc < W):
+                    continue
+                if dist[nr][nc] != -1:
+                    continue
+                if not _is_passable(obs.type_grid[nr][nc]):
+                    continue
+                dist[nr][nc] = dist[r][c] + 1
+                q.append((nr, nc))
+
+        best_army = -1
+        best_move = None
+        for r in range(H):
+            for c in range(W):
+                if obs.owner_grid[r][c] != 1:
+                    continue
+                src_army = obs.army_grid[r][c]
+                if src_army < SCOUT_MARCH_MIN_ARMY:
+                    continue
+                here = dist[r][c]
+                if here <= 0:
+                    continue
+                for d, (dr, dc) in enumerate(DIRECTIONS):
+                    nr, nc = r + dr, c + dc
+                    if not (0 <= nr < H and 0 <= nc < W):
+                        continue
+                    if not _is_passable(obs.type_grid[nr][nc]):
+                        continue
+                    if obs.owner_grid[nr][nc] != 1:
+                        continue
+                    if dist[nr][nc] < 0 or dist[nr][nc] >= here:
+                        continue
+                    if src_army > best_army:
+                        best_army = src_army
+                        best_move = (0, r, c, d, 0)
+        return best_move
 
     def _interior_convey(self, obs, frontier):
         dist = self._convey_distance_field(obs, frontier)

@@ -56,6 +56,10 @@ Derived each turn:
 | `OPPONENT_CAPTURE_MULT` | 3.0 | Multiplier for opponent-tile captures |
 | `ENEMY_GENERAL_SCORE` | 10000 | Score for a legal attack onto the remembered enemy general |
 | `GENERAL_ATTACK_MIN_MARGIN` | 1 | Need `src_army > dest_army + margin` (one stays on source) |
+| `SCOUT_UNSIGHTED_LAND` | 80 | Enter scout mode when enemy general not sighted and land ≥ this |
+| `SCOUT_FOG_CAPTURE_MULT` | 2.5 | Frontier capture multiplier for fog/unseen targets in scout mode |
+| `SCOUT_MARCH_MIN_ARMY` | 3 | Minimum stack for fog march toward unrevealed terrain |
+| `SCOUT_RESERVE_FACTOR` | 0.75 | Reserve multiplier in scout mode (floor `RESERVE_BASE`) |
 
 ## 5. Action priority (strict order)
 
@@ -64,12 +68,16 @@ Derived each turn:
 2. **Enemy general kill** — if the enemy general is visible and a frontier or
    adjacent owned cell can capture it with `src_army > dest_army + 1`, take
    the highest-scoring legal attack.
-3. **Neutral city capture** — when `my_land >= CITY_MIN_OWNED_LAND`, score
-   captures onto `owner == 0`, `type == 3` with garrison
+3. **Neutral city capture** — when `my_land >= CITY_MIN_OWNED_LAND` and **not**
+   in scout mode (`enemy_general_pos` sighted or `my_land < SCOUT_UNSIGHTED_LAND`),
+   score captures onto `owner == 0`, `type == 3` with garrison
    `<= CITY_MAX_GARRISON`. Score =
    `CITY_CAPTURE_SCORE + my_land * CITY_LAND_BONUS - garrison`.
 4. **Frontier capture** — `army_convey`-style greedy capture from frontier cells
-   (including opponent tiles with `OPPONENT_CAPTURE_MULT`).
+   (including opponent tiles with `OPPONENT_CAPTURE_MULT`; fog/unseen targets
+   get `SCOUT_FOG_CAPTURE_MULT` when in scout mode).
+4b. **Fog march** — in scout mode only, move interior stacks toward nearest
+   unrevealed passable cell (BFS distance field).
 5. **Interior convey** — move idle interior stacks toward the frontier by
    `army / (distance + 1)`.
 6. **Frontier gathering** — push interior neighbors onto frontier tips.
@@ -152,3 +160,25 @@ python scripts/remote_play.py --mode dry-run --bot classic_duel
 ```
 
 Remote adapter must load the bot with `builds_dropped == 0`.
+
+## 12. Parameter revision 1 (scout mode)
+
+**Evidence:** Classic stress grid (seeds 0–4, both seats) showed 7 non-wins
+(6 losses vs `army_convey`, 1 draw vs `smoke`). In 5 of 7, telemetry reported
+`enemy_general_sighted=0` — the bot never found the enemy general despite
+owning 130–428 land tiles.
+
+**Change:**
+
+| Constant | Old | New | Axis |
+| --- | --- | --- | --- |
+| `SCOUT_UNSIGHTED_LAND` | — | 80 | scout |
+| `SCOUT_FOG_CAPTURE_MULT` | — | 2.5 | scout |
+| `SCOUT_MARCH_MIN_ARMY` | — | 3 | scout |
+| `SCOUT_RESERVE_FACTOR` | — | 0.75 | reserve |
+
+Scout mode pauses neutral city capture (city priority) and biases expansion
+toward fog. Reserve drops to `max(RESERVE_BASE, floor(required * 0.75))`.
+
+**Hypothesis:** Sighting rate before turn 600 vs `army_convey` rises from 3/10
+to ≥ 7/10 without increasing losses where the enemy general was already sighted.
