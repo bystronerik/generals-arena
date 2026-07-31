@@ -11,15 +11,20 @@ generals-arena/
 ├── README.md                 # this file
 ├── AGENTS.md                 # agent workflow only
 ├── RULES.md                  # competition rules (processed)
-├── requirements.txt          # arena deps + sandbox pin notes
+├── requirements.txt          # arena deps (elote, pytest)
+├── requirements-sandbox.txt  # optional torch/jax sandbox pins
+├── pytest.ini                # unified test discovery
 ├── competition-module/       # git submodule (engine + matchup)
+├── client/                   # generals_client submodule (live generals.io)
 ├── bots/                     # stdio competition bots (Phase 1+)
 ├── arena/                    # match runner, ratings, store (Phase 2)
-├── data/games/               # stored match outcomes
-├── data/ratings/             # leaderboard snapshots
+├── tests/                    # core pytest suite
+├── data/games/               # stored match outcomes (JSON gitignored)
+├── data/ratings/             # leaderboard snapshots (local; gitignored)
+├── data/remote_games/        # live classic session logs (gitignored)
 ├── scripts/                  # thin CLIs
 ├── docs/                     # game and bot knowledge (small files)
-├── .cursor/skills/           # Cursor skills (Phase 2)
+├── .cursor/skills/           # Cursor skills (Phase 2+)
 └── prompts/                  # optional phase kickoff prompts
 ```
 
@@ -35,7 +40,22 @@ pip install -e client               # generals_client wire for live play (option
 pip install -r requirements.txt
 ```
 
-Submitted-bot sandbox pins live in [`competition-module/competition/requirements.txt`](competition-module/competition/requirements.txt). Use those when you need the evaluation image library set.
+Optional: match the competition evaluation image library set:
+
+```bash
+pip install -r requirements-sandbox.txt
+```
+
+Submitted-bot sandbox pins also live in [`competition-module/competition/requirements.txt`](competition-module/competition/requirements.txt).
+
+## Tests
+
+```bash
+source .venv/bin/activate
+pytest
+```
+
+Config: [`pytest.ini`](pytest.ini). Core targets: [`docs/research/strategies/test-core-skill.md`](docs/research/strategies/test-core-skill.md).
 
 ## Smoke match
 
@@ -74,6 +94,8 @@ python scripts/tournament.py \
 
 python scripts/leaderboard.py
 ```
+
+Ratings rebuild locally under `data/ratings/` (gitignored). Commit round reports under `docs/research/measurements/` when publishing results.
 
 See [`docs/arena/tournament.md`](docs/arena/tournament.md) and [`docs/arena/ratings.md`](docs/arena/ratings.md).
 

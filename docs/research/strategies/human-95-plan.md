@@ -2,7 +2,7 @@
 
 The Phase 3 end goal is one heuristic bot that wins **at least 95 of 100 logged
 games against human opponents** on live generals.io through
-`competition-module/generals/remote/`.
+`client/generals_client` (`arena/remote_bridge.py`, `scripts/remote_play.py`).
 
 This file is the program plan for that goal. It holds no bot code. It is a
 **classic generals.io** plan, not a competition plan. A remote result never
@@ -329,12 +329,8 @@ Existing skills carry this split already — `write-strategy-spec` and
 
 ### 5.1 Credentials
 
-- `GeneralsIOClient.bot_key` is hard-coded to the placeholder
-  `"sd09fjd203i0ejwi_changeme"`. A real bot key is issued by the generals.io
-  operators. Until one is obtained, `register_agent` may be rejected and no
-  live game is possible. **Obtain the key before scheduling any block.**
-- The key must be settable from the environment without editing submodule
-  internals. Set it on the subclass after `super().__init__`.
+- Live play uses `generals_client` (EIO v4) with `GENERALS_USER_ID`. No
+  `bot_key` is required on the bot websocket endpoint.
 - `GENERALS_USER_ID` is a secret the operator invents and is bound to a
   username once. It is a password. Environment only, never a CLI flag, never
   committed. `.env` and `.env.agent` are already gitignored.
@@ -357,19 +353,15 @@ plan and out of line with site convention.
 
 ### 5.4 A result-fidelity defect that would corrupt the headline number
 
-`GeneralsIOClient._play_game` unpacks `event, data, _ = self.receive()` and, on
-`ValueError`, calls `_finish_game(is_winner=True)`. Any event that is not
-exactly three elements — a chat message, a queue update, a truncated frame, a
-disconnect — is therefore recorded as a **win**. `scripts/remote_play.py`
-inherits that path and writes `"result": "win"` to the block store.
+The repo-side client in `arena/remote_client.py` (`FidelityRemoteSession`) must
+never count disconnects or malformed frames as wins. `scripts/remote_play.py`
+routes live play through `arena/remote_bridge.UnifiedBot`, not the legacy
+competition-module remote client.
 
-This alone can manufacture a 95/100. It must be fixed before the first counted
-game: classify that path as `disconnect` or `receive_error`, exclude it from
-the block count, and report it separately. Fix it in the repo-side subclass,
-not in the submodule.
-
-The same loop has no receive timeout, so a stalled game blocks forever. Add a
-timeout and record a stall as its own `result_reason`.
+Verify with `--mode dry-run` and the offline checks in
+`arena/remote_adapter.verify_adapter_offline` before the first counted game.
+Any `result_reason` other than `game_won` / `game_lost` is excluded from the
+block count.
 
 ### 5.5 Sample size and opponent mix
 

@@ -6,16 +6,11 @@ so arena bots use the unified API without duplicating socket logic.
 """
 from __future__ import annotations
 
-import logging
-from typing import Any
-
 from generals_client.bot import BaseBot, BotError, GameClient
 from generals_client.state import GameState
 from generals_client.transport import DEFAULT_SERVER
 
 from arena.bot_api import StrategySession, from_game_state, to_client_move
-
-logger = logging.getLogger(__name__)
 
 
 class UnifiedBot(BaseBot):
@@ -38,70 +33,7 @@ class UnifiedBot(BaseBot):
 
 
 class ArenaGameClient(GameClient):
-    """GameClient that forwards split moves and notifies the bot on game start."""
-
-    def _on_game_start(self, data: dict[str, Any], *_: Any) -> None:
-        super()._on_game_start(data, *_)
-        bot = self._bot
-        if isinstance(bot, UnifiedBot) and self._state is not None:
-            bot.on_game_start(self._state)
-
-    def _on_game_update(self, data: dict[str, Any], *_: Any) -> None:
-        """Apply update, ask bot, emit attack with optional 50/50 split."""
-        with self._lock:
-            if self._finished.is_set():
-                return
-            state = self._state
-            if state is None:
-                logger.warning("game_update received before game_start; ignoring")
-                return
-            try:
-                state.apply_update(data)
-            except Exception:
-                self._fail(BotError("failed to apply game_update; state is unreliable"))
-                logger.exception("apply_update failed")
-                return
-
-            try:
-                move = self._bot.move(state)
-            except Exception:
-                logger.exception("bot.move() raised on turn %d; passing this tick", state.turn)
-                return
-
-            if move is None:
-                return
-
-            validated = self._coerce_move(move, state)
-            if validated is None:
-                return
-            start, end, is50 = validated
-            self._transport.attack(start, end, is50)
-
-    @staticmethod
-    def _coerce_move(
-        move: Any,
-        state: GameState,
-    ) -> tuple[int, int, bool] | None:
-        is50 = False
-        try:
-            if len(move) == 3:
-                start, end, is50 = move
-                is50 = bool(is50)
-            else:
-                start, end = move
-        except (TypeError, ValueError):
-            logger.error("bot returned malformed move %r; passing", move)
-            return None
-        start, end = int(start), int(end)
-        if not (0 <= start < state.size and 0 <= end < state.size):
-            logger.error(
-                "bot returned out-of-range move %d -> %d (map has %d tiles); passing",
-                start,
-                end,
-                state.size,
-            )
-            return None
-        return start, end, is50
+    """GameClient alias used by the arena remote harness (split moves via ``_emit_move``)."""
 
 
 def opponent_username(state: GameState | None) -> str | None:

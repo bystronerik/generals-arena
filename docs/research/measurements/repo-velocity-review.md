@@ -4,7 +4,7 @@ Source: generals-arena review @ `145db98+` · interactive pick-list in
 [repo-velocity-review.canvas.tsx](/Users/erikbystron/.cursor/projects/Users-erikbystron-Work-learning-generals-arena/canvases/repo-velocity-review.canvas.tsx)
 
 Scope: iteration speed toward 95/100 human wins on remote and general bot
-iteration. No fixes implemented in this review.
+iteration. Status column marks items addressed in the 2026-07-31 velocity pass.
 
 Measured facts: 202 stored games (118 draws at turn 1200; seat a 75 wins, b 9);
 0 records with schema v2 telemetry; 14 tests in 0.76 s.
@@ -27,48 +27,48 @@ Measured facts: 202 stored games (118 draws at turn 1200; seat a 75 wins, b 9);
 
 ## P0 findings
 
-| ID | Area | Problem | Est. speedup | Suggested fix |
-| --- | --- | --- | --- | --- |
-| A1 | Arena | Classic harness has no batch runner or record store | 5–10x per revision | `classic_tournament.py` + `measure_classic.py`; `data/classic_games/` |
-| A2 | Remote | No queue timeout or requeue loop | Removes 30–60 min idle/batch | `--queue-timeout-seconds`, requeue with backoff |
-| A3 | Bots | Four divergent `main.py`; 5/13 emit telemetry | 13x fewer metric edits | Shared `bots/_common/wire.py` |
-| E1 | Eval | `measure_heuristics` drops v2 telemetry | 5–10 min/re-run avoided | Use `run_and_store` |
-| E2 | Eval | Draw-dominated, seat-biased grid | ~1 round saved | Both seat orders; land margin at cap |
-| S1 | Skills | No Phase 3 classic/remote skills | Plan read → procedure | `run-classic-grid`, `run-remote-block`, remote-operator role |
+| ID | Status | Area | Problem | Est. speedup | Suggested fix |
+| --- | --- | --- | --- | --- | --- |
+| A1 | open | Arena | Classic harness has no batch runner or record store | 5–10x per revision | `classic_tournament.py` + `measure_classic.py`; `data/classic_games/` |
+| A2 | open | Remote | No queue timeout or requeue loop | Removes 30–60 min idle/batch | `--queue-timeout-seconds`, requeue with backoff |
+| A3 | open | Bots | Four divergent `main.py`; 5/13 emit telemetry | 13x fewer metric edits | Shared `bots/_common/wire.py` |
+| E1 | open | Eval | `measure_heuristics` drops v2 telemetry | 5–10 min/re-run avoided | Use `run_and_store` |
+| E2 | open | Eval | Draw-dominated, seat-biased grid | ~1 round saved | Both seat orders; land margin at cap |
+| S1 | **done** | Skills | No Phase 3 classic/remote skills | Plan read → procedure | `run-classic-grid`, `run-remote-block`, remote-operator role |
 
 ## P1 findings
 
-| ID | Area | Problem | Est. speedup | Suggested fix |
-| --- | --- | --- | --- | --- |
-| A4 | Arena | `ArenaGameClient` copies `_on_game_update` | Hours on divergence | Hook in generals-client |
-| A5 | Arena | `StrategySession` swallows exceptions | Blind → diagnosable block | Log traceback; store in stats |
-| A6 | Bots | `strategy_common.py` triplicated | 1 vs 3 edits | Shared module + named constants |
-| A9 | Code | No formal ABC/Protocol for arena stdio bots; contract is duck-typed (`Agent` + `__init__(player_id,H,W)` + `act(obs)->5-tuple`); competition-module JAX Agent unused by `bots/` | Fewer broken scaffolds; clearer Composer contracts | `typing.Protocol` in `arena/bot_api.py` (optional runtime import); update `docs/engine/unified-bot-api.md` |
-| R1 | Repo | `.gitignore` vs skills on `data/ratings/` | Fewer commit dead-ends | Pick one rule |
-| R2 | Repo | `requirements.txt` mixes torch sandbox | Clean setup seconds | Split requirements files |
-| R3 | Repo | AGENTS/human-95 stale remote path | Minutes/session | Point to `client/generals_client` |
-| E3 | Eval | `classic_duel` city metric dropped | No stdout hand-read | Generic telemetry parse |
-| E4 | Eval | No `remote_report.py` | Manual → one command | Wilson bound + star bands script |
-| T1 | Tests | Parsers/store untested | Corrupt round in <1 s | Table-driven parser tests |
-| T2 | Tests | Block counter null `opponent_is_bot` | Protect 95/100 claim | Require `opponent_is_bot is False` |
-| C1 | Scripts | `remote_lobby_watch` path hack | Env divergence | `arena/remote_env.py` |
-| S2 | Skills | Skills point at broken measure script | Fixed by E1 | Fix E1 first |
+| ID | Status | Area | Problem | Est. speedup | Suggested fix |
+| --- | --- | --- | --- | --- | --- |
+| A4 | **done** | Arena | `ArenaGameClient` copies `_on_game_update` | Hours on divergence | Hook in generals-client |
+| A5 | open | Arena | `StrategySession` swallows exceptions | Blind → diagnosable block | Log traceback; store in stats |
+| A6 | open | Bots | `strategy_common.py` triplicated | 1 vs 3 edits | Shared module + named constants |
+| A9 | open | Code | No formal ABC/Protocol for arena stdio bots | Fewer broken scaffolds | `typing.Protocol` in `arena/bot_api.py` |
+| R1 | **done** | Repo | `.gitignore` vs skills on `data/ratings/` | Fewer commit dead-ends | Ratings local; commit measurement reports |
+| R2 | **done** | Repo | `requirements.txt` mixes torch sandbox | Clean setup seconds | Split requirements files |
+| R3 | **done** | Repo | AGENTS/human-95 stale remote path | Minutes/session | Point to `client/generals_client` |
+| E3 | open | Eval | `classic_duel` city metric dropped | No stdout hand-read | Generic telemetry parse |
+| E4 | open | Eval | No `remote_report.py` | Manual → one command | Wilson bound + star bands script |
+| T1 | open | Tests | Parsers/store untested | Corrupt round in <1 s | Table-driven parser tests |
+| T2 | open | Tests | Block counter null `opponent_is_bot` | Protect 95/100 claim | Require `opponent_is_bot is False` |
+| C1 | open | Scripts | `remote_lobby_watch` path hack | Env divergence | `arena/remote_env.py` |
+| S2 | **done** | Skills | Skills point at broken measure script | Fixed by E1 | Skills note v2 / E1 dependency |
 
 ## P2 summary
 
-| ID | Area | Problem | Fix |
-| --- | --- | --- | --- |
-| A7 | Arena | JAX import for remote | Lazy import |
-| A8 | Arena | Stale `__all__` | Update export list |
-| R4 | Repo | Docs index drift | Add rows; fix matrix pointer |
-| R5 | Repo | Wrong symbol in remote docs | `from_game_state` |
-| R6 | Repo | README/.DS_Store | Update tree; gitignore |
-| E5 | Eval | Elo weakness | Fix E2 first |
-| E6 | Eval | No `--jobs` | Parallel matches |
-| C2 | Scripts | `--public-server` ignored | `--server-url` or remove |
-| C3 | Scripts | Bare `python` in `run.sh` | Venv python |
-| C4 | Scripts | Dry-run, round name, wait gaps | Small script fixes |
-| T3 | Tests | No CI | `pytest.ini` + unified command |
+| ID | Status | Area | Problem | Fix |
+| --- | --- | --- | --- | --- |
+| A7 | **done** | Arena | JAX import for remote | Lazy import |
+| A8 | **done** | Arena | Stale `__all__` | Update export list |
+| R4 | **done** | Repo | Docs index drift | Add rows; fix matrix pointer |
+| R5 | **done** | Repo | Wrong symbol in remote docs | `from_game_state` |
+| R6 | **done** | Repo | README/.DS_Store | Update tree; gitignore |
+| E5 | **note** | Eval | Elo weakness | Fix E2 first — seat bias and draw cap dominate signal |
+| E6 | **done** | Eval | No `--jobs` | Already on `arena/classic_tournament.py` |
+| C2 | open | Scripts | `--public-server` ignored | `--server-url` or remove |
+| C3 | **done** | Scripts | Bare `python` in `run.sh` | `"${PYTHON:-python3}"` |
+| C4 | **done** | Scripts | Dry-run, round name, wait gaps | Small script fixes |
+| T3 | **done** | Tests | No CI | `pytest.ini` + README command |
 
 ## Already good — do not change
 

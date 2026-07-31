@@ -9,7 +9,9 @@ Process rules for agents that work in this repo. Put game and bot knowledge in `
 - `AGENTS.md` (this file): phases, file placement, verification. No game/bot strategy.
 - All game and bot knowledge lives under `docs/` as many small files.
 - Do not edit `competition-module` internals unless a bug blocks work. Wrap and document instead.
-- Remote play via `competition-module/generals/remote/` targets **live generals.io**, not the competition sandbox. Keep that distinction explicit.
+- Remote play uses `client/generals_client` via `arena/remote_bridge.py` and
+  `scripts/remote_play.py`. That path targets **live generals.io** (classic
+  rules), not the competition sandbox. Keep that distinction explicit.
 
 ## Phases
 
@@ -62,7 +64,7 @@ After Phase 2, also store the game under `data/games/` before you update ratings
 
 Phase 3 closes when one heuristic bot wins **at least 95 of 100 logged games
 against human opponents** on live generals.io through
-`competition-module/generals/remote/`.
+`client/generals_client` (`arena/remote_bridge.py`, `scripts/remote_play.py`).
 
 Process rules for that criterion:
 
@@ -87,6 +89,7 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 | bot-author | Add or change `bots/<name>/`; keep stdio protocol intact | `build-bot-from-spec`, then `run-competition-match` | New/changed `run.sh` finishes a competition match |
 | strategist | Write strategy specs; enforce bot diversity | `write-strategy-spec`, `check-bot-diversity` | Spec in `docs/research/strategies/` with diversity verdict |
 | evaluator | Fixed seed grid; before/after winrate; rating delta | `run-measurement-round`, `evaluate-bot-change`, `update-leaderboard` | Games in `data/games/`; metrics reported; ratings only after store |
+| remote-operator | Live classic blocks; human gate ladder | `run-remote-block`, `run-classic-grid` | Block report under `docs/research/measurements/`; logs in `data/remote_games/` |
 | docs-keeper | Keep `docs/` small and accurate; sync with code + `RULES.md` | none required | Topic files stay single-purpose; no strategy moved into `AGENTS.md` |
 | tester | Core coverage under `tests/`; fixtures under `tests/fixtures/` | `analyze-and-test-core` | New tests pass, the suite stays under 3 s, and every untested core target is named |
 
@@ -113,6 +116,13 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 1. Follow [`docs/research/experiment-protocol.md`](docs/research/experiment-protocol.md).
 2. Use `run-measurement-round` for batch grids or `evaluate-bot-change` for A/B pairs.
 3. Store games via `arena/run_match.py` / `scripts/measure_heuristics.py`, then `update-leaderboard`.
+
+### remote-operator
+
+1. Read [`docs/research/strategies/human-95-plan.md`](docs/research/strategies/human-95-plan.md) and [`docs/engine/remote-play-setup.md`](docs/engine/remote-play-setup.md).
+2. Tune on the classic harness with `run-classic-grid` before spending live queue time.
+3. Run human blocks with `run-remote-block`; publish `docs/research/measurements/remote-block<N>.md`.
+4. Never feed remote games into `data/games/` or `data/ratings/`.
 
 ### docs-keeper
 
@@ -144,6 +154,8 @@ Taxonomy: [`docs/research/strategies/skills-workflow.md`](docs/research/strategi
 | update-leaderboard | Composer | [`.cursor/skills/update-leaderboard/`](.cursor/skills/update-leaderboard/) |
 | commit-research-increment | Composer | [`.cursor/skills/commit-research-increment/`](.cursor/skills/commit-research-increment/) |
 | analyze-and-test-core | Think + Composer | [`.cursor/skills/analyze-and-test-core/`](.cursor/skills/analyze-and-test-core/) |
+| run-classic-grid | Composer | [`.cursor/skills/run-classic-grid/`](.cursor/skills/run-classic-grid/) |
+| run-remote-block | Composer | [`.cursor/skills/run-remote-block/`](.cursor/skills/run-remote-block/) |
 | improve-skill-from-failure | Think (named only) | [`.cursor/skills/improve-skill-from-failure/`](.cursor/skills/improve-skill-from-failure/) |
 
 Planned CLIs and modules: `scripts/`, `arena/run_match.py`, `arena/tournament.py`, `arena/ratings.py`; data under `data/games/` and `data/ratings/`.

@@ -43,7 +43,10 @@ Typical flow after a grid:
 
 ## Git hygiene
 
-Commit `data/ratings/` snapshots when the user asks for a commit. Do **not** commit `data/games/*.json` unless the user asks for the raw games.
+Rebuild writes JSON and Markdown under `data/ratings/`. Those files are
+**gitignored** — keep them local. Commit round reports under
+`docs/research/measurements/` when publishing results. Do **not** commit
+`data/games/*.json` unless the user asks for the raw games.
 
 ## Rules
 

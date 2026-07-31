@@ -23,7 +23,9 @@ Follow [`docs/research/experiment-protocol.md`](../../../docs/research/experimen
 1. **Hypothesis** — one claim; optional short note under `docs/research/experiments/`.
 2. **Baseline** — fix opponent set + seed list. Run before the change (or use stored games that match that grid).
 3. **Treat** — apply the change; re-run the same seeds and opponents.
-4. **Store** — every game via `arena/run_match.py`, `arena/tournament.py`, or `scripts/measure_heuristics.py` into `data/games/` before ratings.
+4. **Store** — every game via `arena/run_match.run_and_store`,
+   `arena/tournament.py`, or `scripts/measure_heuristics.py` into `data/games/`
+   before ratings. Prefer `run_and_store` for schema v2 telemetry fields.
 5. **Report** — winrate, draw rate, mean turns, decisive games, Elo delta, sample size.
 6. **Decide** — keep or revert from stored metrics only.
 
@@ -32,7 +34,7 @@ Follow [`docs/research/experiment-protocol.md`](../../../docs/research/experimen
 ```bash
 source .venv/bin/activate   # if present; prefer python3.12
 
-# Single stored match
+# Single stored match (schema v2 telemetry)
 python arena/run_match.py bots/<a>/run.sh bots/<b>/run.sh --mode competition --seed <n>
 
 # Full heuristic round (fixed grid + round report)

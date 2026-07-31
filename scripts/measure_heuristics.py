@@ -82,7 +82,7 @@ def wait_for_bots(
     names: list[str],
     *,
     poll_seconds: float = 20.0,
-    timeout_seconds: float = 1200.0,
+    timeout_seconds: float = 120.0,
 ) -> None:
     """Poll until every bot has a run.sh (up to timeout)."""
     deadline = time.monotonic() + timeout_seconds
@@ -380,21 +380,21 @@ def write_reports(games: list[GameEntry], *, round_name: str = "round1") -> tupl
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run round-1 heuristic measurement grid.")
     parser.add_argument(
-        "--no-wait",
+        "--wait",
         action="store_true",
-        help="fail immediately if a bot run.sh is missing",
+        help="poll until every bot run.sh exists (default: fail fast if missing)",
     )
     parser.add_argument(
         "--poll-seconds",
         type=float,
         default=20.0,
-        help="poll interval when waiting for bots (default: 20)",
+        help="poll interval when --wait is set (default: 20)",
     )
     parser.add_argument(
         "--wait-timeout",
         type=float,
-        default=1200.0,
-        help="max wait for bots in seconds (default: 1200 = 20 min)",
+        default=120.0,
+        help="max wait for bots in seconds when --wait is set (default: 120)",
     )
     parser.add_argument(
         "--no-ratings",
@@ -403,22 +403,25 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--round",
-        default="round1",
-        help="output basename under docs/research/measurements/ (default: round1)",
+        default=None,
+        help="output basename under docs/research/measurements/ "
+        "(default: round-YYYYMMDDTHHMMSSZ)",
     )
     args = parser.parse_args(argv)
 
+    round_name = args.round or datetime.now(timezone.utc).strftime("round-%Y%m%dT%H%M%SZ")
+
     required = NEW_BOTS + BASELINE_BOTS
-    if args.no_wait:
+    if args.wait:
+        wait_for_bots(required, poll_seconds=args.poll_seconds, timeout_seconds=args.wait_timeout)
+    else:
         missing = [n for n in required if not bot_run_sh(n).exists()]
         if missing:
             print(f"[measure] missing bots: {', '.join(missing)}", file=sys.stderr)
             return 1
-    else:
-        wait_for_bots(required, poll_seconds=args.poll_seconds, timeout_seconds=args.wait_timeout)
 
     specs = build_grid()
-    print(f"[measure] running {len(specs)} match(es)")
+    print(f"[measure] running {len(specs)} match(es) (round={round_name})")
     games: list[GameEntry] = []
     for i, spec in enumerate(specs, start=1):
         print(
@@ -432,7 +435,7 @@ def main(argv: list[str] | None = None) -> int:
             f"terminated={entry.terminated} truncated={entry.truncated}"
         )
 
-    json_path, md_path = write_reports(games, round_name=args.round)
+    json_path, md_path = write_reports(games, round_name=round_name)
     print(f"[measure] wrote {json_path}")
     print(f"[measure] wrote {md_path}")
     return 0

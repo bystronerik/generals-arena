@@ -25,7 +25,8 @@ description: >-
 ## Output
 
 - Verdict: `distinct` / `overlap` / `duplicate`
-- Updated row in [`docs/research/strategies/diversity-matrix.md`](../../../docs/research/strategies/diversity-matrix.md) (create the file when absent)
+- Updated row in [`docs/research/strategies/diversity-matrix.md`](../../../docs/research/strategies/diversity-matrix.md)
+- Hard rules: [`docs/research/strategies/diversity-constraints.md`](../../../docs/research/strategies/diversity-constraints.md)
 
 ## Diversity axes
 
@@ -42,7 +43,8 @@ One value per axis for each bot:
 ## Rules
 
 - Two bots that match on **four axes or more** are a **duplicate**. Change the specification or drop the bot.
-- One table, one row per bot.
+- One table, one row per bot. Axis definitions and roster contract:
+  [`diversity-constraints.md`](../../../docs/research/strategies/diversity-constraints.md).
 - **Behavior evidence beats intent.** When the round report shows the same win, loss, and draw pattern against every opponent, mark **overlap** even when the axes differ.
 
 Authority: [`docs/research/strategies/skills-workflow.md`](../../../docs/research/strategies/skills-workflow.md).

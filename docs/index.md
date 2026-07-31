@@ -30,9 +30,16 @@ Small topic files for the Generals Arena research repo.
 - [smoke](bots/smoke.md) — Phase 1 stdio smoke test, not competitive
 - [expand_plus](bots/expand-plus.md) — greedy capture + BFS frontier march
 - [castle_builder](bots/castle-builder.md) — rested-general castle investment
+- [castle_rush](bots/castle-rush.md) — early castle investment rush
 - [general_hunter](bots/general-hunter.md) — deathtouch beeline once the enemy general is sighted
 - [garrison](bots/garrison.md) — phase-based general reserve and route-aware defense
 - [late_rush](bots/late-rush.md) — rally accumulation and turn-700 committed rush
+- [fog_scout](bots/fog-scout.md) — fog-aware frontier probing
+- [army_convey](bots/army-convey.md) — interior-to-frontier logistics
+- [splitter](bots/splitter.md) — half-army dual-front expansion
+- [choke_control](bots/choke-control.md) — corridor hold and denial
+- [phase_switch](bots/phase-switch.md) — gated build phases
+- [classic_duel](bots/classic-duel.md) — remote-only classic champion (no Elo)
 
 ## Arena
 

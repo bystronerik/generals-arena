@@ -10,11 +10,9 @@ See ``docs/engine/remote-eval-heuristics.md`` and ``docs/engine/unified-bot-api.
 from __future__ import annotations
 
 import sys
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
-
-from generals.agents import Agent as RemoteAgent
-from generals.core.observation import Observation as RemoteObservation
 
 from arena.bot_api import (
     PASS,
@@ -25,6 +23,10 @@ from arena.bot_api import (
     to_competition_action_array,
     translate_action_for_remote,
 )
+
+if TYPE_CHECKING:
+    from generals.agents import Agent as RemoteAgent
+    from generals.core.observation import Observation as RemoteObservation
 
 REPO_ROOT = __import__("pathlib").Path(__file__).resolve().parent.parent
 
@@ -44,70 +46,91 @@ to_stdio_observation = from_competition_remote_obs
 list_remote_bots = list_bots
 translate_action = translate_action_for_remote
 
-
-class StdioStrategyAdapter(RemoteAgent):
-    """Wrap ``bots/<name>/agent.py`` for legacy competition-module remote play."""
-
-    def __init__(self, bot_name: str, bot_id: str | None = None):
-        super().__init__(id=bot_id or bot_name)
-        self.bot_name = bot_name
-        self.session = StrategySession(bot_name)
-        self.strategy = None
-        self.builds_dropped = 0
-        self.faults = 0
-        self.timeouts = 0
-        self.saw_enemy_general_at: int | None = None
-        self._peak_land = 0
-        self._peak_army = 0
-        self._last_land = 0
-        self._last_army = 0
-        self._last_turn = 0
-
-    def act(self, observation: RemoteObservation, key=None) -> np.ndarray:
-        """Remote client calls ``act(observation)`` with one argument; key is optional."""
-        action = self.session.act(from_competition_remote_obs(observation))
-        self._sync_from_session()
-        return to_competition_action_array(action)
-
-    def _sync_from_session(self) -> None:
-        stats = self.session.session_stats()
-        self.builds_dropped = stats["builds_dropped"]
-        self.faults = stats["faults"]
-        self.timeouts = stats["timeouts"]
-        self.saw_enemy_general_at = stats["saw_enemy_general_at"]
-        self._peak_land = stats["peak_land"]
-        self._peak_army = stats["peak_army"]
-        self._last_land = stats["final_land"]
-        self._last_army = stats["final_army"]
-        self._last_turn = stats["server_turns"]
-        self.strategy = self.session.strategy
-
-    def session_stats(self) -> dict:
-        self._sync_from_session()
-        return self.session.session_stats()
-
-    def reset(self) -> None:
-        self.session.reset()
-        self.strategy = None
-        self.builds_dropped = 0
-        self.faults = 0
-        self.timeouts = 0
-        self.saw_enemy_general_at = None
-        self._peak_land = 0
-        self._peak_army = 0
-        self._last_land = 0
-        self._last_army = 0
-        self._last_turn = 0
+_AdapterClass: type[Any] | None = None
 
 
-def make_remote_agent(bot_name: str) -> StdioStrategyAdapter:
+def _adapter_class() -> type[Any]:
+    """Lazy import of competition-module Agent (JAX path not needed for live play)."""
+    global _AdapterClass
+    if _AdapterClass is not None:
+        return _AdapterClass
+
+    from generals.agents import Agent as RemoteAgent
+    from generals.core.observation import Observation as RemoteObservation
+
+    class StdioStrategyAdapter(RemoteAgent):
+        """Wrap ``bots/<name>/agent.py`` for legacy competition-module remote play."""
+
+        def __init__(self, bot_name: str, bot_id: str | None = None):
+            super().__init__(id=bot_id or bot_name)
+            self.bot_name = bot_name
+            self.session = StrategySession(bot_name)
+            self.strategy = None
+            self.builds_dropped = 0
+            self.faults = 0
+            self.timeouts = 0
+            self.saw_enemy_general_at: int | None = None
+            self._peak_land = 0
+            self._peak_army = 0
+            self._last_land = 0
+            self._last_army = 0
+            self._last_turn = 0
+
+        def act(self, observation: RemoteObservation, key=None) -> np.ndarray:
+            """Remote client calls ``act(observation)`` with one argument; key is optional."""
+            action = self.session.act(from_competition_remote_obs(observation))
+            self._sync_from_session()
+            return to_competition_action_array(action)
+
+        def _sync_from_session(self) -> None:
+            stats = self.session.session_stats()
+            self.builds_dropped = stats["builds_dropped"]
+            self.faults = stats["faults"]
+            self.timeouts = stats["timeouts"]
+            self.saw_enemy_general_at = stats["saw_enemy_general_at"]
+            self._peak_land = stats["peak_land"]
+            self._peak_army = stats["peak_army"]
+            self._last_land = stats["final_land"]
+            self._last_army = stats["final_army"]
+            self._last_turn = stats["server_turns"]
+            self.strategy = self.session.strategy
+
+        def session_stats(self) -> dict:
+            self._sync_from_session()
+            return self.session.session_stats()
+
+        def reset(self) -> None:
+            self.session.reset()
+            self.strategy = None
+            self.builds_dropped = 0
+            self.faults = 0
+            self.timeouts = 0
+            self.saw_enemy_general_at = None
+            self._peak_land = 0
+            self._peak_army = 0
+            self._last_land = 0
+            self._last_army = 0
+            self._last_turn = 0
+
+    _AdapterClass = StdioStrategyAdapter
+    return _AdapterClass
+
+
+def __getattr__(name: str) -> Any:
+    if name == "StdioStrategyAdapter":
+        return _adapter_class()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def make_remote_agent(bot_name: str) -> Any:
+    adapter_cls = _adapter_class()
     if bot_name in REMOTE_BUILD_BOTS:
         print(
             f"Warning: {bot_name} uses build actions that generals.io ignores remotely. "
             "Prefer army_convey, late_rush, fog_scout, or expand_plus.",
             file=sys.stderr,
         )
-    return StdioStrategyAdapter(bot_name=bot_name)
+    return adapter_cls(bot_name=bot_name)
 
 
 def verify_adapter_offline() -> list[str]:
@@ -115,7 +138,10 @@ def verify_adapter_offline() -> list[str]:
     Offline checks required before any live run. Returns error strings;
     empty list means all checks passed.
     """
+    from generals.core.observation import Observation as RemoteObservation
+
     errors: list[str] = []
+    adapter_cls = _adapter_class()
 
     H, W = 3, 3
     armies = np.zeros((H, W), dtype=np.int32)
@@ -168,14 +194,14 @@ def verify_adapter_offline() -> list[str]:
     if rewritten != PASS:
         errors.append("build action was not rewritten to pass")
 
-    adapter = StdioStrategyAdapter("smoke")
+    adapter = adapter_cls("smoke")
     action = adapter.act(remote_obs)
     if int(action[0]) not in (0, 1) or len(action) != 5:
         errors.append("smoke adapter did not return a valid action array")
 
     for bot in REMOTE_RECOMMENDED_BOTS:
         try:
-            agent = StdioStrategyAdapter(bot)
+            agent = adapter_cls(bot)
             out = agent.act(remote_obs)
             if len(out) != 5:
                 errors.append(f"{bot}: action length != 5")

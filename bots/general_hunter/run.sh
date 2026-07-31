@@ -3,4 +3,4 @@
 # the caller invoked us from (matchup.py sets cwd to the script dir, but
 # absolute paths stay correct if someone runs the script directly).
 DIR="$(cd "$(dirname "$0")" && pwd)"
-exec python -u "$DIR/main.py"
+exec "${PYTHON:-python3}" -u "$DIR/main.py"

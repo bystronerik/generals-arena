@@ -78,7 +78,7 @@ good against humans".
 
 ## 3. Wire bridge (implemented)
 
-- `arena/bot_api.py` — unified types and mappers (`from_generals_client_state`,
+- `arena/bot_api.py` — unified types and mappers (`from_game_state`,
   `translate_action_for_remote`).
 - `arena/remote_bridge.py` — `UnifiedBot` + `ArenaGameClient` over
   `generals_client`.
@@ -92,7 +92,7 @@ uses `UnifiedBot`, not the adapter.
 
 ### 3.1 Observation translation
 
-`arena/bot_api.from_generals_client_state` maps `generals_client.state.GameState`
+`arena/bot_api.from_game_state` maps `generals_client.state.GameState`
 into `UnifiedObservation`. Field mapping is shared with the stdio bridge in
 `bots/<name>/main.py` — same grids and scalars our strategies already expect.
 

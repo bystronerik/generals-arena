@@ -28,9 +28,14 @@ source .venv/bin/activate   # if present; prefer python3.12
 python scripts/measure_heuristics.py --round round<N>
 ```
 
+Prefer `arena/run_match.run_and_store` (schema v2 with bot telemetry) when
+adding single matches outside the grid script. Stored v2 fields include
+`final_land_*`, `final_army_*`, and sighting metrics parsed from `[telemetry]`
+stderr lines.
+
 Flags:
 
-- `--no-wait` — fail fast when a `run.sh` is missing
+- `--wait` — poll until every bot `run.sh` exists (default: fail fast if missing)
 - `--no-ratings` — store games without a global Elo update
 
 ## Grid
@@ -47,6 +52,11 @@ Read `docs/research/measurements/round<N>.md` and report:
 - mean turns
 - decisive games
 - any bot with zero decisive games
+- whether stored games use schema v2 telemetry (`final_land_a`, sighting fields)
+
+**Note:** `scripts/measure_heuristics.py` may still store schema v1 until E1
+lands in that script. Single-match paths via `arena/run_match.py` already use
+v2 through `run_and_store`.
 
 ## Rules
 

@@ -6,7 +6,8 @@
 
 1. Store every match under `data/games/<game_id>.json`.
 2. Apply the stored result to the rating book.
-3. Persist competitor state and leaderboard under `data/ratings/`.
+3. Persist competitor state and leaderboard under `data/ratings/` (local only;
+   JSON and Markdown snapshots are gitignored — rebuild from `data/games/`).
 
 Do not update Elo from live stdout alone.
 
