@@ -35,7 +35,7 @@ Composer must not change production code to make a test pass.
 | C2 | Castle metric counting | `arena/matches/competition.py` | castle tally in `run_competition_match` (`castles_built_a/b`) |
 | C3 | Telemetry schema and series reducers | `arena/records/telemetry_schema.py`, `arena/records/telemetry.py` | `coerce`, `reduce_series`, `metric_keys`, `engine_metrics`, `series_metrics` |
 | C4 | Game record store | `arena/records/store.py` | `GameRecord.from_dict`, `save_game`, `load_game` |
-| C5 | Rating order-invariance | `arena/records/ratings/` | `counts.count_table` digest, `counts.merge`, `fit.fit_ratings` (ratings, SEs, covariance), `policy.rejection_reason` |
+| C5 | Rating order-invariance and connectivity | `arena/records/ratings/` | `counts.count_table` digest, `counts.merge`, `counts.connected_components`, `fit.fit_ratings` (ratings, SEs, covariance), `fit.RatingFit.delta` comparability, `policy.rejection_reason` |
 | C11 | Bot version registry | `arena/records/registry.py` | `Registry.register` (idempotent, revert case), `require_registered`, `verify` |
 | C6 | Unified bot API mapping | `arena/bot_api.py` | `from_game_state`, `from_competition_remote_obs`, `to_client_move`, `translate_action_for_remote`, `StrategySession.act` fault path |
 | C7 | Fidelity session classification | `arena/remote/client.py` | `result_from_reason`, `opponent_is_bot`, `DECIDED_REASONS`, `FidelityRemoteSession._finish_with_reason` |

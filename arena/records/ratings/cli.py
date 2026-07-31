@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from arena.records.ratings import io
@@ -187,6 +188,14 @@ def main(argv: list[str] | None = None) -> int:
         f"[ratings] fitted {len(fit.entities)} entit(ies) over {fit.counts.games} game(s) "
         f"in {fit.solver.iterations} Newton step(s) (max|grad| {fit.solver.max_abs_grad:.2e})"
     )
+    if not fit.connected:
+        sizes = " + ".join(str(len(group)) for group in fit.components)
+        print(
+            f"[ratings] WARNING: the pool is not connected — {len(fit.components)} "
+            f"groups ({sizes} entities) that share no games. Ratings compare only "
+            f"within a group; across groups the offset is prior, not evidence.",
+            file=sys.stderr,
+        )
     stats = fit.cache_stats
     if stats is not None and stats.rounds:
         print(

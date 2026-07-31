@@ -101,6 +101,58 @@ class CountTable:
         )
 
 
+def connected_components(table: CountTable) -> tuple[tuple[str, ...], ...]:
+    """
+    Groups of entities linked by actual games, largest first.
+
+    The likelihood only ever sees *differences* `theta_i - theta_j`, and only
+    for pairs that played. So it is flat along "add a constant to everybody",
+    once per component: with one component the anchor pins that constant, but
+    with two the second one is pinned by nothing but the prior. Ratings from
+    different components are therefore not comparable at all — see
+    `RatingFit.delta`, which refuses to contrast across them.
+
+    Entities with no games are their own singleton component, which is exactly
+    right: an entity nobody played cannot be placed against anyone.
+
+    Ordering is canonical (size descending, then first entity name), so the
+    result is identical for any input order — the same property the count table
+    itself guarantees.
+    """
+    parent = {name: name for name in table.entities}
+
+    def find(name: str) -> str:
+        root = name
+        while parent[root] != root:
+            parent[root] = parent[parent[root]]
+            root = parent[root]
+        return root
+
+    for cell in table.cells:
+        a, b = find(cell.seat_a), find(cell.seat_b)
+        if a != b:
+            # Union by name keeps the result independent of cell order.
+            low, high = (a, b) if a < b else (b, a)
+            parent[high] = low
+
+    grouped: dict[str, list[str]] = {}
+    for name in table.entities:
+        grouped.setdefault(find(name), []).append(name)
+    return tuple(
+        tuple(sorted(members))
+        for members in sorted(grouped.values(), key=lambda m: (-len(m), min(m)))
+    )
+
+
+def component_index(table: CountTable) -> dict[str, int]:
+    """`entity -> component number`, numbered by `connected_components` order."""
+    return {
+        name: number
+        for number, members in enumerate(connected_components(table))
+        for name in members
+    }
+
+
 def _digest(entities: tuple[str, ...], cells: tuple[Cell, ...]) -> str:
     """
     A hash of the canonical form: the entity list, then every cell in order.

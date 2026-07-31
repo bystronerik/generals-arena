@@ -127,7 +127,14 @@ def lineage_table_lines(bot_id: str, fit: RatingFit, registry: Registry) -> list
     lines = list(LINEAGE_TABLE_HEADER)
     for row in rows:
         rating = "—" if row.rating is None else f"{row.rating:.1f}"
+        incomparable = row.delta is not None and not row.delta.comparable
         if row.delta is None:
+            change = ci = probability = "—"
+        elif incomparable:
+            # The arithmetic difference exists but means nothing: the two
+            # versions never met, directly or through any chain of opponents.
+            # Printing it as a number is what produced a confident +474 Elo for
+            # an edit that could not change a move.
             change = ci = probability = "—"
         else:
             low, high = row.delta.ci
@@ -135,6 +142,8 @@ def lineage_table_lines(bot_id: str, fit: RatingFit, registry: Registry) -> list
             ci = f"[{low:+.1f}, {high:+.1f}]"
             probability = f"{row.delta.p_stronger:.2f}"
         notes = [n for n in (row.note, "inherited" if row.inherited else None) if n]
+        if incomparable:
+            notes.append("**no games link this step to the previous one**")
         if not row.rated:
             notes.append("unrated")
         lines.append(

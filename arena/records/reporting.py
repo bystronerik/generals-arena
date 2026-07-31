@@ -31,6 +31,14 @@ LEADERBOARD_TABLE_HEADER = (
     "| ---: | --- | ---: | --- | ---: | ---: | ---: | ---: | --- |",
 )
 
+# Used instead when the pool is not connected. A single ranked list asserts
+# that every row is comparable to every other; when the games do not link them
+# that assertion is false, so the group has to be on the row.
+LEADERBOARD_TABLE_HEADER_SPLIT = (
+    "| Rank | Group | Entity | Rating | 95% CI | Games | W | L | D | Prov. |",
+    "| ---: | ---: | --- | ---: | --- | ---: | ---: | ---: | ---: | --- |",
+)
+
 
 class GameLike(Protocol):
     """Minimum surface the aggregation helpers read off a finished game."""
@@ -155,7 +163,7 @@ def matchup_table_lines(rows: list[dict[str, Any]]) -> list[str]:
     return lines
 
 
-def leaderboard_table_lines(rows) -> list[str]:
+def leaderboard_table_lines(rows, *, split: bool | None = None) -> list[str]:
     """
     Render `ratings.io.leaderboard_rows()` as a markdown table.
 
@@ -163,12 +171,23 @@ def leaderboard_table_lines(rows) -> list[str]:
     indistinguishable from noise, and the old point-estimate-only layout gave
     a reader no way to see that. Provisional rows carry a `—` rank because
     they are in the fit but deliberately not ranked.
+
+    `split` adds the connectivity group to every row. Pass it whenever the
+    pool has more than one component, so a rank is never read as a comparison
+    between entities that never met.
     """
-    lines = list(LEADERBOARD_TABLE_HEADER)
+    rows = list(rows)
+    # Decided by the caller, not inferred from `rows`: the ranked and
+    # provisional tables are rendered separately, and either one on its own can
+    # look connected while the pool is not.
+    if split is None:
+        split = len({r.component for r in rows}) > 1
+    lines = list(LEADERBOARD_TABLE_HEADER_SPLIT if split else LEADERBOARD_TABLE_HEADER)
     for r in rows:
         rank = "—" if r.provisional else str(r.rank)
+        group = f" {r.component} |" if split else ""
         lines.append(
-            f"| {rank} | `{r.entity}` | {r.rating:.1f} "
+            f"| {rank} |{group} `{r.entity}` | {r.rating:.1f} "
             f"| [{r.ci_low:.0f}, {r.ci_high:.0f}] | {r.games} "
             f"| {r.wins} | {r.losses} | {r.draws} "
             f"| {'yes' if r.provisional else ''} |"

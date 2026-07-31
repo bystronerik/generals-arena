@@ -36,10 +36,19 @@ Any failure means `unproven`, with the reason named.
 1. `A` and `B` are both registered; every game is `mode == "competition"`;
    both arms share one `engine_version`; both arms use the same opponent panel
    and seed set.
-2. **≥ 200 games per arm**, and **≥ 30 games per (arm, opponent)**.
-3. **≥ 60 decisive (non-draw) games per arm.** Below that the verdict is
+2. **`A` and `B` are in the same connectivity group** — `fit.comparable(A, B)`.
+   They need not have played each other, but some chain of games must link
+   them, or their difference is prior rather than evidence (see below).
+3. **≥ 200 games per arm**, and **≥ 30 games per (arm, opponent)**.
+4. **≥ 60 decisive (non-draw) games per arm.** Below that the verdict is
    `unproven — no signal`, and the report names which opponents were 100%
    draws.
+
+Gate 2 is enforced in code, not by discipline: `fit.delta` returns
+`comparable=False` with an infinite SE across groups, so no threshold below
+can be met and the verdict is necessarily `unproven`. Sharing an opponent
+panel satisfies it automatically, which is why a decision arm cannot trip it —
+the failure mode it guards against is a *whole roster* forking at once.
 
 ## Verdict
 
@@ -69,6 +78,34 @@ delta.value, delta.se, delta.ci, delta.p_stronger
   that is ~54% more games than a draw-free pool would need.
 - **200 games** is therefore the floor for *any* verdict (`SE ≈ 30`), and
   "proven flat" is a verdict you can actually afford to buy.
+
+## Connectivity: no contrast without a chain of games
+
+The model only ever sees differences `θ_i − θ_j`, and only for pairs that
+played. The likelihood is therefore flat along "add a constant to everybody",
+once per connected component of the co-play graph. One component: the anchor
+pins that constant, and every contrast is measured. Two components: the second
+constant is pinned by nothing but the `N(1500, 200)` prior.
+
+The prior also makes the Hessian invertible, so a split pool **converges
+cleanly and reports normal-looking intervals**. Nothing downstream can tell
+that the curvature came from three pseudo-games rather than from evidence.
+
+This has bitten once, for real. Deleting a stderr write that ran after the
+last move forked every bot's content hash; the next round played only the new
+hashes; the two generations shared zero games. The lineage table then reported
+**+474 Elo, CI [+379, +570], P(better) = 1.00** for the anchor bot — whose only
+changed file could not alter a single action.
+
+The guard:
+
+- `fit.connected` and `fit.components` expose the grouping;
+- `fit.delta(a, b)` across groups returns `comparable=False`, `se = inf`, and
+  `P = 0.50`, so no verdict above can be reached;
+- the leaderboard prints a warning block and a `Group` column, because a
+  single ranked list asserts that every row is comparable;
+- `fit.games_to_resolve(a, b, …)` still answers, from zero precision — the
+  remediation is **games between the groups**, never comparing anyway.
 
 ## Draws are not uninformative
 

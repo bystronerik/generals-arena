@@ -107,7 +107,7 @@ is not in it.
 | C2 | Castle metric counting | `arena/competition_match.py` | castle tally in `run_competition_match` (`castles_built_a/b`) | The only castle signal that reaches a round report |
 | C3 | Telemetry schema and series reducers | `arena/records/telemetry_schema.py`, `arena/records/telemetry.py` | `coerce`, `reduce_series`, `metric_keys`, `engine_metrics`, `series_metrics` | Every observational number in a record is typed and reduced here; a wrong reducer is invisible in the match output and permanent in `data/games/` |
 | C4 | Game record store | `arena/store.py` | `GameRecord.from_dict`, `save_game`, `load_game` | A malformed record breaks a whole round load |
-| C5 | Rating order-invariance | `arena/records/ratings/` | `counts.count_table` digest, `counts.merge`, `fit.fit_ratings`, `policy.rejection_reason` | A rating that depends on match order makes the leaderboard a readout of worker scheduling |
+| C5 | Rating order-invariance and connectivity | `arena/records/ratings/` | `counts.count_table` digest, `counts.merge`, `counts.connected_components`, `fit.fit_ratings`, `fit.RatingFit.delta`, `policy.rejection_reason` | A rating that depends on match order makes the leaderboard a readout of worker scheduling; a contrast across a disconnected pool reports the prior as if it were evidence |
 | C6 | Unified bot API mapping | `arena/bot_api.py` | `from_game_state`, `from_competition_remote_obs`, `to_client_move`, `translate_action_for_remote`, `StrategySession.act` fault path | The single observation and action contract for every bot |
 | C7 | Fidelity session classification | `arena/remote_client.py` | `result_from_reason`, `opponent_is_bot`, `DECIDED_REASONS`, `FidelityRemoteSession._finish_with_reason` | Decides `counts_toward_block`, which defines the 95/100 claim |
 | C8 | Classic match result contract | `arena/classic_match.py` | `run_classic_match` return contract, and the record writer that arrives with A1 | Classic results use a different ruleset and must never reach `data/games/` |
@@ -155,6 +155,7 @@ Existing coverage, so that the skill does not duplicate work:
 | `tests/test_ratings_model.py` | C5 likelihood derivatives, anchor stability, strength/seat/draw recovery, sparse cases, the elote oracle | — |
 | `tests/test_ratings_cache.py` | C5 per-round caches: same answer, less work | — |
 | `tests/test_ratings_lineage.py` | C5 lineage ordering, the revert case, `inherited` steps | — |
+| `tests/test_ratings_connectivity.py` | C5 components, cross-group contrasts, split leaderboard | — |
 | `tests/test_registry.py` | C11 hash to closure to git ref to diff; idempotent registration; `--strict`; `verify` | — |
 | `tests/test_tournament.py` | C10 for `parse_seeds` and `bot_pairs`, plus seat policy and orientation-independent `_pair_rng` | — |
 | `tests/test_remote_block.py` | C9 including the null case | — |

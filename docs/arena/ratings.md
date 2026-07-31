@@ -80,7 +80,7 @@ in `fit.json`'s `excluded`, never dropped silently.
 | Rule | Rejection reason |
 | --- | --- |
 | `mode == "competition"` | `mode_not_eligible` |
-| `schema_version >= 4` | `schema_too_old` |
+| `schema_version >= 5` | `schema_too_old` |
 | both content hashes present and not `"unknown"` | `unknown_content_hash` |
 | both hashes registered in `data/bot_versions/` | `unregistered_hash` |
 | `engine_version` matches the era being fitted | `engine_mismatch` |
@@ -102,6 +102,30 @@ Specifically:
 Entities with fewer than **30 games** are `provisional`: listed below the
 ranked block and not eligible as a decision baseline. They still participate in
 the fit — dropping them would change every other rating.
+
+## Connectivity
+
+Eligibility decides which games enter. **Connectivity decides which resulting
+ratings may be compared**, and it is a separate question.
+
+The likelihood reads only differences `θ_i − θ_j`, for pairs that played. So it
+is flat along "add a constant to everybody" once per connected component of the
+co-play graph. One component and the anchor pins that constant; two components
+and the second one is set by the prior alone. The prior also makes the Hessian
+invertible, so a split pool converges cleanly and hands back ordinary-looking
+intervals for comparisons that rest on no evidence whatsoever.
+
+`fit.connected` and `fit.components` expose the grouping. Across groups
+`fit.delta` returns `comparable=False` with an infinite SE and `P = 0.50`, the
+CLI warns, and the leaderboard grows a `Group` column plus a warning block —
+because a single ranked list asserts that every row is comparable to every
+other. The remedy is games between the groups; `fit.games_to_resolve` says how
+many. See [decision-rule.md](decision-rule.md).
+
+The usual cause is a *whole roster* forking at once — a change to a file every
+bot's closure contains — followed by a round that plays only the new hashes.
+A normal decision arm shares an opponent panel and stays connected by
+construction.
 
 ## Flow
 
@@ -145,6 +169,7 @@ from arena.records.ratings.cli import refit
 fit = refit()
 delta = fit.delta("expand_plus@ab12cd34ef56", "expand_plus@cd34ef5678ab")
 delta.value, delta.se, delta.ci, delta.p_stronger
+delta.comparable          # False when no chain of games links the two
 fit.games_to_resolve(a, b, target_se=12.75)
 ```
 

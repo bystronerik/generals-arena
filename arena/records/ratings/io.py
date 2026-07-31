@@ -54,6 +54,9 @@ class LeaderboardRow:
     losses: int
     draws: int
     provisional: bool
+    # Connectivity group. Rows in different groups are not comparable: no chain
+    # of games links them, so their difference is prior, not evidence.
+    component: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -70,6 +73,7 @@ class LeaderboardRow:
             "losses": self.losses,
             "draws": self.draws,
             "provisional": self.provisional,
+            "component": self.component,
         }
 
 
@@ -112,6 +116,7 @@ def _row(fit: RatingFit, entity: str, rank: int) -> LeaderboardRow:
         losses=losses,
         draws=draws,
         provisional=fit.provisional(entity),
+        component=fit.component_of(entity),
     )
 
 
@@ -235,6 +240,25 @@ def stored_counts_digest(ratings_dir: Path | None = None) -> str | None:
     return json.loads(path.read_text(encoding="utf-8")).get("counts_digest")
 
 
+def _connectivity_lines(fit: RatingFit) -> list[str]:
+    """The warning block, or nothing at all when the pool is connected."""
+    if fit.connected:
+        return []
+    sizes = ", ".join(str(len(group)) for group in fit.components)
+    return [
+        f"> **This pool is not connected: {len(fit.components)} groups "
+        f"({sizes} entities).**",
+        ">",
+        "> Groups share no games, so nothing links their scales — the offset",
+        "> between them comes from the prior, not from evidence. Ratings and",
+        "> ranks are meaningful **only within one group**. A contrast across",
+        "> groups reports an infinite interval and `P(better) = 0.50`.",
+        ">",
+        "> Fix it by playing games between the groups, not by comparing anyway.",
+        "",
+    ]
+
+
 def leaderboard_markdown(fit: RatingFit, *, updated_at: str | None = None) -> str:
     rows = leaderboard_rows(fit)
     ranked = [r for r in rows if not r.provisional]
@@ -253,7 +277,8 @@ def leaderboard_markdown(fit: RatingFit, *, updated_at: str | None = None) -> st
         "jointly over every eligible game. Decide from the pairwise contrast, never",
         "from rank: see [decision-rule.md](../../docs/arena/decision-rule.md).",
         "",
-        *leaderboard_table_lines(ranked),
+        *_connectivity_lines(fit),
+        *leaderboard_table_lines(ranked, split=not fit.connected),
     ]
     if provisional:
         lines += [
@@ -262,7 +287,7 @@ def leaderboard_markdown(fit: RatingFit, *, updated_at: str | None = None) -> st
             "",
             "In the fit, but not ranked and not eligible as a decision baseline.",
             "",
-            *leaderboard_table_lines(provisional),
+            *leaderboard_table_lines(provisional, split=not fit.connected),
         ]
     lines.append("")
     return "\n".join(lines)
@@ -279,6 +304,8 @@ def write_leaderboard(
         "counts_digest": fit.counts.digest,
         "min_games_display": fit.policy.min_games_display,
         "seat_advantage": fit.seat_advantage.to_dict(),
+        "connected": fit.connected,
+        "components": [list(group) for group in fit.components],
         "entities": [row.to_dict() for row in rows],
     }
     json_path = _write_json(payload, directory / LEADERBOARD_JSON)

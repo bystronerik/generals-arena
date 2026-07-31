@@ -17,7 +17,11 @@ from typing import Any
 
 import numpy as np
 
-from arena.records.ratings.counts import CountTable
+from arena.records.ratings.counts import (
+    CountTable,
+    component_index,
+    connected_components,
+)
 from arena.records.ratings.model import (
     ELO_SCALE,
     ModelSpec,
@@ -55,6 +59,12 @@ class Delta:
     b: str
     value: float
     se: float
+    # False when `a` and `b` sit in different connected components of the
+    # co-play graph: no chain of games links them, so their difference is set
+    # by the prior rather than measured. `se` is infinite in that case, which
+    # makes the interval infinite and `p_stronger` exactly 0.5 — the honest
+    # readout of "no evidence either way".
+    comparable: bool = True
 
     def interval(self, level: float = 0.95) -> tuple[float, float]:
         z = _z_for(level)
@@ -139,6 +149,26 @@ class RatingFit:
 
         self._index = {name: i for i, name in enumerate(self.entities)}
         self._records = {name: counts.record_for(name) for name in self.entities}
+        # Which entities the games actually link. One component is the normal
+        # case; more than one means the pool contains groups that never met,
+        # and only within-component comparisons mean anything.
+        self.components = connected_components(counts)
+        self._component_of = component_index(counts)
+
+    # -- connectivity --
+
+    @property
+    def connected(self) -> bool:
+        """Whether every rated entity is reachable from every other by games."""
+        return len(self.components) <= 1
+
+    def component_of(self, entity: str) -> int:
+        self._at(entity)  # raise a clear KeyError for an unknown entity
+        return self._component_of[entity]
+
+    def comparable(self, a: str, b: str) -> bool:
+        """Whether a contrast between these two is supported by any games."""
+        return self.component_of(a) == self.component_of(b)
 
     # -- per-entity readouts --
 
@@ -190,17 +220,24 @@ class RatingFit:
     # -- contrasts, which is what decisions are made from --
 
     def delta(self, a: str, b: str) -> Delta:
-        """`theta_b - theta_a`, with the SE taken from the joint covariance."""
+        """
+        `theta_b - theta_a`, with the SE taken from the joint covariance.
+
+        Refuses the contrast when the two entities are in different connected
+        components. The covariance would still hand back a small, finite SE
+        there — the prior makes the Hessian invertible, so nothing downstream
+        could tell that the number describes prior curvature rather than
+        evidence. That is how a behaviour-free edit once scored +474 Elo with
+        `P(better) = 1.00`: the two hash generations shared no games.
+        """
         i, j = self._at(a), self._at(b)
+        value = self.rating(b) - self.rating(a)
+        if not self.comparable(a, b):
+            return Delta(a=a, b=b, value=value, se=math.inf, comparable=False)
         variance = (
             self._covariance[i, i] + self._covariance[j, j] - 2.0 * self._covariance[i, j]
         )
-        return Delta(
-            a=a,
-            b=b,
-            value=self.rating(b) - self.rating(a),
-            se=math.sqrt(max(variance, 0.0)),
-        )
+        return Delta(a=a, b=b, value=value, se=math.sqrt(max(variance, 0.0)))
 
     def p_stronger(self, b: str, a: str) -> float:
         """P(b stronger than a) = Phi(Delta / SE(Delta))."""
