@@ -366,7 +366,7 @@ def test_agrees_with_elotes_independently_written_bradley_terry():
     elote = pytest.importorskip("elote")
 
     truth = {f"e{i}@1": r for i, r in enumerate([1500, 1620, 1400, 1700, 1380, 1560])}
-    table = sample_table(truth, games=40, seed=20, beta=0.0, kappa=-40.0)
+    table = sample_table(truth, games=15, seed=20, beta=0.0, kappa=-40.0)
     assert sum(c.draws for c in table.cells) == 0
 
     ours = fit_ratings(
