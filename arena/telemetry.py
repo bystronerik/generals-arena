@@ -140,6 +140,8 @@ def record_from_match_result(
     bot_b_commit: str,
     started_at: str,
     finished_at: str,
+    bot_a_content_hash: str | None = None,
+    bot_b_content_hash: str | None = None,
 ) -> GameRecord:
     """
     Build a stored GameRecord from a CompetitionMatchResult.
@@ -163,6 +165,8 @@ def record_from_match_result(
         finished_at=finished_at,
         schema_version=CURRENT_SCHEMA_VERSION,
         duration_seconds=duration_seconds_between(started_at, finished_at),
+        bot_a_content_hash=bot_a_content_hash,
+        bot_b_content_hash=bot_b_content_hash,
         castles_built_a=result.castles_built_a,
         castles_built_b=result.castles_built_b,
     )

@@ -1,0 +1,117 @@
+"""Bot content-hash closure: what it covers, and what it ignores."""
+from __future__ import annotations
+
+import pytest
+
+from arena.fingerprint import (
+    BOTS_DIR,
+    HASH_LENGTH,
+    bot_content_hash,
+    bot_content_hashes,
+    bot_source_closure,
+    content_hash_for_dir,
+)
+
+
+def closure_names(bot_id: str) -> set[str]:
+    return {
+        p.relative_to(BOTS_DIR).as_posix() for p in bot_source_closure(BOTS_DIR / bot_id)
+    }
+
+
+def test_hash_is_short_hex():
+    digest = bot_content_hash(BOTS_DIR / "smoke" / "run.sh")
+    assert len(digest) == HASH_LENGTH
+    assert all(c in "0123456789abcdef" for c in digest)
+
+
+def test_hash_is_stable_across_calls():
+    run_sh = BOTS_DIR / "smoke" / "run.sh"
+    assert bot_content_hash(run_sh) == content_hash_for_dir(run_sh.parent)
+
+
+def test_closure_includes_own_sources_and_shared_wire():
+    names = closure_names("smoke")
+    assert {"smoke/agent.py", "smoke/main.py", "smoke/run.sh", "_common/wire.py"} <= names
+
+
+def test_closure_excludes_pycache():
+    assert not any("__pycache__" in name for name in closure_names("smoke"))
+
+
+def test_closure_follows_transitive_shared_imports():
+    # aegis -> _common.oppmodel -> _common.tactics -> _common.strategy_common
+    names = closure_names("aegis")
+    assert "_common/oppmodel.py" in names
+    assert "_common/tactics.py" in names
+    assert "_common/strategy_common.py" in names
+
+
+def test_closure_crosses_bot_directories():
+    """proteus dispatches to four other bots; editing them changes proteus."""
+    names = closure_names("proteus")
+    for dependency in ("aegis", "blitz", "boom", "metro"):
+        assert f"{dependency}/agent.py" in names, dependency
+    assert "proteus/switcher.py" in names
+    assert "proteus/classifier.py" in names
+
+
+def test_closure_follows_shell_source_directives():
+    """cm_* launchers `source` a shared body no AST walk would find."""
+    assert "_common/cm_run.sh" in closure_names("cm_random")
+
+
+def test_closure_stops_at_third_party_imports():
+    """`generals` and jax are pinned by the lockfile, not by this hash."""
+    assert all(
+        not name.startswith(("generals", "jax", "numpy")) for name in closure_names("cm_random")
+    )
+
+
+def test_unrelated_bots_have_different_hashes():
+    hashes = bot_content_hashes(
+        [BOTS_DIR / name / "run.sh" for name in ("smoke", "aegis", "proteus")]
+    )
+    assert len(set(hashes.values())) == 3
+    assert set(hashes) == {"smoke", "aegis", "proteus"}
+
+
+def test_missing_bot_dir_is_unknown_not_an_error():
+    assert bot_content_hash(BOTS_DIR / "does_not_exist" / "run.sh") == "unknown"
+
+
+@pytest.mark.parametrize(
+    "target, dependents, unaffected",
+    [
+        ("_common/wire.py", ("smoke", "aegis", "cm_random"), ()),
+        ("_common/tactics.py", ("aegis",), ("smoke",)),
+        ("blitz/agent.py", ("blitz", "proteus"), ("smoke", "aegis")),
+        ("_common/cm_adapter.py", ("cm_random",), ("smoke", "aegis", "proteus")),
+    ],
+)
+def test_edit_propagates_to_exactly_the_dependents(
+    tmp_path, monkeypatch, target, dependents, unaffected
+):
+    """Touching a shared file must move its dependents' hashes and nothing else."""
+    import shutil
+
+    import arena.fingerprint as fingerprint
+
+    sandbox = tmp_path / "bots"
+    shutil.copytree(BOTS_DIR, sandbox, ignore=shutil.ignore_patterns("__pycache__"))
+    monkeypatch.setattr(fingerprint, "BOTS_DIR", sandbox)
+    monkeypatch.setattr(fingerprint, "REPO_ROOT", tmp_path)
+
+    watched = list(dependents) + list(unaffected)
+    before = {name: fingerprint.content_hash_for_dir(sandbox / name) for name in watched}
+
+    edited = sandbox / target
+    edited.write_text(
+        edited.read_text(encoding="utf-8") + "\n# behaviour change\n", encoding="utf-8"
+    )
+
+    after = {name: fingerprint.content_hash_for_dir(sandbox / name) for name in watched}
+    for name in dependents:
+        assert before[name] != after[name], f"{name} should depend on {target}"
+    for name in unaffected:
+        assert before[name] == after[name], f"{name} should not depend on {target}"

@@ -9,6 +9,7 @@ import random
 from pathlib import Path
 from typing import Any
 
+from arena.fingerprint import bot_content_hashes
 from arena.parallel import cap_jobs, default_jobs, run_pool
 from arena.ratings import rebuild_from_games
 from arena.store import (
@@ -118,6 +119,7 @@ def write_round_manifest(
     specs: list[tuple[Path, Path, int]],
     swap_sides: bool,
     fixed_seeds: list[int] | None,
+    content_hashes: dict[str, str] | None = None,
 ) -> Path:
     """Write `manifest.json` describing the round grid."""
     assignments: list[dict[str, Any]] = []
@@ -135,6 +137,7 @@ def write_round_manifest(
         "games_per_pair": games_per_pair,
         "jobs": jobs,
         "bots": bots,
+        "bot_content_hashes": content_hashes or {},
         "swap_sides": swap_sides,
         "fixed_seeds": fixed_seeds,
         "match_count": len(assignments),
@@ -182,6 +185,8 @@ def run_tournament(
     worker_jobs = cap_jobs(default_jobs() if jobs is None else jobs)
     commit = git_commit_or_tag()
     bot_ids = [bot_id_from_run_sh(p) for p in run_scripts]
+    # Hash each roster entry once here rather than per match in every worker.
+    content_hashes = bot_content_hashes(run_scripts)
 
     manifest_path = write_round_manifest(
         directory,
@@ -193,6 +198,7 @@ def run_tournament(
         specs=specs,
         swap_sides=swap_sides,
         fixed_seeds=fixed_seeds,
+        content_hashes=content_hashes,
     )
     print(f"[tournament] wrote {manifest_path}")
     print(
@@ -209,6 +215,8 @@ def run_tournament(
             "mode": "competition",
             "timeout": timeout,
             "commit": commit,
+            "bot_a_content_hash": content_hashes.get(bot_id_from_run_sh(a)),
+            "bot_b_content_hash": content_hashes.get(bot_id_from_run_sh(b)),
         }
         for a, b, seed in specs
     ]

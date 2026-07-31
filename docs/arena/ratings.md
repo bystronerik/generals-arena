@@ -35,3 +35,12 @@ Rebuild walks all `data/games/*.json` in `finished_at` order.
 ## Incremental update
 
 `arena/tournament.py` and `arena/run_match.py --update-ratings` call `rate_stored_game` after each store. Already-rated `game_id` values are skipped on incremental apply; rebuild resets from the game store.
+
+## Bot identity
+
+Ratings currently key on `bot_a` / `bot_b`, the directory name, so every
+revision of a bot shares one rating. Schema v3 records also carry
+`bot_a_content_hash` / `bot_b_content_hash` (see
+[game-record-schema.md](game-record-schema.md)), which change only when the
+bot's own source closure changes. Games stored before v3 have no hash, so any
+identity scheme built on it has to fall back to the bot id for those.

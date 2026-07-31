@@ -44,7 +44,17 @@ V2_FULL = {
 }
 
 
-@pytest.mark.parametrize("payload", [V1_MINIMAL, V2_FULL], ids=["v1", "v2"])
+V3_FULL = {
+    **V2_FULL,
+    "schema_version": 3,
+    "bot_a_content_hash": "0123456789ab",
+    "bot_b_content_hash": "ba9876543210",
+}
+
+
+@pytest.mark.parametrize(
+    "payload", [V1_MINIMAL, V2_FULL, V3_FULL], ids=["v1", "v2", "v3"]
+)
 def test_game_record_round_trip(payload):
     record = GameRecord.from_dict(payload)
     restored = GameRecord.from_dict(record.to_dict())
@@ -64,6 +74,21 @@ def test_v2_preserves_telemetry_fields():
     assert record.castles_built_a == 2
     assert record.final_army_b == 80
     assert record.metrics["enemy_general_sighted_a"] is True
+
+
+def test_pre_v3_records_have_no_content_hash():
+    """The 7k+ games stored before schema v3 must still load, hashes absent."""
+    for payload in (V1_MINIMAL, V2_FULL):
+        record = GameRecord.from_dict(payload)
+        assert record.bot_a_content_hash is None
+        assert record.bot_b_content_hash is None
+
+
+def test_v3_preserves_content_hashes():
+    record = GameRecord.from_dict(V3_FULL)
+    assert record.schema_version == 3
+    assert record.bot_a_content_hash == "0123456789ab"
+    assert record.bot_b_content_hash == "ba9876543210"
 
 
 def test_from_dict_rejects_missing_required():

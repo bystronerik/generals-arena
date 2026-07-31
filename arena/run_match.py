@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from arena.competition_match import run_competition_match
+from arena.fingerprint import bot_content_hash
 from arena.store import (
     GAMES_DIR,
     GameRecord,
@@ -28,6 +29,8 @@ def run_and_store(
     bot_b_id: str | None = None,
     bot_a_commit: str | None = None,
     bot_b_commit: str | None = None,
+    bot_a_content_hash: str | None = None,
+    bot_b_content_hash: str | None = None,
     timeout: float | None = None,
     update_ratings: bool = False,
 ) -> GameRecord:
@@ -38,6 +41,8 @@ def run_and_store(
     bot_b = bot_b_id or bot_id_from_run_sh(b_path)
     commit_a = bot_a_commit if bot_a_commit is not None else git_commit_or_tag()
     commit_b = bot_b_commit if bot_b_commit is not None else commit_a
+    hash_a = bot_a_content_hash if bot_a_content_hash is not None else bot_content_hash(a_path)
+    hash_b = bot_b_content_hash if bot_b_content_hash is not None else bot_content_hash(b_path)
 
     started_at = utc_now_iso()
     result = run_competition_match(
@@ -55,6 +60,8 @@ def run_and_store(
         bot_b_commit=commit_b,
         started_at=started_at,
         finished_at=finished_at,
+        bot_a_content_hash=hash_a,
+        bot_b_content_hash=hash_b,
     )
     path = save_game(record, games_dir or GAMES_DIR)
     print(f"[run_match] stored {path}")

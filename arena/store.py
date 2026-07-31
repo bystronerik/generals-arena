@@ -29,7 +29,7 @@ Winner = Literal["a", "b", "draw"]
 
 # Schema version stamped on records this code writes. Records without the
 # field predate it and read back as 1. See docs/arena/game-record-schema.md.
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 REQUIRED_FIELDS = (
     "game_id",
@@ -50,6 +50,8 @@ REQUIRED_FIELDS = (
 OPTIONAL_FIELDS = (
     "schema_version",
     "duration_seconds",
+    "bot_a_content_hash",
+    "bot_b_content_hash",
     "castles_built_a",
     "castles_built_b",
     "final_land_a",
@@ -79,6 +81,10 @@ class GameRecord:
     finished_at: str
     schema_version: int = 1
     duration_seconds: float | None = None
+    # Hash of each bot's source closure (arena/fingerprint.py). Rating identity
+    # should key on this, not on the repo-wide commit pin. None on schema < 3.
+    bot_a_content_hash: str | None = None
+    bot_b_content_hash: str | None = None
     castles_built_a: int | None = None
     castles_built_b: int | None = None
     final_land_a: int | None = None
@@ -118,6 +124,8 @@ class GameRecord:
             finished_at=str(data["finished_at"]),
             schema_version=int(data.get("schema_version", 1)),
             duration_seconds=optional_float(data.get("duration_seconds")),
+            bot_a_content_hash=optional_str(data.get("bot_a_content_hash")),
+            bot_b_content_hash=optional_str(data.get("bot_b_content_hash")),
             castles_built_a=optional_int(data.get("castles_built_a")),
             castles_built_b=optional_int(data.get("castles_built_b")),
             final_land_a=optional_int(data.get("final_land_a")),
@@ -140,6 +148,13 @@ def optional_float(value: Any) -> float | None:
     if value is None:
         return None
     return float(value)
+
+
+def optional_str(value: Any) -> str | None:
+    """Coerce an optional JSON field to str, keeping None as None."""
+    if value is None:
+        return None
+    return str(value)
 
 
 def coerce_metrics(value: Any) -> dict[str, Any]:

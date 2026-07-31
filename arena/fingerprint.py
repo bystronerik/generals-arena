@@ -1,0 +1,245 @@
+"""
+Content hash of a bot's source closure, for rating identity.
+
+`bot_a_commit_or_tag` records repo HEAD (`store.git_commit_or_tag`), which
+moves whenever *anything* in the repo is committed and stays put when a bot is
+edited without committing. That makes it useless for deciding whether two
+stored games were played by the same program.
+
+The hash here covers exactly the files a bot's behaviour depends on: every file
+in its own directory, plus every module under `bots/` it imports, transitively.
+That closure crosses bot directories — `bots/proteus/agent.py` imports
+`aegis.agent`, `blitz.agent`, `boom.agent` and `metro.agent`, so editing any of
+those changes proteus's hash. Every bot pulls in `_common/wire.py` via its
+`main.py`; the heuristics also pull in `_common/strategy_common.py` and friends.
+
+Imports that do not resolve under `bots/` (stdlib, `jax`, `generals`) are
+outside the closure: pinning third-party versions is the lockfile's job.
+
+Resolution mirrors how a bot actually runs — `bots/<id>/main.py` puts `bots/`
+on `sys.path` and imports a bare `agent`, so bare names resolve against the bot
+directory first, then against `bots/`.
+"""
+
+from __future__ import annotations
+
+import ast
+import hashlib
+import re
+from functools import lru_cache
+from pathlib import Path
+
+from arena.store import REPO_ROOT, bot_id_from_run_sh
+
+BOTS_DIR = REPO_ROOT / "bots"
+
+HASH_LENGTH = 12
+
+# Directories and files that are build output, not source.
+_SKIP_DIRS = {"__pycache__", ".git", ".mypy_cache", ".pytest_cache", ".ruff_cache"}
+_SKIP_SUFFIXES = {".pyc", ".pyo"}
+
+# Shell launchers source siblings by path (`bots/cm_*/run.sh` -> `_common/cm_run.sh`),
+# which no AST walk would find. Best-effort: pick paths that look like bots/ files.
+_SHELL_REF_RE = re.compile(r"[\w./-]*?([\w-]+/[\w.-]+\.(?:sh|py))")
+
+
+def _is_source(path: Path) -> bool:
+    if path.suffix in _SKIP_SUFFIXES:
+        return False
+    return not any(part in _SKIP_DIRS for part in path.parts)
+
+
+def _bot_dir_files(bot_dir: Path) -> list[Path]:
+    return sorted(p for p in bot_dir.rglob("*") if p.is_file() and _is_source(p))
+
+
+def _module_file(module: str, search_dirs: list[Path]) -> Path | None:
+    """Resolve a dotted module name to a file under one of `search_dirs`."""
+    parts = module.split(".")
+    if not all(parts):
+        return None
+    for base in search_dirs:
+        candidate = base.joinpath(*parts)
+        module_py = candidate.parent / f"{candidate.name}.py"
+        if module_py.is_file():
+            return module_py
+        package_init = candidate / "__init__.py"
+        if package_init.is_file():
+            return package_init
+    return None
+
+
+def _package_inits(module: str, search_dirs: list[Path]) -> list[Path]:
+    """`__init__.py` of every package on the way to `module` — they run on import."""
+    parts = module.split(".")[:-1]
+    found: list[Path] = []
+    for base in search_dirs:
+        for depth in range(1, len(parts) + 1):
+            init = base.joinpath(*parts[:depth]) / "__init__.py"
+            if init.is_file():
+                found.append(init)
+    return found
+
+
+def _imported_names(source: str, path: Path) -> set[str]:
+    """Dotted module names a Python file imports, absolute form only."""
+    try:
+        tree = ast.parse(source, filename=str(path))
+    except SyntaxError:
+        return set()
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                names.add(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:
+                # No bot uses relative imports today; resolve anyway rather than
+                # leaving a silent hole in the closure.
+                base = path.parent
+                for _ in range(node.level - 1):
+                    base = base.parent
+                try:
+                    prefix = base.relative_to(BOTS_DIR).as_posix().replace("/", ".")
+                except ValueError:
+                    continue
+                head = f"{prefix}.{node.module}" if node.module else prefix
+            elif node.module:
+                head = node.module
+            else:
+                continue
+            names.add(head)
+            # `from pkg import submodule` — the alias may itself be a module.
+            for alias in node.names:
+                names.add(f"{head}.{alias.name}")
+    return names
+
+
+def _shell_referenced(source: str) -> set[str]:
+    return {match.group(1) for match in _SHELL_REF_RE.finditer(source)}
+
+
+def bot_source_closure(bot_dir: Path) -> list[Path]:
+    """
+    Every source file the bot's behaviour depends on, sorted and deduplicated.
+
+    Seeded with the bot's own directory, then expanded over `bots/` imports
+    (and shell `source` references) until it stops growing.
+    """
+    bot_dir = bot_dir.resolve()
+    search_dirs = [bot_dir, BOTS_DIR]
+
+    seen: set[Path] = set()
+    queue = _bot_dir_files(bot_dir)
+
+    while queue:
+        path = queue.pop()
+        if path in seen or not path.is_file():
+            continue
+        seen.add(path)
+        try:
+            source = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue  # binary asset: hashed, but nothing to walk
+
+        if path.suffix == ".py":
+            for module in _imported_names(source, path):
+                resolved = _module_file(module, search_dirs)
+                if resolved is not None and resolved not in seen:
+                    queue.append(resolved)
+                for init in _package_inits(module, search_dirs):
+                    if init not in seen:
+                        queue.append(init)
+        elif path.suffix == ".sh":
+            for ref in _shell_referenced(source):
+                candidate = BOTS_DIR / ref
+                if candidate.is_file() and candidate not in seen:
+                    queue.append(candidate)
+
+    return sorted(seen)
+
+
+def _relative_label(path: Path) -> str:
+    """Machine-independent path label so hashes match across checkouts."""
+    try:
+        return path.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.name
+
+
+def content_hash_for_dir(bot_dir: Path) -> str:
+    """Short hex digest over the bot's source closure."""
+    digest = hashlib.sha256()
+    for path in bot_source_closure(bot_dir):
+        digest.update(_relative_label(path).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(hashlib.sha256(path.read_bytes()).hexdigest().encode("ascii"))
+        digest.update(b"\n")
+    return digest.hexdigest()[:HASH_LENGTH]
+
+
+@lru_cache(maxsize=None)
+def _cached_hash(bot_dir_str: str) -> str:
+    return content_hash_for_dir(Path(bot_dir_str))
+
+
+def bot_content_hash(run_sh: Path) -> str:
+    """
+    Content hash for the bot owning `run_sh`, or "unknown" if it cannot be read.
+
+    Cached per process: bot sources do not change mid-round, and a tournament
+    would otherwise re-hash the same closure once per match.
+    """
+    try:
+        bot_dir = run_sh.resolve().parent
+        if not bot_dir.is_dir():
+            return "unknown"
+        return _cached_hash(str(bot_dir))
+    except OSError:
+        return "unknown"
+
+
+def bot_content_hashes(run_scripts: list[Path]) -> dict[str, str]:
+    """Map bot id -> content hash, for callers that hash a roster up front."""
+    return {bot_id_from_run_sh(p): bot_content_hash(p) for p in run_scripts}
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Print the content hash and source closure of one or more bots."
+    )
+    parser.add_argument(
+        "bots",
+        nargs="*",
+        help="bot ids (default: every directory under bots/ with a run.sh)",
+    )
+    parser.add_argument(
+        "--files",
+        action="store_true",
+        help="also list the source closure behind each hash",
+    )
+    args = parser.parse_args(argv)
+
+    if args.bots:
+        run_scripts = [BOTS_DIR / name / "run.sh" for name in args.bots]
+    else:
+        run_scripts = sorted(BOTS_DIR.glob("*/run.sh"))
+
+    for run_sh in run_scripts:
+        if not run_sh.exists():
+            print(f"{run_sh.parent.name:<18} <no run.sh at {run_sh}>")
+            continue
+        bot_id = bot_id_from_run_sh(run_sh)
+        closure = bot_source_closure(run_sh.resolve().parent)
+        print(f"{bot_id:<18} {bot_content_hash(run_sh)}  ({len(closure)} file(s))")
+        if args.files:
+            for path in closure:
+                print(f"    {_relative_label(path)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
