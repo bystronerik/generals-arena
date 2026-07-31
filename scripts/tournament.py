@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Thin CLI wrapper around arena.tournament."""
+"""Thin CLI wrapper around arena.tournaments.competition."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from arena.tournament import main
+from arena.tournaments.competition import main
 
 if __name__ == "__main__":
     raise SystemExit(main())

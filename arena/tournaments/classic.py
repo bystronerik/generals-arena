@@ -9,7 +9,6 @@ from typing import Any, Literal
 
 from arena.matches.classic import CLASSIC_ENV_DEFAULTS, run_classic_match
 from arena.matches.loop import winner_seat
-from arena.parallel import cap_jobs, run_pool
 from arena.records.store import (
     REPO_ROOT,
     Winner,
@@ -25,7 +24,8 @@ from arena.records.store import (
     utc_now_iso,
     write_record_json,
 )
-from arena.tournament import bot_pairs, parse_seeds
+from arena.tournaments.competition import bot_pairs, parse_seeds
+from arena.tournaments.parallel import cap_jobs, run_pool
 
 CLASSIC_GAMES_DIR = REPO_ROOT / "data" / "classic_games"
 

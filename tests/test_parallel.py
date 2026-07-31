@@ -1,10 +1,10 @@
-"""Tests for arena/parallel.py job caps."""
+"""Tests for arena/tournaments/parallel.py job caps."""
 
 from __future__ import annotations
 
 import pytest
 
-from arena.parallel import cap_jobs, default_jobs, physical_cpu_count
+from arena.tournaments.parallel import cap_jobs, default_jobs, physical_cpu_count
 
 
 def test_physical_cpu_count_positive():

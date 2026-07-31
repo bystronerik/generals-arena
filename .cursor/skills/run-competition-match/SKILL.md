@@ -45,7 +45,7 @@ python -m arena.matches.run_match \
   --mode competition --seed 0
 ```
 
-Batch grids use `arena/tournament.py` / `scripts/measure_heuristics.py` with
+Batch grids use `arena/tournaments/competition.py` / `scripts/measure_heuristics.py` with
 `--round <name>` (games under `data/games/<round>/`).
 
 ## Fault detection

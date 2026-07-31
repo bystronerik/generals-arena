@@ -1,4 +1,4 @@
-"""Light tests for arena/tournament.py seed and pair helpers."""
+"""Light tests for arena/tournaments/competition.py seed and pair helpers."""
 from __future__ import annotations
 
 import json
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from arena.tournament import (
+from arena.tournaments.competition import (
     bot_pairs,
     expand_pair_seeds,
     parse_seeds,

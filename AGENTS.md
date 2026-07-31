@@ -147,7 +147,7 @@ Taxonomy: [`docs/research/strategies/skills-workflow.md`](docs/research/strategi
 | structure-audit | Think (named only) | [`.cursor/skills/structure-audit/`](.cursor/skills/structure-audit/) |
 | improve-skill-from-failure | Think (named only) | [`.cursor/skills/improve-skill-from-failure/`](.cursor/skills/improve-skill-from-failure/) |
 
-CLIs and modules the skills drive: `scripts/`, `arena/matches/run_match.py`, `arena/tournament.py`, `arena/records/ratings.py`; data under `data/games/` and `data/ratings/`.
+CLIs and modules the skills drive: `scripts/`, `arena/matches/run_match.py`, `arena/tournaments/competition.py`, `arena/records/ratings.py`; data under `data/games/` and `data/ratings/`.
 
 ## Sources of truth (priority)
 

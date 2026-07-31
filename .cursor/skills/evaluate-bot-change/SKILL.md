@@ -24,7 +24,7 @@ Follow [`docs/research/experiment-protocol.md`](../../../docs/research/experimen
 2. **Baseline** — fix opponent set + seed list. Run before the change (or use stored games that match that grid).
 3. **Treat** — apply the change; re-run the same seeds and opponents.
 4. **Store** — every game via `arena/matches/run_match.run_and_store`,
-   `arena/tournament.py`, or `scripts/measure_heuristics.py` into
+   `arena/tournaments/competition.py`, or `scripts/measure_heuristics.py` into
    `data/games/<round>/` before ratings. Prefer `run_and_store` for single
    schema v2 matches.
 5. **Report** — winrate, draw rate, mean turns, decisive games, Elo delta, sample size.

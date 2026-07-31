@@ -58,7 +58,7 @@ For N seeds × bot pairs with JSON storage under `data/classic_games/` (never
 Elo), use the classic tournament runner:
 
 ```bash
-python -m arena.classic_tournament \
+python -m arena.tournaments.classic \
   bots/classic_duel/run.sh \
   bots/smoke/run.sh \
   --seeds 0-4 --swap-sides

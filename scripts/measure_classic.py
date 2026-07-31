@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Classic-approximate bot measurement grid.
 
-Runs N seeds × bot pairs via arena.classic_tournament, stores games under
+Runs N seeds × bot pairs via arena.tournaments.classic, stores games under
 data/classic_games/, and writes docs/research/measurements/<round>.{json,md}.
 Classic results never enter data/games/ or Elo.
 """
@@ -17,7 +17,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from arena.classic_tournament import (
+from arena.tournaments.classic import (
     CLASSIC_GAMES_DIR,
     ClassicGameRecord,
     build_match_specs,
@@ -32,7 +32,7 @@ from arena.records.reporting import (
     winrate_table_lines,
 )
 from arena.records.store import bot_id_from_run_sh, utc_now_iso
-from arena.tournament import parse_seeds
+from arena.tournaments.competition import parse_seeds
 
 MEASUREMENTS_DIR = REPO_ROOT / "docs" / "research" / "measurements"
 

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from arena.matches.loop import winner_seat
-from arena.classic_tournament import (
+from arena.tournaments.classic import (
     ClassicGameRecord,
     ClassicMatchSpec,
     build_match_specs,

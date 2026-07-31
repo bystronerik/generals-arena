@@ -31,7 +31,7 @@ python -m arena.records.ratings     # or scripts/ CLI that wraps arena/records/r
 
 Typical flow after a grid:
 
-1. `arena/tournament.py` (or `arena/matches/run_match.py` / `scripts/measure_heuristics.py`) writes `data/games/`.
+1. `arena/tournaments/competition.py` (or `arena/matches/run_match.py` / `scripts/measure_heuristics.py`) writes `data/games/`.
 2. `arena/records/ratings.py` reads stored games, applies elote `EloCompetitor` (`beat` / `tied` / `lost_to`).
 3. Persist competitor state + leaderboard under `data/ratings/`.
 

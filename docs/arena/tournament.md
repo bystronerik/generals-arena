@@ -1,6 +1,6 @@
 # Tournament
 
-`arena/tournament.py` runs games-per-pair × bot pairs under competition mode
+`arena/tournaments/competition.py` runs games-per-pair × bot pairs under competition mode
 with a ProcessPool of in-process match workers. Each match is stored under
 `data/games/<round>/`. Elo rebuilds once after the pool finishes (unless
 `--no-ratings`).
@@ -12,7 +12,7 @@ timeouts when you need hang detection.
 
 ```bash
 source .venv/bin/activate
-python -m arena.tournament \
+python -m arena.tournaments.competition \
   bots/smoke/run.sh \
   bots/expand_plus/run.sh \
   --round parallel-smoke \

@@ -9,7 +9,6 @@ import random
 from pathlib import Path
 from typing import Any
 
-from arena.parallel import cap_jobs, default_jobs, run_pool
 from arena.records.fingerprint import bot_content_hashes
 from arena.records.ratings import rebuild_from_games
 from arena.records.store import (
@@ -20,7 +19,8 @@ from arena.records.store import (
     round_games_dir,
     utc_now_iso,
 )
-from arena.tournament_worker import run_one_worker
+from arena.tournaments.parallel import cap_jobs, default_jobs, run_pool
+from arena.tournaments.worker import run_one_worker
 
 DEFAULT_GAMES_PER_PAIR = 50
 

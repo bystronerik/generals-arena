@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from arena.parallel import default_jobs
+from arena.tournaments.parallel import default_jobs
 from arena.records.ratings import RatingBook
 from arena.records.reporting import (
     aggregate_stats,
@@ -31,7 +31,7 @@ from arena.records.reporting import (
     winrate_table_lines,
 )
 from arena.records.store import GameRecord, round_games_dir, utc_now_iso
-from arena.tournament import DEFAULT_GAMES_PER_PAIR, parse_seeds
+from arena.tournaments.competition import DEFAULT_GAMES_PER_PAIR, parse_seeds
 
 MEASUREMENTS_DIR = REPO_ROOT / "docs" / "research" / "measurements"
 
@@ -481,7 +481,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.jobs is not None and args.jobs < 1:
             parser.error("--jobs must be >= 1")
 
-        from arena.tournament import run_tournament
+        from arena.tournaments.competition import run_tournament
 
         fixed = parse_seeds(args.seeds) if args.seeds else None
         run_scripts = [bot_run_sh(n) for n in roster]
