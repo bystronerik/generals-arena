@@ -35,14 +35,15 @@ Composer must not change production code to make a test pass.
 | C2 | Castle metric counting | `arena/matches/competition.py` | castle tally in `run_competition_match` (`castles_built_a/b`) |
 | C3 | Telemetry parse and merge | `arena/records/telemetry.py` | `parse_bot_telemetry`, `apply_telemetry_to_record` |
 | C4 | Game record store | `arena/records/store.py` | `GameRecord.from_dict`, `save_game`, `load_game` |
-| C5 | Rating idempotence | `arena/records/ratings.py` | `RatingBook.apply_game`, `apply_games`, `to_state`, `from_state`, `rebuild_from_games` |
+| C5 | Rating order-invariance | `arena/records/ratings/` | `counts.count_table` digest, `counts.merge`, `fit.fit_ratings` (ratings, SEs, covariance), `policy.rejection_reason` |
+| C11 | Bot version registry | `arena/records/registry.py` | `Registry.register` (idempotent, revert case), `require_registered`, `verify` |
 | C6 | Unified bot API mapping | `arena/bot_api.py` | `from_game_state`, `from_competition_remote_obs`, `to_client_move`, `translate_action_for_remote`, `StrategySession.act` fault path |
 | C7 | Fidelity session classification | `arena/remote/client.py` | `result_from_reason`, `opponent_is_bot`, `DECIDED_REASONS`, `FidelityRemoteSession._finish_with_reason` |
 | C8 | Classic match result contract | `arena/matches/classic.py` | `run_classic_match` return contract, classic record writer |
 | C9 | Remote human-count filter | `arena/remote/block.py` | `counts_as_human_block_game`, `count_human_block_games` |
 | C10 | Grid construction helpers | `arena/tournaments/competition.py`, `scripts/measure_heuristics.py` | `parse_seeds`, `bot_pairs`, `build_grid` |
 
-Priority when the change does not point at one target: **C1, C9, C4, C5, C3, C2, C10, C7 gap, C6 gap, C8**.
+Priority when the change does not point at one target: **C1, C9, C4, C5, C11, C3, C2, C10, C7 gap, C6 gap, C8**.
 
 Existing coverage — extend only gaps; see design file section 5 for the full map.
 

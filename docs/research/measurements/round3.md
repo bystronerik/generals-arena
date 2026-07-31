@@ -1,5 +1,13 @@
 # Heuristic measurement — round3
 
+> **Not comparable to any post-refactor rating.** The Elo table below comes
+> from the sequential Elo model that was removed on 2026-07-31. It is
+> order-dependent: replaying the same games in a different order moved ratings
+> by up to 250 Elo, and round-report Elo was built in list order, so it also
+> disagreed with the leaderboard of its own day. Winrates, draw rates and turn
+> counts on this page are unaffected — they are counts, not estimates. See
+> [`docs/arena/ratings.md`](../../arena/ratings.md).
+
 Generated: 2026-07-31T09:56:33Z
 Games: 140 | Draw rate: 55.0% | Mean turns: 913.3
 

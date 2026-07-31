@@ -1,78 +1,126 @@
 ---
 name: evaluate-bot-change
 description: >-
-  Measures a bot change with a fixed seed grid or Rule C games-per-pair round,
-  before and after winrate, and an Elo delta from stored games. Use when
-  comparing bot versions, running an A/B tournament, judging a parameter
-  revision, or deciding keep versus revert from data/games metrics.
+  Measures a bot change as a pairwise rating contrast with a confidence
+  interval, from stored games. Use when comparing bot versions, running an A/B
+  round, judging a parameter revision, or deciding keep versus revert.
 ---
 
 # Evaluate bot change
 
-Follow [`docs/research/experiment-protocol.md`](../../../docs/research/experiment-protocol.md). One **parameter group** per experiment when possible.
+Follow [`docs/research/experiment-protocol.md`](../../../docs/research/experiment-protocol.md).
+One **parameter group** per experiment when possible.
+
+**Every threshold lives in
+[`docs/arena/decision-rule.md`](../../../docs/arena/decision-rule.md).** Read it
+before reporting a verdict; do not restate its numbers here or invent new ones.
 
 ## Model split
 
-- Think model: writes the hypothesis, chooses the seed grid and opponents, interprets results
-- Composer: runs matches or the measurement script, stores games, reports metrics
+- Think model: writes the hypothesis, chooses the opponent panel, interprets the contrast
+- Composer: runs the arms, stores games, refits, reports the contrast
 
-**Composer must not invent a threshold.** When a value is absent from the specification, Composer stops and asks the think model.
+**Composer must not invent a threshold.** When a value is absent from
+`decision-rule.md`, Composer stops and asks the think model.
+
+## What a decision is
+
+A **pairwise contrast between two content hashes**, with an interval:
+
+```python
+from arena.records.ratings.cli import refit
+
+fit = refit()
+delta = fit.delta("expand_plus@<baseline_hash>", "expand_plus@<candidate_hash>")
+delta.value, delta.se, delta.ci, delta.p_stronger
+```
+
+Never a leaderboard rank, and never a bare winrate. The two revisions are
+separate rated entities because identity is the content hash, so "did
+expand_plus improve?" has a direct answer.
 
 ## Workflow
 
 1. **Hypothesis** — one claim; optional short note under `docs/research/experiments/`.
-2. **Baseline** — fix opponent set + seed list. Run before the change (or use stored games that match that grid).
-3. **Treat** — apply the change; re-run the same seeds and opponents.
-4. **Store** — every game via `arena/matches/run_match.run_and_store`,
-   `arena/tournaments/competition.py`, or `scripts/measure_heuristics.py` into
-   `data/games/<round>/` before ratings. Prefer `run_and_store` for single
-   schema v2 matches.
-5. **Report** — winrate, draw rate, mean turns, decisive games, Elo delta, sample size.
-6. **Decide** — keep or revert from stored metrics only.
+2. **Baseline** — record the current hash (`python -m arena.records.fingerprint <bot>`).
+   It must not be provisional. Fix the opponent panel and the round seed.
+3. **Treat** — apply the change. The hash moves on its own; the registry
+   records the new version when the round runs.
+4. **Run both arms** on matched seeds with `--seat-policy alternate`.
+5. **Store** — every game lands under `data/games/<round>/` before any refit.
+6. **Refit and report** — `Δ ± SE`, `CI₉₅`, `P(B > A)`, games per arm, decisive
+   games per arm, and the verdict from `decision-rule.md`. If `unproven`,
+   report `fit.games_to_resolve(a, b, target_se=12.75)`.
+7. **Decide** — keep or revert from the contrast only.
 
 ## Commands
 
 ```bash
 source .venv/bin/activate   # if present; prefer python3.12
+```
 
-# Single stored match (schema v2 telemetry)
-python -m arena.matches.run_match bots/<a>/run.sh bots/<b>/run.sh --mode competition --seed <n>
+```bash
+python -m arena.tournaments.competition \
+  bots/<candidate>/run.sh bots/<panel...>/run.sh \
+  --round <name> --games-per-pair 50 --round-seed <int> \
+  --seat-policy alternate --strict-versions
+```
 
-# Rule C heuristic round (parallel pool + round report)
-python scripts/measure_heuristics.py \
-  --round round<N> --games-per-pair 50 --round-seed <int>
+```bash
+python scripts/measure_heuristics.py --round round<N> --games-per-pair 50 --round-seed <int>
+```
+
+```bash
+python -m arena.records.ratings --print --lineage <bot>
 ```
 
 Round reports: [`docs/research/measurements/`](../../../docs/research/measurements/).
-Override roster with `--bots`; default is `DEFAULT_ROSTER` in the script.
+Override the roster with `--bots`; default is `DEFAULT_ROSTER` in the script.
 
-## Seat-order swap
+## Seat policy
 
-For small fixed-seed A/B claims, include both seat orders. Large Rule C rounds
-with random `--games-per-pair` seeds skip seat swap by default.
+Seat is drawn per game from the seeded stream — it is no longer implied by
+roster position, so a round does **not** need to double its games to control
+for it.
 
-## Draw-heavy decision rule
+| Round type | Policy |
+| --- | --- |
+| Large exploratory / regeneration | `--seat-policy random` (default), zero extra games |
+| Decision arms | `--seat-policy alternate`, exactly 50/50 on matched map seeds |
 
-When both arms draw every game, mark the result **unproven**, not neutral. Ask for a decisive opponent or a different grid before changing thresholds.
+`--swap-sides` no longer exists. It keyed the pair RNG on the oriented pair, so
+the mirrored copy drew a different seed list: 2× the games for an unmatched
+sample.
 
-## Metrics checklist
+## Draw-heavy arms
 
-- [ ] Same `--round-seed` / `--seeds` and `--games-per-pair` before and after
-- [ ] Same opponents
-- [ ] Both seat orders when using a small fixed-seed grid
+Draws are **not** uninformative under the Davidson draw model — they pin a
+rating band. The rule is quantitative: see gate 3 in `decision-rule.md`
+(≥ 60 decisive games per arm). Do not mark an arm unproven merely because the
+draw rate is high.
+
+## Checklist
+
+- [ ] Both hashes registered (`python -m arena.records.registry --verify`)
+- [ ] Same opponent panel, `--round-seed`, and `--games-per-pair` on both arms
+- [ ] `--seat-policy alternate` on decision arms
+- [ ] One `engine_version` across both arms (`excluded.engine_mismatch == 0`)
 - [ ] Competition mode on every match
-- [ ] Games under `data/games/<round>/` before Elo update
+- [ ] Games under `data/games/<round>/` before the refit
 - [ ] One changed parameter group per experiment
-- [ ] Rating snapshot / delta via `arena/records/ratings.py` (see **update-leaderboard**)
+- [ ] Verdict quoted with `Δ`, `SE`, `CI₉₅`, `P(B > A)` — never a rank
 
 Schema: [`docs/arena/game-record-schema.md`](../../../docs/arena/game-record-schema.md).
+Ratings: [`docs/arena/ratings.md`](../../../docs/arena/ratings.md).
 
 ## Rules
 
-- Do not merge strategy changes without a measured delta in `data/`.
+- Do not merge strategy changes without a measured contrast in `data/`.
 - No strategy content in this skill — link `docs/` for domain knowledge.
 
 ## Changelog
 
+- 2026-07-31 — Contrast-with-interval replaces "Elo delta"; thresholds moved to
+  `docs/arena/decision-rule.md`; seat policy replaces seat-order swap
 - 2026-07-31 — Rule C parallel rounds + per-round folders
 - 2026-07-31 — Seat-order swap, draw rule, measure_heuristics pointer (cause: skills-workflow build)

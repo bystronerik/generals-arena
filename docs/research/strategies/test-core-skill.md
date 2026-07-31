@@ -106,7 +106,7 @@ is not in it.
 | C2 | Castle metric counting | `arena/competition_match.py` | castle tally in `run_competition_match` (`castles_built_a/b`) | The only castle signal that reaches a round report |
 | C3 | Telemetry parse and merge | `arena/telemetry.py` | `parse_bot_telemetry`, `apply_telemetry_to_record` | Schema v2 fields; generic extras (e.g. `first_city_capture_turn`) |
 | C4 | Game record store | `arena/store.py` | `GameRecord.from_dict`, `save_game`, `load_game` | A malformed record breaks a whole round load |
-| C5 | Rating idempotence | `arena/ratings.py` | `RatingBook.apply_game`, `apply_games`, `to_state`, `from_state`, `rebuild_from_games` | A double-counted game moves Elo with no visible error |
+| C5 | Rating order-invariance | `arena/records/ratings/` | `counts.count_table` digest, `counts.merge`, `fit.fit_ratings`, `policy.rejection_reason` | A rating that depends on match order makes the leaderboard a readout of worker scheduling |
 | C6 | Unified bot API mapping | `arena/bot_api.py` | `from_game_state`, `from_competition_remote_obs`, `to_client_move`, `translate_action_for_remote`, `StrategySession.act` fault path | The single observation and action contract for every bot |
 | C7 | Fidelity session classification | `arena/remote_client.py` | `result_from_reason`, `opponent_is_bot`, `DECIDED_REASONS`, `FidelityRemoteSession._finish_with_reason` | Decides `counts_toward_block`, which defines the 95/100 claim |
 | C8 | Classic match result contract | `arena/classic_match.py` | `run_classic_match` return contract, and the record writer that arrives with A1 | Classic results use a different ruleset and must never reach `data/games/` |
@@ -124,7 +124,7 @@ Existing coverage, so that the skill does not duplicate work:
 | `tests/test_remote_client.py` | C7 reason mapping, `opponent_is_bot`, win, loss, disconnect records | `stall` and `receive_error` records; a null `opponent_is_bot` in the written record |
 | `tests/test_telemetry_parsers.py` | C1, C2, C3 | Two castle lines in one capture; telemetry with one player only |
 | `tests/test_store.py` | C4 | — |
-| `tests/test_ratings.py` | C5 | `to_state` and `from_state` round trip; `rebuild_from_games` |
+| `tests/test_ratings.py` | C5 | count-table canonicality under any ordering; pooling policy; reproducible artifacts |
 | `tests/test_tournament.py` | C10 for `parse_seeds` and `bot_pairs` | `build_grid` seat coverage after E2 lands |
 | `tests/test_remote_block.py` | C9 including the null case | — |
 | `tests/test_classic_match.py` | C8 smoke, marked `slow` | The classic record writer that arrives with A1 |
@@ -216,8 +216,11 @@ Mocks stay for one purpose only: the remote client boundary
 When the analysis names more than eight tests, Composer writes the top eight by
 the section 5 priority order and reports the rest as a remainder list.
 
-Runtime note: 54 tests run in about 2 seconds with a warm cache. `arena/ratings.py`
-imports `elote`, `elote` imports Matplotlib, and Matplotlib builds a font cache on
+Runtime note (superseded): the arena's rating code no longer imports `elote` at
+all — it is a test-only oracle. The paragraph below described the old cost.
+
+Historical: 54 tests ran in about 2 seconds with a warm cache. `arena/ratings.py`
+imported `elote`, `elote` imports Matplotlib, and Matplotlib builds a font cache on
 a first run in a fresh environment. That first run costs about 11 seconds. The
 skill must report the warm number and must not treat the cold run as a
 regression. Any test that needs more than 1 second belongs behind

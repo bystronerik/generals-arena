@@ -5,7 +5,9 @@
 ## Rules
 
 - Always uses `--mode competition`.
-- Store the game **before** updating ratings.
+- Store the game **before** refitting ratings.
+- The runner registers each bot's content hash in `data/bot_versions/` before
+  the match, in this process. See [bot-version-registry.md](bot-version-registry.md).
 - Prefer the project `.venv` (CPython 3.12). System Python 3.14 can fail on pygame / engine pins.
 
 ## Command
@@ -18,7 +20,9 @@ python -m arena.matches.run_match \
   --mode competition --seed 0
 ```
 
-Optional: `--update-ratings` applies Elo after the game file exists.
+Optional: `--round <name>` labels the record (default `adhoc`), and
+`--update-ratings` refits the whole pool after the game file exists — there is
+no incremental rating update.
 
 Thin smoke CLI:
 
@@ -33,9 +37,9 @@ The runner reads matchup output lines:
 - `player N captured the enemy general` → winner `a` (N=0) or `b` (N=1), `terminated=true`
 - `truncated at ... turns (draw)` → `winner=draw`, `truncated=true`
 - `[matchup] castles built: N (...) vs M (...)` → optional `castles_built_a` / `_b`
-- `[telemetry] player=P ...` (last line per player on stderr) → optional final land/army and sighting metrics (schema v2)
+- `[telemetry] player=P ...` (last line per player on stderr) → optional final land/army and sighting metrics
 
-See [game-record-schema.md](game-record-schema.md) for the full v2 field list.
+See [game-record-schema.md](game-record-schema.md) for the full schema v4 field list.
 
 ## Schema
 

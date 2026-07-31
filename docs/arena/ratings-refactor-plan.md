@@ -3,10 +3,16 @@
 Replace sequential elote Elo with a batch-fit rating model that can answer one
 question: **did this bot change make the bot stronger?**
 
-Status: **plan only, no code written.** Nothing in this document has been
-implemented. All open questions are resolved as of 2026-07-31 — see §9. Numbers marked *(measured)* come from probes against the current
-`data/games/` (7261 records, 2026-07-31); probe scripts were throwaway and are
-not committed.
+Status: **implemented, 2026-07-31.** §6's nine migration steps all landed; this
+document is kept as the audit and design record, not as a work item. The
+shipped result is documented in [ratings.md](ratings.md),
+[decision-rule.md](decision-rule.md), and
+[bot-version-registry.md](bot-version-registry.md). Links below to
+`arena/records/ratings.py` point at the module the refactor deleted — it is now
+the package `arena/records/ratings/`. All open questions were resolved before
+implementation — see §9. Numbers marked *(measured)* come from probes against
+the pre-refactor `data/games/` (7261 records, 2026-07-31); probe scripts were
+throwaway and are not committed.
 
 **Measurement audit (2026-07-31).** The §1 audit was re-verified against the
 repo and reproduces exactly — order-dependence (250.5 Elo), draw/truncation

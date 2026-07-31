@@ -11,7 +11,8 @@ generals-arena/
 ├── README.md                 # this file
 ├── AGENTS.md                 # agent workflow only
 ├── RULES.md                  # competition rules (processed)
-├── requirements.txt          # arena deps (elote, pytest)
+├── requirements.txt          # arena runtime deps (numpy)
+├── requirements-dev.txt      # test-only deps (pytest, elote oracle)
 ├── requirements-sandbox.txt  # optional torch/jax sandbox pins
 ├── pytest.ini                # unified test discovery
 ├── competition-module/       # git submodule (engine + matchup)
@@ -20,7 +21,8 @@ generals-arena/
 ├── arena/                    # match runner, ratings, store
 ├── tests/                    # core pytest suite
 ├── data/games/               # stored match outcomes (JSON gitignored)
-├── data/ratings/             # leaderboard snapshots (local; gitignored)
+├── data/ratings/             # fit + leaderboard snapshots (local; gitignored)
+├── data/bot_versions/        # bot version registry (committed)
 ├── data/remote_games/        # live classic session logs (gitignored)
 ├── scripts/                  # thin CLIs
 ├── docs/                     # game and bot knowledge (small files)
@@ -37,6 +39,7 @@ source .venv/bin/activate
 pip install -e competition-module   # local competition matches
 pip install -e client               # generals_client wire for live play (optional)
 pip install -r requirements.txt
+pip install -r requirements-dev.txt  # to run the test suite
 ```
 
 Optional: match the competition evaluation image library set:
@@ -95,12 +98,23 @@ python scripts/tournament.py \
   competition-module/competition/agents/expander_python/run.sh \
   --seeds 0-2
 
-python scripts/leaderboard.py
+python scripts/leaderboard.py --print
 ```
 
-Ratings rebuild locally under `data/ratings/` (gitignored). Commit round reports under `docs/research/measurements/` when publishing results.
+Ratings are a batch Bradley-Terry + Davidson-draws + seat-term fit over every
+eligible stored game, keyed on `bot_id@content_hash`, with a covariance matrix
+behind every interval. There is no incremental update: every write refits.
+Snapshots land under `data/ratings/` (gitignored); `data/bot_versions/` is
+committed, and `git log -p data/bot_versions/<bot>.json` is a bot's improvement
+history. Commit round reports under `docs/research/measurements/` when
+publishing results.
 
-See [`docs/arena/tournament.md`](docs/arena/tournament.md) and [`docs/arena/ratings.md`](docs/arena/ratings.md).
+Decide keep-or-revert from the pairwise contrast, never from rank:
+[`docs/arena/decision-rule.md`](docs/arena/decision-rule.md).
+
+See [`docs/arena/tournament.md`](docs/arena/tournament.md),
+[`docs/arena/ratings.md`](docs/arena/ratings.md), and
+[`docs/arena/bot-version-registry.md`](docs/arena/bot-version-registry.md).
 
 ## Docs
 

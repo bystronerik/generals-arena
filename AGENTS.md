@@ -23,7 +23,8 @@ Process rules for agents that work in this repo. Put game and bot knowledge in `
 | Game, protocol, engine, research notes | `docs/**` (small topic files) |
 | Stdio bots | `bots/<name>/` with `agent.py`, `main.py`, `run.sh` |
 | Match runner, ratings, store | `arena/` |
-| Match JSON / rating snapshots | `data/games/`, `data/ratings/` |
+| Match JSON / rating snapshots (derived, gitignored) | `data/games/`, `data/ratings/` |
+| Bot version registry (committed) | `data/bot_versions/` |
 | Cursor skills | `.cursor/skills/` |
 
 Do not put strategy content in `AGENTS.md` or skill files beyond process pointers that link into `docs/`.
@@ -45,7 +46,8 @@ Requirements:
 - The match must reach a normal end (win, loss, or draw / truncation).
 - Do not treat a classic or non-competition preset run as sufficient.
 
-Also store the game under `data/games/` before you update ratings.
+Also store the game under `data/games/` before you refit ratings. There is no
+incremental rating update: every write refits the whole pool.
 
 ## Remote success criterion (classic rules)
 
@@ -75,7 +77,7 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 | explorer | Read `docs/` + `RULES.md`; map engine APIs | `run-competition-match` to verify observations | Notes cite a finished `--mode competition` match; no unmeasured strategy claims |
 | bot-author | Add or change `bots/<name>/`; keep stdio protocol intact | `build-bot-from-spec`, then `run-competition-match` | New/changed `run.sh` finishes a competition match |
 | strategist | Write strategy specs; enforce bot diversity | `write-strategy-spec`, `check-bot-diversity` | Spec in `docs/research/strategies/` with diversity verdict |
-| evaluator | Fixed seed grid; before/after winrate; rating delta | `run-measurement-round`, `evaluate-bot-change`, `update-leaderboard` | Games in `data/games/`; metrics reported; ratings only after store |
+| evaluator | Fixed grid; before/after winrate; **pairwise rating contrast with an interval** | `run-measurement-round`, `evaluate-bot-change`, `update-leaderboard` | Games in `data/games/`; verdict quoted per [`docs/arena/decision-rule.md`](docs/arena/decision-rule.md), never as a rank |
 | remote-operator | Live classic blocks; human gate ladder | `run-remote-block`, `run-classic-grid` | Block report under `docs/research/measurements/`; logs in `data/remote_games/` |
 | auditor | Structure and duplication review | `structure-audit` | Report names concrete files and lines; no edits without a follow-up ask |
 | docs-keeper | Keep `docs/` small and accurate; sync with code + `RULES.md` | none required | Topic files stay single-purpose; no strategy moved into `AGENTS.md` |
@@ -104,6 +106,7 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 1. Follow [`docs/research/experiment-protocol.md`](docs/research/experiment-protocol.md).
 2. Use `run-measurement-round` for batch grids or `evaluate-bot-change` for A/B pairs.
 3. Store games via `arena/matches/run_match.py` / `scripts/measure_heuristics.py`, then `update-leaderboard`.
+4. Decide from the pairwise contrast in [`docs/arena/decision-rule.md`](docs/arena/decision-rule.md) — never from a leaderboard rank.
 
 ### remote-operator
 
@@ -122,8 +125,9 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 
 1. Start from the core surface table in
    [`docs/research/strategies/test-core-skill.md`](docs/research/strategies/test-core-skill.md).
-2. Test core logic only: parsers, store, ratings idempotence, bot_api mapping,
-   fidelity classification, classic match results, remote human-count filter.
+2. Test core logic only: parsers, store, **rating order-invariance and the
+   count-table digest**, the version registry, bot_api mapping, fidelity
+   classification, classic match results, remote human-count filter.
 3. Report a proven defect; do not fix production code inside the test step.
 
 ## Cursor skills
@@ -147,7 +151,7 @@ Taxonomy: [`docs/research/strategies/skills-workflow.md`](docs/research/strategi
 | structure-audit | Think (named only) | [`.cursor/skills/structure-audit/`](.cursor/skills/structure-audit/) |
 | improve-skill-from-failure | Think (named only) | [`.cursor/skills/improve-skill-from-failure/`](.cursor/skills/improve-skill-from-failure/) |
 
-CLIs and modules the skills drive: `scripts/`, `arena/matches/run_match.py`, `arena/tournaments/competition.py`, `arena/records/ratings.py`; data under `data/games/` and `data/ratings/`.
+CLIs and modules the skills drive: `scripts/`, `arena/matches/run_match.py`, `arena/tournaments/competition.py`, `arena/records/ratings/`, `arena/records/registry.py`; data under `data/games/`, `data/ratings/`, and `data/bot_versions/`.
 
 ## Sources of truth (priority)
 

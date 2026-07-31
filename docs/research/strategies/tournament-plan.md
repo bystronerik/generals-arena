@@ -1,5 +1,14 @@
 # Tournament plan — the 13-competitor pool
 
+> **Partly superseded (2026-07-31).** The ranking machinery this plan assumes
+> — sequential Elo and `--swap-sides` — was replaced. Ratings are now a batch
+> Bradley–Terry + Davidson-draws + seat-term fit
+> ([`docs/arena/ratings.md`](../../arena/ratings.md)), and seat is drawn per
+> game from the seeded stream, so a round no longer doubles its games to
+> control for seat order ([`docs/arena/tournament.md`](../../arena/tournament.md)).
+> Thresholds live in [`docs/arena/decision-rule.md`](../../arena/decision-rule.md).
+> The roster, staging, draw analysis, and cost reasoning here still stand.
+
 How to rank the pool, what to measure when games draw, and what "healthy"
 looks like. Follows [`experiment-protocol.md`](../experiment-protocol.md);
 runs through `arena/tournament.py`.

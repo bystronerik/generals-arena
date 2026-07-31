@@ -51,7 +51,9 @@ Small topic files for the Generals Arena research repo.
 
 - [game record schema](arena/game-record-schema.md)
 - [match runner](arena/match-runner.md)
-- [ratings (elote)](arena/ratings.md)
+- [ratings](arena/ratings.md) — batch Bradley–Terry + Davidson draws + seat term
+- [decision rule](arena/decision-rule.md) — the keep/revert thresholds, in one place
+- [bot version registry](arena/bot-version-registry.md) — content hash → source, commit, git ref
 - [tournament](arena/tournament.md)
 - [classic tournament](arena/classic-tournament.md)
 

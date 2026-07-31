@@ -333,10 +333,10 @@ description: >-
 
 ```yaml
 description: >-
-  Rebuilds Elo leaderboard snapshots from stored data/games/ through
-  arena/ratings.py and publishes JSON and Markdown under data/ratings/. Use when
-  refreshing ratings, publishing the leaderboard, or closing a tournament or
-  measurement round.
+  Refits arena ratings from stored data/games/ through arena/records/ratings/
+  and publishes fit.json plus JSON and Markdown leaderboards under
+  data/ratings/. Use when refreshing ratings, publishing the leaderboard, or
+  closing a tournament or measurement round.
 ```
 
 ### `write-strategy-spec`
