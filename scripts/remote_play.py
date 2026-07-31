@@ -13,70 +13,45 @@ import sys
 import time
 import traceback
 from datetime import datetime, timezone
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
-from arena.remote_adapter import (  # noqa: E402
+from arena.remote_adapter import (
     REMOTE_RECOMMENDED_BOTS,
     list_remote_bots,
     verify_adapter_offline,
 )
-from arena.remote_bridge import ensure_bot_username, make_unified_bot  # noqa: E402
-from arena.remote_client import FidelityRemoteSession, git_head  # noqa: E402
+from arena.remote_bridge import ensure_bot_username, make_unified_bot
+from arena.remote_client import (
+    FidelityRemoteSession,
+    SessionSummary,
+    git_head,
+    print_session_summary,
+    run_1v1_session,
+    run_lobby_session,
+)
+from arena.remote_env import (
+    REMOTE_GAMES_DIR,
+    REPO_ROOT,
+    SETUP_DOC,
+    default_lobby_id,
+    default_username,
+    ensure_repo_on_path,
+    load_dotenv_files,
+    require_user_id,
+    resolve_server_url,
+)
 
-REMOTE_GAMES_DIR = REPO_ROOT / "data" / "remote_games"
-SETUP_DOC = "docs/engine/remote-play-setup.md"
+ensure_repo_on_path()
 
-
-def _load_dotenv_files() -> None:
-    """Load KEY=VALUE pairs from .env and .env.agent without overwriting existing env."""
-    for name in (".env", ".env.agent"):
-        path = REPO_ROOT / name
-        if not path.is_file():
-            continue
-        for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key = key.strip()
-            value = value.strip().strip("'").strip('"')
-            if key and key not in os.environ:
-                os.environ[key] = value
-
-
-def _require_user_id() -> str:
-    user_id = os.environ.get("GENERALS_USER_ID", "").strip()
-    if user_id:
-        return user_id
-    msg = (
-        "GENERALS_USER_ID is not set.\n\n"
-        "Live generals.io play needs a secret user id you invent (any long random string).\n"
-        "It is not issued by generals.io; register_username binds a display name to it once.\n\n"
-        "Setup:\n"
-        "  export GENERALS_USER_ID='<your long random secret>'\n"
-        "  export GENERALS_USERNAME='[Bot] arena_army_convey'   # optional\n"
-        "  export GENERALS_LOBBY_ID='arena-test'                # for --mode lobby\n\n"
-        "Or put the same keys in .env.agent (gitignored).\n"
-        f"Full guide: {SETUP_DOC}\n\n"
-        "Run with --dry-run to offline-verify the adapter without credentials."
-    )
-    print(msg, file=sys.stderr)
-    sys.exit(2)
+DEFAULT_QUEUE_TIMEOUT_S = 600.0
 
 
-def _default_username(bot: str) -> str:
-    return os.environ.get("GENERALS_USERNAME", f"[Bot] arena_{bot}").strip()
-
-
-def _default_lobby_id() -> str:
-    return os.environ.get("GENERALS_LOBBY_ID", "arena-test").strip()
-
-
-def _make_session(bot_name: str, user_id: str, room_mode: str) -> FidelityRemoteSession:
+def _make_session(
+    bot_name: str,
+    user_id: str,
+    room_mode: str,
+    server_url: str,
+    queue_timeout_seconds: float | None,
+) -> FidelityRemoteSession:
     bot = make_unified_bot(bot_name)
     return FidelityRemoteSession(
         bot,
@@ -84,36 +59,9 @@ def _make_session(bot_name: str, user_id: str, room_mode: str) -> FidelityRemote
         bot_name=bot_name,
         room_mode=room_mode,
         log_dir=REMOTE_GAMES_DIR,
+        server_url=server_url,
+        game_timeout=queue_timeout_seconds,
     )
-
-
-def run_lobby_session(
-    session: FidelityRemoteSession,
-    user_id: str,
-    lobby_id: str,
-    username: str,
-    max_games: int | None,
-) -> None:
-    del user_id  # session already holds the client bound to user_id
-    session.register(username)
-    games_played = 0
-    while max_games is None or games_played < max_games:
-        session.play_private(lobby_id)
-        games_played += 1
-        if max_games is not None and games_played >= max_games:
-            break
-
-
-def run_1v1_session(
-    session: FidelityRemoteSession,
-    user_id: str,
-    username: str,
-    max_games: int,
-) -> None:
-    del user_id
-    session.register(username)
-    for _ in range(max_games):
-        session.play_1v1()
 
 
 def run_dry_run(bot: str) -> int:
@@ -174,8 +122,21 @@ def run_dry_run(bot: str) -> int:
     return 0
 
 
+def _write_session_log(summary: SessionSummary, *, bot: str, started: float) -> None:
+    REMOTE_GAMES_DIR.mkdir(parents=True, exist_ok=True)
+    path = REMOTE_GAMES_DIR / f"session_summary_{int(time.time())}.json"
+    payload = {
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "bot_commit": git_head(),
+        **summary.as_dict(),
+    }
+    if summary.duration_s == 0.0:
+        payload["duration_s"] = round(time.time() - started, 2)
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
-    _load_dotenv_files()
+    load_dotenv_files()
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -207,23 +168,41 @@ def main(argv: list[str] | None = None) -> int:
         help="Stop after N games (default: unlimited for lobby, 1 for 1v1)",
     )
     parser.add_argument(
-        "--verify-offline",
-        action="store_true",
-        help="Run offline adapter checks before connecting",
+        "--queue-timeout-seconds",
+        type=float,
+        default=DEFAULT_QUEUE_TIMEOUT_S,
+        help=(
+            "Per-attempt timeout for queue + game (default: 600). "
+            "1v1 mode requeues with backoff when this expires."
+        ),
+    )
+    parser.add_argument(
+        "--session-minutes",
+        type=float,
+        default=None,
+        help="Stop the whole session after this many minutes (1v1 requeue loop)",
+    )
+    parser.add_argument(
+        "--server-url",
+        default=None,
+        help="Bot server URL (default: https://botws.generals.io)",
     )
     parser.add_argument(
         "--public-server",
         action="store_true",
-        help="Ignored (generals_client always uses botws.generals.io EIO v4)",
+        help="Alias for the public bot server (https://botws.generals.io)",
+    )
+    parser.add_argument(
+        "--verify-offline",
+        action="store_true",
+        help="Run offline adapter checks before connecting",
     )
     args = parser.parse_args(argv)
 
-    if args.public_server:
-        print(
-            "Note: --public-server is ignored; remote play uses generals_client on "
-            "botws.generals.io (EIO v4, no bot_key).",
-            file=sys.stderr,
-        )
+    server_url = resolve_server_url(
+        server_url=args.server_url,
+        public_server=args.public_server,
+    )
 
     if args.bot not in REMOTE_RECOMMENDED_BOTS:
         print(
@@ -242,8 +221,8 @@ def main(argv: list[str] | None = None) -> int:
                 print(err, file=sys.stderr)
             return 1
 
-    user_id = _require_user_id()
-    username = args.username or _default_username(args.bot)
+    user_id = require_user_id()
+    username = args.username or default_username(args.bot)
     registered_as = ensure_bot_username(username)
     if registered_as != username.strip():
         print(
@@ -256,24 +235,64 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
 
-    session = _make_session(args.bot, user_id, args.mode)
+    session = _make_session(
+        args.bot,
+        user_id,
+        args.mode,
+        server_url,
+        args.queue_timeout_seconds,
+    )
     started = time.time()
+    session_deadline = None
+    if args.session_minutes is not None:
+        session_deadline = started + args.session_minutes * 60.0
+
+    summary: SessionSummary | None = None
+    exit_code = 0
 
     try:
         if args.mode == "lobby":
-            lobby_id = args.lobby_id or _default_lobby_id()
-            print(f"Starting {args.bot} in private lobby {lobby_id!r} as {username!r}...")
-            run_lobby_session(session, user_id, lobby_id, username, args.max_games)
+            lobby_id = args.lobby_id or default_lobby_id()
+            print(
+                f"Starting {args.bot} in private lobby {lobby_id!r} "
+                f"as {username!r} on {server_url}..."
+            )
+            summary = run_lobby_session(
+                session,
+                lobby_id,
+                username,
+                args.max_games,
+            )
         else:
             max_games = args.max_games if args.max_games is not None else 1
+            deadline_note = ""
+            if args.session_minutes is not None:
+                deadline_note = f", session cap {args.session_minutes:.0f} min"
             print(
-                f"Starting {args.bot} in 1v1 queue on botws.generals.io "
-                f"as {username!r} ({max_games} game(s))..."
+                f"Starting {args.bot} in 1v1 queue on {server_url} "
+                f"as {username!r} ({max_games} game(s), "
+                f"queue timeout {args.queue_timeout_seconds:.0f}s{deadline_note})..."
             )
-            run_1v1_session(session, user_id, username, max_games)
+            summary = run_1v1_session(
+                session,
+                username,
+                max_games,
+                queue_timeout_seconds=args.queue_timeout_seconds,
+                session_deadline=session_deadline,
+            )
     except KeyboardInterrupt:
         print("\nStopped by user.")
-        return 130
+        exit_code = 130
+        if summary is None:
+            summary = SessionSummary(
+                bot_name=args.bot,
+                room_mode=args.mode,
+                endpoint=session.endpoint,
+                wins=session._score_wins,
+                losses=session._score_losses,
+                stop_reason="interrupt",
+            )
+        summary.stop_reason = "interrupt"
     except Exception:
         session_log = REMOTE_GAMES_DIR / f"session_error_{int(time.time())}.json"
         REMOTE_GAMES_DIR.mkdir(parents=True, exist_ok=True)
@@ -293,8 +312,14 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(f"Session error logged to {session_log.relative_to(REPO_ROOT)}", file=sys.stderr)
         raise
+    finally:
+        if summary is not None:
+            if summary.duration_s == 0.0:
+                summary.duration_s = time.time() - started
+            print_session_summary(summary)
+            _write_session_log(summary, bot=args.bot, started=started)
 
-    return 0
+    return exit_code
 
 
 if __name__ == "__main__":

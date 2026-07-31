@@ -11,29 +11,27 @@ See docs/engine/remote-play-setup.md.
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
-sys.path.insert(0, str(REPO_ROOT / "scripts"))
-from remote_play import (  # noqa: E402
+from arena.remote_adapter import verify_adapter_offline
+from arena.remote_block import count_human_block_games
+from arena.remote_bridge import make_unified_bot
+from arena.remote_client import FidelityRemoteSession, run_lobby_session
+from arena.remote_env import (
     REMOTE_GAMES_DIR,
-    _default_username,
-    _load_dotenv_files,
-    _require_user_id,
-    run_lobby_session,
+    REPO_ROOT,
+    default_username,
+    ensure_repo_on_path,
+    load_dotenv_files,
+    require_user_id,
+    resolve_server_url,
 )
-from arena.remote_adapter import verify_adapter_offline  # noqa: E402
-from arena.remote_block import count_human_block_games  # noqa: E402
-from arena.remote_bridge import make_unified_bot  # noqa: E402
-from arena.remote_client import FidelityRemoteSession  # noqa: E402
+
+ensure_repo_on_path()
 
 ENV_AGENT = REPO_ROOT / ".env.agent"
 SECRET_KEYS = frozenset(
@@ -89,11 +87,13 @@ class LobbyWatchSession:
         max_games: int,
         lobby_id: str,
         poll_interval: float,
+        server_url: str,
     ) -> None:
         self.bot = bot
         self.max_games = max_games
         self.lobby_id = lobby_id
         self.poll_interval = poll_interval
+        self.server_url = server_url
         self.started_at = time.time()
         self.counted_at_start = _counted_human_games_since(self.started_at)
 
@@ -104,14 +104,15 @@ class LobbyWatchSession:
         return max(0, self.max_games - self.counted_this_session())
 
     def run(self) -> int:
-        user_id = _require_user_id()
-        username = _default_username(self.bot)
+        user_id = require_user_id()
+        username = default_username(self.bot)
         session = FidelityRemoteSession(
             make_unified_bot(self.bot),
             user_id,
             bot_name=self.bot,
             room_mode="lobby",
             log_dir=REMOTE_GAMES_DIR,
+            server_url=self.server_url,
         )
 
         print(
@@ -130,7 +131,6 @@ class LobbyWatchSession:
             try:
                 run_lobby_session(
                     session,
-                    user_id,
                     self.lobby_id,
                     username,
                     max_games=1,
@@ -175,6 +175,7 @@ def watch_for_lobby(
     max_games: int,
     poll_interval: float,
     max_watch_s: float | None,
+    server_url: str,
 ) -> int:
     watch_started = time.time()
     print(
@@ -187,12 +188,13 @@ def watch_for_lobby(
         lobby_id = _lobby_id_from_agent_file()
         if lobby_id:
             _apply_env_file(ENV_AGENT)
-            _load_dotenv_files()
+            load_dotenv_files()
             return LobbyWatchSession(
                 bot=bot,
                 max_games=max_games,
                 lobby_id=lobby_id,
                 poll_interval=poll_interval,
+                server_url=server_url,
             ).run()
 
         elapsed = time.time() - watch_started
@@ -215,7 +217,7 @@ def watch_for_lobby(
 
 
 def main(argv: list[str] | None = None) -> int:
-    _load_dotenv_files()
+    load_dotenv_files()
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -242,6 +244,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Exit if no lobby id appears within this many minutes",
     )
     parser.add_argument(
+        "--server-url",
+        default=None,
+        help="Bot server URL (default: https://botws.generals.io)",
+    )
+    parser.add_argument(
+        "--public-server",
+        action="store_true",
+        help="Alias for the public bot server (https://botws.generals.io)",
+    )
+    parser.add_argument(
         "--verify-offline",
         action="store_true",
         help="Run offline adapter checks before watching",
@@ -259,11 +271,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.max_watch_minutes is not None:
         max_watch_s = args.max_watch_minutes * 60.0
 
+    server_url = resolve_server_url(
+        server_url=args.server_url,
+        public_server=args.public_server,
+    )
+
     return watch_for_lobby(
         bot=args.bot,
         max_games=args.max_games,
         poll_interval=args.poll_interval,
         max_watch_s=max_watch_s,
+        server_url=server_url,
     )
 
 

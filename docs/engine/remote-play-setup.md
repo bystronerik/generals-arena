@@ -79,11 +79,18 @@ Private lobby (safe first test — a human joins the same lobby id):
 python scripts/remote_play.py --bot army_convey --mode lobby
 ```
 
-Public 1v1 queue (only after lobby test passes):
+Public 1v1 queue (only after lobby test passes). The script requeues with
+exponential backoff when the queue does not assign a game within
+`--queue-timeout-seconds` (default 600 s):
 
 ```bash
-python scripts/remote_play.py --bot army_convey --mode 1v1 --max-games 5
+python scripts/remote_play.py --bot army_convey --mode 1v1 --max-games 5 \
+  --queue-timeout-seconds 600 --session-minutes 120
 ```
+
+Use `--session-minutes` to cap total wall-clock time for a 1v1 block. On exit
+(normal, interrupt, or cap) the script prints a session summary and writes
+`session_summary_*.json` under `data/remote_games/`.
 
 Lobby watch — poll `.env.agent` until `GENERALS_LOBBY_ID` is set, then play
 lobby games without idle 1v1 queue time:
@@ -99,14 +106,33 @@ python scripts/remote_lobby_watch.py --max-watch-minutes 15
 ```
 
 The watcher never prints secret values (user id or lobby id). It counts only
-human games with `counts_toward_block: true` and stops when the target is reached
-or `GENERALS_LOBBY_ID` is cleared from `.env.agent`.
+human games with `counts_toward_block: true` and `opponent_is_bot: false`, and
+stops when the target is reached or `GENERALS_LOBBY_ID` is cleared from
+`.env.agent`.
 
 Run offline checks before connecting:
 
 ```bash
 python scripts/remote_play.py --bot fog_scout --mode lobby --verify-offline
 ```
+
+### Server URL
+
+Both scripts accept `--server-url` (default `https://botws.generals.io`) and
+`--public-server` (alias for the same public bot endpoint). The URL is passed
+through `FidelityRemoteSession` to `generals_client`.
+
+### Block report
+
+Aggregate counted human games and emit Wilson bounds plus star-band splits:
+
+```bash
+python scripts/remote_report.py
+python scripts/remote_report.py --output docs/research/measurements/remote-report.md
+```
+
+Only games with `counts_toward_block: true` and `opponent_is_bot: false` enter
+the headline win rate.
 
 ---
 
@@ -135,7 +161,10 @@ Remote results do **not** update arena Elo in `data/ratings/`.
 
 - `arena/bot_api.py` — unified observation/action types and mappers.
 - `arena/remote_bridge.py` — `UnifiedBot` + `ArenaGameClient` over `generals_client`.
-- `arena/remote_client.py` — `FidelityRemoteSession` and JSON logging.
-- `scripts/remote_play.py` — CLI, credential checks, game runner.
+- `arena/remote_client.py` — `FidelityRemoteSession`, session runners, JSON logging.
+- `arena/remote_env.py` — repo paths, dotenv load, credential checks, server URL.
+- `arena/remote_report.py` — aggregate human-block stats, Wilson bound, star bands.
+- `scripts/remote_play.py` — CLI, game runner, session summary on exit.
+- `scripts/remote_report.py` — markdown report CLI over `data/remote_games/`.
 
 Strategy code stays in `bots/<name>/agent.py`; wire details never leak into bots.

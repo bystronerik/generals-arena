@@ -10,13 +10,15 @@ from __future__ import annotations
 
 import json
 import subprocess
+import time
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from generals_client.bot import BotError, GameResult
+from generals_client.bot import BotError, GAME_TIMEOUT_SECONDS, GameResult
 from generals_client.transport import DEFAULT_SERVER
 
 from arena.remote_bridge import (
@@ -31,6 +33,46 @@ from arena.remote_bridge import (
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 DECIDED_REASONS = frozenset({"game_won", "game_lost"})
+QUEUE_TIMEOUT_DETAIL = "did not finish within"
+DEFAULT_REQUEUE_BACKOFF_S = 30.0
+MAX_REQUEUE_BACKOFF_S = 300.0
+
+
+@dataclass
+class SessionSummary:
+    """Aggregate stats for one remote_play session."""
+
+    bot_name: str
+    room_mode: str
+    games_played: int = 0
+    wins: int = 0
+    losses: int = 0
+    queue_timeouts: int = 0
+    not_counted: int = 0
+    duration_s: float = 0.0
+    endpoint: str = ""
+    stop_reason: str = "completed"
+    queue_attempts: int = 0
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "bot_id": self.bot_name,
+            "room_mode": self.room_mode,
+            "endpoint": self.endpoint,
+            "games_played": self.games_played,
+            "wins": self.wins,
+            "losses": self.losses,
+            "queue_timeouts": self.queue_timeouts,
+            "not_counted": self.not_counted,
+            "duration_s": round(self.duration_s, 2),
+            "stop_reason": self.stop_reason,
+            "queue_attempts": self.queue_attempts,
+        }
+
+
+def is_queue_timeout(detail: str | None) -> bool:
+    """Return True when a BotError detail indicates queue/game timeout."""
+    return bool(detail and QUEUE_TIMEOUT_DETAIL in detail.lower())
 
 
 def git_head() -> str | None:
@@ -90,6 +132,7 @@ class FidelityRemoteSession:
         room_mode: str,
         log_dir: Path,
         server_url: str = DEFAULT_SERVER,
+        game_timeout: float | None = None,
     ):
         self.bot = bot
         self.bot_name = bot_name
@@ -97,8 +140,13 @@ class FidelityRemoteSession:
         self.log_dir = log_dir
         self.server_url = server_url
         self.client = ArenaGameClient(bot, user_id, server_url=server_url)
+        self.client.game_timeout = (
+            game_timeout if game_timeout is not None else GAME_TIMEOUT_SECONDS
+        )
         self._score_wins = 0
         self._score_losses = 0
+        self._last_result_reason: str | None = None
+        self._last_finish_detail: str | None = None
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
     @property
@@ -109,21 +157,27 @@ class FidelityRemoteSession:
     def register(self, username: str) -> None:
         register_username_safe(self.client, username)
 
-    def play_private(self, game_id: str) -> None:
-        self._run_game(lambda: self.client.play_private(game_id))
+    def play_private(self, game_id: str) -> str:
+        return self._run_game(lambda: self.client.play_private(game_id))
 
-    def play_1v1(self) -> None:
-        self._run_game(self.client.play_1v1)
+    def play_1v1(self) -> str:
+        return self._run_game(self.client.play_1v1)
 
-    def _run_game(self, play_fn) -> None:
+    @property
+    def last_finish_detail(self) -> str | None:
+        return self._last_finish_detail
+
+    def _run_game(self, play_fn) -> str:
         try:
             result = play_fn()
             reason = "game_won" if result.won else "game_lost"
             self._finish_with_reason(reason, result=result)
+            return reason
         except BotError as exc:
             detail = str(exc)
             reason = "disconnect" if "disconnect" in detail.lower() else "receive_error"
             self._finish_with_reason(reason, detail=detail)
+            return reason
 
     def _finish_with_reason(
         self,
@@ -132,6 +186,8 @@ class FidelityRemoteSession:
         result: GameResult | None = None,
         detail: str | None = None,
     ) -> None:
+        self._last_result_reason = result_reason
+        self._last_finish_detail = detail
         outcome = result_from_reason(result_reason)
         counts_toward_block = result_reason in DECIDED_REASONS
         is_winner = result_reason == "game_won"
@@ -214,3 +270,110 @@ class FidelityRemoteSession:
         except ValueError:
             display_path = path
         print(f"Logged game ({counted}) to {display_path}")
+
+
+def run_lobby_session(
+    session: FidelityRemoteSession,
+    lobby_id: str,
+    username: str,
+    max_games: int | None,
+) -> SessionSummary:
+    """Play private lobby games until max_games or unlimited."""
+    summary = SessionSummary(
+        bot_name=session.bot_name,
+        room_mode=session.room_mode,
+        endpoint=session.endpoint,
+    )
+    started = time.time()
+    session.register(username)
+    games_played = 0
+    while max_games is None or games_played < max_games:
+        reason = session.play_private(lobby_id)
+        games_played += 1
+        summary.games_played += 1
+        _tally_session_reason(summary, reason, session.last_finish_detail)
+        if max_games is not None and games_played >= max_games:
+            break
+    summary.duration_s = time.time() - started
+    summary.wins = session._score_wins
+    summary.losses = session._score_losses
+    return summary
+
+
+def run_1v1_session(
+    session: FidelityRemoteSession,
+    username: str,
+    max_games: int,
+    *,
+    queue_timeout_seconds: float,
+    session_deadline: float | None = None,
+    requeue_backoff_s: float = DEFAULT_REQUEUE_BACKOFF_S,
+) -> SessionSummary:
+    """Play 1v1 queue games with requeue backoff on queue timeout."""
+    summary = SessionSummary(
+        bot_name=session.bot_name,
+        room_mode=session.room_mode,
+        endpoint=session.endpoint,
+    )
+    started = time.time()
+    session.register(username)
+    session.client.game_timeout = queue_timeout_seconds
+    backoff = requeue_backoff_s
+
+    while summary.games_played < max_games:
+        if session_deadline is not None and time.time() >= session_deadline:
+            summary.stop_reason = "session_minutes"
+            break
+
+        summary.queue_attempts += 1
+        reason = session.play_1v1()
+        detail = session.last_finish_detail
+
+        if is_queue_timeout(detail):
+            summary.queue_timeouts += 1
+            if session_deadline is not None and time.time() + backoff >= session_deadline:
+                summary.stop_reason = "session_minutes"
+                break
+            print(
+                f"Queue timeout after {queue_timeout_seconds:.0f}s; "
+                f"requeue in {backoff:.0f}s...",
+                flush=True,
+            )
+            time.sleep(backoff)
+            backoff = min(backoff * 2.0, MAX_REQUEUE_BACKOFF_S)
+            continue
+
+        backoff = requeue_backoff_s
+        summary.games_played += 1
+        _tally_session_reason(summary, reason, detail)
+
+    summary.duration_s = time.time() - started
+    summary.wins = session._score_wins
+    summary.losses = session._score_losses
+    return summary
+
+
+def _tally_session_reason(
+    summary: SessionSummary,
+    reason: str,
+    detail: str | None,
+) -> None:
+    if reason in DECIDED_REASONS:
+        return
+    if is_queue_timeout(detail):
+        summary.queue_timeouts += 1
+    else:
+        summary.not_counted += 1
+
+
+def print_session_summary(summary: SessionSummary) -> None:
+    """Print a one-screen session summary on exit."""
+    print("\n--- Session summary ---")
+    print(f"Bot: {summary.bot_name}  Mode: {summary.room_mode}  Endpoint: {summary.endpoint}")
+    print(
+        f"Games: {summary.games_played}  W-L: {summary.wins}-{summary.losses}  "
+        f"Queue timeouts: {summary.queue_timeouts}  Not counted: {summary.not_counted}"
+    )
+    if summary.room_mode == "1v1":
+        print(f"Queue attempts: {summary.queue_attempts}")
+    print(f"Duration: {summary.duration_s:.0f}s  Stop: {summary.stop_reason}")
