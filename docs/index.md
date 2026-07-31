@@ -27,6 +27,7 @@ Small topic files for the Generals Arena research repo.
 ## Bots
 
 - [adding a bot](bots/adding-a-bot.md)
+- [benchmark agents](bots/benchmark-agents.md) — fixed `cm_*` wrappers over competition-module JAX agents
 - [smoke](bots/smoke.md) — Phase 1 stdio smoke test, not competitive
 - [expand_plus](bots/expand-plus.md) — greedy capture + BFS frontier march
 - [castle_builder](bots/castle-builder.md) — rested-general castle investment
