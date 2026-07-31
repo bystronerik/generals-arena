@@ -123,12 +123,19 @@ def test_edit_propagates_to_exactly_the_dependents(
 # --- probe.py: outside the closure, unreachable from inside it ---------------
 
 
-def test_probe_is_absent_from_the_closures_that_have_one():
-    """A probe is arena-owned introspection; it never plays, so it never hashes."""
-    probed = sorted(p.parent.name for p in BOTS_DIR.glob("*/probe.py"))
-    assert probed, "no bot carries a probe; this invariant would be vacuous"
-    for bot_id in probed:
-        assert not any(name.endswith("probe.py") for name in closure_names(bot_id)), bot_id
+def test_probe_is_absent_from_a_real_closure():
+    """
+    A probe is arena-owned introspection; it never plays, so it never hashes.
+
+    proteus alone is the whole invariant on one closure walk: it carries a
+    probe *and* cross-imports aegis, blitz, boom and metro, each of which
+    carries one too — so this covers the cross-directory leak, not just the
+    bot's own directory.
+    """
+    assert (BOTS_DIR / "proteus" / "probe.py").is_file()
+    names = closure_names("proteus")
+    assert "metro/agent.py" in names  # the cross-import is live
+    assert not any(name.endswith("probe.py") for name in names)
 
 
 @pytest.fixture
