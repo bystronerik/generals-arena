@@ -14,6 +14,9 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Literal
+
+Winner = Literal["a", "b", "draw"]
 
 import jax.numpy as jnp
 
@@ -89,6 +92,17 @@ def _spawn_agent(
         file=sys.stderr,
     )
     return proc
+
+
+def classic_winner_seat(winner_player_id: int, *, truncated: bool) -> Winner:
+    """Map run_classic_match player id to seat winner label."""
+    if winner_player_id == 0:
+        return "a"
+    if winner_player_id == 1:
+        return "b"
+    if truncated or winner_player_id < 0:
+        return "draw"
+    raise ValueError(f"invalid winner_player_id: {winner_player_id}")
 
 
 def run_classic_match(

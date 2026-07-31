@@ -40,6 +40,7 @@ Small topic files for the Generals Arena research repo.
 - [match runner](arena/match-runner.md)
 - [ratings (elote)](arena/ratings.md)
 - [tournament](arena/tournament.md)
+- [classic tournament](arena/classic-tournament.md)
 
 ## Research
 

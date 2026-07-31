@@ -52,6 +52,29 @@ python arena/classic_match.py bots/classic_duel/run.sh bots/smoke/run.sh \
   --seed 1 --grid-size 20 --truncation 3000
 ```
 
+## Batch grid
+
+For N seeds × bot pairs with JSON storage under `data/classic_games/` (never
+Elo), use the classic tournament runner:
+
+```bash
+python arena/classic_tournament.py \
+  bots/classic_duel/run.sh \
+  bots/smoke/run.sh \
+  --seeds 0-4 --swap-sides
+```
+
+Or the measurement CLI, which also writes a report under
+`docs/research/measurements/`:
+
+```bash
+python scripts/measure_classic.py \
+  classic_duel smoke expand_plus \
+  --seeds 0-4 --swap-sides --round classic-duel-stress
+```
+
+See [`../arena/classic-tournament.md`](../arena/classic-tournament.md).
+
 ## Relation to matchup.py
 
 `competition-module/competition/matchup.py` only accepts `--mode competition`
