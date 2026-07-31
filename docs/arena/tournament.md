@@ -12,7 +12,7 @@ timeouts when you need hang detection.
 
 ```bash
 source .venv/bin/activate
-python arena/tournament.py \
+python -m arena.tournament \
   bots/smoke/run.sh \
   bots/expand_plus/run.sh \
   --round parallel-smoke \

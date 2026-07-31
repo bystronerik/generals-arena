@@ -11,7 +11,6 @@ See docs/engine/remote-play-setup.md.
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -28,8 +27,10 @@ from arena.remote_client import FidelityRemoteSession, run_lobby_session
 from arena.remote_env import (
     REMOTE_GAMES_DIR,
     REPO_ROOT,
+    apply_env_file,
     default_username,
     load_dotenv_files,
+    parse_env_file,
     require_user_id,
     resolve_server_url,
 )
@@ -40,33 +41,9 @@ SECRET_KEYS = frozenset(
 )
 
 
-def _parse_env_file(path: Path) -> dict[str, str]:
-    """Read KEY=VALUE pairs from one env file; do not mutate os.environ."""
-    out: dict[str, str] = {}
-    if not path.is_file():
-        return out
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        key = key.strip()
-        value = value.strip().strip("'").strip('"')
-        if key:
-            out[key] = value
-    return out
-
-
 def _lobby_id_from_agent_file() -> str | None:
-    raw = _parse_env_file(ENV_AGENT).get("GENERALS_LOBBY_ID", "").strip()
+    raw = parse_env_file(ENV_AGENT).get("GENERALS_LOBBY_ID", "").strip()
     return raw or None
-
-
-def _apply_env_file(path: Path) -> None:
-    """Load env file without overwriting variables already in the shell."""
-    for key, value in _parse_env_file(path).items():
-        if key not in os.environ:
-            os.environ[key] = value
 
 
 def _counted_human_games_since(since: float) -> int:
@@ -187,7 +164,7 @@ def watch_for_lobby(
     while True:
         lobby_id = _lobby_id_from_agent_file()
         if lobby_id:
-            _apply_env_file(ENV_AGENT)
+            apply_env_file(ENV_AGENT)
             load_dotenv_files()
             return LobbyWatchSession(
                 bot=bot,

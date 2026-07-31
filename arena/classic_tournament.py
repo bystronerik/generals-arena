@@ -3,19 +3,15 @@
 from __future__ import annotations
 
 import argparse
-import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Literal
-
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
 
 from arena.classic_match import CLASSIC_ENV_DEFAULTS, run_classic_match
 from arena.match_loop import winner_seat
 from arena.parallel import cap_jobs, run_pool
 from arena.store import (
+    REPO_ROOT,
     Winner,
     bot_id_from_run_sh,
     coerce_metrics,
@@ -31,7 +27,7 @@ from arena.store import (
 )
 from arena.tournament import bot_pairs, parse_seeds
 
-CLASSIC_GAMES_DIR = _REPO_ROOT / "data" / "classic_games"
+CLASSIC_GAMES_DIR = REPO_ROOT / "data" / "classic_games"
 
 
 @dataclass

@@ -39,7 +39,7 @@ Prefer the wrapper when rating or logging. Single matches use the in-process
 runner (`arena/competition_match.py`) via `run_and_store`:
 
 ```bash
-python arena/run_match.py \
+python -m arena.run_match \
   bots/<bot_a>/run.sh \
   bots/<bot_b>/run.sh \
   --mode competition --seed 0

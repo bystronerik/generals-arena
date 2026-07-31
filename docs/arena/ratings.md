@@ -25,7 +25,7 @@ Initial Elo for new bots: **1500**.
 
 ```bash
 source .venv/bin/activate
-python arena/ratings.py --print
+python -m arena.ratings --print
 # or
 python scripts/leaderboard.py
 ```

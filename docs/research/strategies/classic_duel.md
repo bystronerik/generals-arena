@@ -156,7 +156,7 @@ average. **Falsified if** city capture rate rises but land-at-200 does not.
 Classic harness (not competition matchup):
 
 ```bash
-python arena/classic_match.py bots/classic_duel/run.sh bots/expand_plus/run.sh --seed 0
+python -m arena.classic_match bots/classic_duel/run.sh bots/expand_plus/run.sh --seed 0
 python scripts/remote_play.py --mode dry-run --bot classic_duel
 ```
 

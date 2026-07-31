@@ -36,7 +36,7 @@ Follow [`docs/research/experiment-protocol.md`](../../../docs/research/experimen
 source .venv/bin/activate   # if present; prefer python3.12
 
 # Single stored match (schema v2 telemetry)
-python arena/run_match.py bots/<a>/run.sh bots/<b>/run.sh --mode competition --seed <n>
+python -m arena.run_match bots/<a>/run.sh bots/<b>/run.sh --mode competition --seed <n>
 
 # Rule C heuristic round (parallel pool + round report)
 python scripts/measure_heuristics.py \

@@ -6,13 +6,8 @@ import argparse
 import itertools
 import json
 import random
-import sys
 from pathlib import Path
 from typing import Any
-
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
 
 from arena.parallel import cap_jobs, default_jobs, run_pool
 from arena.ratings import rebuild_from_games

@@ -106,7 +106,7 @@ each. Elo rebuilds once after the pool (omit `--no-ratings` for that, or pass
 source .venv/bin/activate
 BOTS="$(ls -d bots/*/run.sh) competition-module/competition/agents/expander_python/run.sh"
 
-python arena/tournament.py $BOTS \
+python -m arena.tournament $BOTS \
   --round stage2-dev \
   --games-per-pair 50 \
   --round-seed 1 \
@@ -351,19 +351,19 @@ source .venv/bin/activate
 
 # Stage 2.0 — gate every bot against the anchor
 for b in bots/*/run.sh; do
-  python arena/run_match.py "$b" bots/smoke/run.sh --seed 0 --timeout 120
+  python -m arena.run_match "$b" bots/smoke/run.sh --seed 0 --timeout 120
 done
 
 # Stage 2.2 — full round robin via worker pool (Rule C)
 BOTS="$(ls -d bots/*/run.sh) competition-module/competition/agents/expander_python/run.sh"
-python arena/tournament.py $BOTS \
+python -m arena.tournament $BOTS \
   --round stage2-dev \
   --games-per-pair 50 \
   --round-seed 1 \
   --timeout 120
 
 # Stage 2.3 — holdout, top 6 only (fixed seeds if desired)
-python arena/tournament.py <six run.sh paths> \
+python -m arena.tournament <six run.sh paths> \
   --round stage2-holdout \
   --seeds 100-111 \
   --timeout 120

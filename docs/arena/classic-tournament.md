@@ -10,7 +10,7 @@ For a full grid plus Markdown/JSON report, use [`scripts/measure_classic.py`](..
 
 ```bash
 source .venv/bin/activate
-python arena/classic_tournament.py \
+python -m arena.classic_tournament \
   bots/classic_duel/run.sh \
   bots/smoke/run.sh \
   --seeds 0-2

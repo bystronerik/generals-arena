@@ -26,7 +26,7 @@ import jax.numpy as jnp
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _COMP = _REPO_ROOT / "competition-module"
-for _path in (_REPO_ROOT, _COMP, _COMP / "competition"):
+for _path in (_COMP, _COMP / "competition"):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 

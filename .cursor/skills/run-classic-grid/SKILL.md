@@ -37,7 +37,7 @@ python scripts/measure_classic.py \
 Lower-level tournament (no report):
 
 ```bash
-python arena/classic_tournament.py \
+python -m arena.classic_tournament \
   bots/classic_duel/run.sh bots/army_convey/run.sh \
   --seeds 0-2 --swap-sides --jobs 2
 ```

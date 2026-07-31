@@ -26,7 +26,7 @@ description: >-
 
 ```bash
 source .venv/bin/activate   # if present; prefer python3.12
-python arena/ratings.py     # or scripts/ CLI that wraps arena/ratings.py
+python -m arena.ratings     # or scripts/ CLI that wraps arena/ratings.py
 ```
 
 Typical flow after a grid:

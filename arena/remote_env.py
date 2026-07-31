@@ -14,28 +14,34 @@ SETUP_DOC = "docs/engine/remote-play-setup.md"
 PUBLIC_SERVER_URL = DEFAULT_SERVER
 
 
-def ensure_repo_on_path() -> None:
-    """Insert repo root on ``sys.path`` when the script is run directly."""
-    root = str(REPO_ROOT)
-    if root not in sys.path:
-        sys.path.insert(0, root)
+def parse_env_file(path: Path) -> dict[str, str]:
+    """Read KEY=VALUE pairs from one env file without mutating os.environ."""
+    out: dict[str, str] = {}
+    if not path.is_file():
+        return out
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip("'").strip('"')
+        if key:
+            out[key] = value
+    return out
+
+
+def apply_env_file(path: Path) -> None:
+    """Load one env file into os.environ without overwriting existing values."""
+    for key, value in parse_env_file(path).items():
+        if key not in os.environ:
+            os.environ[key] = value
 
 
 def load_dotenv_files() -> None:
     """Load KEY=VALUE pairs from .env and .env.agent without overwriting existing env."""
     for name in (".env", ".env.agent"):
-        path = REPO_ROOT / name
-        if not path.is_file():
-            continue
-        for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key = key.strip()
-            value = value.strip().strip("'").strip('"')
-            if key and key not in os.environ:
-                os.environ[key] = value
+        apply_env_file(REPO_ROOT / name)
 
 
 def require_user_id() -> str:

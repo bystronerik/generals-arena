@@ -12,7 +12,7 @@
 
 ```bash
 source .venv/bin/activate
-python arena/run_match.py \
+python -m arena.run_match \
   bots/smoke/run.sh \
   competition-module/competition/agents/expander_python/run.sh \
   --mode competition --seed 0

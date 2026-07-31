@@ -72,7 +72,7 @@ python competition-module/competition/matchup.py \
 Arena store (writes `data/games/<game_id>.json`):
 
 ```bash
-python arena/run_match.py \
+python -m arena.run_match \
   bots/smoke/run.sh \
   competition-module/competition/agents/expander_python/run.sh \
   --mode competition --seed 0
@@ -82,6 +82,10 @@ python scripts/smoke_match.py --seed 0 --update-ratings
 ```
 
 A valid competition match must finish under `--mode competition`. Full games can run to 1200 turns.
+
+Run `arena/` modules as modules (`python -m arena.<name>`) from the repo root,
+not as file paths — the package no longer bootstraps `sys.path` for direct
+execution. Scripts under `scripts/` still run as `python scripts/<name>.py`.
 
 ## Tournament and leaderboard
 

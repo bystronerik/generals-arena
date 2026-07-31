@@ -17,7 +17,7 @@ For competition verification, use [`local-matchup.md`](local-matchup.md) with
 From the repo root:
 
 ```bash
-python arena/classic_match.py \
+python -m arena.classic_match \
   bots/classic_duel/run.sh \
   bots/expand_plus/run.sh \
   --seed 0
@@ -26,7 +26,7 @@ python arena/classic_match.py \
 Against smoke:
 
 ```bash
-python arena/classic_match.py \
+python -m arena.classic_match \
   bots/classic_duel/run.sh \
   bots/smoke/run.sh \
   --seed 0
@@ -48,7 +48,7 @@ python arena/classic_match.py \
 Override board size and truncation:
 
 ```bash
-python arena/classic_match.py bots/classic_duel/run.sh bots/smoke/run.sh \
+python -m arena.classic_match bots/classic_duel/run.sh bots/smoke/run.sh \
   --seed 1 --grid-size 20 --truncation 3000
 ```
 
@@ -58,7 +58,7 @@ For N seeds × bot pairs with JSON storage under `data/classic_games/` (never
 Elo), use the classic tournament runner:
 
 ```bash
-python arena/classic_tournament.py \
+python -m arena.classic_tournament \
   bots/classic_duel/run.sh \
   bots/smoke/run.sh \
   --seeds 0-4 --swap-sides
