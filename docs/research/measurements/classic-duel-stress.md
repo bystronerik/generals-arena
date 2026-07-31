@@ -126,3 +126,61 @@ Mean turns (decided games): 812.6
   could not convert before truncation). Net grid improves 23-6-1 → 24-5-1.
 - Remaining `army_convey` losses (5) still include 3 games with no sighting when
   classic_duel plays seat 1.
+
+## Parameter revision 2 (frontier gather concentration)
+
+Generated: 2026-07-31T02:45:00Z
+
+Applied `GATHER_DEST_ARMY_WEIGHT = 1.0` — frontier gathering favors thicker
+frontier tips over largest interior source alone.
+
+| Opponent | W | L | D | Winrate | Δ vs rev1 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `expand_plus` | 9 | 0 | 1 | 90% | same |
+| `smoke` | 10 | 0 | 0 | 100% | same |
+| `army_convey` | 6 | 4 | 0 | 60% | +1W −1L |
+| **Total** | **25** | **4** | **1** | **83.3%** | **+1W −1L** |
+
+Mean turns (decided games): 798.2
+
+### Revision 2 game log
+
+| bot_a | bot_b | seed | winner | turns |
+| --- | --- | ---: | --- | ---: |
+| `classic_duel` | `army_convey` | 0 | `classic_duel` | 346 |
+| `army_convey` | `classic_duel` | 0 | `army_convey` | 483 |
+| `classic_duel` | `army_convey` | 1 | `classic_duel` | 270 |
+| `army_convey` | `classic_duel` | 1 | `classic_duel` | 182 |
+| `classic_duel` | `army_convey` | 2 | `army_convey` | 1010 |
+| `army_convey` | `classic_duel` | 2 | `army_convey` | 1149 |
+| `classic_duel` | `army_convey` | 3 | `classic_duel` | 2471 |
+| `army_convey` | `classic_duel` | 3 | `classic_duel` | 2074 |
+| `classic_duel` | `army_convey` | 4 | `classic_duel` | 1271 |
+| `army_convey` | `classic_duel` | 4 | `army_convey` | 984 |
+| `classic_duel` | `expand_plus` | 0 | `classic_duel` | 533 |
+| `expand_plus` | `classic_duel` | 0 | `classic_duel` | 749 |
+| `classic_duel` | `expand_plus` | 1 | `classic_duel` | 188 |
+| `expand_plus` | `classic_duel` | 1 | `classic_duel` | 332 |
+| `classic_duel` | `expand_plus` | 2 | `draw` | 5000 |
+| `expand_plus` | `classic_duel` | 2 | `classic_duel` | 1412 |
+| `classic_duel` | `expand_plus` | 3 | `classic_duel` | 785 |
+| `expand_plus` | `classic_duel` | 3 | `classic_duel` | 482 |
+| `classic_duel` | `expand_plus` | 4 | `classic_duel` | 1243 |
+| `expand_plus` | `classic_duel` | 4 | `classic_duel` | 541 |
+| `classic_duel` | `smoke` | 0 | `classic_duel` | 680 |
+| `smoke` | `classic_duel` | 0 | `classic_duel` | 581 |
+| `classic_duel` | `smoke` | 1 | `classic_duel` | 182 |
+| `smoke` | `classic_duel` | 1 | `classic_duel` | 349 |
+| `classic_duel` | `smoke` | 2 | `classic_duel` | 694 |
+| `smoke` | `classic_duel` | 2 | `classic_duel` | 1115 |
+| `classic_duel` | `smoke` | 3 | `classic_duel` | 743 |
+| `smoke` | `classic_duel` | 3 | `classic_duel` | 674 |
+| `classic_duel` | `smoke` | 4 | `classic_duel` | 797 |
+| `smoke` | `classic_duel` | 4 | `classic_duel` | 510 |
+
+### Revision 2 assessment
+
+- Seat-1 `army_convey` seed 1 flipped loss → win (turn 182).
+- Remaining `army_convey` losses: seat 0 seed 2; seat 1 seeds 0, 2, 4 (three
+  without early sighting).
+- No regression on `smoke`; `expand_plus` unchanged at 90%.
