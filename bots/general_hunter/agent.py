@@ -93,14 +93,6 @@ class Agent:
 
         return self._finish_move(PASS)
 
-    def telemetry_extras(self):
-        if self.belief.first_sighting_turn is None:
-            return {"enemy_general_sighted": 0}
-        return {
-            "enemy_general_sighted": 1,
-            "first_sighting_turn": self.belief.first_sighting_turn,
-        }
-
     def _finish_move(self, move):
         self._advance_probe_tracking(move)
         return move

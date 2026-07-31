@@ -751,10 +751,3 @@ class Agent:
 
     def act(self, obs):
         return self._core.decide(obs)
-
-    def telemetry_extras(self) -> dict:
-        mem = self._core.memory
-        return {
-            "castles_built": mem.castles_built,
-            "pushing": 1 if mem.pushing else 0,
-        }

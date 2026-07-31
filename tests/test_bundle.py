@@ -128,3 +128,28 @@ def test_bundle_runs_standalone(tmp_path):
     assert 0 <= row < 5 and 0 <= col < 5
     assert direction in (0, 1, 2, 3)
     assert split in (0, 1)
+
+
+def test_the_bundle_carries_no_instrumentation(tmp_path):
+    """
+    The submitted program is game logic only.
+
+    Probes and the instrumented runner live outside every closure, so neither
+    can reach a zip — and `wire.py` is a bare protocol loop again.
+    """
+    info = write_bundle("metro", tmp_path / "metro.zip")
+    with zipfile.ZipFile(info.zip_path) as zf:
+        names = zf.namelist()
+        wire = zf.read("bots/_common/wire.py").decode("utf-8")
+
+    assert not any(n.endswith("probe.py") for n in names)
+    assert not any(n.startswith("arena/") for n in names)
+    for symbol in ("telemetry", "_telemetry_line", "telemetry_extras"):
+        assert symbol not in wire
+
+
+def test_a_probe_beside_the_agent_stays_out_of_the_bundle():
+    """metro has a probe on disk; the bundle must not notice."""
+    assert (BOTS_DIR / "metro" / "probe.py").is_file()
+    names = {arcname for _, arcname in bundle_members("metro")}
+    assert "bots/metro/probe.py" not in names

@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import pytest
 
+from arena.instrument.probes import load_probe, probe_extras
 from arena.bot_api import ArenaAgent, StrategySession, load_strategy_class
+from arena.records.fingerprint import BOTS_DIR
 from test_common_tactics import _grid, make_obs
 
 MIGRATED_BOTS = ["blitz", "boom", "metro", "aegis", "proteus"]
@@ -42,12 +44,15 @@ def test_strategy_session(name):
 
 
 @pytest.mark.parametrize("name", MIGRATED_BOTS)
-def test_telemetry_extras_dict(name):
+def test_probe_reads_the_agent_without_being_part_of_it(name):
+    """Introspection moved out of the closure; the probe reads it from outside."""
     agent_cls = load_strategy_class(name)
     agent = agent_cls(player_id=0, H=5, W=5)
     agent.act(_basic_obs())
-    extras = agent.telemetry_extras()
-    assert isinstance(extras, dict)
+
+    assert not hasattr(agent, "telemetry_extras")
+    extras = probe_extras(load_probe(BOTS_DIR / name), agent)
+    assert isinstance(extras, dict) and extras
 
 
 # ------------------------------------------------------------------- blitz
@@ -69,7 +74,7 @@ def test_blitz_finishing_move_takes_visible_general():
     action = agent.act(obs)
     # (2,1) -> right (direction 3) onto the enemy general.
     assert action == (0, 2, 1, 3, 0)
-    assert agent.telemetry_extras()["phase"] == "finish"
+    assert probe_extras(load_probe(BOTS_DIR / "blitz"), agent)["phase"] == "finish"
 
 
 def test_blitz_chain_launch_rule():
@@ -109,7 +114,7 @@ def test_blitz_defends_home_when_threatened():
     action = agent.act(obs)
     # Deficit is real (no reinforcement can arrive in time), so blitz pulls
     # its field stack home: (2,2) starts walking toward the general.
-    assert agent.telemetry_extras()["phase"] == "defend"
+    assert probe_extras(load_probe(BOTS_DIR / "blitz"), agent)["phase"] == "defend"
     assert action[0] == 0 and (action[1], action[2]) == (2, 2)
 
 

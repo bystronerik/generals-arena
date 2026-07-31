@@ -20,6 +20,14 @@ outside the closure: pinning third-party versions is the lockfile's job.
 Resolution mirrors how a bot actually runs — `bots/<id>/main.py` puts `bots/`
 on `sys.path` and imports a bare `agent`, so bare names resolve against the bot
 directory first, then against `bots/`.
+
+One name is excluded by rule: `probe.py`. A probe is arena-owned per-turn
+introspection that only `arena.instrument.runner` ever loads (see
+docs/arena/trajectories.md); it never plays, never ships in a bundle, and must
+not fork a rating identity when it is edited. What keeps that honest is the
+invariant **unhashed code must be unreachable from the hashed program**: if any
+module in the closure imports `probe`, the walk raises rather than
+under-hashing a program that a probe can influence.
 """
 
 from __future__ import annotations
@@ -39,6 +47,11 @@ HASH_LENGTH = 12
 _SKIP_DIRS = {"__pycache__", ".git", ".mypy_cache", ".pytest_cache", ".ruff_cache"}
 _SKIP_SUFFIXES = {".pyc", ".pyo"}
 
+# Per-turn introspection, loaded only by `arena.instrument.runner`. Outside the
+# closure, so probe edits move no hash and no bundle.
+PROBE_FILENAME = "probe.py"
+PROBE_MODULE = "probe"
+
 # Shell launchers source siblings by path (`bots/cm_*/run.sh` -> `_common/cm_run.sh`),
 # which no AST walk would find. Best-effort: pick paths that look like bots/ files.
 _SHELL_REF_RE = re.compile(r"[\w./-]*?([\w-]+/[\w.-]+\.(?:sh|py))")
@@ -46,6 +59,8 @@ _SHELL_REF_RE = re.compile(r"[\w./-]*?([\w-]+/[\w.-]+\.(?:sh|py))")
 
 def _is_source(path: Path) -> bool:
     if path.suffix in _SKIP_SUFFIXES:
+        return False
+    if path.name == PROBE_FILENAME:
         return False
     return not any(part in _SKIP_DIRS for part in path.parts)
 
@@ -120,12 +135,23 @@ def _shell_referenced(source: str) -> set[str]:
     return {match.group(1) for match in _SHELL_REF_RE.finditer(source)}
 
 
+class ProbeInClosureError(RuntimeError):
+    """
+    A hashed module imports a `probe.py`, which is not hashed.
+
+    That would make the rating identity blind to code the program can execute:
+    editing the probe would change how the bot plays without moving its hash.
+    A loud failure here is the price of keeping probes out of the closure.
+    """
+
+
 def bot_source_closure(bot_dir: Path) -> list[Path]:
     """
     Every source file the bot's behaviour depends on, sorted and deduplicated.
 
     Seeded with the bot's own directory, then expanded over `bots/` imports
-    (and shell `source` references) until it stops growing.
+    (and shell `source` references) until it stops growing. `probe.py` is
+    excluded by rule and may not be imported from inside the closure.
     """
     bot_dir = bot_dir.resolve()
     search_dirs = [bot_dir, BOTS_DIR]
@@ -146,6 +172,12 @@ def bot_source_closure(bot_dir: Path) -> list[Path]:
         if path.suffix == ".py":
             for module in _imported_names(source, path):
                 resolved = _module_file(module, search_dirs)
+                if resolved is not None and resolved.name == PROBE_FILENAME:
+                    raise ProbeInClosureError(
+                        f"{relative_label(path)} imports {module!r}, which resolves "
+                        f"to the unhashed {relative_label(resolved)}; a probe must "
+                        f"never be reachable from the program it observes"
+                    )
                 if resolved is not None and resolved not in seen:
                     queue.append(resolved)
                 for init in _package_inits(module, search_dirs):

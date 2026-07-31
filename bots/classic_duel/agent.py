@@ -107,17 +107,6 @@ class Agent:
             return fallback
         return PASS
 
-    def telemetry_extras(self):
-        extras = {}
-        if self.first_sighting_turn is not None:
-            extras["enemy_general_sighted"] = 1
-            extras["first_sighting_turn"] = self.first_sighting_turn
-        else:
-            extras["enemy_general_sighted"] = 0
-        if self.first_city_capture_turn is not None:
-            extras["first_city_capture_turn"] = self.first_city_capture_turn
-        return extras
-
     def _locate_own_general(self, obs):
         if self.general_pos is not None:
             return

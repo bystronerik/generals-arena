@@ -1,14 +1,18 @@
 """
 Competition stdio wire loop shared by every ``bots/<name>/main.py``.
 
-Parses the matchup line protocol, drives ``Agent.act``, emits generic
-``[telemetry]`` lines from optional ``telemetry_extras()``.
+Parses the matchup line protocol and drives ``Agent.act``. Nothing else: this
+module sits in every bot's source closure, so it ships in every submission
+bundle and is part of every rating identity. Per-turn introspection lives
+outside ``bots/`` entirely — ``arena.instrument.runner`` drives this same
+protocol from these same helpers and reads ``bots/<name>/probe.py`` alongside
+it (docs/arena/trajectories.md).
 """
 from __future__ import annotations
 
 import sys
 from dataclasses import dataclass
-from typing import Callable, List, Type
+from typing import List, Type
 
 
 @dataclass
@@ -48,22 +52,6 @@ def _read_observation(stdin, H: int, W: int, scalars_line: str) -> Observation:
     )
 
 
-def _telemetry_line(player_id: int, last_obs: Observation, agent) -> str:
-    parts = [
-        "[telemetry]",
-        f"player={player_id}",
-        f"turn={last_obs.turn}",
-        f"my_land={last_obs.my_land}",
-        f"my_army={last_obs.my_army}",
-        f"opp_land={last_obs.opp_land}",
-        f"opp_army={last_obs.opp_army}",
-    ]
-    extras = agent.telemetry_extras() if hasattr(agent, "telemetry_extras") else {}
-    for key in sorted(extras):
-        parts.append(f"{key}={extras[key]}")
-    return " ".join(parts) + "\n"
-
-
 def run_stdio(agent_class: Type) -> None:
     """Run the competition stdin/stdout loop for ``agent_class``."""
     stdin = sys.stdin
@@ -75,17 +63,13 @@ def run_stdio(agent_class: Type) -> None:
     player_id, H, W = (int(x) for x in handshake.split())
 
     agent = agent_class(player_id=player_id, H=H, W=W)
-    last_obs: Observation | None = None
 
     while True:
         first = stdin.readline()
         if not first:
-            if last_obs is not None:
-                sys.stderr.write(_telemetry_line(player_id, last_obs, agent))
             return
 
         obs = _read_observation(stdin, H, W, first)
-        last_obs = obs
         p, r, c, d, s = agent.act(obs)
         stdout.write(f"{p} {r} {c} {d} {s}\n")
         stdout.flush()

@@ -81,7 +81,7 @@ belief to `castles_built_probe_a/_b`.
 SHA-256 over the bot's source closure, computed by
 `arena/records/fingerprint.py`:
 
-- every file in `bots/<id>/`, excluding `__pycache__` and `*.pyc`;
+- every file in `bots/<id>/`, excluding `__pycache__`, `*.pyc`, and `probe.py`;
 - every module under `bots/` it imports, transitively — this crosses bot
   directories, so `proteus` covers `aegis`, `blitz`, `boom` and `metro`, and
   every bot covers `_common/wire.py`;
@@ -89,6 +89,19 @@ SHA-256 over the bot's source closure, computed by
 
 Imports that do not resolve under `bots/` (stdlib, `jax`, `generals`) are
 excluded — third-party versions are the lockfile's job.
+
+### The `probe.py` exclusion
+
+`bots/<id>/probe.py` is arena-owned per-turn introspection, loaded only by
+`arena.instrument.runner` on recorded matches
+([trajectories.md](trajectories.md)). It never plays, so it is outside the
+closure: adding or editing a probe moves no hash and reaches no bundle.
+
+What keeps that honest is one invariant — **unhashed code must be unreachable
+from the hashed program**. `bot_source_closure` raises `ProbeInClosureError`
+if any module in the closure imports `probe`, because a probe the agent could
+call would change how the bot plays while leaving its rating identity
+untouched.
 
 Two games share a bot's content hash only if that bot was byte-identical. The
 hash is required and must never be `"unknown"`: `fingerprint.bot_content_hash`
@@ -123,25 +136,22 @@ Stored on the record so eligibility never has to parse a path. Batch rounds
 pass their own name; one-off matches through `arena/matches/run_match.py`
 default to `adhoc` and can override it with `--round`.
 
-## Bot stderr telemetry
+## Where observations come from
 
-Each bot may write one line to stderr when stdin reaches EOF:
+**Bots emit no telemetry.** The `[telemetry]` stderr line and every
+`telemetry_extras()` method were deleted: the submitted bundle and the rated
+closure are pure game logic, and nothing in `arena/` parses bot stderr. Two
+sources feed `metrics` instead:
 
-```
-[telemetry] player=<0|1> turn=<int> my_land=<int> my_army=<int> opp_land=<int> opp_army=<int> [enemy_general_sighted=<0|1>] [first_sighting_turn=<int>]
-```
+| Source | Available on | Keys |
+| --- | --- | --- |
+| the engine's terminal `GameInfo` | every match | finals, castle tallies, land margins |
+| recorded trajectories | matches run with `--record` | probe output and series reducers ([trajectories.md](trajectories.md)) |
 
-`run_match.py` takes the last line per player, maps player 0 to bot A, and
-fills the opposite land/army from `opp_*` when only one bot reports.
-
-Sighting fields are copied into `metrics`:
-
-| Metric key | Meaning |
-| --- | --- |
-| `enemy_general_sighted_a` / `_b` | bool — bot ever saw the enemy general |
-| `first_sighting_turn_a` / `_b` | int — turn of first sighting |
-
-See [`docs/research/strategies/optimize-existing.md`](../research/strategies/optimize-existing.md) §5.2.
+Engine finals are ground truth for both seats. They are also *post-capture*:
+when a general falls the engine transfers the loser's cells to the winner
+first, so a decisive game's finals are the winner's totals, not the last thing
+either bot saw.
 
 ## Rules
 

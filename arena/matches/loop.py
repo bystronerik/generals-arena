@@ -54,6 +54,14 @@ class MatchLoopResult:
     truncated: bool
     castles_built_a: int | None
     castles_built_b: int | None
+    # Terminal-state truth, straight off the engine's own `GameInfo`. The bots
+    # are not asked and cannot lie: a seat's view of its opponent is
+    # fog-limited, and a seat that crashed reports nothing at all. `None` only
+    # when no turn was ever stepped.
+    final_land_a: int | None
+    final_land_b: int | None
+    final_army_a: int | None
+    final_army_b: int | None
     stderr: str
 
 
@@ -112,6 +120,22 @@ def winner_seat(winner_player_id: int, *, truncated: bool) -> Winner:
     raise ValueError(f"invalid winner_player_id: {winner_player_id}")
 
 
+def _final_scalars(
+    info,
+) -> tuple[tuple[int | None, int | None], tuple[int | None, int | None]]:
+    """
+    `((land_a, land_b), (army_a, army_b))` off the last `GameInfo`.
+
+    Read once at the end rather than per turn: each access pulls a JAX device
+    array back to the host. On a capture the engine has already transferred the
+    loser's cells to the winner, so these are the post-capture totals — the
+    engine's own final answer, not the last thing either bot saw.
+    """
+    if info is None:
+        return (None, None), (None, None)
+    return (int(info.land[0]), int(info.land[1])), (int(info.army[0]), int(info.army[1]))
+
+
 def _read_temp_stderr(stderr_file: IO[str]) -> str:
     try:
         stderr_file.seek(0)
@@ -133,9 +157,10 @@ def run_stdio_match(
     Play one stdio match on `env` and return its outcome.
 
     Castles are tallied only when `env.build_castles` is set, so classic runs
-    report None for both counts. Bot stderr is captured for the caller (the
-    competition path parses `[telemetry]` lines out of it) rather than
-    streamed to the terminal.
+    report None for both counts. Final land and army come off the engine's last
+    `GameInfo`, so a record never depends on a bot reporting its own score.
+    Bot stderr is captured for the caller — it is debug output now, nothing
+    parses it — rather than streamed to the terminal.
     """
     a0_path = bot_a_run.resolve()
     a1_path = bot_b_run.resolve()
@@ -171,6 +196,7 @@ def run_stdio_match(
     truncated = False
     started = time.monotonic()
     stderr_parts: list[str] = []
+    last_info = None
 
     try:
         while turn < env.truncation:
@@ -188,6 +214,7 @@ def run_stdio_match(
 
             actions = jnp.stack([a_0, a_1])
             state, info = transition(state, actions)
+            last_info = info
             turn += 1
 
             if env.build_castles:
@@ -210,6 +237,8 @@ def run_stdio_match(
             stderr_parts.append(_read_temp_stderr(err))
             err.close()
 
+    land, army = _final_scalars(last_info)
+
     return MatchLoopResult(
         winner=winner_seat(winner_player, truncated=truncated),
         winner_player_id=winner_player,
@@ -218,5 +247,9 @@ def run_stdio_match(
         truncated=truncated,
         castles_built_a=built[0] if env.build_castles else None,
         castles_built_b=built[1] if env.build_castles else None,
+        final_land_a=land[0],
+        final_land_b=land[1],
+        final_army_a=army[0],
+        final_army_b=army[1],
         stderr="\n".join(stderr_parts),
     )

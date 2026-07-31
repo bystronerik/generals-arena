@@ -118,3 +118,78 @@ def test_edit_propagates_to_exactly_the_dependents(
         assert before[name] != after[name], f"{name} should depend on {target}"
     for name in unaffected:
         assert before[name] == after[name], f"{name} should not depend on {target}"
+
+
+# --- probe.py: outside the closure, unreachable from inside it ---------------
+
+
+def test_probe_is_absent_from_the_closures_that_have_one():
+    """A probe is arena-owned introspection; it never plays, so it never hashes."""
+    probed = sorted(p.parent.name for p in BOTS_DIR.glob("*/probe.py"))
+    assert probed, "no bot carries a probe; this invariant would be vacuous"
+    for bot_id in probed:
+        assert not any(name.endswith("probe.py") for name in closure_names(bot_id)), bot_id
+
+
+@pytest.fixture
+def sandbox(tmp_path, monkeypatch):
+    """
+    Two throwaway bots, so the closure rules can be exercised in milliseconds.
+
+    Deliberately synthetic rather than a copy of `bots/`: these tests are about
+    the hashing rule, not about any real bot's imports.
+    """
+    import arena.records.fingerprint as fingerprint
+
+    root = tmp_path / "bots"
+    for name, agent_src in (("one", "VALUE = 1\n"), ("two", "from one.agent import VALUE\n")):
+        bot = root / name
+        bot.mkdir(parents=True)
+        (bot / "agent.py").write_text(agent_src, encoding="utf-8")
+        (bot / "main.py").write_text("import agent\n", encoding="utf-8")
+        (bot / "run.sh").write_text("exec python main.py\n", encoding="utf-8")
+    monkeypatch.setattr(fingerprint, "BOTS_DIR", root)
+    monkeypatch.setattr(fingerprint, "REPO_ROOT", tmp_path)
+    return fingerprint, root
+
+
+def test_adding_or_editing_a_probe_does_not_move_the_hash(sandbox):
+    """The point of the exclusion: instrumentation stops being hash-coupled."""
+    fingerprint, root = sandbox
+    before = fingerprint.content_hash_for_dir(root / "one")
+
+    probe = root / "one" / "probe.py"
+    probe.write_text("def extras(agent):\n    return {}\n", encoding="utf-8")
+    assert fingerprint.content_hash_for_dir(root / "one") == before
+
+    probe.write_text("def extras(agent):\n    return {'phase': 'x'}\n", encoding="utf-8")
+    assert fingerprint.content_hash_for_dir(root / "one") == before
+    assert "one/probe.py" not in {
+        p.relative_to(root).as_posix() for p in fingerprint.bot_source_closure(root / "one")
+    }
+
+
+def test_a_closure_module_importing_probe_raises(sandbox):
+    """
+    Unhashed code must be unreachable from the hashed program.
+
+    A probe the agent imports could change how the bot plays while leaving its
+    rating identity untouched — a silent under-hash. Fail loudly instead.
+    """
+    fingerprint, root = sandbox
+    (root / "one" / "probe.py").write_text("def extras(agent):\n    return {}\n", encoding="utf-8")
+    agent = root / "one" / "agent.py"
+    agent.write_text("import probe\n" + agent.read_text(encoding="utf-8"), encoding="utf-8")
+
+    with pytest.raises(fingerprint.ProbeInClosureError, match="probe"):
+        fingerprint.content_hash_for_dir(root / "one")
+
+
+def test_the_guard_also_catches_a_cross_bot_probe_import(sandbox):
+    fingerprint, root = sandbox
+    (root / "one" / "probe.py").write_text("def extras(agent):\n    return {}\n", encoding="utf-8")
+    agent = root / "two" / "agent.py"
+    agent.write_text("from one import probe\n" + agent.read_text(encoding="utf-8"), encoding="utf-8")
+
+    with pytest.raises(fingerprint.ProbeInClosureError, match="one/probe.py"):
+        fingerprint.content_hash_for_dir(root / "two")

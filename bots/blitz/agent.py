@@ -825,11 +825,3 @@ class Agent:
 
     def act(self, obs):
         return self._core.decide(obs)
-
-    def telemetry_extras(self) -> dict:
-        mem = self._core.memory
-        return {
-            "phase": mem.phase,
-            "strikes": mem.strikes,
-            "enemy_general_sighted": 1 if mem.belief.enemy_general else 0,
-        }

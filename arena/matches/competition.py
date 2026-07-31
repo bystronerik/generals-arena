@@ -35,6 +35,11 @@ class CompetitionMatchResult:
     truncated: bool
     castles_built_a: int | None
     castles_built_b: int | None
+    # Terminal-state truth from the engine (loop.MatchLoopResult).
+    final_land_a: int | None
+    final_land_b: int | None
+    final_army_a: int | None
+    final_army_b: int | None
     stderr: str
 
 
@@ -71,6 +76,10 @@ def run_competition_match(
         truncated=result.truncated,
         castles_built_a=result.castles_built_a,
         castles_built_b=result.castles_built_b,
+        final_land_a=result.final_land_a,
+        final_land_b=result.final_land_b,
+        final_army_a=result.final_army_a,
+        final_army_b=result.final_army_b,
         stderr=result.stderr,
     )
 

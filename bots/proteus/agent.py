@@ -60,10 +60,3 @@ class Agent:
     @property
     def active_strategy(self) -> str:
         return self.switcher.current
-
-    def telemetry_extras(self) -> dict:
-        return {
-            "active": self.switcher.current,
-            "label": self.switcher.label,
-            "switches": len(self.switcher.history),
-        }

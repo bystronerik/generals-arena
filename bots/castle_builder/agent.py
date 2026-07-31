@@ -94,14 +94,6 @@ class Agent:
 
         return PASS
 
-    def telemetry_extras(self):
-        if self.belief.first_sighting_turn is None:
-            return {"enemy_general_sighted": 0}
-        return {
-            "enemy_general_sighted": 1,
-            "first_sighting_turn": self.belief.first_sighting_turn,
-        }
-
     def _own_structures(self, obs):
         structures = []
         castles = 0
