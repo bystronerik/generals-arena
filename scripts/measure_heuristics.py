@@ -172,7 +172,7 @@ def game_entry_from_record(record: GameRecord, *, tag: str = "") -> GameEntry:
 
 
 def run_one(spec: MatchSpec, *, update_ratings: bool, games_dir: Path | None = None) -> GameEntry:
-    from arena.run_match import run_and_store
+    from arena.matches.run_match import run_and_store
 
     a_path = bot_run_sh(spec.bot_a)
     b_path = bot_run_sh(spec.bot_b)

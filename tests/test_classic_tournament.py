@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from arena.match_loop import winner_seat
+from arena.matches.loop import winner_seat
 from arena.classic_tournament import (
     ClassicGameRecord,
     ClassicMatchSpec,

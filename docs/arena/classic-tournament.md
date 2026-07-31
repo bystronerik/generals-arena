@@ -1,7 +1,7 @@
 # Classic tournament
 
 `arena/classic_tournament.py` runs N seeds × bot pairs under the
-classic-approximate harness (`arena/classic_match.py`). Each match is stored
+classic-approximate harness (`arena/matches/classic.py`). Each match is stored
 under `data/classic_games/` — **not** `data/games/` and **not** Elo.
 
 For a full grid plus Markdown/JSON report, use [`scripts/measure_classic.py`](../../scripts/measure_classic.py).

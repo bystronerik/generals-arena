@@ -17,7 +17,7 @@ For competition verification, use [`local-matchup.md`](local-matchup.md) with
 From the repo root:
 
 ```bash
-python -m arena.classic_match \
+python -m arena.matches.classic \
   bots/classic_duel/run.sh \
   bots/expand_plus/run.sh \
   --seed 0
@@ -26,7 +26,7 @@ python -m arena.classic_match \
 Against smoke:
 
 ```bash
-python -m arena.classic_match \
+python -m arena.matches.classic \
   bots/classic_duel/run.sh \
   bots/smoke/run.sh \
   --seed 0
@@ -34,7 +34,7 @@ python -m arena.classic_match \
 
 ## Environment settings
 
-`arena/classic_match.py` builds `GeneralsEnv` with:
+`arena/matches/classic.py` builds `GeneralsEnv` with:
 
 | Setting | Value | Effect |
 | --- | --- | --- |
@@ -48,7 +48,7 @@ python -m arena.classic_match \
 Override board size and truncation:
 
 ```bash
-python -m arena.classic_match bots/classic_duel/run.sh bots/smoke/run.sh \
+python -m arena.matches.classic bots/classic_duel/run.sh bots/smoke/run.sh \
   --seed 1 --grid-size 20 --truncation 3000
 ```
 

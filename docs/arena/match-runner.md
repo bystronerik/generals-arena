@@ -1,6 +1,6 @@
 # Match runner
 
-`arena/run_match.py` wraps `competition-module/competition/matchup.py` and writes one JSON record under `data/games/`.
+`arena/matches/run_match.py` wraps `competition-module/competition/matchup.py` and writes one JSON record under `data/games/`.
 
 ## Rules
 
@@ -12,7 +12,7 @@
 
 ```bash
 source .venv/bin/activate
-python -m arena.run_match \
+python -m arena.matches.run_match \
   bots/smoke/run.sh \
   competition-module/competition/agents/expander_python/run.sh \
   --mode competition --seed 0

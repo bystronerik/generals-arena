@@ -6,7 +6,7 @@ a ``GeneralsEnv``, spawn two stdio bots over the matchup protocol, and step the
 transition until a capture or truncation. They differ only in how the env is
 constructed, so each one configures this loop instead of reimplementing it.
 
-``arena.competition_match`` and ``arena.classic_match`` are the entry points;
+``arena.matches.competition`` and ``arena.matches.classic`` are the entry points;
 neither result shape changes, and only competition results may enter
 ``data/games/`` and Elo.
 """

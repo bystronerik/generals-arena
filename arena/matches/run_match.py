@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from arena.competition_match import run_competition_match
+from arena.matches.competition import run_competition_match
 from arena.records.fingerprint import bot_content_hash
 from arena.records.store import (
     GAMES_DIR,

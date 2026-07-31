@@ -11,7 +11,7 @@ SMOKE_RUN = REPO_ROOT / "bots" / "smoke" / "run.sh"
 
 @pytest.mark.slow
 def test_classic_match_smoke_truncates():
-    from arena.classic_match import run_classic_match
+    from arena.matches.classic import run_classic_match
 
     if not SMOKE_RUN.is_file():
         pytest.skip("smoke bot missing")

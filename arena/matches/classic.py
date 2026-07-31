@@ -1,7 +1,7 @@
 """
 Classic-approximate local harness for remote-only bots.
 
-Configures the shared loop in `arena.match_loop` with a GeneralsEnv built for
+Configures the shared loop in `arena.matches.loop` with a GeneralsEnv built for
 classic rules: build_castles=False, deathtouch_turn=None, and neutral
 pre-placed cities. This is NOT competition matchup — results do not enter
 data/games/ or Elo.
@@ -20,7 +20,7 @@ _COMP = REPO_ROOT / "competition-module"
 if str(_COMP) not in sys.path:
     sys.path.insert(0, str(_COMP))
 
-from arena.match_loop import run_stdio_match  # noqa: E402
+from arena.matches.loop import run_stdio_match  # noqa: E402
 from generals import GeneralsEnv  # noqa: E402
 
 LOG_TAG = "classic_match"

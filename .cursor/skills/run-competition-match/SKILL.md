@@ -2,7 +2,7 @@
 name: run-competition-match
 description: >-
   Runs Generals Competition local matches with --mode competition through
-  matchup.py or arena/run_match.py, and checks the result for bot faults. Use
+  matchup.py or arena/matches/run_match.py, and checks the result for bot faults. Use
   when starting a match, debugging a stdio bot, verifying the competition gate,
   swapping seat order, or writing a game record under data/games/.
 ---
@@ -36,10 +36,10 @@ Always pass `--mode competition`. The match must finish (win, loss, or draw / tr
 ## Arena store
 
 Prefer the wrapper when rating or logging. Single matches use the in-process
-runner (`arena/competition_match.py`) via `run_and_store`:
+runner (`arena/matches/competition.py`) via `run_and_store`:
 
 ```bash
-python -m arena.run_match \
+python -m arena.matches.run_match \
   bots/<bot_a>/run.sh \
   bots/<bot_b>/run.sh \
   --mode competition --seed 0

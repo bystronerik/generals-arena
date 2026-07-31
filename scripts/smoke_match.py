@@ -11,7 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from arena.run_match import run_and_store
+from arena.matches.run_match import run_and_store
 
 DEFAULT_A = REPO_ROOT / "bots" / "smoke" / "run.sh"
 DEFAULT_B = (

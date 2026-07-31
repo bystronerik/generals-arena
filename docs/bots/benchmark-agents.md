@@ -45,7 +45,7 @@ Default `scripts/measure_heuristics.py` does **not** include `cm_*` bots (to
 keep the heuristic round grid size stable). To add benchmark matchups manually:
 
 ```bash
-python -m arena.run_match \
+python -m arena.matches.run_match \
   bots/expand_plus/run.sh bots/cm_hunter/run.sh \
   --mode competition --seed 0 --tag benchmark_vs_hunter
 ```

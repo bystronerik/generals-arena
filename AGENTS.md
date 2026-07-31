@@ -103,7 +103,7 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 
 1. Follow [`docs/research/experiment-protocol.md`](docs/research/experiment-protocol.md).
 2. Use `run-measurement-round` for batch grids or `evaluate-bot-change` for A/B pairs.
-3. Store games via `arena/run_match.py` / `scripts/measure_heuristics.py`, then `update-leaderboard`.
+3. Store games via `arena/matches/run_match.py` / `scripts/measure_heuristics.py`, then `update-leaderboard`.
 
 ### remote-operator
 
@@ -147,7 +147,7 @@ Taxonomy: [`docs/research/strategies/skills-workflow.md`](docs/research/strategi
 | structure-audit | Think (named only) | [`.cursor/skills/structure-audit/`](.cursor/skills/structure-audit/) |
 | improve-skill-from-failure | Think (named only) | [`.cursor/skills/improve-skill-from-failure/`](.cursor/skills/improve-skill-from-failure/) |
 
-CLIs and modules the skills drive: `scripts/`, `arena/run_match.py`, `arena/tournament.py`, `arena/records/ratings.py`; data under `data/games/` and `data/ratings/`.
+CLIs and modules the skills drive: `scripts/`, `arena/matches/run_match.py`, `arena/tournament.py`, `arena/records/ratings.py`; data under `data/games/` and `data/ratings/`.
 
 ## Sources of truth (priority)
 

@@ -34,7 +34,7 @@ python competition-module/competition/matchup.py \
 Classic harness (proxy for remote tuning):
 
 ```bash
-python -m arena.classic_match \
+python -m arena.matches.classic \
   bots/classic_duel/run.sh \
   bots/army_convey/run.sh \
   --seed 0

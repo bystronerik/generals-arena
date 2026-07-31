@@ -34,7 +34,7 @@ Rebuild walks all `data/games/*.json` in `finished_at` order.
 
 ## Incremental update
 
-`arena/tournament.py` and `arena/run_match.py --update-ratings` call `rate_stored_game` after each store. Already-rated `game_id` values are skipped on incremental apply; rebuild resets from the game store.
+`arena/tournament.py` and `arena/matches/run_match.py --update-ratings` call `rate_stored_game` after each store. Already-rated `game_id` values are skipped on incremental apply; rebuild resets from the game store.
 
 ## Bot identity
 

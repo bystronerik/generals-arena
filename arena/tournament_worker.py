@@ -20,7 +20,7 @@ from arena.records.store import (
 
 def run_one_worker(payload: dict[str, Any]) -> GameRecord:
     """One in-process competition match + store (ProcessPool entry point)."""
-    from arena.competition_match import run_competition_match
+    from arena.matches.competition import run_competition_match
     from arena.records.fingerprint import bot_content_hash
     from arena.records.telemetry import record_from_match_result
 

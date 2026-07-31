@@ -1,7 +1,7 @@
 """
 In-process competition match runner for arena batch workers.
 
-Configures the shared loop in `arena.match_loop` with a competition-mode
+Configures the shared loop in `arena.matches.loop` with a competition-mode
 GeneralsEnv, without spawning matchup.py. Results may enter data/games/ and Elo.
 """
 
@@ -18,7 +18,7 @@ _COMP = REPO_ROOT / "competition-module"
 if str(_COMP) not in sys.path:
     sys.path.insert(0, str(_COMP))
 
-from arena.match_loop import run_stdio_match  # noqa: E402
+from arena.matches.loop import run_stdio_match  # noqa: E402
 from arena.records.store import Winner  # noqa: E402
 from generals import GeneralsEnv  # noqa: E402
 

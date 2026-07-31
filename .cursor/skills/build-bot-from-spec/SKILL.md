@@ -58,7 +58,7 @@ python competition-module/competition/matchup.py \
   --mode competition --seed 0
 ```
 
-Or use skill **run-competition-match** / `arena/run_match.py` so the game lands in `data/games/`.
+Or use skill **run-competition-match** / `arena/matches/run_match.py` so the game lands in `data/games/`.
 
 ## Rules
 

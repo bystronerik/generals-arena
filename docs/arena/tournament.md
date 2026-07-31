@@ -46,7 +46,7 @@ python scripts/tournament.py \
 
 ## Parallelism
 
-- Workers run [`arena/competition_match.py`](../../arena/competition_match.py)
+- Workers run [`arena/matches/competition.py`](../../arena/matches/competition.py)
   (in-process JAX + stdio bots), not a fresh `matchup.py` per match.
 - Each worker pins BLAS/OpenMP/XLA to one thread so packing can reach one
   match per physical core.

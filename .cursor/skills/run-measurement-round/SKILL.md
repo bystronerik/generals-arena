@@ -35,7 +35,7 @@ python scripts/measure_heuristics.py \
 Default grid is Rule C: unordered pairs among `DEFAULT_ROSTER`, random map
 seeds per pair, no seat swap. Games land in `data/games/<round>/`.
 
-Prefer `arena/run_match.run_and_store` (schema v2 with bot telemetry) when
+Prefer `arena/matches/run_match.run_and_store` (schema v2 with bot telemetry) when
 adding single matches outside the grid script.
 
 Flags:
