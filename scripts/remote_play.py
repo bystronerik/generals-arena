@@ -18,11 +18,8 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from arena.remote_adapter import (
-    REMOTE_RECOMMENDED_BOTS,
-    list_remote_bots,
-    verify_adapter_offline,
-)
+from arena.bot_api import list_bots
+from arena.remote_adapter import REMOTE_RECOMMENDED_BOTS, verify_adapter_offline
 from arena.remote_bridge import ensure_bot_username, make_unified_bot
 from arena.remote_client import (
     FidelityRemoteSession,
@@ -153,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--bot",
         default="army_convey",
-        choices=list_remote_bots(),
+        choices=list_bots(),
         help="bots/<name>/ to play (default: army_convey)",
     )
     parser.add_argument(

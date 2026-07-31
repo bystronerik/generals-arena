@@ -22,12 +22,6 @@ def test_ensure_bot_username_adds_prefix():
     assert ensure_bot_username("[Bot] arena_army_convey") == "[Bot] arena_army_convey"
 
 
-def test_normalize_bot_endpoint_username_alias():
-    from arena.remote_client import normalize_bot_endpoint_username
-
-    assert normalize_bot_endpoint_username("plain_name") == "[Bot] plain_name"
-
-
 def test_result_from_reason_mapping():
     assert result_from_reason("game_won") == "win"
     assert result_from_reason("game_lost") == "loss"

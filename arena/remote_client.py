@@ -23,7 +23,6 @@ from generals_client.transport import DEFAULT_SERVER
 from arena.remote_bridge import (
     ArenaGameClient,
     UnifiedBot,
-    ensure_bot_username,
     opponent_stars,
     opponent_username,
     register_username_safe,
@@ -78,11 +77,6 @@ def is_queue_timeout(detail: str | None) -> bool:
 def git_head() -> str | None:
     """Full HEAD SHA for remote game logs (None when git is unavailable)."""
     return git_head_sha(short=False, repo_root=REPO_ROOT)
-
-
-def normalize_bot_endpoint_username(username: str) -> str:
-    """Backward-compatible alias: ensure ``[Bot]`` prefix for generals_client."""
-    return ensure_bot_username(username)
 
 
 def opponent_is_bot(username: str | None) -> bool | None:

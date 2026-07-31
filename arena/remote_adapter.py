@@ -9,7 +9,6 @@ See ``docs/engine/remote-eval-heuristics.md`` and ``docs/engine/unified-bot-api.
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -19,7 +18,6 @@ from arena.bot_api import (
     PASS,
     StrategySession,
     from_competition_remote_obs,
-    list_bots,
     to_competition_action_array,
     translate_action_for_remote,
 )
@@ -37,11 +35,6 @@ REMOTE_RECOMMENDED_BOTS: tuple[str, ...] = (
     "fog_scout",
     "expand_plus",
 )
-
-REMOTE_BUILD_BOTS: frozenset[str] = frozenset({"castle_builder", "castle_rush", "phase_switch"})
-
-# Backward-compatible alias kept for scripts/remote_play.py.
-list_remote_bots = list_bots
 
 _AdapterClass: type[Any] | None = None
 
@@ -117,17 +110,6 @@ def __getattr__(name: str) -> Any:
     if name == "StdioStrategyAdapter":
         return _adapter_class()
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-def make_remote_agent(bot_name: str) -> Any:
-    adapter_cls = _adapter_class()
-    if bot_name in REMOTE_BUILD_BOTS:
-        print(
-            f"Warning: {bot_name} uses build actions that generals.io ignores remotely. "
-            "Prefer army_convey, late_rush, fog_scout, or expand_plus.",
-            file=sys.stderr,
-        )
-    return adapter_cls(bot_name=bot_name)
 
 
 def verify_adapter_offline() -> list[str]:

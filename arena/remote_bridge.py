@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from generals_client.bot import BaseBot, BotError, GameClient
 from generals_client.state import GameState
-from generals_client.transport import DEFAULT_SERVER
 
 from arena.bot_api import StrategySession, from_game_state, to_client_move
 
@@ -93,7 +92,3 @@ def register_username_safe(client: GameClient, username: str) -> None:
 
 def make_unified_bot(bot_name: str) -> UnifiedBot:
     return UnifiedBot(bot_name=bot_name)
-
-
-def make_remote_client(bot_name: str, user_id: str, server_url: str = DEFAULT_SERVER) -> ArenaGameClient:
-    return ArenaGameClient(make_unified_bot(bot_name), user_id, server_url=server_url)
