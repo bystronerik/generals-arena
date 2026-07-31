@@ -9,6 +9,7 @@ __pycache__/
 
 # Arena data (keep .gitkeep; commit round reports under docs/research/measurements/)
 data/games/*.json
+data/games/**/*.json
 data/ratings/*.json
 data/ratings/leaderboard.md
 

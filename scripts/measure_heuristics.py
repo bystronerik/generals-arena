@@ -57,8 +57,8 @@ BENCHMARK_BOTS = ["cm_random", "cm_expander", "cm_hunter", "cm_harvester"]
 
 BENCHMARK_ANCHOR = "army_convey"
 
-# Default measurement roster: new heuristics + baselines (no cm_* unless listed).
-DEFAULT_ROSTER = NEW_BOTS + BASELINE_BOTS
+# Default measurement roster: new heuristics + baselines + cm_* benchmarks.
+DEFAULT_ROSTER = NEW_BOTS + BASELINE_BOTS + BENCHMARK_BOTS
 
 
 @dataclass
