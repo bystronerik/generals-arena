@@ -37,6 +37,11 @@ NEW_BOTS = [
     "choke_control",
     "phase_switch",
     "castle_rush",
+    "blitz",
+    "boom",
+    "metro",
+    "aegis",
+    "proteus",
 ]
 
 BASELINE_BOTS = ["smoke", "expand_plus", "castle_builder", "general_hunter"]

@@ -87,11 +87,17 @@ def load_strategy_class(bot_name: str) -> Type:
         raise ImportError(f"Cannot load {agent_path}")
 
     module = importlib.util.module_from_spec(spec)
+    # Register before exec (importlib recipe) — dataclasses and other
+    # introspection in the agent module need sys.modules[module.__module__].
+    sys.modules[module_name] = module
     bots_dir = REPO_ROOT / "bots"
     sys.path.insert(0, str(bots_dir))
     sys.path.insert(0, str(bot_dir))
     try:
         spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(module_name, None)
+        raise
     finally:
         if str(bot_dir) in sys.path:
             sys.path.remove(str(bot_dir))

@@ -41,6 +41,11 @@ Small topic files for the Generals Arena research repo.
 - [choke_control](bots/choke-control.md) — corridor hold and denial
 - [phase_switch](bots/phase-switch.md) — gated build phases
 - [classic_duel](bots/classic-duel.md) — remote-only classic champion (no Elo)
+- [blitz](bots/blitz.md) — general rush with re-sized strike waves (migrated from generals-bot)
+- [boom](bots/boom.md) — fast-expand economy with an endgame latch (migrated from generals-bot)
+- [metro](bots/metro.md) — castle network + mandatory pressure waves (migrated from generals-bot)
+- [aegis](bots/aegis.md) — turtle + event-driven counterattack (migrated from generals-bot)
+- [proteus](bots/proteus.md) — adaptive switcher over blitz/boom/metro/aegis (migrated from generals-bot)
 
 ## Arena
 
