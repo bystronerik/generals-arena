@@ -160,7 +160,7 @@ def bot_source_closure(bot_dir: Path) -> list[Path]:
     return sorted(seen)
 
 
-def _relative_label(path: Path) -> str:
+def relative_label(path: Path) -> str:
     """Machine-independent path label so hashes match across checkouts."""
     try:
         return path.relative_to(REPO_ROOT).as_posix()
@@ -172,7 +172,7 @@ def content_hash_for_dir(bot_dir: Path) -> str:
     """Short hex digest over the bot's source closure."""
     digest = hashlib.sha256()
     for path in bot_source_closure(bot_dir):
-        digest.update(_relative_label(path).encode("utf-8"))
+        digest.update(relative_label(path).encode("utf-8"))
         digest.update(b"\0")
         digest.update(hashlib.sha256(path.read_bytes()).hexdigest().encode("ascii"))
         digest.update(b"\n")
@@ -237,7 +237,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{bot_id:<18} {bot_content_hash(run_sh)}  ({len(closure)} file(s))")
         if args.files:
             for path in closure:
-                print(f"    {_relative_label(path)}")
+                print(f"    {relative_label(path)}")
     return 0
 
 
