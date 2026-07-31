@@ -20,6 +20,9 @@ data/ratings/leaderboard.md
 # are file globs scoped to data/games/ and data/ratings/, so no carve-out is
 # needed here — tests/test_registry.py asserts it stays that way.
 
+# Submission bundles are derived artifacts (python -m arena.bundle <bot>)
+data/bundles/
+
 # Live generals.io session logs (classic rules; not arena Elo)
 data/remote_games/*.json
 
