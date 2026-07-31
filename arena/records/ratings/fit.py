@@ -125,7 +125,6 @@ class RatingFit:
         keep = [i for i in range(spec.n_full) if i != spec.anchor]
         full[np.ix_(keep, keep)] = covariance
         self._covariance = full[:size, :size]
-        self._full_covariance = full
 
         seat_se = (
             math.sqrt(full[spec.seat_index, spec.seat_index]) if spec.fit_seat else 0.0
@@ -196,7 +195,12 @@ class RatingFit:
         variance = (
             self._covariance[i, i] + self._covariance[j, j] - 2.0 * self._covariance[i, j]
         )
-        return Delta(a=a, b=b, value=self.rating(b) - self.rating(a), se=math.sqrt(max(variance, 0.0)))
+        return Delta(
+            a=a,
+            b=b,
+            value=self.rating(b) - self.rating(a),
+            se=math.sqrt(max(variance, 0.0)),
+        )
 
     def p_stronger(self, b: str, a: str) -> float:
         """P(b stronger than a) = Phi(Delta / SE(Delta))."""

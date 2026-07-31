@@ -222,3 +222,17 @@ def test_expand_pair_seeds_rejects_an_unknown_seat_policy(roster):
             round_seed=0,
             seat_policy="coin-flip",
         )
+
+
+def test_alternating_seats_honour_a_fixed_seed_list(roster):
+    """Every fixed seed still gets both orientations."""
+    specs = expand_pair_seeds(
+        [(roster[0], roster[1])],
+        games_per_pair=50,
+        round_seed=0,
+        fixed_seeds=[10, 20],
+        seat_policy=ALTERNATING_SEATS,
+    )
+    assert sorted(seed for _, _, seed in specs) == [10, 10, 20, 20]
+    first_seat = sum(1 for a, b, _ in specs if a.parent.name < b.parent.name)
+    assert first_seat * 2 == len(specs)
