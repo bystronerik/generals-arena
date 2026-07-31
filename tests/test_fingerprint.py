@@ -49,10 +49,14 @@ def test_closure_follows_transitive_shared_imports():
 
 
 def test_closure_crosses_bot_directories():
-    """proteus dispatches to four other bots; editing them changes proteus."""
+    """proteus dispatches to other bots; editing them changes proteus."""
     names = closure_names("proteus")
-    for dependency in ("aegis", "blitz", "boom", "metro"):
+    for dependency in ("blitz", "boom"):
         assert f"{dependency}/agent.py" in names, dependency
+    # Dropped from the counter map, so no longer in the closure: a core
+    # proteus cannot select must not be able to fork proteus's hash.
+    for dropped in ("aegis", "metro"):
+        assert f"{dropped}/agent.py" not in names, dropped
     assert "proteus/switcher.py" in names
     assert "proteus/classifier.py" in names
 
@@ -128,13 +132,14 @@ def test_probe_is_absent_from_a_real_closure():
     A probe is arena-owned introspection; it never plays, so it never hashes.
 
     proteus alone is the whole invariant on one closure walk: it carries a
-    probe *and* cross-imports aegis, blitz, boom and metro, each of which
-    carries one too — so this covers the cross-directory leak, not just the
-    bot's own directory.
+    probe *and* cross-imports blitz and boom, each of which carries one too —
+    so this covers the cross-directory leak, not just the bot's own
+    directory.
     """
     assert (BOTS_DIR / "proteus" / "probe.py").is_file()
+    assert (BOTS_DIR / "boom" / "probe.py").is_file()
     names = closure_names("proteus")
-    assert "metro/agent.py" in names  # the cross-import is live
+    assert "boom/agent.py" in names  # the cross-import is live
     assert not any(name.endswith("probe.py") for name in names)
 
 

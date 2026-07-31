@@ -85,6 +85,34 @@ _PROBE_KEYS = (
     _key("strikes", Kind.INT, "blitz: strikes launched so far (monotone)", F),
     _key("switches", Kind.INT, "proteus: strategy switches so far (monotone)", F),
     _key(
+        "stack_near",
+        Kind.INT,
+        "proteus: largest enemy stack ever seen within 8 steps of our general",
+        F,
+        MAX,
+    ),
+    _key(
+        "turns_near",
+        Kind.INT,
+        "proteus: turns an enemy cell stood within 8 steps of our general",
+        F,
+    ),
+    _key(
+        "duel_turn",
+        Kind.INT,
+        "proteus: turn a 15+ stack first reached our door, -1 if never",
+        F,
+    ),
+    _key(
+        "structures",
+        Kind.INT,
+        "proteus: opponent structures (general + castles) inferred from the "
+        "army aggregate, -1 if not yet estimable; reported for analysis, not "
+        "consumed by classify()",
+        F,
+        MAX,
+    ),
+    _key(
         "castles_built_probe",
         Kind.INT,
         "metro's own castle count — the engine's tally is castles_built_*",

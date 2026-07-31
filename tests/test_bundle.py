@@ -69,8 +69,10 @@ def test_proteus_bundle_carries_cross_imported_bots():
     # Member arcnames are exactly what write_bundle zips; skipping the build
     # keeps the closure-crossing case cheap.
     names = {arcname for _, arcname in bundle_members("proteus")}
-    for bot in ("aegis", "blitz", "boom", "metro"):
+    for bot in ("blitz", "boom"):
         assert f"bots/{bot}/agent.py" in names
+    for dropped in ("aegis", "metro"):
+        assert f"bots/{dropped}/agent.py" not in names
 
 
 def test_bundles_are_deterministic(tmp_path):
