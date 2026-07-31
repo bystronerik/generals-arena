@@ -6,7 +6,28 @@ classes without copying decision logic. Do not retune upstream parameters here.
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Callable, Type
+
+_CM_PATHS_READY = False
+
+
+def ensure_cm_paths() -> None:
+    """Put ``bots/`` and ``competition-module/`` on ``sys.path`` for imports."""
+    global _CM_PATHS_READY
+    if _CM_PATHS_READY:
+        return
+    bots_dir = Path(__file__).resolve().parent.parent
+    cm_root = bots_dir.parent / "competition-module"
+    for entry in (bots_dir, cm_root):
+        path = str(entry)
+        if path not in sys.path:
+            sys.path.insert(0, path)
+    _CM_PATHS_READY = True
+
+
+ensure_cm_paths()
 
 import jax.numpy as jnp
 import jax.random as jrandom
