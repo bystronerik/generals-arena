@@ -1,31 +1,39 @@
 # proteus
 
 `bots/proteus/`. Grounded idea: **classify the opponent, switch between
-the four migrated strategies with hysteresis.** Composes the cores of
-`blitz`, `boom`, `metro`, and `aegis` around one shared opponent model.
-Migrated from the generals-bot repo (source name: adaptive). Baselines for
-comparison: the four pure cores and `phase_switch`.
+strategy cores with hysteresis.** Composes the cores of `blitz` and `boom`
+around one shared opponent model. Migrated from the generals-bot repo
+(source name: adaptive). Baselines for comparison: the two pure cores and
+`phase_switch`.
 
 ## Strategy
 
-1. **Classify** every turn: rusher / boomer / citier (castle-builder) /
-   turtler / unknown, from exact aggregates + vision signals.
-2. **Counter map**: blitz vs rushers, boomers, and castle-builders; boom
-   vs passive turtlers; blitz as the from-turn-0 default spine.
-3. **Hysteresis**: 12-turn streak at confidence ≥ 0.45 to switch, 50-turn
-   cooldown; switching *into* the aegis defensive posture is fast (5-turn
-   streak, no cooldown), leaving it is slow (60-turn streak).
-4. **Warm handover**: inactive cores observe every turn, so a mid-game
+1. **Classify** every turn: aggressor / economy / unknown, from the exact
+   aggregates plus a home-pressure latch.
+2. **Counter map**: blitz against an opponent that has walked a sized stack
+   at our general; boom against everything else; blitz as the from-turn-0
+   spine.
+3. **Hysteresis**: leaving the spine needs a long streak at confidence;
+   returning to it needs six turns and ignores the cooldown. The asymmetry
+   is priced from the core grid — being boom against a real aggressor is the
+   worst cell (0.36), being blitz against an economy costs at most 0.16.
+4. **Warm handover**: the inactive core observes every turn, so a mid-game
    switch starts with current beliefs and threat memories.
 
-Telemetry reports the active core, opponent label, and switch count.
+Two cores, not four: `metro` and `aegis` were constructed and warmed by
+every previous version behind a counter map that could never select either,
+and the core grid says that was right — both are dominated and uniquely best
+against nothing. See the spec §2.
+
+Telemetry reports the active core, the label, the switch count, and the
+evidence behind the aggressor branch (`stack_near`, `turns_near`,
+`duel_turn`) plus the inferred opponent structure count.
 
 Spec: [`docs/research/strategies/proteus.md`](../research/strategies/proteus.md).
 
 ## Experiment
 
 [`docs/research/experiments/016-proteus-adaptive-switching.md`](../research/experiments/016-proteus-adaptive-switching.md)
-— provisional keep pending full seed grid.
 
 ## Verification
 

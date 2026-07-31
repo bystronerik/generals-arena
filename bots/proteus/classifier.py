@@ -58,8 +58,13 @@ DUEL_DEADLINE = 250
 #: bot looks alike because every bot is still chain-expanding.
 EVIDENCE_TURN = 60
 
-#: Turns over which the economy claim saturates to full confidence.
-ECONOMY_RAMP = 140
+#: Confidence in the economy verdict the moment the deadline passes, and how
+#: fast it grows after. Absence of a fist only becomes evidence *of* anything
+#: once the window in which a fist would have arrived has closed — before
+#: `DUEL_DEADLINE`, "no fist yet" and "no fist coming" are indistinguishable,
+#: so the classifier says `unknown` rather than guessing.
+ECONOMY_BASE = 0.60
+ECONOMY_GROWTH = 1 / 100.0
 
 #: Structures (general + castles) above which the opponent is running a
 #: castle programme. Validated against ground truth on the roster sweep:
@@ -99,20 +104,30 @@ def classify(
         # 15-stack is ambiguous, a 40-stack is not.
         scores[AGGRESSOR] = min(1.0, 0.45 + (near - DUEL_ARMY) / 50.0)
 
-    # --- economy: everything else, once the aggregates have spoken ---------
+    # Evidence of an attack outranks the absence of one, at any turn.
+    if scores[AGGRESSOR] > 0.0:
+        return Classification(AGGRESSOR, scores[AGGRESSOR], scores)
+
+    # --- economy: everything else, once the fist window has closed ---------
     # Deliberately not a positive test for economic play. "Has not brought a
     # fist" is the whole claim, and the grid says boom is the right answer to
     # all of it — castle programmes, slow expanders, turtles and the timed
     # committer alike.
-    scores[ECONOMY] = min(1.0, (turn - EVIDENCE_TURN) / ECONOMY_RAMP)
-
-    # Evidence of an attack outranks the absence of one, at any turn: the
-    # economy score saturates at 1.0 by turn 200 and would otherwise drown a
-    # fist that arrived later.
-    if scores[AGGRESSOR] > 0.0:
-        return Classification(AGGRESSOR, scores[AGGRESSOR], scores)
-    if scores[ECONOMY] <= 0.0:
+    #
+    # Held back until `DUEL_DEADLINE` on purpose, and this is the load-bearing
+    # timing decision in the bot. Before the deadline the absence of a fist is
+    # not evidence: it is a measurement still in progress. Committing to boom
+    # early was measured at turn ~162 while a blitz opponent's fist lands at
+    # turn ~226, so proteus banked for sixty turns and then met the wave with
+    # an economy. Waiting recovers the three matchups that cost
+    # (boom 0.47->0.69, classic_duel 0.75->0.84, fog_scout 0.84->0.94) for
+    # part of the gain elsewhere, and lifts the floor from 0.47 to 0.56.
+    if turn <= DUEL_DEADLINE:
         return Classification(UNKNOWN, 0.0, scores)
+
+    scores[ECONOMY] = min(
+        1.0, ECONOMY_BASE + (turn - DUEL_DEADLINE) * ECONOMY_GROWTH
+    )
     return Classification(ECONOMY, scores[ECONOMY], scores)
 
 

@@ -50,14 +50,15 @@ class Switcher:
 
     min_confidence: float = 0.55
     """Confidence the classifier must carry before any streak accumulates.
-    The economy score crosses this at turn 137 (`EVIDENCE_TURN` 60 plus
-    0.55 of the 140-turn ramp)."""
+    The economy verdict opens at `ECONOMY_BASE` (0.60) the turn
+    `DUEL_DEADLINE` passes, so this gate is satisfied immediately after it
+    and the streak below is what actually times the switch."""
 
-    #: Streak needed to leave the spine. With `min_confidence` this puts the
-    #: earliest economy switch at turn ~162 — after boom's own
-    #: `avoid_enemy_adjacent_until` (160) and before its `commit_turn` (200),
-    #: so the core arrives with its expansion phase intact and its endgame
-    #: latch still ahead of it.
+    #: Streak needed to leave the spine, which puts the earliest economy
+    #: switch at turn ~275 (`DUEL_DEADLINE` 250 plus this). Swept against
+    #: 16 games per cell over 12 opponents: exits at turn 162 / 224 / 274 /
+    #: 324 / 374 score 0.841 / 0.812 / 0.846 / 0.836 / 0.826 on the mean and
+    #: 0.47 / 0.53 / 0.56 / 0.41 / 0.53 on the floor. 275 wins both.
     leave_spine_streak: int = 25
 
     #: Streak needed to come back. Cheap on purpose: a fist that lands while

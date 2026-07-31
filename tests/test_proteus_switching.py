@@ -101,15 +101,33 @@ def test_unknown_before_evidence_turn():
     assert classify(m, EVIDENCE_TURN - 1).label == UNKNOWN
 
 
-def test_no_fist_reads_as_economy():
+def test_no_fist_reads_as_economy_once_the_window_closes():
     m = OpponentModel()
-    feed(m, range(1, 260), lambda t: 1 + t // 2)
-    c = classify(m, 259, HomePressure())
+    feed(m, range(1, DUEL_DEADLINE + 40), lambda t: 1 + t // 2)
+    c = classify(m, DUEL_DEADLINE + 20, HomePressure())
     assert c.label == ECONOMY
-    assert c.confidence == 1.0
+    assert c.confidence >= 0.6
 
 
-def test_a_timely_fist_reads_as_aggressor():
+def test_silence_before_the_deadline_is_not_evidence():
+    """"No fist yet" and "no fist coming" are the same observation until
+    the window a fist would have arrived in has closed."""
+    m = OpponentModel()
+    feed(m, range(1, DUEL_DEADLINE), lambda t: 1 + t // 2)
+    assert classify(m, DUEL_DEADLINE - 1, HomePressure()).label == UNKNOWN
+    assert classify(m, DUEL_DEADLINE, HomePressure()).label == UNKNOWN
+
+
+def test_economy_confidence_grows_after_the_deadline():
+    m = OpponentModel()
+    feed(m, range(1, DUEL_DEADLINE + 300), lambda t: 1 + t // 2)
+    early = classify(m, DUEL_DEADLINE + 10, HomePressure()).confidence
+    late = classify(m, DUEL_DEADLINE + 200, HomePressure()).confidence
+    assert early < late == 1.0
+
+
+def test_a_timely_fist_reads_as_aggressor_before_the_deadline():
+    """An attack is actionable the moment it lands; only silence must wait."""
     m = OpponentModel()
     feed(m, range(1, 200), lambda t: 1 + t // 2)
     p = HomePressure()
