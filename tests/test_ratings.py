@@ -357,3 +357,21 @@ def test_leaderboard_lists_provisional_entities_below_the_ranked_block():
     assert "95% CI" in markdown
     assert "## Provisional" in markdown
     assert f"`{fit.anchor}` pinned at 1500.0" in markdown
+
+
+# --- the anchor is what pins the scale ------------------------------------
+
+
+def test_a_missing_anchor_is_a_clear_error_not_a_crash(tmp_path):
+    """No anchor means no scale — theta would be free up to a constant."""
+    from arena.records.ratings.cli import MissingAnchor, resolve_anchor
+    from arena.records.registry import Registry
+
+    with pytest.raises(MissingAnchor, match="not registered"):
+        resolve_anchor(Registry(tmp_path), "cm_expander")
+
+
+def test_fit_rejects_an_anchor_that_is_not_in_the_table():
+    table = count_table(synthetic_games(), policy=Policy(), registry=FakeRegistry())
+    with pytest.raises(ValueError, match="not in the count table"):
+        fit_ratings(table, anchor="ghost@000000000000")

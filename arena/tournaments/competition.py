@@ -298,13 +298,20 @@ def run_tournament(
     print(f"[tournament] finished {len(records)} game(s)")
 
     if update_ratings:
-        from arena.records.ratings.cli import refit
+        from arena.records.ratings.cli import MissingAnchor, refit
 
-        fit = refit(games_dir=GAMES_DIR)
-        print(
-            f"[tournament] refitted ratings from {GAMES_DIR} "
-            f"({fit.counts.games} rated game(s), {len(fit.entities)} entit(ies))"
-        )
+        try:
+            fit = refit(games_dir=GAMES_DIR)
+        except MissingAnchor as exc:
+            # The games are stored; a refit is a pure function of them and can
+            # be re-run at any time. Losing a round's results over a missing
+            # anchor would be the worse outcome.
+            print(f"[tournament] ratings not refitted: {exc}")
+        else:
+            print(
+                f"[tournament] refitted ratings from {GAMES_DIR} "
+                f"({fit.counts.games} rated game(s), {len(fit.entities)} entit(ies))"
+            )
     return records
 
 

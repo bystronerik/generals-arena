@@ -21,12 +21,22 @@ from arena.records.store import GAMES_DIR, engine_version
 DEFAULT_ANCHOR_BOT = "cm_expander"
 
 
+class MissingAnchor(RuntimeError):
+    """No anchor means no scale: `theta` would be free up to a constant."""
+
+
 def resolve_anchor(registry: Registry, bot_id: str = DEFAULT_ANCHOR_BOT) -> str:
-    """The anchor entity: the anchor bot's most recent registered version."""
+    """
+    The anchor entity: the anchor bot's most recent registered version.
+
+    Editing the anchor bot re-bases the whole scale, which is why
+    `bots/cm_expander/agent.py` carries a "do not retune" comment.
+    """
     entry = registry.load(bot_id)
     if entry is None or not entry.steps:
-        raise SystemExit(
-            f"[ratings] anchor bot {bot_id!r} is not registered; run "
+        raise MissingAnchor(
+            f"anchor bot {bot_id!r} is not registered, so there is nothing to "
+            f"pin the rating scale to; run "
             f"`python -m arena.records.registry --register {bot_id}` first"
         )
     return entity_key(bot_id, entry.steps[-1].content_hash)
@@ -158,16 +168,20 @@ def main(argv: list[str] | None = None) -> int:
     registry = Registry()
     era = None if args.all_eras else (args.era or engine_version())
     policy = Policy(engine_version=era, min_games_display=args.min_games)
-    fit = refit(
-        games_dir=args.games_dir,
-        ratings_dir=args.ratings_dir,
-        policy=policy,
-        prior=Prior(sigma=args.sigma),
-        registry=registry,
-        anchor_bot=args.anchor,
-        persist=not args.dry_run,
-        use_cache=not args.no_cache,
-    )
+    try:
+        fit = refit(
+            games_dir=args.games_dir,
+            ratings_dir=args.ratings_dir,
+            policy=policy,
+            prior=Prior(sigma=args.sigma),
+            registry=registry,
+            anchor_bot=args.anchor,
+            persist=not args.dry_run,
+            use_cache=not args.no_cache,
+        )
+    except MissingAnchor as exc:
+        print(f"[ratings] {exc}")
+        return 1
 
     print(
         f"[ratings] fitted {len(fit.entities)} entit(ies) over {fit.counts.games} game(s) "
