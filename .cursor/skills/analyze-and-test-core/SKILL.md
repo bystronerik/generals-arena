@@ -11,9 +11,9 @@ description: >-
 
 # Analyze and test core
 
-Design: [`docs/research/strategies/test-core-skill.md`](../../docs/research/strategies/test-core-skill.md).
-Findings: [`docs/research/measurements/repo-velocity-review.md`](../../docs/research/measurements/repo-velocity-review.md) (**T1**, **T2**).
-Tests: [`tests/`](../../tests/).
+Design: [`docs/research/strategies/test-core-skill.md`](../../../docs/research/strategies/test-core-skill.md).
+Findings: [`docs/research/measurements/repo-velocity-review.md`](../../../docs/research/measurements/repo-velocity-review.md) (**T1**, **T2**).
+Tests: [`tests/`](../../../tests/).
 
 ## Model split
 

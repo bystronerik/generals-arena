@@ -13,18 +13,6 @@ Process rules for agents that work in this repo. Put game and bot knowledge in `
   `scripts/remote_play.py`. That path targets **live generals.io** (classic
   rules), not the competition sandbox. Keep that distinction explicit.
 
-## Phases
-
-| Phase | Goal | Owns |
-| --- | --- | --- |
-| 0 | Rules + docs foundation | root docs, `RULES.md`, `README.md`, this file |
-| 1 | Smoke stdio bot | `bots/smoke/` |
-| 2 | Arena + ratings + skills | `arena/`, `data/`, `.cursor/skills/` |
-| 3 | Heuristic bots | `bots/<name>/` |
-| 4 | Learned bots | later |
-
-Finish Phase N verification before starting Phase N+1 work that depends on it.
-
 ## File placement
 
 | Kind | Where |
@@ -37,7 +25,6 @@ Finish Phase N verification before starting Phase N+1 work that depends on it.
 | Match runner, ratings, store | `arena/` |
 | Match JSON / rating snapshots | `data/games/`, `data/ratings/` |
 | Cursor skills | `.cursor/skills/` |
-| Phase kickoff prompts | `prompts/` |
 
 Do not put strategy content in `AGENTS.md` or skill files beyond process pointers that link into `docs/`.
 
@@ -58,11 +45,11 @@ Requirements:
 - The match must reach a normal end (win, loss, or draw / truncation).
 - Do not treat a classic or non-competition preset run as sufficient.
 
-After Phase 2, also store the game under `data/games/` before you update ratings.
+Also store the game under `data/games/` before you update ratings.
 
-## Phase 3 success criterion (remote, classic rules)
+## Remote success criterion (classic rules)
 
-Phase 3 closes when one heuristic bot wins **at least 95 of 100 logged games
+The remote goal is one heuristic bot that wins **at least 95 of 100 logged games
 against human opponents** on live generals.io through
 `client/generals_client` (`arena/remote_bridge.py`, `scripts/remote_play.py`).
 
@@ -90,6 +77,7 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 | strategist | Write strategy specs; enforce bot diversity | `write-strategy-spec`, `check-bot-diversity` | Spec in `docs/research/strategies/` with diversity verdict |
 | evaluator | Fixed seed grid; before/after winrate; rating delta | `run-measurement-round`, `evaluate-bot-change`, `update-leaderboard` | Games in `data/games/`; metrics reported; ratings only after store |
 | remote-operator | Live classic blocks; human gate ladder | `run-remote-block`, `run-classic-grid` | Block report under `docs/research/measurements/`; logs in `data/remote_games/` |
+| auditor | Structure and duplication review | `structure-audit` | Report names concrete files and lines; no edits without a follow-up ask |
 | docs-keeper | Keep `docs/` small and accurate; sync with code + `RULES.md` | none required | Topic files stay single-purpose; no strategy moved into `AGENTS.md` |
 | tester | Core coverage under `tests/`; fixtures under `tests/fixtures/` | `analyze-and-test-core` | New tests pass, the suite stays under 3 s, and every untested core target is named |
 
@@ -138,7 +126,7 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
    fidelity classification, classic match results, remote human-count filter.
 3. Report a proven defect; do not fix production code inside the test step.
 
-## Cursor skills (Phase 2+)
+## Cursor skills
 
 Taxonomy: [`docs/research/strategies/skills-workflow.md`](docs/research/strategies/skills-workflow.md). Index: [`.cursor/skills/README.md`](.cursor/skills/README.md).
 
@@ -156,9 +144,10 @@ Taxonomy: [`docs/research/strategies/skills-workflow.md`](docs/research/strategi
 | analyze-and-test-core | Think + Composer | [`.cursor/skills/analyze-and-test-core/`](.cursor/skills/analyze-and-test-core/) |
 | run-classic-grid | Composer | [`.cursor/skills/run-classic-grid/`](.cursor/skills/run-classic-grid/) |
 | run-remote-block | Composer | [`.cursor/skills/run-remote-block/`](.cursor/skills/run-remote-block/) |
+| structure-audit | Think (named only) | [`.cursor/skills/structure-audit/`](.cursor/skills/structure-audit/) |
 | improve-skill-from-failure | Think (named only) | [`.cursor/skills/improve-skill-from-failure/`](.cursor/skills/improve-skill-from-failure/) |
 
-Planned CLIs and modules: `scripts/`, `arena/run_match.py`, `arena/tournament.py`, `arena/ratings.py`; data under `data/games/` and `data/ratings/`.
+CLIs and modules the skills drive: `scripts/`, `arena/run_match.py`, `arena/tournament.py`, `arena/ratings.py`; data under `data/games/` and `data/ratings/`.
 
 ## Sources of truth (priority)
 

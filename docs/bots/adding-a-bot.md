@@ -1,6 +1,6 @@
 # Adding a bot
 
-Scaffold for Phase 1+.
+How to add a bot under `bots/<name>/`.
 
 ## Layout
 
@@ -36,9 +36,9 @@ python competition-module/competition/matchup.py \
 
 ## Smoke bot
 
-Phase 1 owns `bots/smoke/`. Observation notes go in `docs/bots/smoke.md` after the first verified match.
+`bots/smoke/` is the reference stdio bot. Observation notes go in `docs/bots/smoke.md` after the first verified match.
 
-## Phase 3 heuristic bots
+## Heuristic bots
 
 Scaffolded with the `build-bot-from-spec` skill from a spec under
 `docs/research/strategies/`. One doc

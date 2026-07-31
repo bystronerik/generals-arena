@@ -28,7 +28,7 @@ Small topic files for the Generals Arena research repo.
 
 - [adding a bot](bots/adding-a-bot.md)
 - [benchmark agents](bots/benchmark-agents.md) — fixed `cm_*` wrappers over competition-module JAX agents
-- [smoke](bots/smoke.md) — Phase 1 stdio smoke test, not competitive
+- [smoke](bots/smoke.md) — stdio smoke test, not competitive
 - [expand_plus](bots/expand-plus.md) — greedy capture + BFS frontier march
 - [castle_builder](bots/castle-builder.md) — rested-general castle investment
 - [castle_rush](bots/castle-rush.md) — early castle investment rush
@@ -63,6 +63,6 @@ Small topic files for the Generals Arena research repo.
 - [optimize the existing four bots](research/strategies/optimize-existing.md) — root causes and `Parameter revision 1`
 - [tournament plan](research/strategies/tournament-plan.md) — seed grid, staging, metrics, and the round 2 schedule
 - [diversity constraints](research/strategies/diversity-constraints.md) — hard rules that keep the roster from converging
-- [human 95/100 plan](research/strategies/human-95-plan.md) — Phase 3 goal: 95 wins in 100 logged games against humans on classic generals.io
+- [human 95/100 plan](research/strategies/human-95-plan.md) — remote goal: 95 wins in 100 logged games against humans on classic generals.io
 - `research/measurements/` — one result set per tournament round
-- [learned bot plan (Phase 4 scaffold)](research/learned-bot-plan.md)
+- [learned bot plan](research/learned-bot-plan.md) — not started; scaffold notes only

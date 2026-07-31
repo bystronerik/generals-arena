@@ -6,7 +6,7 @@ defensible ring, destroy incoming attacks, then commit into the window
 their spent attack opens.** Baselines for comparison: `garrison`,
 `choke_control`, `smoke`, `blitz`.
 
-Rule references: [`RULES.md`](../../RULES.md) sections 03 (build castles),
+Rule references: [`RULES.md`](../../../RULES.md) sections 03 (build castles),
 06 (visibility), 07 (deathtouch). Source-tuned values transfer as
 **hypotheses**.
 

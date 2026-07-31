@@ -16,16 +16,15 @@ generals-arena/
 ├── pytest.ini                # unified test discovery
 ├── competition-module/       # git submodule (engine + matchup)
 ├── client/                   # generals_client submodule (live generals.io)
-├── bots/                     # stdio competition bots (Phase 1+)
-├── arena/                    # match runner, ratings, store (Phase 2)
+├── bots/                     # stdio competition bots
+├── arena/                    # match runner, ratings, store
 ├── tests/                    # core pytest suite
 ├── data/games/               # stored match outcomes (JSON gitignored)
 ├── data/ratings/             # leaderboard snapshots (local; gitignored)
 ├── data/remote_games/        # live classic session logs (gitignored)
 ├── scripts/                  # thin CLIs
 ├── docs/                     # game and bot knowledge (small files)
-├── .cursor/skills/           # Cursor skills (Phase 2+)
-└── prompts/                  # optional phase kickoff prompts
+└── .cursor/skills/           # Cursor skills
 ```
 
 ## Install

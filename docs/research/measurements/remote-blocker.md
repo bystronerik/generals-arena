@@ -56,4 +56,4 @@ When `client/` adds **public lobby** support, re-run:
 Or use `remote_lobby_watch.py` once public lobby ids are supported the same way.
 
 Only logs with `counts_toward_block: true` and **human** opponents count toward
-Phase 3.
+the 95/100 human block.

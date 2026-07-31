@@ -4,7 +4,7 @@
 classic-approximate harness (`arena/classic_match.py`). Each match is stored
 under `data/classic_games/` — **not** `data/games/` and **not** Elo.
 
-For a full grid plus Markdown/JSON report, use [`scripts/measure_classic.py`](../scripts/measure_classic.py).
+For a full grid plus Markdown/JSON report, use [`scripts/measure_classic.py`](../../scripts/measure_classic.py).
 
 ## Command
 
@@ -52,4 +52,4 @@ Confirm JSON under `data/classic_games/` and that nothing new appears under
 ## Related
 
 - [`../engine/classic-matchup.md`](../engine/classic-matchup.md) — single-match harness
-- [`../research/strategies/human-95-plan.md`](../research/strategies/human-95-plan.md) — Phase 3 remote goal
+- [`../research/strategies/human-95-plan.md`](../research/strategies/human-95-plan.md) — remote human-block goal

@@ -95,5 +95,5 @@ See [`remote-play-setup.md`](remote-play-setup.md) for live credentials.
 ## Related
 
 - [`../research/strategies/classic_duel.md`](../research/strategies/classic_duel.md) — champion spec
-- [`../research/strategies/human-95-plan.md`](../research/strategies/human-95-plan.md) — Phase 3 plan
+- [`../research/strategies/human-95-plan.md`](../research/strategies/human-95-plan.md) — remote human-block plan
 - [`../competition/vs-classic.md`](../competition/vs-classic.md) — rule deltas

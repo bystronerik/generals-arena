@@ -3,7 +3,7 @@ name: run-remote-block
 description: >-
   Runs or resumes a 100-game human block on live generals.io through
   scripts/remote_play.py, counts eligible games with arena/remote_block.py, and
-  publishes docs/research/measurements/remote-block<N>.md. Use for Phase 3
+  publishes docs/research/measurements/remote-block<N>.md. Use for the remote
   human evaluation and the 95/100 gate ladder.
 ---
 

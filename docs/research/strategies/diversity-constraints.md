@@ -14,7 +14,7 @@ Related:
 - [`optimize-existing.md`](optimize-existing.md) — the approved revisions.
 - [`tournament-plan.md`](tournament-plan.md) — the round schedule.
 - [`../experiment-protocol.md`](../experiment-protocol.md) — how to measure.
-- [`human-95-plan.md`](human-95-plan.md) — Phase 3 remote champion plan.
+- [`human-95-plan.md`](human-95-plan.md) — remote champion plan.
 - [`classic_duel.md`](classic_duel.md) — remote-only champion spec.
 
 ## 1. Why this file exists
@@ -116,7 +116,7 @@ the current owner.
 
 ### 3.2 Remote-only carve-out: `classic_duel`
 
-`bots/classic_duel/` is the Phase 3 champion for **classic generals.io**, not
+`bots/classic_duel/` is the remote champion for **classic generals.io**, not
 the competition ruleset. It is exempt from the axis table above:
 
 - **Remote-only.** It never enters `arena/tournament.py` fields, never appears

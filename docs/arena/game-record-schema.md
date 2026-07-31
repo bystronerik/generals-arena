@@ -1,4 +1,4 @@
-# Game record schema (Phase 2)
+# Game record schema
 
 Minimum fields for one stored match under
 `data/games/<round>/<game_id>.json` (batch rounds) or
@@ -88,7 +88,7 @@ See [`docs/research/strategies/optimize-existing.md`](../research/strategies/opt
 ## Rules
 
 - Store every game **before** updating ratings.
-- Arena code lives in `arena/store.py` (Phase 2).
+- Arena code lives in `arena/store.py`.
 - Do not invent extra required fields without updating this page.
 - Arena matches set `mode` to `"competition"` only.
 

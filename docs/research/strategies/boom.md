@@ -5,7 +5,7 @@ rewrite. Grounded idea: **fast-expand economy — refuse to fight until the
 economy has won, then cash it in with one fist.** Baselines for comparison:
 `expand_plus`, `castle_builder`, `smoke`.
 
-Rule references: [`RULES.md`](../../RULES.md) sections 03 (build castles),
+Rule references: [`RULES.md`](../../../RULES.md) sections 03 (build castles),
 04 (army growth), 08 (draw at 1200). Turn cadence matches the source
 ruleset, so source-tuned values transfer as **hypotheses**.
 

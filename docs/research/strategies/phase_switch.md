@@ -8,7 +8,7 @@ Grounded idea: **explicit early / mid / late phases** over the 1200-turn
 competition game. Baselines for comparison: `expand_plus`, `castle_builder`,
 `general_hunter`, `smoke`.
 
-Rule references: [`RULES.md`](../../RULES.md) sections 03 (build castles),
+Rule references: [`RULES.md`](../../../RULES.md) sections 03 (build castles),
 04 (army growth), 07 (deathtouch from turn 800); build-cost detail in
 [`docs/competition/build-castles.md`](../../competition/build-castles.md).
 

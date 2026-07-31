@@ -378,10 +378,10 @@ Store every game before rating — `arena/tournament.py` stores under
 rebuildable from `data/games/` at any time, so the store is the source of
 truth and `data/ratings/` is a derived snapshot.
 
-## 8. Relation to the Phase 3 remote goal
+## 8. Relation to the remote goal
 
 This plan ranks the roster under the **competition** ruleset. It is not the
-path to the Phase 3 end goal, which is **95 wins in 100 logged games against
+path to the remote end goal, which is **95 wins in 100 logged games against
 human opponents** on classic generals.io. Classic removes the build action,
 adds pre-placed neutral cities, and removes deathtouch, so a competition rank
 does not carry over.

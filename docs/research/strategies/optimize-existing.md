@@ -304,7 +304,7 @@ up doing the same thing, delete one.
 
 Recommendation: **make no strategy change.**
 
-- It is the Phase 1 stdio smoke test. Its documented purpose is proving the
+- It is the stdio smoke test. Its documented purpose is proving the
   wire protocol, not competing (`docs/bots/smoke.md`).
 - The arena needs a frozen weak anchor. Elo is only meaningful relative to
   something; if every bot improves together, the leaderboard stays flat for
@@ -470,7 +470,7 @@ and fills the opposite side from the reporting bot's `opp_*` view when only
 one bot reports. One line per bot per game keeps the logs clean and cannot
 affect gameplay.
 
-Do not add `trajectory_path` or any training field. Phase 4 is not in scope.
+Do not add `trajectory_path` or any training field. Learned bots are not in scope.
 
 ### 5.3 Metrics each experiment note must report
 

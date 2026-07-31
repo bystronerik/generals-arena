@@ -5,7 +5,7 @@ ruleset) as a grid-native rewrite. Grounded idea: **general rush — one big
 strike stack, launched early and repeatedly at the enemy general.**
 Baselines for comparison: `smoke`, `expand_plus`, `army_convey`, `late_rush`.
 
-Rule references: [`RULES.md`](../../RULES.md) sections 04 (army growth), 07
+Rule references: [`RULES.md`](../../../RULES.md) sections 04 (army growth), 07
 (deathtouch). The turn cadence matches the source ruleset (production every
 other turn, land bonus every 50), so the source-tuned thresholds transfer
 as **hypotheses** — the numbers below were measured under the old ruleset

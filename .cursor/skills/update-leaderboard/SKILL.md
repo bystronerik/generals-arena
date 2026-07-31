@@ -51,7 +51,7 @@ Rebuild writes JSON and Markdown under `data/ratings/`. Those files are
 ## Rules
 
 - Prefer explicit result recording from the game store over opaque arena helpers that skip persistence.
-- After Phase 2, store then rate — see root `AGENTS.md` verification gate.
+- Store then rate — see root `AGENTS.md` verification gate.
 - Experiment reporting: [`docs/research/experiment-protocol.md`](../../../docs/research/experiment-protocol.md).
 
 ## Changelog

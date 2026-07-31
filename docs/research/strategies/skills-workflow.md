@@ -25,7 +25,7 @@ Two constraints act on the loop:
 
 - **Diversity constraint.** New bots must not converge on the behavior of an
   existing bot.
-- **Phase 4 gate.** The learned bot waits for about 10 heuristic bots plus a
+- **Learned-bot gate.** The learned bot waits for about 10 heuristic bots plus a
   remote evaluation result.
 
 The skill set below maps one skill to each step, plus meta skills for git
@@ -227,7 +227,7 @@ This skill holds the auto-improve rules in section 4.
 ### 3.7 Deferred: `learned-bot-readiness`
 
 Do not build this skill now. Build the skill when the heuristic count reaches
-about 10 and a remote evaluation path exists. The skill will check the Phase 4
+about 10 and a remote evaluation path exists. The skill will check the learned-bot
 gate: heuristic count, decisive-game rate, telemetry fields, and one remote
 evaluation result. See `docs/research/learned-bot-plan.md`.
 

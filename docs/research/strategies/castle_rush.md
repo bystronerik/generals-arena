@@ -8,7 +8,7 @@ Grounded idea: **more aggressive castle building than `castle_builder`;
 spend early for income.** Baselines for comparison: `castle_builder`,
 `expand_plus`, `smoke`.
 
-Rule references: [`RULES.md`](../../RULES.md) sections 03 (build castles),
+Rule references: [`RULES.md`](../../../RULES.md) sections 03 (build castles),
 04 (army growth); build-cost detail in
 [`docs/competition/build-castles.md`](../../competition/build-castles.md).
 

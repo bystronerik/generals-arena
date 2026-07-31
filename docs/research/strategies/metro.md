@@ -8,7 +8,7 @@ on land is spent once; army spent on production keeps paying.** Baselines
 for comparison: `castle_builder`, `castle_rush`, `phase_switch`,
 `expand_plus`.
 
-Rule references: [`RULES.md`](../../RULES.md) sections 03 (build castles),
+Rule references: [`RULES.md`](../../../RULES.md) sections 03 (build castles),
 04 (army growth). Source-tuned values transfer as **hypotheses**.
 
 ## 1. Priority ladder (every turn)

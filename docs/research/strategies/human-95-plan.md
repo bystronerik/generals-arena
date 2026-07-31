@@ -1,6 +1,6 @@
 # Plan: 95 wins in 100 games against human players
 
-The Phase 3 end goal is one heuristic bot that wins **at least 95 of 100 logged
+The remote end goal is one heuristic bot that wins **at least 95 of 100 logged
 games against human opponents** on live generals.io through
 `client/generals_client` (`arena/remote_bridge.py`, `scripts/remote_play.py`).
 

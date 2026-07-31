@@ -1,11 +1,11 @@
-# Learned bot plan (Phase 4 scaffold)
+# Learned bot plan
 
 Brief placeholder only. No training code lives here yet — this is a
-pointer for the agent that picks up Phase 4, not an implementation.
+pointer for the agent that picks up learned bots, not an implementation.
 
 ## Scope (later)
 
-- Train against the Phase 3 heuristic bots (`bots/expand_plus/`,
+- Train against the heuristic bots (`bots/expand_plus/`,
   `bots/castle_builder/`, `bots/general_hunter/`) plus `bots/smoke/` and
   `expander_python` as a fixed opponent pool.
 - Reference the engine's vectorized env / experimental PPO under
@@ -33,5 +33,5 @@ produces decisive games, or early training will mostly see draws too.
 ## Not in scope here
 
 - Any model code, training loop, or checkpoint format.
-- Changing `arena/` schemas — propose that as its own experiment note if
-  Phase 4 needs it.
+- Changing `arena/` schemas — propose that as its own experiment note if a
+  learned bot needs it.

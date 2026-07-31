@@ -33,7 +33,7 @@ python competition-module/competition/matchup.py \
 
 Always pass `--mode competition`. The match must finish (win, loss, or draw / truncation).
 
-## Arena store (Phase 2+)
+## Arena store
 
 Prefer the wrapper when rating or logging. Single matches use the in-process
 runner (`arena/competition_match.py`) via `run_and_store`:
