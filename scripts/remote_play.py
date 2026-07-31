@@ -73,8 +73,8 @@ def run_dry_run(
     lobby_id: str | None = None,
 ) -> int:
     print("Dry-run: offline adapter verification (no network).")
-    registered_as = ensure_bot_username(username or _default_username(bot))
-    lobby = lobby_id or _default_lobby_id()
+    registered_as = ensure_bot_username(username or default_username(bot))
+    lobby = lobby_id or default_lobby_id()
     print(f"Live username would register as: {registered_as!r}")
     print(f"Lobby mode would use lobby_id: {lobby!r}")
     errors = verify_adapter_offline()
