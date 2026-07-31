@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from arena.store import (
+from arena.records.store import (
     GameRecord,
     list_game_paths,
     load_all_games,
@@ -115,7 +115,7 @@ def test_round_games_dir_rejects_bad_name():
 
 
 def test_list_game_paths_recursive_skips_manifest(monkeypatch, tmp_path):
-    monkeypatch.setattr("arena.store.GAMES_DIR", tmp_path)
+    monkeypatch.setattr("arena.records.store.GAMES_DIR", tmp_path)
     legacy = tmp_path / "legacy.json"
     legacy.write_text(json.dumps(V1_MINIMAL) + "\n", encoding="utf-8")
     round_dir = tmp_path / "roundX"

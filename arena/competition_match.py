@@ -19,7 +19,7 @@ if str(_COMP) not in sys.path:
     sys.path.insert(0, str(_COMP))
 
 from arena.match_loop import run_stdio_match  # noqa: E402
-from arena.store import Winner  # noqa: E402
+from arena.records.store import Winner  # noqa: E402
 from generals import GeneralsEnv  # noqa: E402
 
 LOG_TAG = "competition_match"

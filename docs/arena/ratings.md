@@ -1,6 +1,6 @@
 # Ratings (elote)
 
-`arena/ratings.py` rates bots with elote `EloCompetitor` (`beat` / `tied` / `lost_to`).
+`arena/records/ratings.py` rates bots with elote `EloCompetitor` (`beat` / `tied` / `lost_to`).
 
 ## Flow
 
@@ -25,7 +25,7 @@ Initial Elo for new bots: **1500**.
 
 ```bash
 source .venv/bin/activate
-python -m arena.ratings --print
+python -m arena.records.ratings --print
 # or
 python scripts/leaderboard.py
 ```

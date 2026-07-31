@@ -6,8 +6,8 @@ import argparse
 from pathlib import Path
 
 from arena.competition_match import run_competition_match
-from arena.fingerprint import bot_content_hash
-from arena.store import (
+from arena.records.fingerprint import bot_content_hash
+from arena.records.store import (
     GAMES_DIR,
     GameRecord,
     bot_id_from_run_sh,
@@ -15,7 +15,7 @@ from arena.store import (
     save_game,
     utc_now_iso,
 )
-from arena.telemetry import record_from_match_result
+from arena.records.telemetry import record_from_match_result
 
 
 def run_and_store(
@@ -71,7 +71,7 @@ def run_and_store(
     )
 
     if update_ratings:
-        from arena.ratings import rate_stored_game
+        from arena.records.ratings import rate_stored_game
 
         rate_stored_game(record)
         print("[run_match] ratings updated")

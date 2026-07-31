@@ -33,9 +33,9 @@ Composer must not change production code to make a test pass.
 | --- | --- | --- | --- |
 | C1 | Match result mapping | `arena/match_loop.py` | `winner_seat`, `MatchLoopResult` fields |
 | C2 | Castle metric counting | `arena/competition_match.py` | castle tally in `run_competition_match` (`castles_built_a/b`) |
-| C3 | Telemetry parse and merge | `arena/telemetry.py` | `parse_bot_telemetry`, `apply_telemetry_to_record` |
-| C4 | Game record store | `arena/store.py` | `GameRecord.from_dict`, `save_game`, `load_game` |
-| C5 | Rating idempotence | `arena/ratings.py` | `RatingBook.apply_game`, `apply_games`, `to_state`, `from_state`, `rebuild_from_games` |
+| C3 | Telemetry parse and merge | `arena/records/telemetry.py` | `parse_bot_telemetry`, `apply_telemetry_to_record` |
+| C4 | Game record store | `arena/records/store.py` | `GameRecord.from_dict`, `save_game`, `load_game` |
+| C5 | Rating idempotence | `arena/records/ratings.py` | `RatingBook.apply_game`, `apply_games`, `to_state`, `from_state`, `rebuild_from_games` |
 | C6 | Unified bot API mapping | `arena/bot_api.py` | `from_game_state`, `from_competition_remote_obs`, `to_client_move`, `translate_action_for_remote`, `StrategySession.act` fault path |
 | C7 | Fidelity session classification | `arena/remote_client.py` | `result_from_reason`, `opponent_is_bot`, `DECIDED_REASONS`, `FidelityRemoteSession._finish_with_reason` |
 | C8 | Classic match result contract | `arena/classic_match.py` | `run_classic_match` return contract, classic record writer |

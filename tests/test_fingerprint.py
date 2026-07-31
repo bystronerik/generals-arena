@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from arena.fingerprint import (
+from arena.records.fingerprint import (
     BOTS_DIR,
     HASH_LENGTH,
     bot_content_hash,
@@ -95,7 +95,7 @@ def test_edit_propagates_to_exactly_the_dependents(
     """Touching a shared file must move its dependents' hashes and nothing else."""
     import shutil
 
-    import arena.fingerprint as fingerprint
+    import arena.records.fingerprint as fingerprint
 
     sandbox = tmp_path / "bots"
     shutil.copytree(BOTS_DIR, sandbox, ignore=shutil.ignore_patterns("__pycache__"))

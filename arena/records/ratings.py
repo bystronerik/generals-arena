@@ -10,8 +10,8 @@ from typing import Any
 
 from elote import EloCompetitor
 
-from arena.reporting import leaderboard_table_lines
-from arena.store import (
+from arena.records.reporting import leaderboard_table_lines
+from arena.records.store import (
     GAMES_DIR,
     REPO_ROOT,
     GameRecord,

@@ -10,7 +10,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from arena.ratings import main
+from arena.records.ratings import main
 
 if __name__ == "__main__":
     # Default to printing the table for a quick glance.

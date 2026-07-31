@@ -1,8 +1,8 @@
 """RatingBook.apply_game idempotence and basic Elo updates."""
 from __future__ import annotations
 
-from arena.ratings import INITIAL_RATING, RatingBook
-from arena.store import GameRecord
+from arena.records.ratings import INITIAL_RATING, RatingBook
+from arena.records.store import GameRecord
 
 
 def _record(game_id: str, winner: str = "a") -> GameRecord:

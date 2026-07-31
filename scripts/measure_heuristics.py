@@ -22,15 +22,15 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from arena.parallel import default_jobs
-from arena.ratings import RatingBook
-from arena.reporting import (
+from arena.records.ratings import RatingBook
+from arena.records.reporting import (
     aggregate_stats,
     bot_run_sh,
     leaderboard_table_lines,
     winner_bot_id,
     winrate_table_lines,
 )
-from arena.store import GameRecord, round_games_dir, utc_now_iso
+from arena.records.store import GameRecord, round_games_dir, utc_now_iso
 from arena.tournament import DEFAULT_GAMES_PER_PAIR, parse_seeds
 
 MEASUREMENTS_DIR = REPO_ROOT / "docs" / "research" / "measurements"
@@ -360,8 +360,8 @@ def _run_legacy_grid(
             f"terminated={entry.terminated} truncated={entry.truncated}"
         )
     if update_ratings:
-        from arena.ratings import rebuild_from_games
-        from arena.store import GAMES_DIR
+        from arena.records.ratings import rebuild_from_games
+        from arena.records.store import GAMES_DIR
 
         book = rebuild_from_games(games_dir=GAMES_DIR)
         print(f"[measure] rebuilt ratings ({len(book.rated_game_ids)} game(s))")

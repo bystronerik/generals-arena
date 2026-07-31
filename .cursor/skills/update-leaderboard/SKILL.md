@@ -2,7 +2,7 @@
 name: update-leaderboard
 description: >-
   Rebuilds Elo leaderboard snapshots from stored data/games/ through
-  arena/ratings.py and publishes JSON and Markdown under data/ratings/. Use when
+  arena/records/ratings.py and publishes JSON and Markdown under data/ratings/. Use when
   refreshing ratings, publishing the leaderboard, or closing a tournament or
   measurement round.
 ---
@@ -12,7 +12,7 @@ description: >-
 ## Model split
 
 - Think model: decides when a rating snapshot is worth committing
-- Composer: runs `arena/ratings.py` after games are stored
+- Composer: runs `arena/records/ratings.py` after games are stored
 
 **Composer must not invent a threshold.** When a value is absent from the specification, Composer stops and asks the think model.
 
@@ -26,13 +26,13 @@ description: >-
 
 ```bash
 source .venv/bin/activate   # if present; prefer python3.12
-python -m arena.ratings     # or scripts/ CLI that wraps arena/ratings.py
+python -m arena.records.ratings     # or scripts/ CLI that wraps arena/records/ratings.py
 ```
 
 Typical flow after a grid:
 
 1. `arena/tournament.py` (or `arena/run_match.py` / `scripts/measure_heuristics.py`) writes `data/games/`.
-2. `arena/ratings.py` reads stored games, applies elote `EloCompetitor` (`beat` / `tied` / `lost_to`).
+2. `arena/records/ratings.py` reads stored games, applies elote `EloCompetitor` (`beat` / `tied` / `lost_to`).
 3. Persist competitor state + leaderboard under `data/ratings/`.
 
 ## Outputs

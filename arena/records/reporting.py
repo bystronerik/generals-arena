@@ -3,7 +3,7 @@ Shared measurement aggregation and markdown table rendering.
 
 Used by `scripts/measure_heuristics.py` (competition rounds),
 `scripts/measure_classic.py` (classic rounds), and
-`arena.ratings.write_leaderboard`. The aggregation helpers are duck-typed on
+`arena.records.ratings.write_leaderboard`. The aggregation helpers are duck-typed on
 anything carrying `bot_a`, `bot_b`, `winner`, and `turns` — GameRecord,
 ClassicGameRecord, and the measure scripts' GameEntry all qualify — so the two
 round types share one definition of winrate and one table layout.

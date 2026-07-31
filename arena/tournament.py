@@ -9,10 +9,10 @@ import random
 from pathlib import Path
 from typing import Any
 
-from arena.fingerprint import bot_content_hashes
 from arena.parallel import cap_jobs, default_jobs, run_pool
-from arena.ratings import rebuild_from_games
-from arena.store import (
+from arena.records.fingerprint import bot_content_hashes
+from arena.records.ratings import rebuild_from_games
+from arena.records.store import (
     GAMES_DIR,
     GameRecord,
     bot_id_from_run_sh,

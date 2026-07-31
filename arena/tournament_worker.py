@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from arena.store import (
+from arena.records.store import (
     GameRecord,
     bot_id_from_run_sh,
     git_commit_or_tag,
@@ -21,8 +21,8 @@ from arena.store import (
 def run_one_worker(payload: dict[str, Any]) -> GameRecord:
     """One in-process competition match + store (ProcessPool entry point)."""
     from arena.competition_match import run_competition_match
-    from arena.fingerprint import bot_content_hash
-    from arena.telemetry import record_from_match_result
+    from arena.records.fingerprint import bot_content_hash
+    from arena.records.telemetry import record_from_match_result
 
     a = Path(payload["bot_a_run"])
     b = Path(payload["bot_b_run"])

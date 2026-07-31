@@ -31,7 +31,7 @@ for _path in (_COMP, _COMP / "competition"):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from arena.store import Winner  # noqa: E402
+from arena.records.store import Winner  # noqa: E402
 from generals.core import game  # noqa: E402
 from matchup import (  # noqa: E402
     ask_agent,

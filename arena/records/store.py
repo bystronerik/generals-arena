@@ -82,7 +82,7 @@ class GameRecord:
     finished_at: str
     schema_version: int = 1
     duration_seconds: float | None = None
-    # Hash of each bot's source closure (arena/fingerprint.py). Rating identity
+    # Hash of each bot's source closure (arena/records/fingerprint.py). Rating identity
     # should key on this, not on the repo-wide commit pin. None on schema < 3.
     bot_a_content_hash: str | None = None
     bot_b_content_hash: str | None = None

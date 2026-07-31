@@ -63,7 +63,7 @@ When both arms draw every game, mark the result **unproven**, not neutral. Ask f
 - [ ] Competition mode on every match
 - [ ] Games under `data/games/<round>/` before Elo update
 - [ ] One changed parameter group per experiment
-- [ ] Rating snapshot / delta via `arena/ratings.py` (see **update-leaderboard**)
+- [ ] Rating snapshot / delta via `arena/records/ratings.py` (see **update-leaderboard**)
 
 Schema: [`docs/arena/game-record-schema.md`](../../../docs/arena/game-record-schema.md).
 

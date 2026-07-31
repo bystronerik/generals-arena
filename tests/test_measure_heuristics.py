@@ -7,7 +7,7 @@ from scripts.measure_heuristics import (
     build_grid,
     game_entry_from_record,
 )
-from arena.store import GameRecord
+from arena.records.store import GameRecord
 
 
 def test_both_seat_orders_emits_swap():

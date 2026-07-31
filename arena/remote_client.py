@@ -20,6 +20,8 @@ from urllib.parse import urlparse
 from generals_client.bot import BotError, GAME_TIMEOUT_SECONDS, GameResult
 from generals_client.transport import DEFAULT_SERVER
 
+from arena.paths import REPO_ROOT
+from arena.records.store import git_head_sha, utc_now_iso
 from arena.remote_bridge import (
     ArenaGameClient,
     UnifiedBot,
@@ -27,8 +29,6 @@ from arena.remote_bridge import (
     opponent_username,
     register_username_safe,
 )
-from arena.paths import REPO_ROOT
-from arena.store import git_head_sha, utc_now_iso
 
 DECIDED_REASONS = frozenset({"game_won", "game_lost"})
 QUEUE_TIMEOUT_DETAIL = "did not finish within"

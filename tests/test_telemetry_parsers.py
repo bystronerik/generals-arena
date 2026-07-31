@@ -1,10 +1,10 @@
-"""Table-driven tests for arena/telemetry.py bot-telemetry parsers."""
+"""Table-driven tests for arena/records/telemetry.py bot-telemetry parsers."""
 from __future__ import annotations
 
 from types import SimpleNamespace
 
-from arena.store import CURRENT_SCHEMA_VERSION, GameRecord
-from arena.telemetry import (
+from arena.records.store import CURRENT_SCHEMA_VERSION, GameRecord
+from arena.records.telemetry import (
     BotTelemetry,
     apply_telemetry_to_record,
     parse_bot_telemetry,

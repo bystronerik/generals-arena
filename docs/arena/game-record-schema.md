@@ -32,7 +32,7 @@ measured, never zero.
 | --- | --- | --- |
 | `schema_version` | int | `3` for new records; `1` when absent |
 | `duration_seconds` | float or null | wall clock between `started_at` and `finished_at` |
-| `bot_a_content_hash` / `_b` | string or null | schema v3; `arena/fingerprint.py` |
+| `bot_a_content_hash` / `_b` | string or null | schema v3; `arena/records/fingerprint.py` |
 | `castles_built_a` / `_b` | int or null | `[matchup] castles built: N (...) vs M (...)` |
 | `final_land_a` / `_b` | int or null | bot stderr `[telemetry]` line (last frame) |
 | `final_army_a` / `_b` | int or null | same |
@@ -42,7 +42,7 @@ measured, never zero.
 
 `bot_a_content_hash` / `bot_b_content_hash` pin the *bot*, where
 `bot_a_commit_or_tag` only pins the repo. A 12-hex-character SHA-256 over the
-bot's source closure, computed by `arena/fingerprint.py`:
+bot's source closure, computed by `arena/records/fingerprint.py`:
 
 - every file in `bots/<id>/`, excluding `__pycache__` and `*.pyc`;
 - every module under `bots/` it imports, transitively — this crosses bot
@@ -62,7 +62,7 @@ committing.
 Inspect a roster:
 
 ```bash
-python -m arena.fingerprint --files proteus cm_random
+python -m arena.records.fingerprint --files proteus cm_random
 ```
 
 ### Bot stderr telemetry
@@ -88,7 +88,7 @@ See [`docs/research/strategies/optimize-existing.md`](../research/strategies/opt
 ## Rules
 
 - Store every game **before** updating ratings.
-- Arena code lives in `arena/store.py`.
+- Arena code lives in `arena/records/store.py`.
 - Do not invent extra required fields without updating this page.
 - Arena matches set `mode` to `"competition"` only.
 

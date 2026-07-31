@@ -62,7 +62,7 @@ data/games/<round>/
   <game_id>.json         # one file per match
 ```
 
-`arena/ratings.py` rebuild scans `data/games/` recursively (skips
+`arena/records/ratings.py` rebuild scans `data/games/` recursively (skips
 `manifest.json`). Legacy flat JSON at `data/games/*.json` still loads.
 
 ## Verification

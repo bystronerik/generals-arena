@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from arena.store import (
+from arena.records.store import (
     CURRENT_SCHEMA_VERSION,
     GameRecord,
     duration_seconds_between,

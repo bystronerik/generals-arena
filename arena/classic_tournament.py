@@ -10,7 +10,7 @@ from typing import Any, Literal
 from arena.classic_match import CLASSIC_ENV_DEFAULTS, run_classic_match
 from arena.match_loop import winner_seat
 from arena.parallel import cap_jobs, run_pool
-from arena.store import (
+from arena.records.store import (
     REPO_ROOT,
     Winner,
     bot_id_from_run_sh,

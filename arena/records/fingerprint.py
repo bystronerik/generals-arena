@@ -29,7 +29,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
-from arena.store import REPO_ROOT, bot_id_from_run_sh
+from arena.records.store import REPO_ROOT, bot_id_from_run_sh
 
 BOTS_DIR = REPO_ROOT / "bots"
 

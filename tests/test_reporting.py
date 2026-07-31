@@ -1,11 +1,11 @@
-"""Tests for arena/reporting.py: shared aggregation and table rendering."""
+"""Tests for arena/records/reporting.py: shared aggregation and table rendering."""
 from __future__ import annotations
 
 from types import SimpleNamespace
 
 import pytest
 
-from arena.reporting import (
+from arena.records.reporting import (
     EXPANDER_PYTHON,
     aggregate_stats,
     bot_run_sh,

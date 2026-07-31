@@ -23,7 +23,7 @@ from arena.classic_tournament import (
     build_match_specs,
     run_classic_tournament,
 )
-from arena.reporting import (
+from arena.records.reporting import (
     aggregate_stats,
     bot_run_sh,
     matchup_table,
@@ -31,7 +31,7 @@ from arena.reporting import (
     winner_bot_id,
     winrate_table_lines,
 )
-from arena.store import bot_id_from_run_sh, utc_now_iso
+from arena.records.store import bot_id_from_run_sh, utc_now_iso
 from arena.tournament import parse_seeds
 
 MEASUREMENTS_DIR = REPO_ROOT / "docs" / "research" / "measurements"
