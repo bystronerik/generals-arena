@@ -101,11 +101,7 @@ class GameRecord:
         winner = data["winner"]
         if winner not in ("a", "b", "draw"):
             raise ValueError(f"invalid winner: {winner!r}")
-        metrics = data.get("metrics")
-        if metrics is None:
-            metrics = {}
-        elif not isinstance(metrics, dict):
-            raise ValueError("metrics must be an object when present")
+        metrics = coerce_metrics(data.get("metrics"))
         return cls(
             game_id=str(data["game_id"]),
             seed=int(data["seed"]),
@@ -121,27 +117,57 @@ class GameRecord:
             started_at=str(data["started_at"]),
             finished_at=str(data["finished_at"]),
             schema_version=int(data.get("schema_version", 1)),
-            duration_seconds=_optional_float(data.get("duration_seconds")),
-            castles_built_a=_optional_int(data.get("castles_built_a")),
-            castles_built_b=_optional_int(data.get("castles_built_b")),
-            final_land_a=_optional_int(data.get("final_land_a")),
-            final_land_b=_optional_int(data.get("final_land_b")),
-            final_army_a=_optional_int(data.get("final_army_a")),
-            final_army_b=_optional_int(data.get("final_army_b")),
-            metrics=dict(metrics),
+            duration_seconds=optional_float(data.get("duration_seconds")),
+            castles_built_a=optional_int(data.get("castles_built_a")),
+            castles_built_b=optional_int(data.get("castles_built_b")),
+            final_land_a=optional_int(data.get("final_land_a")),
+            final_land_b=optional_int(data.get("final_land_b")),
+            final_army_a=optional_int(data.get("final_army_a")),
+            final_army_b=optional_int(data.get("final_army_b")),
+            metrics=metrics,
         )
 
 
-def _optional_int(value: Any) -> int | None:
+def optional_int(value: Any) -> int | None:
+    """Coerce an optional JSON field to int, keeping None as None."""
     if value is None:
         return None
     return int(value)
 
 
-def _optional_float(value: Any) -> float | None:
+def optional_float(value: Any) -> float | None:
+    """Coerce an optional JSON field to float, keeping None as None."""
     if value is None:
         return None
     return float(value)
+
+
+def coerce_metrics(value: Any) -> dict[str, Any]:
+    """Validate a record's optional `metrics` object, defaulting to empty."""
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise ValueError("metrics must be an object when present")
+    return dict(value)
+
+
+def record_path(game_id: str, directory: Path) -> Path:
+    return directory / f"{game_id}.json"
+
+
+def write_record_json(payload: dict[str, Any], path: Path) -> Path:
+    """Write one record as sorted, indented JSON, creating parent dirs."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
+def read_record_json(path: Path, *, label: str = "record") -> dict[str, Any]:
+    """Read one record JSON file, requiring a top-level object."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"{label} must be an object: {path}")
+    return data
 
 
 def utc_now_iso() -> str:
@@ -169,23 +195,16 @@ def _slug(label: str) -> str:
 
 
 def game_path(game_id: str, games_dir: Path | None = None) -> Path:
-    return (games_dir or GAMES_DIR) / f"{game_id}.json"
+    return record_path(game_id, games_dir or GAMES_DIR)
 
 
 def save_game(record: GameRecord, games_dir: Path | None = None) -> Path:
     """Write the game record. Call this before updating ratings."""
-    directory = games_dir or GAMES_DIR
-    directory.mkdir(parents=True, exist_ok=True)
-    path = game_path(record.game_id, directory)
-    path.write_text(json.dumps(record.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return path
+    return write_record_json(record.to_dict(), game_path(record.game_id, games_dir))
 
 
 def load_game(path: Path) -> GameRecord:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        raise ValueError(f"game record must be an object: {path}")
-    return GameRecord.from_dict(data)
+    return GameRecord.from_dict(read_record_json(path, label="game record"))
 
 
 def list_game_paths(games_dir: Path | None = None) -> list[Path]:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -19,10 +18,16 @@ from arena.parallel import cap_jobs, run_pool
 from arena.store import (
     Winner,
     bot_id_from_run_sh,
+    coerce_metrics,
     duration_seconds_between,
     git_commit_or_tag,
     make_game_id,
+    optional_float,
+    optional_int,
+    read_record_json,
+    record_path,
     utc_now_iso,
+    write_record_json,
 )
 from arena.tournament import bot_pairs, parse_seeds
 
@@ -71,11 +76,7 @@ class ClassicGameRecord:
         winner = data["winner"]
         if winner not in ("a", "b", "draw"):
             raise ValueError(f"invalid winner: {winner!r}")
-        metrics = data.get("metrics")
-        if metrics is None:
-            metrics = {}
-        elif not isinstance(metrics, dict):
-            raise ValueError("metrics must be an object when present")
+        metrics = coerce_metrics(data.get("metrics"))
         return cls(
             game_id=str(data["game_id"]),
             seed=int(data["seed"]),
@@ -92,23 +93,11 @@ class ClassicGameRecord:
             started_at=str(data["started_at"]),
             finished_at=str(data["finished_at"]),
             schema_version=int(data.get("schema_version", 1)),
-            duration_seconds=_optional_float(data.get("duration_seconds")),
-            grid_size=_optional_int(data.get("grid_size")),
-            truncation_limit=_optional_int(data.get("truncation_limit")),
-            metrics=dict(metrics),
+            duration_seconds=optional_float(data.get("duration_seconds")),
+            grid_size=optional_int(data.get("grid_size")),
+            truncation_limit=optional_int(data.get("truncation_limit")),
+            metrics=metrics,
         )
-
-
-def _optional_int(value: Any) -> int | None:
-    if value is None:
-        return None
-    return int(value)
-
-
-def _optional_float(value: Any) -> float | None:
-    if value is None:
-        return None
-    return float(value)
 
 
 def build_match_specs(
@@ -131,22 +120,17 @@ def build_match_specs(
 
 
 def classic_game_path(game_id: str, games_dir: Path | None = None) -> Path:
-    return (games_dir or CLASSIC_GAMES_DIR) / f"{game_id}.json"
+    return record_path(game_id, games_dir or CLASSIC_GAMES_DIR)
 
 
 def save_classic_game(record: ClassicGameRecord, games_dir: Path | None = None) -> Path:
-    directory = games_dir or CLASSIC_GAMES_DIR
-    directory.mkdir(parents=True, exist_ok=True)
-    path = classic_game_path(record.game_id, directory)
-    path.write_text(json.dumps(record.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return path
+    return write_record_json(record.to_dict(), classic_game_path(record.game_id, games_dir))
 
 
 def load_classic_game(path: Path) -> ClassicGameRecord:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        raise ValueError(f"classic game record must be an object: {path}")
-    return ClassicGameRecord.from_dict(data)
+    return ClassicGameRecord.from_dict(
+        read_record_json(path, label="classic game record")
+    )
 
 
 def _env_overrides(grid_size: int | None, truncation: int | None) -> dict[str, Any]:
