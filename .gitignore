@@ -28,3 +28,6 @@ data/remote_games/*.json
 
 # Classic-approximate local harness (not competition Elo)
 data/classic_games/*.json
+
+# Per-turn trajectories (derived, opt-in; see docs/arena/trajectories.md)
+data/trajectories/**
