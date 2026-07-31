@@ -11,7 +11,14 @@ __pycache__/
 data/games/*.json
 data/games/**/*.json
 data/ratings/*.json
+data/ratings/**/*.json
 data/ratings/leaderboard.md
+
+# data/bot_versions/ is deliberately NOT ignored: the bot version registry is a
+# reviewable source artifact, not derived data. `git log -p
+# data/bot_versions/<bot>.json` is a bot's improvement history. The rules above
+# are file globs scoped to data/games/ and data/ratings/, so no carve-out is
+# needed here — tests/test_registry.py asserts it stays that way.
 
 # Live generals.io session logs (classic rules; not arena Elo)
 data/remote_games/*.json
