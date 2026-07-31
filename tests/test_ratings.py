@@ -82,10 +82,7 @@ def record(
         engine_version=engine,
         winner=winner,  # type: ignore[arg-type]
         turns=1200 if truncated else 400,
-        terminated=not truncated,
         truncated=truncated,
-        started_at="2026-01-01T00:00:00Z",
-        finished_at="2026-01-01T00:01:00Z",
     )
 
 

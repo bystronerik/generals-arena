@@ -46,10 +46,7 @@ def _minimal_record() -> GameRecord:
         engine_version="9e3b9d1",
         winner="draw",
         turns=10,
-        terminated=False,
         truncated=True,
-        started_at="2026-01-01T00:00:00Z",
-        finished_at="2026-01-01T00:01:00Z",
     )
 
 
@@ -60,10 +57,10 @@ def test_apply_telemetry_both_players():
         1: BotTelemetry(30, 80, 50, 100),
     }
     apply_telemetry_to_record(record, telemetry)
-    assert record.final_land_a == 50
-    assert record.final_army_a == 100
-    assert record.final_land_b == 30
-    assert record.final_army_b == 80
+    assert record.metrics["final_land_a"] == 50
+    assert record.metrics["final_army_a"] == 100
+    assert record.metrics["final_land_b"] == 30
+    assert record.metrics["final_army_b"] == 80
     assert record.metrics["enemy_general_sighted_a"] is True
     assert record.metrics["first_sighting_turn_a"] == 200
 
@@ -74,14 +71,13 @@ def test_apply_telemetry_player0_only_fills_opponent_from_opp_fields():
         record,
         {0: BotTelemetry(50, 100, 30, 80)},
     )
-    assert record.final_land_b == 30
-    assert record.final_army_b == 80
+    assert record.metrics["final_land_b"] == 30
+    assert record.metrics["final_army_b"] == 80
 
 
 def test_apply_telemetry_noop_on_empty():
     record = _minimal_record()
     apply_telemetry_to_record(record, {})
-    assert record.final_land_a is None
     assert record.metrics == {}
 
 
@@ -134,19 +130,16 @@ def test_record_from_match_result_fills_identity_timing_and_telemetry():
         bot_a_content_hash="0123456789ab",
         bot_b_content_hash="ba9876543210",
         engine_version="9e3b9d1",
-        started_at="2026-01-01T00:00:00Z",
-        finished_at="2026-01-01T00:01:30Z",
     )
     assert (record.bot_a, record.bot_b, record.seed) == ("blitz", "smoke", 7)
     assert record.winner == "a" and record.turns == 137
     assert record.schema_version == CURRENT_SCHEMA_VERSION
-    assert record.duration_seconds == 90.0
-    assert (record.castles_built_a, record.castles_built_b) == (2, 1)
+    assert (record.metrics["castles_built_a"], record.metrics["castles_built_b"]) == (2, 1)
     assert (record.round, record.engine_version) == ("round5", "9e3b9d1")
     assert record.bot_a_content_hash == "0123456789ab"
     # telemetry merged from stderr, not passed in separately
-    assert record.final_land_a == 50
-    assert record.final_land_b == 30
+    assert record.metrics["final_land_a"] == 50
+    assert record.metrics["final_land_b"] == 30
     assert record.metrics["first_sighting_turn_a"] == 200
 
 
@@ -178,8 +171,6 @@ def test_record_from_match_result_rejects_a_missing_identity(override, message):
         "bot_a_content_hash": "0123456789ab",
         "bot_b_content_hash": "ba9876543210",
         "engine_version": "9e3b9d1",
-        "started_at": "2026-01-01T00:00:00Z",
-        "finished_at": "2026-01-01T00:01:00Z",
         **override,
     }
     with pytest.raises(ValueError, match=message):

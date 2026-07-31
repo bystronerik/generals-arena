@@ -29,13 +29,17 @@ def round_games_dir(round_name: str, *, games_root: Path | None = None) -> Path:
 
 Winner = Literal["a", "b", "draw"]
 
-# Schema version stamped on records this code writes. v4 is the first version
-# the rating layer will read: it makes both content hashes required (rating
-# identity must never silently degrade) and adds `engine_version` and `round`.
-# There is no v3 reader — every pre-v4 record was deleted, not migrated.
-# See docs/arena/game-record-schema.md.
-CURRENT_SCHEMA_VERSION = 4
-MIN_SCHEMA_VERSION = 4
+# Schema version stamped on records this code writes. v5 is the lean schema:
+# required fields are exactly the rating identity and the outcome, and
+# everything observational lives in `metrics`. Fields no reader consumed
+# (`started_at`, `finished_at`, `duration_seconds`) and one that was fully
+# derivable (`terminated` ≡ `winner != "draw"`) were dropped; the stored v4
+# pool was projected onto v5 once by `scripts/migrate_games_v5.py`.
+#
+# There is never a two-branch reader: v4 is rejected exactly as loudly as v4
+# rejected v3. See docs/arena/game-record-schema.md.
+CURRENT_SCHEMA_VERSION = 5
+MIN_SCHEMA_VERSION = 5
 
 REQUIRED_FIELDS = (
     "game_id",
@@ -49,21 +53,11 @@ REQUIRED_FIELDS = (
     "engine_version",
     "winner",
     "turns",
-    "terminated",
     "truncated",
-    "started_at",
-    "finished_at",
 )
 
 OPTIONAL_FIELDS = (
     "schema_version",
-    "duration_seconds",
-    "castles_built_a",
-    "castles_built_b",
-    "final_land_a",
-    "final_land_b",
-    "final_army_a",
-    "final_army_b",
     "metrics",
 )
 
@@ -95,19 +89,26 @@ class GameRecord:
     engine_version: str
     winner: Winner
     turns: int
-    terminated: bool
+    # Outcome, not observation: a 1200-cap stall and a simultaneous general
+    # capture (RULES.md §02) are both `winner == "draw"`, and only this field
+    # tells them apart. Not derivable, so not dropped.
     truncated: bool
-    started_at: str
-    finished_at: str
     schema_version: int = CURRENT_SCHEMA_VERSION
-    duration_seconds: float | None = None
-    castles_built_a: int | None = None
-    castles_built_b: int | None = None
-    final_land_a: int | None = None
-    final_land_b: int | None = None
-    final_army_a: int | None = None
-    final_army_b: int | None = None
+    # Everything observational: engine-truth finals, castle tallies, land
+    # margins, and (on recorded games) probe and reducer output. Read with
+    # `.get()` — missing means not measured, never zero.
     metrics: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def terminated(self) -> bool:
+        """
+        Whether the game ended in a capture rather than at the turn cap.
+
+        Derived, not stored: under the loop's winner mapping this is exactly
+        `winner != "draw"`, so a stored copy could only ever disagree with the
+        outcome it restates.
+        """
+        return self.winner != "draw"
 
     def __post_init__(self) -> None:
         # Validate at construction, not only at load: the identity fields are
@@ -130,7 +131,8 @@ class GameRecord:
         if version < MIN_SCHEMA_VERSION:
             raise ValueError(
                 f"game record schema v{version} is not readable; "
-                f"v{MIN_SCHEMA_VERSION} is the minimum (no pre-v4 record survives)"
+                f"v{MIN_SCHEMA_VERSION} is the minimum "
+                f"(run scripts/migrate_games_v5.py over pre-v5 records)"
             )
         missing = [f for f in REQUIRED_FIELDS if f not in data]
         if missing:
@@ -151,18 +153,8 @@ class GameRecord:
             engine_version=str(data["engine_version"]),
             winner=winner,
             turns=int(data["turns"]),
-            terminated=bool(data["terminated"]),
             truncated=bool(data["truncated"]),
-            started_at=str(data["started_at"]),
-            finished_at=str(data["finished_at"]),
             schema_version=version,
-            duration_seconds=optional_float(data.get("duration_seconds")),
-            castles_built_a=optional_int(data.get("castles_built_a")),
-            castles_built_b=optional_int(data.get("castles_built_b")),
-            final_land_a=optional_int(data.get("final_land_a")),
-            final_land_b=optional_int(data.get("final_land_b")),
-            final_army_a=optional_int(data.get("final_army_a")),
-            final_army_b=optional_int(data.get("final_army_b")),
             metrics=metrics,
         )
 

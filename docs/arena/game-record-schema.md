@@ -4,15 +4,20 @@ Minimum fields for one stored match under
 `data/games/<round>/<game_id>.json` (batch rounds) or
 `data/games/<game_id>.json` (single-match store).
 
-**Schema v4 is the only readable version.** `GameRecord.from_dict` rejects
-anything older, loudly. Every pre-v4 record was deleted rather than migrated:
-none of them carried a content hash, so none of them had a rating identity.
+**Schema v5 is the only readable version.** `GameRecord.from_dict` rejects
+anything older, loudly. There is never a two-branch reader: the stored v4 pool
+was projected onto v5 once, in place, by
+[`scripts/migrate_games_v5.py`](../../scripts/migrate_games_v5.py) — exactly as
+v4 refused to read v3.
 
-## Required fields (schema v4)
+The split rule at v5: **required fields are the rating identity and the
+outcome; everything observational lives in `metrics`.**
+
+## Required fields (schema v5)
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `game_id` | string | unique id |
+| `game_id` | string | unique id (embeds a UTC minute stamp) |
 | `seed` | int | map seed |
 | `mode` | string | always `"competition"` for arena games |
 | `round` | string | round name — **stored, not inferred from the path** |
@@ -23,10 +28,11 @@ none of them carried a content hash, so none of them had a rating identity.
 | `engine_version` | string | `competition-module` submodule SHA |
 | `winner` | string | `"a"` \| `"b"` \| `"draw"` |
 | `turns` | int | turns played |
-| `terminated` | bool | general capture / deathtouch win path |
-| `truncated` | bool | hit turn cap |
-| `started_at` | string | ISO-8601 |
-| `finished_at` | string | ISO-8601 |
+| `truncated` | bool | hit the turn cap |
+
+`truncated` is outcome, not observation: a 1200-cap stall and a simultaneous
+general capture (RULES.md §02) are both `winner == "draw"`, and only this field
+tells them apart.
 
 `bot_a_commit_or_tag` / `bot_b_commit_or_tag` were **removed** at v4. A repo
 HEAD pin is not a bot version: it moves when any unrelated file is committed
@@ -37,16 +43,37 @@ alongside a dirty-tree flag and a git ref that actually resolves.
 
 ## Optional fields
 
-Read every optional key with `.get()`; missing means not measured, never zero.
-
 | Field | Type | Source |
 | --- | --- | --- |
-| `schema_version` | int | `4`; absent or lower is a hard error |
-| `duration_seconds` | float or null | wall clock between `started_at` and `finished_at` |
-| `castles_built_a` / `_b` | int or null | `[matchup] castles built: N (...) vs M (...)` |
-| `final_land_a` / `_b` | int or null | bot stderr `[telemetry]` line (last frame) |
-| `final_army_a` / `_b` | int or null | same |
-| `metrics` | object | free-form counters; default `{}` |
+| `schema_version` | int | `5`; absent or lower is a hard error |
+| `metrics` | object | every observation; default `{}` |
+
+## Removed at v5
+
+| Field | Why |
+| --- | --- |
+| `started_at`, `finished_at`, `duration_seconds` | no reader anywhere in `arena/` or `scripts/`; `game_id`'s embedded stamp keeps minute provenance |
+| `terminated` | exactly `winner != "draw"`, so v5 derives it (`GameRecord.terminated` is a property, not a stored field) |
+| `castles_built_a` / `_b`, `final_land_*`, `final_army_*` | observations, moved into `metrics` under the same names |
+
+## Metrics
+
+Read every key with `.get()`; **missing means not measured, never zero.**
+
+| Key | Type | Source |
+| --- | --- | --- |
+| `castles_built_a` / `_b` | int | engine tally of castle births per seat |
+| `final_land_a` / `_b`, `final_army_a` / `_b` | int | terminal-state truth, on every record |
+| `land_margin_a` / `_b` | int | `final_land_a - final_land_b` and its negation, on truncated draws |
+| probe and reducer output | per schema | **recorded games only** — see [trajectories.md](trajectories.md) |
+
+Records migrated from v4 keep their stderr-derived values under the same key
+names, so a last-frame question is still answerable on old games while a
+per-turn one is honestly unanswerable. One v4 name meant two measurements: the
+top-level `castles_built_a/_b` (engine tally) and metro's own counter inside
+`metrics`. They disagree on 16 of the 1000 games carrying both, so the
+projection keeps the engine tally under the plain name and moves the bot's
+belief to `castles_built_probe_a/_b`.
 
 ## Bot content hash
 

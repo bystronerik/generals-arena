@@ -14,7 +14,6 @@ from arena.records.store import (
     bot_id_from_run_sh,
     engine_version,
     save_game,
-    utc_now_iso,
 )
 from arena.records.telemetry import record_from_match_result
 
@@ -68,11 +67,9 @@ def run_and_store(
     hash_a = bot_a_content_hash or _register(a_path)
     hash_b = bot_b_content_hash or _register(b_path)
 
-    started_at = utc_now_iso()
     result = run_competition_match(
         a_path, b_path, seed=seed, mode=mode, timeout=timeout
     )
-    finished_at = utc_now_iso()
 
     record = record_from_match_result(
         result,
@@ -84,8 +81,6 @@ def run_and_store(
         bot_a_content_hash=hash_a,
         bot_b_content_hash=hash_b,
         engine_version=engine_version(),
-        started_at=started_at,
-        finished_at=finished_at,
     )
     path = save_game(record, games_dir or GAMES_DIR)
     print(f"[run_match] stored {path}")

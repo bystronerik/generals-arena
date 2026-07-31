@@ -46,14 +46,13 @@ def test_game_entry_from_record_derives_castles_and_land_margin():
         engine_version="9e3b9d1",
         winner="draw",
         turns=1200,
-        terminated=False,
         truncated=True,
-        started_at="2026-01-01T00:00:00Z",
-        finished_at="2026-01-01T00:01:00Z",
-        duration_seconds=60.0,
-        castles_built_a=2,
-        castles_built_b=1,
-        metrics={"land_margin_a": 15, "land_margin_b": -15},
+        metrics={
+            "castles_built_a": 2,
+            "castles_built_b": 1,
+            "land_margin_a": 15,
+            "land_margin_b": -15,
+        },
     )
     entry = game_entry_from_record(record, tag="economy_cluster")
     assert entry.castles_a == 2

@@ -18,7 +18,6 @@ from dataclasses import dataclass
 from arena.records.store import (
     CURRENT_SCHEMA_VERSION,
     GameRecord,
-    duration_seconds_between,
     make_game_id,
 )
 
@@ -89,27 +88,27 @@ def apply_telemetry_to_record(
     record: GameRecord,
     telemetry_by_player: dict[int, BotTelemetry],
 ) -> None:
-    """Fill optional land/army and sighting metrics from bot stderr telemetry."""
+    """Fill `metrics` land/army finals and sighting keys from bot stderr."""
     if not telemetry_by_player:
         return
 
     t0 = telemetry_by_player.get(0)
     t1 = telemetry_by_player.get(1)
 
-    if t0 is not None:
-        record.final_land_a = t0.my_land
-        record.final_army_a = t0.my_army
-    if t1 is not None:
-        record.final_land_b = t1.my_land
-        record.final_army_b = t1.my_army
-    if t0 is not None and t1 is None:
-        record.final_land_b = t0.opp_land
-        record.final_army_b = t0.opp_army
-    elif t1 is not None and t0 is None:
-        record.final_land_a = t1.opp_land
-        record.final_army_a = t1.opp_army
-
     metrics = dict(record.metrics)
+    if t0 is not None:
+        metrics["final_land_a"] = t0.my_land
+        metrics["final_army_a"] = t0.my_army
+    if t1 is not None:
+        metrics["final_land_b"] = t1.my_land
+        metrics["final_army_b"] = t1.my_army
+    if t0 is not None and t1 is None:
+        metrics["final_land_b"] = t0.opp_land
+        metrics["final_army_b"] = t0.opp_army
+    elif t1 is not None and t0 is None:
+        metrics["final_land_a"] = t1.opp_land
+        metrics["final_army_a"] = t1.opp_army
+
     for player_id, suffix in ((0, "_a"), (1, "_b")):
         telemetry = telemetry_by_player.get(player_id)
         if telemetry is None:
@@ -117,14 +116,11 @@ def apply_telemetry_to_record(
         for key, raw in telemetry.all_extras().items():
             metrics[f"{key}{suffix}"] = _coerce_metric_value(key, raw)
 
-    if (
-        record.truncated
-        and record.winner == "draw"
-        and record.final_land_a is not None
-        and record.final_land_b is not None
-    ):
-        metrics["land_margin_a"] = record.final_land_a - record.final_land_b
-        metrics["land_margin_b"] = record.final_land_b - record.final_land_a
+    land_a = metrics.get("final_land_a")
+    land_b = metrics.get("final_land_b")
+    if record.truncated and record.winner == "draw" and land_a is not None and land_b is not None:
+        metrics["land_margin_a"] = land_a - land_b
+        metrics["land_margin_b"] = land_b - land_a
 
     record.metrics = metrics
 
@@ -140,17 +136,22 @@ def record_from_match_result(
     bot_a_content_hash: str,
     bot_b_content_hash: str,
     engine_version: str,
-    started_at: str,
-    finished_at: str,
 ) -> GameRecord:
     """
     Build a stored GameRecord from a CompetitionMatchResult.
 
     Applies bot telemetry from `result.stderr`, so callers only supply the
-    identity and timing fields the match itself does not carry. The identity
-    fields are required — `GameRecord` rejects a record whose bot hashes or
-    engine era are unknown, because it could never be rated (schema v4).
+    identity fields the match itself does not carry. The identity fields are
+    required — `GameRecord` rejects a record whose bot hashes or engine era are
+    unknown, because it could never be rated. Castle tallies are observations,
+    so they go to `metrics` (schema v5).
     """
+    metrics: dict[str, int] = {}
+    if result.castles_built_a is not None:
+        metrics["castles_built_a"] = result.castles_built_a
+    if result.castles_built_b is not None:
+        metrics["castles_built_b"] = result.castles_built_b
+
     record = GameRecord(
         game_id=make_game_id(bot_a, bot_b, seed),
         seed=seed,
@@ -163,14 +164,9 @@ def record_from_match_result(
         engine_version=engine_version,
         winner=result.winner,
         turns=result.turns,
-        terminated=result.terminated,
         truncated=result.truncated,
-        started_at=started_at,
-        finished_at=finished_at,
         schema_version=CURRENT_SCHEMA_VERSION,
-        duration_seconds=duration_seconds_between(started_at, finished_at),
-        castles_built_a=result.castles_built_a,
-        castles_built_b=result.castles_built_b,
+        metrics=metrics,
     )
     apply_telemetry_to_record(record, parse_bot_telemetry(result.stderr or ""))
     return record

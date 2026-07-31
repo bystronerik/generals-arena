@@ -1,4 +1,4 @@
-"""GameRecord v4 round-trip, required identity fields, and path scanning."""
+"""GameRecord v5 round-trip, required identity fields, and path scanning."""
 from __future__ import annotations
 
 import json
@@ -14,7 +14,7 @@ from arena.records.store import (
 )
 
 
-V4_MINIMAL = {
+V5_MINIMAL = {
     "game_id": "20260101T000000Z_smoke_vs_rush_s0_abcd1234",
     "seed": 0,
     "mode": "competition",
@@ -26,27 +26,27 @@ V4_MINIMAL = {
     "engine_version": "9e3b9d1f00112233445566778899aabbccddeeff",
     "winner": "a",
     "turns": 42,
-    "terminated": True,
     "truncated": False,
-    "started_at": "2026-01-01T00:00:00Z",
-    "finished_at": "2026-01-01T00:01:00Z",
-    "schema_version": 4,
+    "schema_version": 5,
 }
 
-V4_FULL = {
-    **V4_MINIMAL,
-    "duration_seconds": 60.0,
-    "castles_built_a": 2,
-    "castles_built_b": 1,
-    "final_land_a": 50,
-    "final_land_b": 30,
-    "final_army_a": 100,
-    "final_army_b": 80,
-    "metrics": {"enemy_general_sighted_a": True},
+# Everything observational is in `metrics` at v5 — including the engine-truth
+# finals and castle tallies that used to be top-level fields.
+V5_FULL = {
+    **V5_MINIMAL,
+    "metrics": {
+        "castles_built_a": 2,
+        "castles_built_b": 1,
+        "final_land_a": 50,
+        "final_land_b": 30,
+        "final_army_a": 100,
+        "final_army_b": 80,
+        "enemy_general_sighted_a": True,
+    },
 }
 
 
-@pytest.mark.parametrize("payload", [V4_MINIMAL, V4_FULL], ids=["minimal", "full"])
+@pytest.mark.parametrize("payload", [V5_MINIMAL, V5_FULL], ids=["minimal", "full"])
 def test_game_record_round_trip(payload):
     record = GameRecord.from_dict(payload)
     restored = GameRecord.from_dict(record.to_dict())
@@ -54,60 +54,82 @@ def test_game_record_round_trip(payload):
 
 
 def test_minimal_defaults_optional_fields():
-    record = GameRecord.from_dict(V4_MINIMAL)
+    record = GameRecord.from_dict(V5_MINIMAL)
     assert record.schema_version == CURRENT_SCHEMA_VERSION
-    assert record.castles_built_a is None
     assert record.metrics == {}
 
 
-def test_full_preserves_telemetry_fields():
-    record = GameRecord.from_dict(V4_FULL)
-    assert record.castles_built_a == 2
-    assert record.final_army_b == 80
+def test_full_preserves_observational_metrics():
+    record = GameRecord.from_dict(V5_FULL)
+    assert record.metrics["castles_built_a"] == 2
+    assert record.metrics["final_army_b"] == 80
     assert record.metrics["enemy_general_sighted_a"] is True
 
 
+def test_terminated_is_derived_not_stored():
+    """`terminated` was exactly `winner != "draw"`, so v5 computes it."""
+    assert GameRecord.from_dict(V5_MINIMAL).terminated is True
+    drawn = GameRecord.from_dict(dict(V5_MINIMAL, winner="draw", truncated=True))
+    assert drawn.terminated is False
+    assert "terminated" not in drawn.to_dict()
+
+
+def test_truncated_survives_because_winner_cannot_replace_it():
+    """A stalled draw and a simultaneous capture differ only here."""
+    stalled = GameRecord.from_dict(dict(V5_MINIMAL, winner="draw", truncated=True))
+    mutual_kill = GameRecord.from_dict(dict(V5_MINIMAL, winner="draw", truncated=False))
+    assert stalled.winner == mutual_kill.winner
+    assert stalled.truncated != mutual_kill.truncated
+
+
+def test_dropped_fields_are_not_stored():
+    """v4 fields with no readers must not reappear through the round trip."""
+    stored = GameRecord.from_dict(V5_FULL).to_dict()
+    for field in ("started_at", "finished_at", "duration_seconds", "terminated"):
+        assert field not in stored
+
+
 def test_identity_fields_survive_the_round_trip():
-    record = GameRecord.from_dict(V4_MINIMAL)
+    record = GameRecord.from_dict(V5_MINIMAL)
     assert record.bot_a_content_hash == "0123456789ab"
     assert record.bot_b_content_hash == "ba9876543210"
     assert record.engine_version.startswith("9e3b9d1")
     assert record.round == "round5"
 
 
-@pytest.mark.parametrize("version", [1, 2, 3])
-def test_pre_v4_records_are_rejected_loudly(version):
-    """No record survives the refactor, so a stray one must not load quietly."""
-    stale = dict(V4_MINIMAL, schema_version=version)
+@pytest.mark.parametrize("version", [1, 2, 3, 4])
+def test_pre_v5_records_are_rejected_loudly(version):
+    """The stored pool was projected once; there is no dual-version reader."""
+    stale = dict(V5_MINIMAL, schema_version=version)
     with pytest.raises(ValueError, match="not readable"):
         GameRecord.from_dict(stale)
 
 
 @pytest.mark.parametrize(
-    "field", ["winner", "round", "engine_version", "bot_a_content_hash"]
+    "field", ["winner", "round", "engine_version", "bot_a_content_hash", "truncated"]
 )
 def test_from_dict_rejects_missing_required(field):
-    bad = dict(V4_MINIMAL)
+    bad = dict(V5_MINIMAL)
     del bad[field]
     with pytest.raises(ValueError, match="missing fields"):
         GameRecord.from_dict(bad)
 
 
 def test_from_dict_rejects_invalid_winner():
-    bad = dict(V4_MINIMAL, winner="x")
+    bad = dict(V5_MINIMAL, winner="x")
     with pytest.raises(ValueError, match="invalid winner"):
         GameRecord.from_dict(bad)
 
 
 def test_from_dict_rejects_the_unknown_hash_sentinel():
     """`"unknown"` would pool every unreadable closure into one rated entity."""
-    bad = dict(V4_MINIMAL, bot_b_content_hash="unknown")
+    bad = dict(V5_MINIMAL, bot_b_content_hash="unknown")
     with pytest.raises(ValueError, match="unknown"):
         GameRecord.from_dict(bad)
 
 
 def test_from_dict_rejects_an_empty_hash():
-    bad = dict(V4_MINIMAL, bot_a_content_hash="")
+    bad = dict(V5_MINIMAL, bot_a_content_hash="")
     with pytest.raises(ValueError, match="non-empty"):
         GameRecord.from_dict(bad)
 
@@ -128,8 +150,8 @@ def test_list_game_paths_skips_manifest_and_subdirectories(tmp_path):
     nested = round_dir / "nested"
     nested.mkdir(parents=True)
     (round_dir / "manifest.json").write_text("{}", encoding="utf-8")
-    (round_dir / "top.json").write_text(json.dumps(V4_MINIMAL) + "\n", encoding="utf-8")
-    (nested / "deep.json").write_text(json.dumps(V4_MINIMAL) + "\n", encoding="utf-8")
+    (round_dir / "top.json").write_text(json.dumps(V5_MINIMAL) + "\n", encoding="utf-8")
+    (nested / "deep.json").write_text(json.dumps(V5_MINIMAL) + "\n", encoding="utf-8")
 
     assert [p.name for p in list_game_paths(round_dir)] == ["top.json"]
 
@@ -139,7 +161,7 @@ def test_list_game_paths_on_a_missing_directory_is_empty(tmp_path):
 
 
 def test_save_game_round_folder(tmp_path):
-    record = GameRecord.from_dict(V4_FULL)
+    record = GameRecord.from_dict(V5_FULL)
     path = save_game(record, tmp_path / "roundZ")
     assert path.parent.name == "roundZ"
     assert path.exists()

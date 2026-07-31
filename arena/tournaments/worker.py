@@ -18,7 +18,6 @@ from arena.records.store import (
     GameRecord,
     bot_id_from_run_sh,
     save_game,
-    utc_now_iso,
 )
 
 
@@ -55,7 +54,6 @@ def run_one_worker(payload: dict[str, Any]) -> GameRecord:
     registry.require_registered(bot_a, hash_a)
     registry.require_registered(bot_b, hash_b)
 
-    started_at = utc_now_iso()
     result = run_competition_match(
         a,
         b,
@@ -63,7 +61,6 @@ def run_one_worker(payload: dict[str, Any]) -> GameRecord:
         mode=mode,
         timeout=float(timeout) if timeout is not None else None,
     )
-    finished_at = utc_now_iso()
 
     record = record_from_match_result(
         result,
@@ -75,8 +72,6 @@ def run_one_worker(payload: dict[str, Any]) -> GameRecord:
         bot_a_content_hash=hash_a,
         bot_b_content_hash=hash_b,
         engine_version=engine,
-        started_at=started_at,
-        finished_at=finished_at,
     )
     save_game(record, games_dir)
     return record
