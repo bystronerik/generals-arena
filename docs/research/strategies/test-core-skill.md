@@ -104,7 +104,7 @@ is not in it.
 | --- | --- | --- | --- | --- |
 | C1 | Match result parse | `arena/run_match.py` | `parse_matchup_output` | A wrong winner or turn count enters `data/games/` and Elo forever |
 | C2 | Castle metric parse | `arena/run_match.py`, `scripts/measure_heuristics.py` | `parse_castles_built`, `parse_castles` | The only castle signal that reaches a round report |
-| C3 | Telemetry parse and merge | `arena/run_match.py` | `parse_bot_telemetry`, `apply_telemetry_to_record` | Schema v2 fields; 0 stored records carry them today (E1) |
+| C3 | Telemetry parse and merge | `arena/run_match.py` | `parse_bot_telemetry`, `apply_telemetry_to_record` | Schema v2 fields; generic extras (e.g. `first_city_capture_turn`) |
 | C4 | Game record store | `arena/store.py` | `GameRecord.from_dict`, `save_game`, `load_game`, `validate_record_dict` | A malformed record breaks a whole round load |
 | C5 | Rating idempotence | `arena/ratings.py` | `RatingBook.apply_game`, `apply_games`, `to_state`, `from_state`, `rebuild_from_games` | A double-counted game moves Elo with no visible error |
 | C6 | Unified bot API mapping | `arena/bot_api.py` | `from_game_state`, `from_competition_remote_obs`, `to_client_move`, `translate_action_for_remote`, `StrategySession.act` fault path | The single observation and action contract for every bot |

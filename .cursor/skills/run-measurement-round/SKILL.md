@@ -54,9 +54,9 @@ Read `docs/research/measurements/round<N>.md` and report:
 - any bot with zero decisive games
 - whether stored games use schema v2 telemetry (`final_land_a`, sighting fields)
 
-**Note:** `scripts/measure_heuristics.py` may still store schema v1 until E1
-lands in that script. Single-match paths via `arena/run_match.py` already use
-v2 through `run_and_store`.
+`scripts/measure_heuristics.py` stores schema v2 through `run_and_store`. Legacy
+games under `data/games/` from before E1 may still be v1 until the grid is
+re-run.
 
 ## Rules
 
