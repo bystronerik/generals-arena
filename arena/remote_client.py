@@ -1,27 +1,35 @@
 """
-Repo-side GeneralsIO client with honest result logging for remote evaluation.
+Repo-side remote play session with honest result logging.
 
-The upstream ``GeneralsIOClient._play_game`` treats ``ValueError`` from
-``receive()`` as a win. This module subclasses without editing the submodule.
+Uses ``generals_client`` (EIO v4, no bot_key) instead of upstream
+``GeneralsIOClient``. Disconnect and malformed frames never count as wins.
+
 See ``docs/research/strategies/human-95-plan.md`` §5.4.
 """
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
-from generals.remote.generalsio_client import BOT_ENDPOINT, GeneralsIOClient
+from generals_client.bot import BotError, GameResult
+from generals_client.transport import DEFAULT_SERVER
 
-from arena.remote_adapter import StdioStrategyAdapter
+from arena.remote_bridge import (
+    ArenaGameClient,
+    UnifiedBot,
+    ensure_bot_username,
+    opponent_stars,
+    opponent_username,
+    register_username_safe,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# Reasons that map to a decided game and may count toward the 95/100 block.
 DECIDED_REASONS = frozenset({"game_won", "game_lost"})
 
 
@@ -39,15 +47,8 @@ def git_head() -> str | None:
 
 
 def normalize_bot_endpoint_username(username: str) -> str:
-    """
-    botws.generals.io rejects usernames starting with ``[Bot]``.
-
-    Strip that prefix for registration; keep the rest unchanged.
-    """
-    name = username.strip()
-    if name.startswith("[Bot]"):
-        name = name[len("[Bot]") :].strip()
-    return name or username.strip()
+    """Backward-compatible alias: ensure ``[Bot]`` prefix for generals_client."""
+    return ensure_bot_username(username)
 
 
 def opponent_is_bot(username: str | None) -> bool | None:
@@ -68,114 +69,84 @@ def result_from_reason(result_reason: str) -> str:
     return "error"
 
 
-class FidelityGeneralsIOClient(GeneralsIOClient):
-    """GeneralsIOClient that never records disconnects or malformed frames as wins."""
+def _replay_id_from_url(replay_url: str) -> str | None:
+    if not replay_url:
+        return None
+    path = urlparse(replay_url).path.rstrip("/")
+    if not path:
+        return None
+    return path.rsplit("/", 1)[-1] or None
+
+
+class FidelityRemoteSession:
+    """One remote bot session: register, play games, log JSON under ``log_dir``."""
 
     def __init__(
         self,
-        agent: StdioStrategyAdapter,
+        bot: UnifiedBot,
         user_id: str,
         *,
         bot_name: str,
         room_mode: str,
         log_dir: Path,
-        public_server: bool = False,
+        server_url: str = DEFAULT_SERVER,
     ):
-        super().__init__(agent, user_id, public_server=public_server)
-        bot_key = os.environ.get("GENERALS_BOT_KEY", "").strip()
-        if bot_key:
-            self.bot_key = bot_key
-        self._arena_agent = agent
+        self.bot = bot
         self.bot_name = bot_name
         self.room_mode = room_mode
         self.log_dir = log_dir
-        self._opponent_username: str | None = None
-        self._last_finish_detail: str | None = None
+        self.server_url = server_url
+        self.client = ArenaGameClient(bot, user_id, server_url=server_url)
+        self._score_wins = 0
+        self._score_losses = 0
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
     @property
     def endpoint(self) -> str:
-        return "ws.generals.io" if self.public_server else "botws.generals.io"
+        host = urlparse(self.server_url).netloc or self.server_url
+        return host.replace("https://", "").replace("http://", "")
 
-    def register_agent(self, username: str) -> None:
-        normalized = normalize_bot_endpoint_username(username)
-        if normalized != username:
-            print(
-                "Note: bot endpoint registration strips the [Bot] prefix "
-                f"(registering as {normalized!r}).",
-            )
+    def register(self, username: str) -> None:
+        register_username_safe(self.client, username)
+
+    def play_private(self, game_id: str) -> None:
+        self._run_game(lambda: self.client.play_private(game_id))
+
+    def play_1v1(self) -> None:
+        self._run_game(self.client.play_1v1)
+
+    def _run_game(self, play_fn) -> None:
         try:
-            super().register_agent(normalized)
-        except ValueError as exc:
-            message = str(exc)
-            if "already have a username" in message.lower():
-                print(
-                    "Note: user id already has a bound username on generals.io; "
-                    "continuing with existing registration.",
-                )
-                return
-            raise
+            result = play_fn()
+            reason = "game_won" if result.won else "game_lost"
+            self._finish_with_reason(reason, result=result)
+        except BotError as exc:
+            detail = str(exc)
+            reason = "disconnect" if "disconnect" in detail.lower() else "receive_error"
+            self._finish_with_reason(reason, detail=detail)
 
-    def _initialize_game(self, data: dict) -> None:
-        super()._initialize_game(data)
-        self._arena_agent.reset()
-        idx = self.game_state.opponent_index
-        self._opponent_username = self.game_state.usernames[idx]
-
-    def _play_game(self) -> None:
-        """Game loop matching upstream terminal events; ignore benign server noise."""
-        while True:
-            try:
-                received = self.receive()
-            except ValueError as exc:
-                self._finish_with_reason("disconnect", detail=str(exc))
-                return
-
-            if not isinstance(received, (list, tuple)) or len(received) == 0:
-                self._finish_with_reason("receive_error", detail="empty receive payload")
-                return
-
-            event = received[0]
-            match event:
-                case "game_update":
-                    if len(received) != 3:
-                        self._finish_with_reason(
-                            "receive_error",
-                            detail=(
-                                f"expected 3-tuple for game_update, got {len(received)}"
-                            ),
-                        )
-                        return
-                    _, data, _ = received
-                    self.game_state.update(data)
-                    obs = self.game_state.get_observation()
-                    action = self._generate_action(obs)
-                    if action:
-                        self.emit("attack", action)
-                case "game_won":
-                    self._finish_with_reason("game_won")
-                    return
-                case "game_lost":
-                    self._finish_with_reason("game_lost")
-                    return
-                case _:
-                    # Upstream has no default case — chat_message and similar are skipped.
-                    continue
-
-    def _finish_with_reason(self, result_reason: str, *, detail: str | None = None) -> None:
-        self._last_finish_detail = detail
-        result = result_from_reason(result_reason)
+    def _finish_with_reason(
+        self,
+        result_reason: str,
+        *,
+        result: GameResult | None = None,
+        detail: str | None = None,
+    ) -> None:
+        outcome = result_from_reason(result_reason)
         counts_toward_block = result_reason in DECIDED_REASONS
         is_winner = result_reason == "game_won"
 
+        replay_id = _replay_id_from_url(result.replay_url) if result else None
+        replay_url = result.replay_url if result else None
+
         self._write_game_log(
-            result=result,
+            result=outcome,
             result_reason=result_reason,
             counts_toward_block=counts_toward_block,
+            replay_id=replay_id,
             detail=detail,
         )
 
-        self._status = "off"
         if counts_toward_block:
             self._score_wins += int(is_winner)
             self._score_losses += int(not is_winner)
@@ -187,17 +158,11 @@ class FidelityGeneralsIOClient(GeneralsIOClient):
         else:
             status = f"Ended ({result_reason}, not counted)."
 
-        prefix = "bot." if not self.public_server else ""
-        replay = self._replay_id or "unknown"
+        link = replay_url or "unknown"
         print(
             f"You {status} Score {self._score_wins}:{self._score_losses}. "
-            f"Replay link: https://{prefix}generals.io/replays/{replay}"
+            f"Replay link: {link}"
         )
-        self.emit("leave_game")
-
-    def _finish_game(self, is_winner: bool) -> None:
-        """Upstream hook; route through fidelity finish."""
-        self._finish_with_reason("game_won" if is_winner else "game_lost")
 
     def _write_game_log(
         self,
@@ -205,27 +170,25 @@ class FidelityGeneralsIOClient(GeneralsIOClient):
         result: str,
         result_reason: str,
         counts_toward_block: bool,
+        replay_id: str | None = None,
         detail: str | None = None,
     ) -> None:
-        stats = self._arena_agent.session_stats()
-        opponent_stars: int | None = None
-        if hasattr(self, "game_state") and self.game_state is not None:
-            idx = self.game_state.opponent_index
-            stars = getattr(self.game_state, "stars", None)
-            if stars is not None and 0 <= idx < len(stars):
-                opponent_stars = int(stars[idx])
+        stats = self.bot.session.session_stats()
+        state = self.bot.last_state
+        opp_name = opponent_username(state)
+        stars = opponent_stars(state)
 
         record: dict[str, Any] = {
             "recorded_at": datetime.now(timezone.utc).isoformat(),
             "session_id": uuid.uuid4().hex[:12],
-            "replay_id": self._replay_id or None,
+            "replay_id": replay_id,
             "bot_id": self.bot_name,
             "bot_commit": git_head(),
             "room_mode": self.room_mode,
             "endpoint": self.endpoint,
-            "opponent_username": self._opponent_username,
-            "opponent_is_bot": opponent_is_bot(self._opponent_username),
-            "opponent_stars": opponent_stars,
+            "opponent_username": opp_name,
+            "opponent_is_bot": opponent_is_bot(opp_name),
+            "opponent_stars": stars,
             "result": result,
             "result_reason": result_reason,
             "counts_toward_block": counts_toward_block,

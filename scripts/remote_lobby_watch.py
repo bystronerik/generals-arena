@@ -30,7 +30,9 @@ from remote_play import (  # noqa: E402
     _require_user_id,
     run_lobby_session,
 )
-from arena.remote_adapter import make_remote_agent, verify_adapter_offline  # noqa: E402
+from arena.remote_adapter import verify_adapter_offline  # noqa: E402
+from arena.remote_bridge import make_unified_bot  # noqa: E402
+from arena.remote_client import FidelityRemoteSession  # noqa: E402
 
 ENV_AGENT = REPO_ROOT / ".env.agent"
 SECRET_KEYS = frozenset(
@@ -120,7 +122,13 @@ class LobbyWatchSession:
     def run(self) -> int:
         user_id = _require_user_id()
         username = _default_username(self.bot)
-        agent = make_remote_agent(self.bot)
+        session = FidelityRemoteSession(
+            make_unified_bot(self.bot),
+            user_id,
+            bot_name=self.bot,
+            room_mode="lobby",
+            log_dir=REMOTE_GAMES_DIR,
+        )
 
         print(
             f"Lobby watch: bot={self.bot!r}, target={self.max_games} counted human games.",
@@ -137,7 +145,7 @@ class LobbyWatchSession:
             before = self.counted_this_session()
             try:
                 run_lobby_session(
-                    agent,
+                    session,
                     user_id,
                     self.lobby_id,
                     username,

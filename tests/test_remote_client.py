@@ -6,20 +6,26 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from generals_client.bot import BotError, GameResult
 
+from arena.remote_bridge import ensure_bot_username, register_username_safe
 from arena.remote_client import (
     DECIDED_REASONS,
-    FidelityGeneralsIOClient,
-    normalize_bot_endpoint_username,
+    FidelityRemoteSession,
     opponent_is_bot,
     result_from_reason,
 )
-from generals.remote.generalsio_client import GeneralsIOClient
 
 
-def test_normalize_bot_endpoint_username_strips_prefix():
-    assert normalize_bot_endpoint_username("[Bot] arena_army_convey") == "arena_army_convey"
-    assert normalize_bot_endpoint_username("plain_name") == "plain_name"
+def test_ensure_bot_username_adds_prefix():
+    assert ensure_bot_username("arena_army_convey") == "[Bot] arena_army_convey"
+    assert ensure_bot_username("[Bot] arena_army_convey") == "[Bot] arena_army_convey"
+
+
+def test_normalize_bot_endpoint_username_alias():
+    from arena.remote_client import normalize_bot_endpoint_username
+
+    assert normalize_bot_endpoint_username("plain_name") == "[Bot] plain_name"
 
 
 def test_result_from_reason_mapping():
@@ -36,121 +42,72 @@ def test_opponent_is_bot():
     assert opponent_is_bot(None) is None
 
 
-class _FakeAgent:
-    bot_name = "smoke"
-
-    def session_stats(self):
-        return {
-            "builds_dropped": 0,
-            "faults": 0,
-            "timeouts": 0,
-            "saw_enemy_general_at": None,
-            "peak_land": 1,
-            "peak_army": 5,
-            "final_land": 1,
-            "final_army": 5,
-            "server_turns": 10,
-        }
-
-    def reset(self):
-        pass
-
-
 @pytest.fixture
-def fidelity_client(tmp_path: Path):
-    with patch.object(FidelityGeneralsIOClient, "__init__", lambda self, *a, **k: None):
-        client = FidelityGeneralsIOClient.__new__(FidelityGeneralsIOClient)
-        client.public_server = False
-        client._replay_id = "testreplay"
-        client._status = "game"
-        client._score_wins = 0
-        client._score_losses = 0
-        client._arena_agent = _FakeAgent()
-        client.bot_name = "smoke"
-        client.room_mode = "1v1"
-        client.log_dir = tmp_path
-        client._opponent_username = "human_player"
-        client.game_state = MagicMock(opponent_index=0, stars=[3])
-        client.emit = MagicMock()
-        return client
+def fidelity_session(tmp_path: Path):
+    from arena.remote_bridge import UnifiedBot
+
+    bot = UnifiedBot("smoke")
+    session = FidelityRemoteSession(
+        bot,
+        "test-user-id",
+        bot_name="smoke",
+        room_mode="1v1",
+        log_dir=tmp_path,
+    )
+    session.client = MagicMock()
+    return session
 
 
-def test_malformed_receive_is_not_a_win(fidelity_client, tmp_path: Path):
-    fidelity_client.receive = MagicMock(side_effect=ValueError("bad frame"))
-    fidelity_client._play_game()
+def test_disconnect_is_not_a_win(fidelity_session, tmp_path: Path):
+    fidelity_session.client.play_1v1 = MagicMock(
+        side_effect=BotError("server disconnected before the game finished")
+    )
+    fidelity_session.play_1v1()
 
-    assert fidelity_client._score_wins == 0
-    assert fidelity_client._score_losses == 0
     logs = list(tmp_path.glob("*.json"))
     assert len(logs) == 1
     record = json.loads(logs[0].read_text())
     assert record["result"] == "disconnect"
     assert record["result_reason"] == "disconnect"
     assert record["counts_toward_block"] is False
+    assert fidelity_session._score_wins == 0
 
 
-def test_chat_message_is_ignored_mid_game(fidelity_client, tmp_path: Path):
-    fidelity_client.receive = MagicMock(
-        side_effect=[
-            ("chat_message", {"text": "hi"}, None),
-            ("chat_message", {"text": "gg"}, None),
-            ("game_won", {}, None),
-        ],
+def test_game_won_counts_toward_block(fidelity_session, tmp_path: Path):
+    fidelity_session.client.play_1v1 = MagicMock(
+        return_value=GameResult(won=True, replay_url="https://bot.generals.io/replays/abc", turns=10)
     )
-    fidelity_client._play_game()
+    fidelity_session.play_1v1()
 
-    assert fidelity_client._score_wins == 1
-    assert fidelity_client._score_losses == 0
-    logs = list(tmp_path.glob("*.json"))
-    assert len(logs) == 1
-    record = json.loads(logs[0].read_text())
-    assert record["result_reason"] == "game_won"
-    assert record["counts_toward_block"] is True
-
-
-def test_malformed_game_update_is_not_a_win(fidelity_client, tmp_path: Path):
-    fidelity_client.receive = MagicMock(return_value=("game_update", {"turn": 1}))
-    fidelity_client._play_game()
-
-    assert fidelity_client._score_wins == 0
-    record = json.loads(list(tmp_path.glob("*.json"))[0].read_text())
-    assert record["result_reason"] == "receive_error"
-    assert record["counts_toward_block"] is False
-
-
-def test_game_won_counts_toward_block(fidelity_client, tmp_path: Path):
-    fidelity_client.receive = MagicMock(return_value=("game_won", {}, None))
-    fidelity_client._play_game()
-
-    assert fidelity_client._score_wins == 1
+    assert fidelity_session._score_wins == 1
     record = json.loads(list(tmp_path.glob("*.json"))[0].read_text())
     assert record["result"] == "win"
     assert record["result_reason"] == "game_won"
     assert record["counts_toward_block"] is True
+    assert record["replay_id"] == "abc"
 
 
-def test_game_lost_counts_toward_block(fidelity_client, tmp_path: Path):
-    fidelity_client.receive = MagicMock(return_value=("game_lost", {}, None))
-    fidelity_client._play_game()
+def test_game_lost_counts_toward_block(fidelity_session, tmp_path: Path):
+    fidelity_session.client.play_1v1 = MagicMock(
+        return_value=GameResult(won=False, replay_url="https://bot.generals.io/replays/xyz", turns=8)
+    )
+    fidelity_session.play_1v1()
 
-    assert fidelity_client._score_losses == 1
+    assert fidelity_session._score_losses == 1
     record = json.loads(list(tmp_path.glob("*.json"))[0].read_text())
     assert record["result"] == "loss"
     assert record["counts_toward_block"] is True
 
 
-def test_register_agent_continues_when_username_already_bound():
-    with patch.object(FidelityGeneralsIOClient, "__init__", lambda self, *a, **k: None):
-        client = FidelityGeneralsIOClient.__new__(FidelityGeneralsIOClient)
-        with patch.object(
-            GeneralsIOClient,
-            "register_agent",
-            side_effect=ValueError(
-                "Failed to register the agent: You already have a username! "
-                "Only Supporters can change usernames.."
-            ),
-        ):
-            client.register_agent("[Bot] BOBTHEAGENT")
+def test_register_username_continues_when_username_already_bound():
+    client = MagicMock()
+    client.register_username = MagicMock(
+        side_effect=BotError(
+            "server rejected username '[Bot] BOBTHEAGENT': "
+            "You already have a username! Only Supporters can change usernames."
+        )
+    )
+    register_username_safe(client, "BOBTHEAGENT")
 
 
 def test_decided_reasons_set():

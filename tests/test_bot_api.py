@@ -1,0 +1,132 @@
+"""Tests for unified bot API mapping."""
+from __future__ import annotations
+
+import numpy as np
+import pytest
+
+from arena.bot_api import (
+    PASS,
+    StrategySession,
+    from_competition_remote_obs,
+    from_game_state,
+    to_client_move,
+    translate_action_for_remote,
+)
+from generals.core.observation import Observation as RemoteObservation
+from generals_client.state import (
+    TILE_EMPTY,
+    TILE_FOG,
+    TILE_FOG_OBSTACLE,
+    TILE_MOUNTAIN,
+    GameState,
+)
+
+
+def test_translate_build_to_pass():
+    assert translate_action_for_remote((2, 1, 2, 0, 0)) == PASS
+
+
+def test_from_competition_remote_obs_mapping():
+    H, W = 3, 3
+    armies = np.zeros((H, W), dtype=np.int32)
+    armies[1, 1] = 5
+    generals = np.zeros((H, W), dtype=bool)
+    generals[1, 1] = True
+    mountains = np.zeros((H, W), dtype=bool)
+    mountains[0, 1] = True
+    fog = np.zeros((H, W), dtype=bool)
+    fog[2, 2] = True
+    owned = np.zeros((H, W), dtype=bool)
+    owned[1, 1] = True
+
+    obs = RemoteObservation(
+        armies=armies,
+        generals=generals,
+        castles=np.zeros((H, W), dtype=bool),
+        mountains=mountains,
+        neutral_cells=np.zeros((H, W), dtype=bool),
+        owned_cells=owned,
+        opponent_cells=np.zeros((H, W), dtype=bool),
+        fog_cells=fog,
+        structures_in_fog=np.zeros((H, W), dtype=bool),
+        owned_land_count=1,
+        owned_army_count=5,
+        opponent_land_count=0,
+        opponent_army_count=0,
+        timestep=7,
+    )
+    unified = from_competition_remote_obs(obs)
+    assert unified.H == 3 and unified.W == 3 and unified.turn == 7
+    assert unified.type_grid[0][1] == 2
+    assert unified.type_grid[1][1] == 4
+    assert unified.type_grid[2][2] == 0
+    assert unified.owner_grid[1][1] == 1
+    assert unified.army_grid[1][1] == 5
+
+
+def _make_game_state() -> GameState:
+    state = GameState(
+        {
+            "playerIndex": 0,
+            "replay_id": "test",
+            "usernames": ["[Bot] a", "human"],
+        }
+    )
+    # 3x3 map: width=3 height=3 size=9
+    # layout: [w,h, armies x9, terrain x9]
+    armies = [1, 0, 0, 0, 5, 0, 0, 0, 0]
+    terrain = [
+        TILE_FOG,
+        TILE_MOUNTAIN,
+        TILE_EMPTY,
+        TILE_EMPTY,
+        0,
+        TILE_EMPTY,
+        TILE_FOG_OBSTACLE,
+        TILE_EMPTY,
+        TILE_EMPTY,
+    ]
+    flat = [3, 3] + armies + terrain
+    state.apply_update(
+        {
+            "turn": 4,
+            "map_diff": [0, len(flat)] + flat,
+            "cities_diff": [0, 1, 7],
+            "generals": [4, -1],
+            "scores": [
+                {"i": 0, "tiles": 2, "total": 6},
+                {"i": 1, "tiles": 1, "total": 1},
+            ],
+        }
+    )
+    return state
+
+
+def test_from_game_state_mapping():
+    state = _make_game_state()
+    obs = from_game_state(state)
+    assert obs.H == 3 and obs.W == 3 and obs.turn == 4
+    assert obs.my_land == 2 and obs.my_army == 6
+    assert obs.opp_land == 1 and obs.opp_army == 1
+    assert obs.type_grid[0][0] == 0
+    assert obs.type_grid[0][1] == 2
+    assert obs.type_grid[1][1] == 4
+    assert obs.type_grid[2][0] == 5
+    assert obs.type_grid[2][1] == 3
+    assert obs.owner_grid[1][1] == 1
+    assert obs.army_grid[1][1] == 5
+    assert obs.army_grid[0][0] == 0
+
+
+def test_to_client_move_and_pass():
+    state = _make_game_state()
+    assert to_client_move(PASS, state) is None
+    assert to_client_move((0, 1, 1, 0, 0), state) == (4, 1)
+    assert to_client_move((0, 1, 1, 0, 1), state) == (4, 1, True)
+
+
+def test_strategy_session_smoke():
+    session = StrategySession("smoke")
+    obs = from_game_state(_make_game_state())
+    action = session.act(obs)
+    assert len(action) == 5
