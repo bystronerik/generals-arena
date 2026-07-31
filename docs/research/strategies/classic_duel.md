@@ -53,6 +53,7 @@ Derived each turn:
 | `CITY_LAND_BONUS` | 4 | Added to city score per owned land |
 | `CONVEY_MIN_ARMY` | 3 | Minimum stack size for interior convey |
 | `FRONTIER_NEIGHBOR_WEIGHT` | 1.5 | Frontier capture bonus from adjacent owned army |
+| `GATHER_DEST_ARMY_WEIGHT` | 1.0 | Frontier gather bonus toward thicker frontier tips |
 | `OPPONENT_CAPTURE_MULT` | 3.0 | Multiplier for opponent-tile captures |
 | `ENEMY_GENERAL_SCORE` | 10000 | Score for a legal attack onto the remembered enemy general |
 | `GENERAL_ATTACK_MIN_MARGIN` | 1 | Need `src_army > dest_army + margin` (one stays on source) |
@@ -182,3 +183,28 @@ toward fog. Reserve drops to `max(RESERVE_BASE, floor(required * 0.75))`.
 
 **Hypothesis:** Sighting rate before turn 600 vs `army_convey` rises from 3/10
 to ≥ 7/10 without increasing losses where the enemy general was already sighted.
+
+## 13. Parameter revision 2 (conveyor concentration)
+
+**Evidence:** Post-revision-1 stress grid still showed 5/10 losses vs
+`army_convey` (50% winrate). Four losses were when `classic_duel` played seat
+1; `army_convey` concentrated frontier stacks faster. Scout mode fixed sighting
+in seat 0 but not conveyor dominance when second to move.
+
+**Change (convey parameter group — gather axis only):**
+
+| Constant | Old | New | Axis |
+| --- | --- | --- | --- |
+| `GATHER_DEST_ARMY_WEIGHT` | — | 1.0 | convey |
+
+Frontier gathering scores `src_army + dest_army * GATHER_DEST_ARMY_WEIGHT` so
+interior stacks funnel toward the thickest frontier tip (same axis as
+`army_convey` concentration). City, scout, and capture constants unchanged.
+
+**Hypothesis:** Winrate vs `army_convey` on seeds 0–4 (both seats) rises from
+50% to ≥ 70% without regressing `expand_plus` or `smoke` below 90%.
+
+**Result (2026-07-31):** 6W-4L vs `army_convey` (60%), 9W-0L-1D vs
+`expand_plus` (90%), 10W-0L vs `smoke` (100%). Grid 25-4-1 (83.3%) vs 24-5-1
+(80.0%) post-revision-1. Hypothesis partially confirmed; seat-1
+`army_convey` losses remain on seeds 0, 2, 4.
