@@ -19,6 +19,7 @@ CITY_CAPTURE_SCORE = 800
 CITY_LAND_BONUS = 4
 CONVEY_MIN_ARMY = 3
 FRONTIER_NEIGHBOR_WEIGHT = 1.5
+GATHER_DEST_ARMY_WEIGHT = 1.0
 OPPONENT_CAPTURE_MULT = 3.0
 ENEMY_GENERAL_SCORE = 10000
 GENERAL_ATTACK_MIN_MARGIN = 1
@@ -354,8 +355,10 @@ class Agent:
                         continue
                     if obs.owner_grid[nr][nc] != 1:
                         continue
-                    if src_army > best_army:
-                        best_army = src_army
+                    dest_army = obs.army_grid[nr][nc]
+                    score = float(src_army) + dest_army * GATHER_DEST_ARMY_WEIGHT
+                    if score > best_army:
+                        best_army = score
                         best_move = (0, r, c, d, 0)
         return best_move
 
