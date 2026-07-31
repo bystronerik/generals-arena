@@ -31,7 +31,7 @@ Composer must not change production code to make a test pass.
 
 | ID | Target | Module | Symbols |
 | --- | --- | --- | --- |
-| C1 | Match result mapping | `arena/competition_match.py` | `competition_winner_seat`, `CompetitionMatchResult` fields |
+| C1 | Match result mapping | `arena/match_loop.py` | `winner_seat`, `MatchLoopResult` fields |
 | C2 | Castle metric counting | `arena/competition_match.py` | castle tally in `run_competition_match` (`castles_built_a/b`) |
 | C3 | Telemetry parse and merge | `arena/run_match.py` | `parse_bot_telemetry`, `apply_telemetry_to_record` |
 | C4 | Game record store | `arena/store.py` | `GameRecord.from_dict`, `save_game`, `load_game` |
@@ -70,8 +70,8 @@ One `pytest.mark.parametrize` table per behavior, two to four rows with short la
         ("truncation draw", -1, True, "draw"),
     ],
 )
-def test_competition_winner_seat(label, winner_player_id, truncated, expected):
-    assert competition_winner_seat(winner_player_id, truncated=truncated) == expected
+def test_winner_seat(label, winner_player_id, truncated, expected):
+    assert winner_seat(winner_player_id, truncated=truncated) == expected
 ```
 
 **Fixtures:** prefer real captured snippets over mocks. Place under `tests/fixtures/<name>.txt` or `.json`, one file per snippet, under 20 lines. Trim to lines the parser reads. One-line comment in the test names the source match or record. Redact every username and credential. Mocks only at the remote client boundary (`FidelityRemoteSession.client`) and for strategies that must raise.

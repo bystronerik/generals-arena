@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Literal
@@ -14,7 +13,9 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from arena.classic_match import CLASSIC_ENV_DEFAULTS, classic_winner_seat, run_classic_match
+from arena.classic_match import CLASSIC_ENV_DEFAULTS, run_classic_match
+from arena.match_loop import winner_seat
+from arena.parallel import cap_jobs, run_pool
 from arena.store import (
     Winner,
     bot_id_from_run_sh,
@@ -181,7 +182,7 @@ def run_one_classic(
         env_overrides=overrides or None,
     )
     finished_at = utc_now_iso()
-    winner = classic_winner_seat(winner_player_id, truncated=truncated)
+    winner = winner_seat(winner_player_id, truncated=truncated)
     terminated = winner_player_id >= 0
 
     record = ClassicGameRecord(
@@ -242,54 +243,37 @@ def run_classic_tournament(
     )
     directory = games_dir or CLASSIC_GAMES_DIR
     commit = git_commit_or_tag()
+    worker_jobs = cap_jobs(jobs)
     total = len(specs)
-    records: list[ClassicGameRecord] = []
 
-    if jobs <= 1:
-        for i, spec in enumerate(specs, start=1):
-            a_id = bot_id_from_run_sh(spec.bot_a_run)
-            b_id = bot_id_from_run_sh(spec.bot_b_run)
-            print(f"[classic_tournament] ({i}/{total}) {a_id} vs {b_id} seed={spec.seed}")
-            record = run_one_classic(
-                spec,
-                games_dir=directory,
-                grid_size=grid_size,
-                truncation=truncation,
-                commit=commit,
-            )
-            records.append(record)
-            print(
-                f"[classic_tournament]   -> {record.winner} turns={record.turns} "
-                f"terminated={record.terminated} truncated={record.truncated} "
-                f"game_id={record.game_id}"
-            )
-    else:
-        print(f"[classic_tournament] running {total} match(es) with jobs={jobs}")
-        payloads = [
-            {
-                "seed": spec.seed,
-                "bot_a_run": str(spec.bot_a_run.resolve()),
-                "bot_b_run": str(spec.bot_b_run.resolve()),
-                "games_dir": str(directory),
-                "grid_size": grid_size,
-                "truncation": truncation,
-                "commit": commit,
-            }
-            for spec in specs
-        ]
-        with ProcessPoolExecutor(max_workers=jobs) as pool:
-            futures = {pool.submit(_run_one_classic_worker, p): p for p in payloads}
-            done = 0
-            for future in as_completed(futures):
-                done += 1
-                record = future.result()
-                records.append(record)
-                print(
-                    f"[classic_tournament] ({done}/{total}) {record.bot_a} vs {record.bot_b} "
-                    f"seed={record.seed} -> {record.winner} turns={record.turns} "
-                    f"game_id={record.game_id}"
-                )
+    print(f"[classic_tournament] running {total} match(es) with jobs={worker_jobs}")
+    payloads = [
+        {
+            "seed": spec.seed,
+            "bot_a_run": str(spec.bot_a_run.resolve()),
+            "bot_b_run": str(spec.bot_b_run.resolve()),
+            "games_dir": str(directory),
+            "grid_size": grid_size,
+            "truncation": truncation,
+            "commit": commit,
+        }
+        for spec in specs
+    ]
 
+    def _on_result(done: int, total: int, record: ClassicGameRecord) -> None:
+        print(
+            f"[classic_tournament] ({done}/{total}) {record.bot_a} vs {record.bot_b} "
+            f"seed={record.seed} -> {record.winner} turns={record.turns} "
+            f"terminated={record.terminated} truncated={record.truncated} "
+            f"game_id={record.game_id}"
+        )
+
+    records = run_pool(
+        payloads,
+        _run_one_classic_worker,
+        jobs=worker_jobs,
+        on_result=_on_result,
+    )
     records.sort(key=lambda r: (r.seed, r.bot_a, r.bot_b, r.game_id))
     print(f"[classic_tournament] finished {len(records)} game(s)")
     return records

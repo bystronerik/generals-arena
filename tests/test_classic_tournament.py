@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from arena.classic_match import classic_winner_seat
+from arena.match_loop import winner_seat
 from arena.classic_tournament import (
     ClassicGameRecord,
     ClassicMatchSpec,
@@ -24,8 +24,8 @@ from arena.classic_tournament import (
         (-1, False, "draw"),
     ],
 )
-def test_classic_winner_seat(player_id, truncated, expected):
-    assert classic_winner_seat(player_id, truncated=truncated) == expected
+def test_winner_seat(player_id, truncated, expected):
+    assert winner_seat(player_id, truncated=truncated) == expected
 
 
 def test_build_match_specs_seeds_and_pairs(tmp_path: Path):

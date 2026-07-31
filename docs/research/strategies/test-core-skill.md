@@ -31,7 +31,7 @@ expensive class of defect in this repo, because the defect is invisible in the
 match output and permanent in `data/games/`.
 
 Shipped state at the time of this design: commit `4c5f0ff` added
-`tests/test_run_match_parsers.py`, `tests/test_store.py`, `tests/test_ratings.py`,
+`tests/test_telemetry_parsers.py`, `tests/test_store.py`, `tests/test_ratings.py`,
 `tests/test_tournament.py`, `tests/test_remote_block.py`,
 `tests/test_classic_match.py`, `arena/remote_block.py`, and a first
 `.cursor/skills/analyze-and-test-core/SKILL.md`. That commit closes most of T1
@@ -102,7 +102,7 @@ is not in it.
 
 | ID | Target | Module | Symbols | Why it is core |
 | --- | --- | --- | --- | --- |
-| C1 | Match result mapping | `arena/competition_match.py` | `competition_winner_seat`, `CompetitionMatchResult` fields | A wrong winner or turn count enters `data/games/` and Elo forever |
+| C1 | Match result mapping | `arena/match_loop.py` | `winner_seat`, `MatchLoopResult` fields | A wrong winner or turn count enters `data/games/` and Elo forever |
 | C2 | Castle metric counting | `arena/competition_match.py` | castle tally in `run_competition_match` (`castles_built_a/b`) | The only castle signal that reaches a round report |
 | C3 | Telemetry parse and merge | `arena/run_match.py` | `parse_bot_telemetry`, `apply_telemetry_to_record` | Schema v2 fields; generic extras (e.g. `first_city_capture_turn`) |
 | C4 | Game record store | `arena/store.py` | `GameRecord.from_dict`, `save_game`, `load_game` | A malformed record breaks a whole round load |
@@ -122,7 +122,7 @@ Existing coverage, so that the skill does not duplicate work:
 | --- | --- | --- |
 | `tests/test_bot_api.py` | C6 mapping for remote obs, game state, client move, pass | `StrategySession.act` fault counting; build action on the remote path |
 | `tests/test_remote_client.py` | C7 reason mapping, `opponent_is_bot`, win, loss, disconnect records | `stall` and `receive_error` records; a null `opponent_is_bot` in the written record |
-| `tests/test_run_match_parsers.py` | C1, C2, C3 | Two castle lines in one capture; telemetry with one player only |
+| `tests/test_telemetry_parsers.py` | C1, C2, C3 | Two castle lines in one capture; telemetry with one player only |
 | `tests/test_store.py` | C4 | — |
 | `tests/test_ratings.py` | C5 | `to_state` and `from_state` round trip; `rebuild_from_games` |
 | `tests/test_tournament.py` | C10 for `parse_seeds` and `bot_pairs` | `build_grid` seat coverage after E2 lands |
@@ -167,8 +167,8 @@ Each row carries a short label. The template the skill must give:
         ("truncation draw", -1, True, "draw"),
     ],
 )
-def test_competition_winner_seat(label, winner_player_id, truncated, expected):
-    assert competition_winner_seat(winner_player_id, truncated=truncated) == expected
+def test_winner_seat(label, winner_player_id, truncated, expected):
+    assert winner_seat(winner_player_id, truncated=truncated) == expected
 ```
 
 Case selection rule, in this order: one normal case, one boundary case, one
