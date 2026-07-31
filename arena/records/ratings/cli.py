@@ -6,12 +6,13 @@ import argparse
 from pathlib import Path
 
 from arena.records.ratings import io
-from arena.records.ratings.counts import CountTable, count_table
+from arena.records.ratings.cache import CACHE_DIRNAME, CacheStats, cached_count_table
+from arena.records.ratings.counts import CountTable
 from arena.records.ratings.fit import RatingFit, fit_ratings
 from arena.records.ratings.lineage import lineage_table_lines
 from arena.records.ratings.policy import Policy, Prior, entity_key
 from arena.records.registry import Registry
-from arena.records.store import GAMES_DIR, engine_version, load_all_games
+from arena.records.store import GAMES_DIR, engine_version
 
 # `bots/cm_expander/` wraps the same upstream ExpanderAgent the competition
 # module ships, lives in the repo, hashes cleanly, and carries a "do not
@@ -34,13 +35,20 @@ def resolve_anchor(registry: Registry, bot_id: str = DEFAULT_ANCHOR_BOT) -> str:
 def build_counts(
     *,
     games_dir: Path | None = None,
+    ratings_dir: Path | None = None,
     policy: Policy,
     registry: Registry,
     anchor: str,
-) -> CountTable:
-    games = load_all_games(games_dir or GAMES_DIR)
-    return count_table(
-        games, policy=policy, registry=registry, extra_entities=[anchor]
+    use_cache: bool = True,
+) -> tuple[CountTable, CacheStats]:
+    """Aggregate every eligible game, reusing per-round caches where valid."""
+    return cached_count_table(
+        games_dir=games_dir,
+        cache_dir=(ratings_dir or io.RATINGS_DIR) / CACHE_DIRNAME,
+        policy=policy,
+        registry=registry,
+        extra_entities=[anchor],
+        use_cache=use_cache,
     )
 
 
@@ -53,6 +61,7 @@ def refit(
     registry: Registry | None = None,
     anchor_bot: str = DEFAULT_ANCHOR_BOT,
     persist: bool = True,
+    use_cache: bool = True,
 ) -> RatingFit:
     """
     Rebuild the whole fit from `data/games/`. There is no incremental path.
@@ -64,10 +73,16 @@ def refit(
     registry = registry or Registry()
     policy = policy or Policy(engine_version=engine_version())
     anchor = resolve_anchor(registry, anchor_bot)
-    counts = build_counts(
-        games_dir=games_dir, policy=policy, registry=registry, anchor=anchor
+    counts, stats = build_counts(
+        games_dir=games_dir,
+        ratings_dir=ratings_dir,
+        policy=policy,
+        registry=registry,
+        anchor=anchor,
+        use_cache=use_cache,
     )
     fit = fit_ratings(counts, prior=prior, anchor=anchor, policy=policy)
+    fit.cache_stats = stats
     if persist:
         io.write_all(fit, ratings_dir)
     return fit
@@ -133,6 +148,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="fit and report without writing data/ratings/",
     )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="re-read every game instead of reusing per-round count caches",
+    )
     args = parser.parse_args(argv)
 
     registry = Registry()
@@ -146,12 +166,18 @@ def main(argv: list[str] | None = None) -> int:
         registry=registry,
         anchor_bot=args.anchor,
         persist=not args.dry_run,
+        use_cache=not args.no_cache,
     )
 
     print(
         f"[ratings] fitted {len(fit.entities)} entit(ies) over {fit.counts.games} game(s) "
         f"in {fit.solver.iterations} Newton step(s) (max|grad| {fit.solver.max_abs_grad:.2e})"
     )
+    stats = fit.cache_stats
+    if stats is not None and stats.rounds:
+        print(
+            f"[ratings] rounds: {stats.hits} cached, {stats.misses} re-aggregated"
+        )
     print(f"[ratings] anchor {fit.anchor} = {fit.spec.anchor_rating:.1f}")
     print(
         f"[ratings] seat advantage {fit.seat_advantage.value:+.2f} "

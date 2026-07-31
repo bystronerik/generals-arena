@@ -110,6 +110,9 @@ class RatingFit:
         self.prior = prior
         self.policy = policy
         self.solver = report
+        # Set by `cli.refit` when the per-round cache was consulted. Reporting
+        # only — it says nothing about the fit, which is identical either way.
+        self.cache_stats: Any | None = None
 
         theta, beta, kappa = unpack(free, spec)
         self._theta = theta

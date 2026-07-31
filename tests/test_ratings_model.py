@@ -324,8 +324,8 @@ def test_fit_is_unchanged_with_a_single_blas_thread():
     """
     script = (
         "import numpy as np;"
-        "import sys; sys.path.insert(0, %r);" % str(REPO_ROOT)
-        + "from tests.test_ratings_model import sample_table, ENTITIES, SPREAD;"
+        "import sys; sys.path[:0] = [%r, %r];" % (str(REPO_ROOT), str(REPO_ROOT / "tests"))
+        + "from test_ratings_model import sample_table, ENTITIES, SPREAD;"
         "from arena.records.ratings.fit import fit_ratings;"
         "t = sample_table(dict(zip(ENTITIES, SPREAD)), games=300, seed=19, beta=40.0, kappa=0.3);"
         "f = fit_ratings(t, anchor='e0');"

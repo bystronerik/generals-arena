@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import random
+from types import SimpleNamespace
 
 import pytest
 
@@ -36,13 +37,25 @@ HASHES = {
 
 
 class FakeRegistry:
-    """Just the surface `policy` uses, so these tests need no git."""
+    """Just the surface `policy` and `cache` use, so these tests need no git."""
 
     def __init__(self, known: dict[str, str] | None = None) -> None:
         self.known = dict(HASHES if known is None else known)
 
     def is_registered(self, bot_id: str, content_hash: str) -> bool:
         return self.known.get(bot_id) == content_hash
+
+    def bot_ids(self) -> list[str]:
+        return sorted(self.known)
+
+    def load(self, bot_id: str):
+        if bot_id not in self.known:
+            return None
+        return SimpleNamespace(
+            bot_id=bot_id,
+            versions=[SimpleNamespace(content_hash=self.known[bot_id])],
+            steps=[],
+        )
 
 
 def record(

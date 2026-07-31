@@ -276,43 +276,20 @@ def load_game(path: Path) -> GameRecord:
     return GameRecord.from_dict(read_record_json(path, label="game record"))
 
 
-def list_game_paths(games_dir: Path | None = None) -> list[Path]:
+def list_game_paths(games_dir: Path) -> list[Path]:
     """
-    List game JSON files under `games_dir`.
+    Game JSON files directly in `games_dir`, sorted, skipping `manifest.json`.
 
-    When `games_dir` is the arena root `data/games/` (or omitted), scan
-    recursively so per-round subfolders are included. Legacy flat JSON at the
-    root still loads. When `games_dir` is a round folder, scan that folder only
-    (non-recursive), skipping `manifest.json`.
+    Non-recursive, deliberately: the rating layer walks rounds one directory at
+    a time (`ratings/cache.py`) so it can cache each of them separately. This
+    used to recurse when handed the arena root and not otherwise, which meant
+    the same call did two different things depending on its argument.
     """
-    directory = games_dir or GAMES_DIR
-    if not directory.exists():
+    if not games_dir.exists():
         return []
-    root = GAMES_DIR.resolve()
-    try:
-        is_games_root = directory.resolve() == root
-    except OSError:
-        is_games_root = False
-
-    if is_games_root:
-        paths = [
-            p
-            for p in directory.rglob("*.json")
-            if p.is_file() and p.name != "manifest.json"
-        ]
-    else:
-        paths = [
-            p
-            for p in directory.glob("*.json")
-            if p.is_file() and p.name != "manifest.json"
-        ]
-    return sorted(paths)
-
-
-def load_all_games(games_dir: Path | None = None) -> list[GameRecord]:
-    records = [load_game(p) for p in list_game_paths(games_dir)]
-    records.sort(key=lambda r: (r.finished_at, r.game_id))
-    return records
+    return sorted(
+        p for p in games_dir.glob("*.json") if p.is_file() and p.name != "manifest.json"
+    )
 
 
 def bot_id_from_run_sh(run_sh: Path) -> str:

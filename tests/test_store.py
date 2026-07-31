@@ -9,7 +9,6 @@ from arena.records.store import (
     CURRENT_SCHEMA_VERSION,
     GameRecord,
     list_game_paths,
-    load_all_games,
     round_games_dir,
     save_game,
 )
@@ -123,26 +122,8 @@ def test_round_games_dir_rejects_bad_name():
         round_games_dir("../escape")
 
 
-def test_list_game_paths_recursive_skips_manifest(monkeypatch, tmp_path):
-    monkeypatch.setattr("arena.records.store.GAMES_DIR", tmp_path)
-    flat = tmp_path / "flat.json"
-    flat.write_text(json.dumps(V4_MINIMAL) + "\n", encoding="utf-8")
-    round_dir = tmp_path / "roundX"
-    round_dir.mkdir()
-    (round_dir / "manifest.json").write_text("{}", encoding="utf-8")
-    game = dict(V4_MINIMAL, game_id="g2")
-    (round_dir / "g2.json").write_text(json.dumps(game) + "\n", encoding="utf-8")
-
-    paths = list_game_paths(tmp_path)
-    names = {p.name for p in paths}
-    assert names == {"flat.json", "g2.json"}
-    assert "manifest.json" not in names
-
-    records = load_all_games(tmp_path)
-    assert len(records) == 2
-
-
-def test_list_game_paths_round_dir_non_recursive(tmp_path):
+def test_list_game_paths_skips_manifest_and_subdirectories(tmp_path):
+    """One directory at a time — the rating layer walks rounds itself."""
     round_dir = tmp_path / "roundY"
     nested = round_dir / "nested"
     nested.mkdir(parents=True)
@@ -150,8 +131,11 @@ def test_list_game_paths_round_dir_non_recursive(tmp_path):
     (round_dir / "top.json").write_text(json.dumps(V4_MINIMAL) + "\n", encoding="utf-8")
     (nested / "deep.json").write_text(json.dumps(V4_MINIMAL) + "\n", encoding="utf-8")
 
-    paths = list_game_paths(round_dir)
-    assert [p.name for p in paths] == ["top.json"]
+    assert [p.name for p in list_game_paths(round_dir)] == ["top.json"]
+
+
+def test_list_game_paths_on_a_missing_directory_is_empty(tmp_path):
+    assert list_game_paths(tmp_path / "never-ran") == []
 
 
 def test_save_game_round_folder(tmp_path):
