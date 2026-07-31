@@ -256,8 +256,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.jobs < 1:
-        print("[measure_classic] --jobs must be >= 1", file=sys.stderr)
-        return 1
+        parser.error("--jobs must be >= 1")
 
     run_scripts = [bot_run_sh(name) for name in args.bots]
     missing = [str(p) for p in run_scripts if not p.exists()]

@@ -83,7 +83,7 @@ def test_disconnect_is_not_a_win(fidelity_session, tmp_path: Path):
     assert record["result"] == "disconnect"
     assert record["result_reason"] == "disconnect"
     assert record["counts_toward_block"] is False
-    assert fidelity_session._score_wins == 0
+    assert fidelity_session.wins == 0
 
 
 def test_game_won_counts_toward_block(fidelity_session, tmp_path: Path):
@@ -92,7 +92,7 @@ def test_game_won_counts_toward_block(fidelity_session, tmp_path: Path):
     )
     fidelity_session.play_1v1()
 
-    assert fidelity_session._score_wins == 1
+    assert fidelity_session.wins == 1
     record = json.loads(list(tmp_path.glob("*.json"))[0].read_text())
     assert record["result"] == "win"
     assert record["result_reason"] == "game_won"
@@ -106,7 +106,7 @@ def test_game_lost_counts_toward_block(fidelity_session, tmp_path: Path):
     )
     fidelity_session.play_1v1()
 
-    assert fidelity_session._score_losses == 1
+    assert fidelity_session.losses == 1
     record = json.loads(list(tmp_path.glob("*.json"))[0].read_text())
     assert record["result"] == "loss"
     assert record["counts_toward_block"] is True

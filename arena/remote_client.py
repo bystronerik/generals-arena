@@ -9,7 +9,6 @@ See ``docs/research/strategies/human-95-plan.md`` §5.4.
 from __future__ import annotations
 
 import json
-import subprocess
 import time
 import uuid
 from dataclasses import dataclass
@@ -29,6 +28,7 @@ from arena.remote_bridge import (
     opponent_username,
     register_username_safe,
 )
+from arena.store import git_head_sha, utc_now_iso
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -42,7 +42,7 @@ MAX_REQUEUE_BACKOFF_S = 300.0
 class SessionSummary:
     """Aggregate stats for one remote_play session."""
 
-    bot_name: str
+    bot_id: str
     room_mode: str
     games_played: int = 0
     wins: int = 0
@@ -56,7 +56,7 @@ class SessionSummary:
 
     def as_dict(self) -> dict[str, Any]:
         return {
-            "bot_id": self.bot_name,
+            "bot_id": self.bot_id,
             "room_mode": self.room_mode,
             "endpoint": self.endpoint,
             "games_played": self.games_played,
@@ -76,16 +76,8 @@ def is_queue_timeout(detail: str | None) -> bool:
 
 
 def git_head() -> str | None:
-    try:
-        out = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            cwd=REPO_ROOT,
-            stderr=subprocess.DEVNULL,
-            text=True,
-        )
-        return out.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return None
+    """Full HEAD SHA for remote game logs (None when git is unavailable)."""
+    return git_head_sha(short=False, repo_root=REPO_ROOT)
 
 
 def normalize_bot_endpoint_username(username: str) -> str:
@@ -148,6 +140,16 @@ class FidelityRemoteSession:
         self._last_result_reason: str | None = None
         self._last_finish_detail: str | None = None
         self.log_dir.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def wins(self) -> int:
+        """Games won this session (decided games only)."""
+        return self._score_wins
+
+    @property
+    def losses(self) -> int:
+        """Games lost this session (decided games only)."""
+        return self._score_losses
 
     @property
     def endpoint(self) -> str:
@@ -235,7 +237,7 @@ class FidelityRemoteSession:
         stars = opponent_stars(state)
 
         record: dict[str, Any] = {
-            "recorded_at": datetime.now(timezone.utc).isoformat(),
+            "recorded_at": utc_now_iso(),
             "session_id": uuid.uuid4().hex[:12],
             "replay_id": replay_id,
             "bot_id": self.bot_name,
@@ -280,7 +282,7 @@ def run_lobby_session(
 ) -> SessionSummary:
     """Play private lobby games until max_games or unlimited."""
     summary = SessionSummary(
-        bot_name=session.bot_name,
+        bot_id=session.bot_name,
         room_mode=session.room_mode,
         endpoint=session.endpoint,
     )
@@ -295,8 +297,8 @@ def run_lobby_session(
         if max_games is not None and games_played >= max_games:
             break
     summary.duration_s = time.time() - started
-    summary.wins = session._score_wins
-    summary.losses = session._score_losses
+    summary.wins = session.wins
+    summary.losses = session.losses
     return summary
 
 
@@ -311,7 +313,7 @@ def run_1v1_session(
 ) -> SessionSummary:
     """Play 1v1 queue games with requeue backoff on queue timeout."""
     summary = SessionSummary(
-        bot_name=session.bot_name,
+        bot_id=session.bot_name,
         room_mode=session.room_mode,
         endpoint=session.endpoint,
     )
@@ -348,8 +350,8 @@ def run_1v1_session(
         _tally_session_reason(summary, reason, detail)
 
     summary.duration_s = time.time() - started
-    summary.wins = session._score_wins
-    summary.losses = session._score_losses
+    summary.wins = session.wins
+    summary.losses = session.losses
     return summary
 
 
@@ -369,7 +371,7 @@ def _tally_session_reason(
 def print_session_summary(summary: SessionSummary) -> None:
     """Print a one-screen session summary on exit."""
     print("\n--- Session summary ---")
-    print(f"Bot: {summary.bot_name}  Mode: {summary.room_mode}  Endpoint: {summary.endpoint}")
+    print(f"Bot: {summary.bot_id}  Mode: {summary.room_mode}  Endpoint: {summary.endpoint}")
     print(
         f"Games: {summary.games_played}  W-L: {summary.wins}-{summary.losses}  "
         f"Queue timeouts: {summary.queue_timeouts}  Not counted: {summary.not_counted}"

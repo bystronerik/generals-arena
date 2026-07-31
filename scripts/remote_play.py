@@ -12,7 +12,6 @@ import os
 import sys
 import time
 import traceback
-from datetime import datetime, timezone
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -43,6 +42,7 @@ from arena.remote_env import (
     require_user_id,
     resolve_server_url,
 )
+from arena.store import utc_now_iso
 
 DEFAULT_QUEUE_TIMEOUT_S = 600.0
 
@@ -137,7 +137,7 @@ def _write_session_log(summary: SessionSummary, *, bot: str, started: float) -> 
     REMOTE_GAMES_DIR.mkdir(parents=True, exist_ok=True)
     path = REMOTE_GAMES_DIR / f"session_summary_{int(time.time())}.json"
     payload = {
-        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "recorded_at": utc_now_iso(),
         "bot_commit": git_head(),
         **summary.as_dict(),
     }
@@ -292,11 +292,11 @@ def main(argv: list[str] | None = None) -> int:
         exit_code = 130
         if summary is None:
             summary = SessionSummary(
-                bot_name=args.bot,
+                bot_id=args.bot,
                 room_mode=args.mode,
                 endpoint=session.endpoint,
-                wins=session._score_wins,
-                losses=session._score_losses,
+                wins=session.wins,
+                losses=session.losses,
                 stop_reason="interrupt",
             )
         summary.stop_reason = "interrupt"
@@ -306,7 +306,7 @@ def main(argv: list[str] | None = None) -> int:
         session_log.write_text(
             json.dumps(
                 {
-                    "recorded_at": datetime.now(timezone.utc).isoformat(),
+                    "recorded_at": utc_now_iso(),
                     "bot_id": args.bot,
                     "bot_commit": git_head(),
                     "error": traceback.format_exc(),

@@ -542,11 +542,9 @@ def main(argv: list[str] | None = None) -> int:
         }
     else:
         if args.games_per_pair < 1:
-            print("[measure] --games-per-pair must be >= 1", file=sys.stderr)
-            return 2
+            parser.error("--games-per-pair must be >= 1")
         if args.jobs is not None and args.jobs < 1:
-            print("[measure] --jobs must be >= 1", file=sys.stderr)
-            return 2
+            parser.error("--jobs must be >= 1")
 
         from arena.tournament import run_tournament
 

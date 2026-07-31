@@ -314,11 +314,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.games_per_pair < 1:
-        print("[tournament] --games-per-pair must be >= 1", file=sys.stderr)
-        return 2
+        parser.error("--games-per-pair must be >= 1")
     if args.jobs is not None and args.jobs < 1:
-        print("[tournament] --jobs must be >= 1", file=sys.stderr)
-        return 2
+        parser.error("--jobs must be >= 1")
 
     fixed = parse_seeds(args.seeds) if args.seeds else None
     games_dir = args.games_dir or round_games_dir(args.round)

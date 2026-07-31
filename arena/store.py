@@ -231,20 +231,24 @@ def bot_id_from_run_sh(run_sh: Path) -> str:
     return run_sh.resolve().parent.name
 
 
-def git_commit_or_tag(repo_root: Path | None = None) -> str:
-    """Best-effort version pin for the workspace (HEAD short SHA)."""
+def git_head_sha(*, short: bool = True, repo_root: Path | None = None) -> str | None:
+    """HEAD SHA for the workspace, or None when git is unavailable."""
     root = repo_root or REPO_ROOT
+    cmd = ["git", "-C", str(root), "rev-parse"]
+    if short:
+        cmd.append("--short")
+    cmd.append("HEAD")
     try:
         import subprocess
 
-        result = subprocess.run(
-            ["git", "-C", str(root), "rev-parse", "--short", "HEAD"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0:
-            return result.stdout.strip() or "unknown"
+        result = subprocess.run(cmd, check=False, capture_output=True, text=True)
     except OSError:
-        pass
-    return "unknown"
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def git_commit_or_tag(repo_root: Path | None = None) -> str:
+    """Best-effort version pin for game records: HEAD short SHA or 'unknown'."""
+    return git_head_sha(short=True, repo_root=repo_root) or "unknown"

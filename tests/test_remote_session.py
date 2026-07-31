@@ -33,8 +33,8 @@ def test_run_1v1_session_requeues_on_timeout():
     session.bot_name = "smoke"
     session.room_mode = "1v1"
     session.endpoint = "botws.generals.io"
-    session._score_wins = 0
-    session._score_losses = 0
+    session.wins = 0
+    session.losses = 0
     session.client = MagicMock()
     session.client.game_timeout = 60.0
     session.register = MagicMock()
@@ -70,8 +70,8 @@ def test_run_lobby_session_counts_games():
     session.bot_name = "smoke"
     session.room_mode = "lobby"
     session.endpoint = "botws.generals.io"
-    session._score_wins = 1
-    session._score_losses = 0
+    session.wins = 1
+    session.losses = 0
     session.register = MagicMock()
     session.play_private = MagicMock(return_value="game_won")
     session.last_finish_detail = None

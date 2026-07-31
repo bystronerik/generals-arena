@@ -350,8 +350,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.jobs < 1:
-        print("[classic_tournament] --jobs must be >= 1", file=sys.stderr)
-        return 1
+        parser.error("--jobs must be >= 1")
 
     seeds = parse_seeds(args.seeds)
     run_classic_tournament(
