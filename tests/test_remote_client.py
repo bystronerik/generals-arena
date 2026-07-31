@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from generals_client.bot import BotError, GameResult
 
-from arena.remote_bridge import ensure_bot_username, register_username_safe
-from arena.remote_client import (
+from arena.remote.bridge import ensure_bot_username, register_username_safe
+from arena.remote.client import (
     DECIDED_REASONS,
     FidelityRemoteSession,
     opponent_is_bot,
@@ -37,7 +37,7 @@ def test_opponent_is_bot():
 
 
 def test_null_opponent_is_bot_does_not_count_toward_human_block():
-    from arena.remote_block import counts_as_human_block_game
+    from arena.remote.block import counts_as_human_block_game
 
     record = {
         "counts_toward_block": True,
@@ -51,7 +51,7 @@ def test_null_opponent_is_bot_does_not_count_toward_human_block():
 
 @pytest.fixture
 def fidelity_session(tmp_path: Path):
-    from arena.remote_bridge import UnifiedBot
+    from arena.remote.bridge import UnifiedBot
 
     bot = UnifiedBot("smoke")
     session = FidelityRemoteSession(

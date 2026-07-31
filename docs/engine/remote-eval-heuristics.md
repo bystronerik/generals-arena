@@ -29,7 +29,7 @@ Full layout, types, and bridge table:
 | --- | --- |
 | `arena/bot_api.py` | `UnifiedObservation`, `UnifiedAction`, mappers |
 | `bots/<name>/main.py` | Stdio bridge for `--mode competition` |
-| `arena/remote_bridge.py` | `UnifiedBot` over `generals_client` for live play |
+| `arena/remote/bridge.py` | `UnifiedBot` over `generals_client` for live play |
 | `scripts/remote_play.py` | CLI, credentials, JSON logging |
 
 Setup and CLI flags: [`remote-play-setup.md`](remote-play-setup.md).
@@ -80,13 +80,13 @@ good against humans".
 
 - `arena/bot_api.py` — unified types and mappers (`from_game_state`,
   `translate_action_for_remote`).
-- `arena/remote_bridge.py` — `UnifiedBot` + `ArenaGameClient` over
+- `arena/remote/bridge.py` — `UnifiedBot` + `ArenaGameClient` over
   `generals_client`.
-- `arena/remote_client.py` — `FidelityRemoteSession`, JSON logging to
+- `arena/remote/client.py` — `FidelityRemoteSession`, JSON logging to
   `data/remote_games/`.
 - `scripts/remote_play.py` — CLI, credential checks, offline verify.
 
-Legacy harness only: `arena/remote_adapter.py` (`StdioStrategyAdapter` for
+Legacy harness only: `arena/remote/adapter.py` (`StdioStrategyAdapter` for
 in-process tests against competition-module `generals.agents.Agent`). Live play
 uses `UnifiedBot`, not the adapter.
 

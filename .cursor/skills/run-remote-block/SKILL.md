@@ -2,7 +2,7 @@
 name: run-remote-block
 description: >-
   Runs or resumes a 100-game human block on live generals.io through
-  scripts/remote_play.py, counts eligible games with arena/remote_block.py, and
+  scripts/remote_play.py, counts eligible games with arena/remote/block.py, and
   publishes docs/research/measurements/remote-block<N>.md. Use for the remote
   human evaluation and the 95/100 gate ladder.
 ---
@@ -48,7 +48,7 @@ Count human-eligible games in the current log dir:
 
 ```python
 from pathlib import Path
-from arena.remote_block import count_human_block_games
+from arena.remote.block import count_human_block_games
 count_human_block_games(Path("data/remote_games"))
 ```
 

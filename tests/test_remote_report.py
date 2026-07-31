@@ -1,4 +1,4 @@
-"""Tests for arena.remote_report aggregation helpers."""
+"""Tests for arena.remote.report aggregation helpers."""
 from __future__ import annotations
 
 import json
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from arena.remote_report import (
+from arena.remote.report import (
     aggregate_remote_games,
     format_markdown_report,
     load_remote_records,

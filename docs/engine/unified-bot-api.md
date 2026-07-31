@@ -16,7 +16,7 @@ arena/bot_api.py         UnifiedObservation, UnifiedAction, ArenaAgent, Strategy
    ┌────┴────┐
    ▼         ▼
 stdio          remote
-bots/<name>/   arena/remote_bridge.py  →  generals_client GameClient
+bots/<name>/   arena/remote/bridge.py  →  generals_client GameClient
 main.py        (UnifiedBot)
 (competition
  matchup)
@@ -71,16 +71,16 @@ No per-bot wire code is required.
 | Bridge | Module | Wire |
 | --- | --- | --- |
 | Stdio | `bots/_common/wire.py` via `bots/<name>/main.py` | competition `matchup.py` line protocol |
-| Remote | `arena/remote_bridge.UnifiedBot` | `generals_client` (`GeneralsTransport` / `GameClient`) |
-| Legacy remote | `arena/remote_adapter.StdioStrategyAdapter` | competition-module `generals.agents.Agent` (local harness only) |
+| Remote | `arena/remote/bridge.UnifiedBot` | `generals_client` (`GeneralsTransport` / `GameClient`) |
+| Legacy remote | `arena/remote/adapter.StdioStrategyAdapter` | competition-module `generals.agents.Agent` (local harness only) |
 
-Remote logging and fidelity rules live in `arena/remote_client.FidelityRemoteSession`
+Remote logging and fidelity rules live in `arena/remote/client.FidelityRemoteSession`
 (`counts_toward_block`, `result_reason`, `opponent_is_bot`).
 
 ## Username policy (generals_client)
 
 Live registration uses `generals_client.GameClient.register_username`. Usernames
-**must** start with `[Bot]`. `arena/remote_bridge.ensure_bot_username` adds the
+**must** start with `[Bot]`. `arena/remote/bridge.ensure_bot_username` adds the
 prefix when env omits it. This differs from the old competition-module client,
 which stripped `[Bot]` for `botws.generals.io`.
 

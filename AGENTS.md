@@ -9,7 +9,7 @@ Process rules for agents that work in this repo. Put game and bot knowledge in `
 - `AGENTS.md` (this file): phases, file placement, verification. No game/bot strategy.
 - All game and bot knowledge lives under `docs/` as many small files.
 - Do not edit `competition-module` internals unless a bug blocks work. Wrap and document instead.
-- Remote play uses `client/generals_client` via `arena/remote_bridge.py` and
+- Remote play uses `client/generals_client` via `arena/remote/bridge.py` and
   `scripts/remote_play.py`. That path targets **live generals.io** (classic
   rules), not the competition sandbox. Keep that distinction explicit.
 
@@ -51,7 +51,7 @@ Also store the game under `data/games/` before you update ratings.
 
 The remote goal is one heuristic bot that wins **at least 95 of 100 logged games
 against human opponents** on live generals.io through
-`client/generals_client` (`arena/remote_bridge.py`, `scripts/remote_play.py`).
+`client/generals_client` (`arena/remote/bridge.py`, `scripts/remote_play.py`).
 
 Process rules for that criterion:
 

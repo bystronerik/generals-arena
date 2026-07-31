@@ -3,7 +3,7 @@ Bridge competition-module remote observations to unified bot strategies.
 
 ``StdioStrategyAdapter`` wraps ``bots/<name>/agent.py`` for legacy in-process
 play through ``generals.agents.Agent``. Live remote play uses
-``arena.remote_bridge.UnifiedBot`` instead.
+``arena.remote.bridge.UnifiedBot`` instead.
 
 See ``docs/engine/remote-eval-heuristics.md`` and ``docs/engine/unified-bot-api.md``.
 """

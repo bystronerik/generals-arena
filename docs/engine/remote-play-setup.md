@@ -160,10 +160,10 @@ Remote results do **not** update arena Elo in `data/ratings/`.
 ## Architecture
 
 - `arena/bot_api.py` — unified observation/action types and mappers.
-- `arena/remote_bridge.py` — `UnifiedBot` + `ArenaGameClient` over `generals_client`.
-- `arena/remote_client.py` — `FidelityRemoteSession`, session runners, JSON logging.
-- `arena/remote_env.py` — repo paths, dotenv load, credential checks, server URL.
-- `arena/remote_report.py` — aggregate human-block stats, Wilson bound, star bands.
+- `arena/remote/bridge.py` — `UnifiedBot` + `ArenaGameClient` over `generals_client`.
+- `arena/remote/client.py` — `FidelityRemoteSession`, session runners, JSON logging.
+- `arena/remote/env.py` — repo paths, dotenv load, credential checks, server URL.
+- `arena/remote/report.py` — aggregate human-block stats, Wilson bound, star bands.
 - `scripts/remote_play.py` — CLI, game runner, session summary on exit.
 - `scripts/remote_report.py` — markdown report CLI over `data/remote_games/`.
 

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from arena.remote_block import counts_as_human_block_game
+from arena.remote.block import counts_as_human_block_game
 
 # Opponent star bands for win-rate splits (human-95-plan §3.5).
 STAR_BANDS: tuple[tuple[str, int | None, int | None], ...] = (

@@ -20,9 +20,9 @@ if str(_REPO_ROOT) not in sys.path:
 
 from arena.bot_api import list_bots
 from arena.records.store import utc_now_iso
-from arena.remote_adapter import REMOTE_RECOMMENDED_BOTS, verify_adapter_offline
-from arena.remote_bridge import ensure_bot_username, make_unified_bot
-from arena.remote_client import (
+from arena.remote.adapter import REMOTE_RECOMMENDED_BOTS, verify_adapter_offline
+from arena.remote.bridge import ensure_bot_username, make_unified_bot
+from arena.remote.client import (
     FidelityRemoteSession,
     SessionSummary,
     git_head,
@@ -30,7 +30,7 @@ from arena.remote_client import (
     run_1v1_session,
     run_lobby_session,
 )
-from arena.remote_env import (
+from arena.remote.env import (
     REMOTE_GAMES_DIR,
     REPO_ROOT,
     SETUP_DOC,

@@ -22,7 +22,7 @@ from generals_client.transport import DEFAULT_SERVER
 
 from arena.paths import REPO_ROOT
 from arena.records.store import git_head_sha, utc_now_iso
-from arena.remote_bridge import (
+from arena.remote.bridge import (
     ArenaGameClient,
     UnifiedBot,
     opponent_stars,

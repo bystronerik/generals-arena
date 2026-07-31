@@ -20,11 +20,11 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from arena.remote_adapter import verify_adapter_offline
-from arena.remote_block import count_human_block_games
-from arena.remote_bridge import make_unified_bot
-from arena.remote_client import FidelityRemoteSession, run_lobby_session
-from arena.remote_env import (
+from arena.remote.adapter import verify_adapter_offline
+from arena.remote.block import count_human_block_games
+from arena.remote.bridge import make_unified_bot
+from arena.remote.client import FidelityRemoteSession, run_lobby_session
+from arena.remote.env import (
     REMOTE_GAMES_DIR,
     REPO_ROOT,
     apply_env_file,

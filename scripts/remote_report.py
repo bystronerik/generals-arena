@@ -15,8 +15,8 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from arena.remote_env import REMOTE_GAMES_DIR, REPO_ROOT, load_dotenv_files
-from arena.remote_report import aggregate_remote_games, format_markdown_report, load_remote_records
+from arena.remote.env import REMOTE_GAMES_DIR, REPO_ROOT, load_dotenv_files
+from arena.remote.report import aggregate_remote_games, format_markdown_report, load_remote_records
 
 
 def main(argv: list[str] | None = None) -> int:

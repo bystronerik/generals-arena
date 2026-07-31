@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from generals_client.bot import BotError, GameResult
 
-from arena.remote_client import (
+from arena.remote.client import (
     is_queue_timeout,
     run_1v1_session,
     run_lobby_session,
@@ -26,7 +26,7 @@ def test_is_queue_timeout(detail, expected):
 
 
 def test_run_1v1_session_requeues_on_timeout():
-    from arena.remote_bridge import UnifiedBot
+    from arena.remote.bridge import UnifiedBot
 
     bot = UnifiedBot("smoke")
     session = MagicMock()
@@ -51,7 +51,7 @@ def test_run_1v1_session_requeues_on_timeout():
 
     session.play_1v1 = play_1v1
 
-    with patch("arena.remote_client.time.sleep"):
+    with patch("arena.remote.client.time.sleep"):
         summary = run_1v1_session(
             session,
             "[Bot] test",

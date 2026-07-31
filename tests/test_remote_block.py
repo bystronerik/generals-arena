@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from arena.remote_block import count_human_block_games, counts_as_human_block_game
+from arena.remote.block import count_human_block_games, counts_as_human_block_game
 
 
 @pytest.mark.parametrize(
