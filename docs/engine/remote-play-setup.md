@@ -31,7 +31,7 @@ python scripts/remote_play.py --mode dry-run --bot army_convey
 | --- | --- | --- | --- |
 | `GENERALS_USER_ID` | **yes** (live) | — | Secret id you invent; treated like a password |
 | `GENERALS_USERNAME` | no | `[Bot] arena_<bot>` | Username shown on generals.io; use `[Bot]` prefix |
-| `GENERALS_LOBBY_ID` | no | `arena-test` | Private lobby id for `--mode lobby` |
+| `GENERALS_LOBBY_ID` | no | `arena-test` | Private lobby id for `--mode lobby` or lobby watch |
 
 Rules:
 
@@ -80,6 +80,23 @@ Public 1v1 queue (only after lobby test passes):
 ```bash
 python scripts/remote_play.py --bot army_convey --mode 1v1 --max-games 5
 ```
+
+Lobby watch — poll `.env.agent` until `GENERALS_LOBBY_ID` is set, then play
+lobby games without idle 1v1 queue time:
+
+```bash
+python scripts/remote_lobby_watch.py --bot classic_duel --max-games 20
+```
+
+Optional: exit if no lobby id appears within 15 minutes:
+
+```bash
+python scripts/remote_lobby_watch.py --max-watch-minutes 15
+```
+
+The watcher never prints secret values (user id, bot key, or lobby id). It
+counts only human games with `counts_toward_block: true` and stops when the
+target is reached or `GENERALS_LOBBY_ID` is cleared from `.env.agent`.
 
 Run offline checks before connecting:
 
