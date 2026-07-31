@@ -1,0 +1,48 @@
+{
+  "bot_id": "classic_duel",
+  "steps": [
+    {
+      "at": "2026-07-31T16:05:57Z",
+      "content_hash": "ed4ae684b35b",
+      "seq": 1
+    }
+  ],
+  "version": 1,
+  "versions": [
+    {
+      "closure_ref": "refs/bot-versions/ed4ae684b35b",
+      "closure_tree": "e6a1289f334549dfa82e4d58554f8327465cf067",
+      "content_hash": "ed4ae684b35b",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "e2ccd9493b92b3f99c1db291c48d81d524cb22f5",
+          "path": "bots/_common/wire.py",
+          "sha256": "1f63791441e04d5efeb1999ce5308405491686132a20277dabbf6f68aac78c92"
+        },
+        {
+          "blob": "c4c769f76f52b87ad1cf8fba24a3ccdaa0827703",
+          "path": "bots/classic_duel/agent.py",
+          "sha256": "45806ac378e6186d4d7ac4c234a845f34950cec057f43f7a5323dc2093827d5d"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/classic_duel/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "e7d78ac169a30678efe60bdb108611f9d932e630",
+          "path": "bots/classic_duel/run.sh",
+          "sha256": "3a4eb8902a76a3bd1a8e9292feef29339976c72786d157da3a20edfcbf296f56"
+        }
+      ],
+      "first_seen_at": "2026-07-31T16:05:57Z",
+      "git_commit": "141d4f08b407198b19ad1a0f5ac6235ace645118",
+      "git_dirty": false
+    }
+  ]
+}

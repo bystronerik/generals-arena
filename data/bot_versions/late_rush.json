@@ -1,0 +1,48 @@
+{
+  "bot_id": "late_rush",
+  "steps": [
+    {
+      "at": "2026-07-31T16:05:57Z",
+      "content_hash": "516b8afcd504",
+      "seq": 1
+    }
+  ],
+  "version": 1,
+  "versions": [
+    {
+      "closure_ref": "refs/bot-versions/516b8afcd504",
+      "closure_tree": "61ef7f10e15f29cb36eab516525398d83e4e3584",
+      "content_hash": "516b8afcd504",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "e2ccd9493b92b3f99c1db291c48d81d524cb22f5",
+          "path": "bots/_common/wire.py",
+          "sha256": "1f63791441e04d5efeb1999ce5308405491686132a20277dabbf6f68aac78c92"
+        },
+        {
+          "blob": "5173ca976074a423574f6bb699dbdc1901b8162c",
+          "path": "bots/late_rush/agent.py",
+          "sha256": "9b1ef959aab47582d168690e1d8158a081f0a4bf2adc2da075fcad1c544b2f2c"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/late_rush/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "f4b30ee05bb279973185c9a7fda3b253259bd21c",
+          "path": "bots/late_rush/run.sh",
+          "sha256": "e3039807d61cee3dd5c59a996bcef745b1549d0f8d9513e2070bf3847c65db16"
+        }
+      ],
+      "first_seen_at": "2026-07-31T16:05:57Z",
+      "git_commit": "141d4f08b407198b19ad1a0f5ac6235ace645118",
+      "git_dirty": false
+    }
+  ]
+}

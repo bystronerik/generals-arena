@@ -1,0 +1,53 @@
+{
+  "bot_id": "expand_plus",
+  "steps": [
+    {
+      "at": "2026-07-31T16:05:57Z",
+      "content_hash": "cf2c77354a92",
+      "seq": 1
+    }
+  ],
+  "version": 1,
+  "versions": [
+    {
+      "closure_ref": "refs/bot-versions/cf2c77354a92",
+      "closure_tree": "764407ee875b259ff0f2a9ad6450a095fd4e64ed",
+      "content_hash": "cf2c77354a92",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "cb6c3a876ef807d9e727299cc02c2b37f0029ee9",
+          "path": "bots/_common/strategy_common.py",
+          "sha256": "b2e424533aebc44fac5f6edb7205f21cb8431fcd6e557a4d965445d6f1138590"
+        },
+        {
+          "blob": "e2ccd9493b92b3f99c1db291c48d81d524cb22f5",
+          "path": "bots/_common/wire.py",
+          "sha256": "1f63791441e04d5efeb1999ce5308405491686132a20277dabbf6f68aac78c92"
+        },
+        {
+          "blob": "fcd738e2c61f85538e86283dd3a5af03c6da06be",
+          "path": "bots/expand_plus/agent.py",
+          "sha256": "5b2ef6ccff3c3f67d0a6e495c9cbc9f58327f5eedd34830c6d1b9a5b3cc4c6d0"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/expand_plus/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "e7d78ac169a30678efe60bdb108611f9d932e630",
+          "path": "bots/expand_plus/run.sh",
+          "sha256": "3a4eb8902a76a3bd1a8e9292feef29339976c72786d157da3a20edfcbf296f56"
+        }
+      ],
+      "first_seen_at": "2026-07-31T16:05:57Z",
+      "git_commit": "141d4f08b407198b19ad1a0f5ac6235ace645118",
+      "git_dirty": false
+    }
+  ]
+}
