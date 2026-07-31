@@ -71,12 +71,8 @@ def _telemetry_line(player_id, last_obs, agent):
         f"opp_land={last_obs.opp_land} opp_army={last_obs.opp_army}"
     )
     extras = agent.telemetry_extras() if hasattr(agent, "telemetry_extras") else {}
-    sighted = extras.get("enemy_general_sighted")
-    if sighted is not None:
-        line += f" enemy_general_sighted={sighted}"
-    sighting_turn = extras.get("first_sighting_turn")
-    if sighting_turn is not None:
-        line += f" first_sighting_turn={sighting_turn}"
+    for key, value in extras.items():
+        line += f" {key}={value}"
     return line + "\n"
 
 

@@ -118,3 +118,31 @@ def test_apply_telemetry_noop_on_empty():
     apply_telemetry_to_record(record, {})
     assert record.final_land_a is None
     assert record.metrics == {}
+
+
+def test_parse_bot_telemetry_generic_extras():
+    line = (
+        "[telemetry] player=0 turn=1199 my_land=50 my_army=100 "
+        "opp_land=30 opp_army=80 enemy_general_sighted=1 "
+        "first_sighting_turn=200 first_city_capture_turn=450\n"
+    )
+    got = parse_bot_telemetry(line)
+    assert got[0].extras == {
+        "enemy_general_sighted": "1",
+        "first_sighting_turn": "200",
+        "first_city_capture_turn": "450",
+    }
+
+
+def test_apply_telemetry_generic_extras_and_land_margin():
+    record = _minimal_record()
+    apply_telemetry_to_record(
+        record,
+        {
+            0: BotTelemetry(50, 100, 30, 80, extras={"first_city_capture_turn": "450"}),
+            1: BotTelemetry(30, 80, 50, 100),
+        },
+    )
+    assert record.metrics["first_city_capture_turn_a"] == 450
+    assert record.metrics["land_margin_a"] == 20
+    assert record.metrics["land_margin_b"] == -20

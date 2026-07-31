@@ -37,13 +37,12 @@ _DRAW_RE = re.compile(
 _CASTLE_RE = re.compile(
     r"\[matchup\] castles built: (?P<a>\d+) \([^)]+\) vs (?P<b>\d+)"
 )
-_TELEMETRY_RE = re.compile(
+_TELEMETRY_PREFIX_RE = re.compile(
     r"\[telemetry\] player=(?P<player>[01]) turn=(?P<turn>\d+) "
     r"my_land=(?P<my_land>\d+) my_army=(?P<my_army>\d+) "
     r"opp_land=(?P<opp_land>\d+) opp_army=(?P<opp_army>\d+)"
-    r"(?: enemy_general_sighted=(?P<sighted>[01]))?"
-    r"(?: first_sighting_turn=(?P<sighting_turn>\d+))?"
 )
+_EXTRA_KV_RE = re.compile(r"(\w+)=(\S+)")
 
 
 @dataclass
@@ -54,6 +53,15 @@ class BotTelemetry:
     opp_army: int
     enemy_general_sighted: int | None = None
     first_sighting_turn: int | None = None
+    extras: dict[str, str] | None = None
+
+    def all_extras(self) -> dict[str, str]:
+        merged: dict[str, str] = dict(self.extras or {})
+        if self.enemy_general_sighted is not None:
+            merged.setdefault("enemy_general_sighted", str(self.enemy_general_sighted))
+        if self.first_sighting_turn is not None:
+            merged.setdefault("first_sighting_turn", str(self.first_sighting_turn))
+        return merged
 
 
 def parse_castles_built(combined: str) -> tuple[int | None, int | None]:
@@ -65,16 +73,30 @@ def parse_castles_built(combined: str) -> tuple[int | None, int | None]:
     return int(match.group("a")), int(match.group("b"))
 
 
+def _parse_telemetry_extras(tail: str) -> dict[str, str]:
+    return {match.group(1): match.group(2) for match in _EXTRA_KV_RE.finditer(tail)}
+
+
+def _coerce_metric_value(key: str, raw: str) -> bool | int | str:
+    if key == "enemy_general_sighted":
+        return bool(int(raw))
+    try:
+        return int(raw)
+    except ValueError:
+        return raw
+
+
 def parse_bot_telemetry(combined: str) -> dict[int, BotTelemetry]:
     """Return the last telemetry line per player id (0 or 1)."""
     last: dict[int, BotTelemetry] = {}
     for line in combined.splitlines():
-        match = _TELEMETRY_RE.search(line)
+        match = _TELEMETRY_PREFIX_RE.search(line)
         if match is None:
             continue
         player = int(match.group("player"))
-        sighted = match.group("sighted")
-        sighting_turn = match.group("sighting_turn")
+        extras = _parse_telemetry_extras(line[match.end() :])
+        sighted = extras.get("enemy_general_sighted")
+        sighting_turn = extras.get("first_sighting_turn")
         last[player] = BotTelemetry(
             my_land=int(match.group("my_land")),
             my_army=int(match.group("my_army")),
@@ -82,6 +104,7 @@ def parse_bot_telemetry(combined: str) -> dict[int, BotTelemetry]:
             opp_army=int(match.group("opp_army")),
             enemy_general_sighted=int(sighted) if sighted is not None else None,
             first_sighting_turn=int(sighting_turn) if sighting_turn is not None else None,
+            extras=extras,
         )
     return last
 
@@ -111,14 +134,22 @@ def apply_telemetry_to_record(
         record.final_army_a = t1.opp_army
 
     metrics = dict(record.metrics)
-    if t0 is not None and t0.enemy_general_sighted is not None:
-        metrics["enemy_general_sighted_a"] = bool(t0.enemy_general_sighted)
-    if t0 is not None and t0.first_sighting_turn is not None:
-        metrics["first_sighting_turn_a"] = t0.first_sighting_turn
-    if t1 is not None and t1.enemy_general_sighted is not None:
-        metrics["enemy_general_sighted_b"] = bool(t1.enemy_general_sighted)
-    if t1 is not None and t1.first_sighting_turn is not None:
-        metrics["first_sighting_turn_b"] = t1.first_sighting_turn
+    for player_id, suffix in ((0, "_a"), (1, "_b")):
+        telemetry = telemetry_by_player.get(player_id)
+        if telemetry is None:
+            continue
+        for key, raw in telemetry.all_extras().items():
+            metrics[f"{key}{suffix}"] = _coerce_metric_value(key, raw)
+
+    if (
+        record.truncated
+        and record.winner == "draw"
+        and record.final_land_a is not None
+        and record.final_land_b is not None
+    ):
+        metrics["land_margin_a"] = record.final_land_a - record.final_land_b
+        metrics["land_margin_b"] = record.final_land_b - record.final_land_a
+
     record.metrics = metrics
 
 

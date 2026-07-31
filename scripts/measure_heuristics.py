@@ -10,11 +10,10 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
-import re
 import sys
 import time
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -23,9 +22,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from arena.ratings import RatingBook, rate_stored_game, write_leaderboard
-from arena.run_match import run_matchup
-from arena.store import GAMES_DIR, GameRecord, bot_id_from_run_sh, git_commit_or_tag, make_game_id, save_game, utc_now_iso
+from arena.ratings import RatingBook
+from arena.run_match import run_and_store
+from arena.store import GameRecord
 
 MEASUREMENTS_DIR = REPO_ROOT / "docs" / "research" / "measurements"
 
@@ -44,11 +43,6 @@ BASELINE_BOTS = ["smoke", "expand_plus", "castle_builder", "general_hunter"]
 
 EXPANDER_PYTHON = (
     REPO_ROOT / "competition-module" / "competition" / "agents" / "expander_python" / "run.sh"
-)
-
-_CASTLE_RE = re.compile(
-    r"\[matchup\] castles built: (?P<a>\d+) \((?P<a_label>[^)]+)\) "
-    r"vs (?P<b>\d+) \((?P<b_label>[^)]+)\)"
 )
 
 
@@ -72,6 +66,8 @@ class GameEntry:
     truncated: bool
     castles_a: int | None = None
     castles_b: int | None = None
+    land_margin_a: int | None = None
+    land_margin_b: int | None = None
     game_id: str = ""
     tag: str = ""
 
@@ -103,32 +99,39 @@ def wait_for_bots(
         time.sleep(poll_seconds)
 
 
-def parse_castles(combined: str) -> tuple[int, int] | None:
-    match = _CASTLE_RE.search(combined)
-    if not match:
-        return None
-    return int(match.group("a")), int(match.group("b"))
+def both_seat_orders(specs: list[MatchSpec]) -> list[MatchSpec]:
+    """Emit A vs B and B vs A for each spec (evaluate-bot-change seat-swap rule)."""
+    out: list[MatchSpec] = []
+    seen: set[tuple[str, str, int, str]] = set()
+    for spec in specs:
+        for bot_a, bot_b in ((spec.bot_a, spec.bot_b), (spec.bot_b, spec.bot_a)):
+            key = (bot_a, bot_b, spec.seed, spec.tag)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(MatchSpec(bot_a, bot_b, spec.seed, spec.tag))
+    return out
 
 
 def build_grid() -> list[MatchSpec]:
-    specs: list[MatchSpec] = []
+    base: list[MatchSpec] = []
 
     for bot in NEW_BOTS:
         for seed in (0, 1):
-            specs.append(MatchSpec(bot, "smoke", seed, "new_vs_smoke"))
+            base.append(MatchSpec(bot, "smoke", seed, "new_vs_smoke"))
 
     for bot in NEW_BOTS:
-        specs.append(MatchSpec(bot, "expand_plus", 0, "new_vs_expand_plus"))
+        base.append(MatchSpec(bot, "expand_plus", 0, "new_vs_expand_plus"))
 
     for a, b in itertools.combinations(NEW_BOTS, 2):
-        specs.append(MatchSpec(a, b, 0, "new_round_robin"))
+        base.append(MatchSpec(a, b, 0, "new_round_robin"))
 
     economy = ["castle_builder", "castle_rush", "phase_switch"]
     for a, b in itertools.combinations(economy, 2):
         for seed in (0, 1):
-            specs.append(MatchSpec(a, b, seed, "economy_cluster"))
+            base.append(MatchSpec(a, b, seed, "economy_cluster"))
 
-    return specs
+    return both_seat_orders(base)
 
 
 def winner_bot_id(record: GameRecord) -> str:
@@ -139,53 +142,37 @@ def winner_bot_id(record: GameRecord) -> str:
     return "draw"
 
 
-def run_one(spec: MatchSpec, *, update_ratings: bool) -> GameEntry:
-    a_path = bot_run_sh(spec.bot_a)
-    b_path = bot_run_sh(spec.bot_b)
-    bot_a = bot_id_from_run_sh(a_path)
-    bot_b = bot_id_from_run_sh(b_path)
-    commit = git_commit_or_tag()
-
-    started_at = utc_now_iso()
-    result = run_matchup(a_path, b_path, seed=spec.seed, mode="competition")
-    finished_at = utc_now_iso()
-    combined = (result.stdout or "") + "\n" + (result.stderr or "")
-    castles = parse_castles(combined)
-
-    record = GameRecord(
-        game_id=make_game_id(bot_a, bot_b, spec.seed),
-        seed=spec.seed,
-        mode="competition",
-        bot_a=bot_a,
-        bot_b=bot_b,
-        bot_a_commit_or_tag=commit,
-        bot_b_commit_or_tag=commit,
-        winner=result.winner,  # type: ignore[arg-type]
-        turns=result.turns,
-        terminated=result.terminated,
-        truncated=result.truncated,
-        started_at=started_at,
-        finished_at=finished_at,
-    )
-    save_game(record, GAMES_DIR)
-    if update_ratings:
-        rate_stored_game(record)
-
-    entry = GameEntry(
-        bot_a=bot_a,
-        bot_b=bot_b,
-        seed=spec.seed,
+def game_entry_from_record(record: GameRecord, *, tag: str = "") -> GameEntry:
+    metrics = record.metrics or {}
+    return GameEntry(
+        bot_a=record.bot_a,
+        bot_b=record.bot_b,
+        seed=record.seed,
         winner=record.winner,
         winner_bot=winner_bot_id(record),
         turns=record.turns,
         terminated=record.terminated,
         truncated=record.truncated,
+        castles_a=record.castles_built_a,
+        castles_b=record.castles_built_b,
+        land_margin_a=metrics.get("land_margin_a"),
+        land_margin_b=metrics.get("land_margin_b"),
         game_id=record.game_id,
-        tag=spec.tag,
+        tag=tag,
     )
-    if castles is not None:
-        entry.castles_a, entry.castles_b = castles
-    return entry
+
+
+def run_one(spec: MatchSpec, *, update_ratings: bool) -> GameEntry:
+    a_path = bot_run_sh(spec.bot_a)
+    b_path = bot_run_sh(spec.bot_b)
+    record = run_and_store(
+        a_path,
+        b_path,
+        seed=spec.seed,
+        mode="competition",
+        update_ratings=update_ratings,
+    )
+    return game_entry_from_record(record, tag=spec.tag)
 
 
 def aggregate_stats(games: list[GameEntry]) -> dict[str, Any]:
@@ -313,6 +300,8 @@ def write_reports(games: list[GameEntry], *, round_name: str = "round1") -> tupl
                 "truncated": g.truncated,
                 "castles_a": g.castles_a,
                 "castles_b": g.castles_b,
+                "land_margin_a": g.land_margin_a,
+                "land_margin_b": g.land_margin_b,
                 "tag": g.tag,
             }
             for g in games
