@@ -31,7 +31,12 @@ from arena.records.reporting import (
     winrate_table_lines,
 )
 from arena.records.store import GameRecord, round_games_dir, utc_now_iso
-from arena.tournaments.competition import DEFAULT_GAMES_PER_PAIR, parse_seeds
+from arena.tournaments.competition import (
+    DEFAULT_GAMES_PER_PAIR,
+    RANDOM_SEATS,
+    SEAT_POLICIES,
+    parse_seeds,
+)
 
 MEASUREMENTS_DIR = REPO_ROOT / "docs" / "research" / "measurements"
 
@@ -432,6 +437,15 @@ def main(argv: list[str] | None = None) -> int:
         help="optional fixed seed list/ranges (overrides --games-per-pair RNG)",
     )
     parser.add_argument(
+        "--seat-policy",
+        choices=SEAT_POLICIES,
+        default=RANDOM_SEATS,
+        help=(
+            "'random' draws the seat per game (zero extra games); 'alternate' "
+            f"plays every seed both ways for exactly 50/50 (default: {RANDOM_SEATS})"
+        ),
+    )
+    parser.add_argument(
         "--jobs",
         type=int,
         default=None,
@@ -505,7 +519,7 @@ def main(argv: list[str] | None = None) -> int:
             games_dir=round_games_dir(round_name),
             update_ratings=not args.no_ratings,
             timeout=args.timeout,
-            swap_sides=False,
+            seat_policy=args.seat_policy,
             jobs=args.jobs,
         )
         games = [game_entry_from_record(r, tag="pair") for r in records]
@@ -515,7 +529,7 @@ def main(argv: list[str] | None = None) -> int:
             "games_per_pair": args.games_per_pair if fixed is None else len(fixed),
             "round_seed": args.round_seed,
             "fixed_seeds": fixed,
-            "swap_sides": False,
+            "seat_policy": args.seat_policy,
             "jobs": args.jobs if args.jobs is not None else default_jobs(),
             "games_dir": str(round_games_dir(round_name)),
         }

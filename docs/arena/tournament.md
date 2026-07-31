@@ -38,11 +38,32 @@ python scripts/tournament.py \
 | `--round-seed` | RNG seed for map-seed generation (default: 0) |
 | `--seeds` | optional fixed seed list/ranges; overrides random generation |
 | `--jobs` | parallel workers (default: physical CPU cores; capped to that) |
-| `--no-ratings` | store only; skip Elo rebuild |
-| `--swap-sides` | also play B vs A (off by default; Rule C uses random seeds instead) |
+| `--no-ratings` | store only; skip the refit |
+| `--seat-policy` | `random` (default) or `alternate` — see below |
+| `--strict-versions` | refuse to start if any bot's closure differs from HEAD |
 | `--timeout` | per-match wall-clock seconds limit |
-| `--include-self` | every ordered pair including self-play |
+| `--include-self` | also play each bot against itself |
 | `--games-dir` | override output directory |
+
+## Seat policy
+
+Seat is drawn per game from the round's seeded stream, not implied by roster
+position. Under the old scheme "sits in seat A" and "appears earlier in the
+roster" were the same variable, so the fitted seat advantage was aliased with
+the strength parameters.
+
+| Policy | What it does | Use it for |
+| --- | --- | --- |
+| `random` | one game per map seed, orientation drawn from the pair's stream | large exploratory and regeneration rounds — **zero extra games** |
+| `alternate` | every map seed played in **both** orientations | decision arms — exactly 50/50, and map difficulty cancels within each matched pair |
+
+`alternate` draws half as many distinct seeds for the same game count, and
+rounds an odd `--games-per-pair` up to keep the split exact. Self-play pairs
+play one game per seed under either policy.
+
+`--swap-sides` is gone. It keyed the pair RNG on the *oriented* pair, so the
+mirrored copy drew an entirely different seed list: 2× the games for an
+unmatched sample. `--seat-policy alternate` is what it should have been.
 
 ## Parallelism
 
@@ -58,12 +79,13 @@ python scripts/tournament.py \
 
 ```
 data/games/<round>/
-  manifest.json          # round_seed, assignments, jobs, bots
+  manifest.json          # round_seed, seat_policy, assignments, jobs, bots, hashes
   <game_id>.json         # one file per match
 ```
 
-`arena/records/ratings.py` rebuild scans `data/games/` recursively (skips
-`manifest.json`). Legacy flat JSON at `data/games/*.json` still loads.
+The rating refit scans `data/games/` recursively (skipping `manifest.json`)
+and filters on each record's own `mode`, `round`, `engine_version` and content
+hashes — never on the directory it happens to sit in.
 
 ## Verification
 

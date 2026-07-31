@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import itertools
 import json
 import random
 from pathlib import Path
@@ -48,29 +47,58 @@ def parse_seeds(spec: str) -> list[int]:
 def bot_pairs(
     run_scripts: list[Path], *, include_self: bool = False
 ) -> list[tuple[Path, Path]]:
-    """Unordered unique pairs (A,B) with A before B in the input list order."""
+    """
+    Unordered unique pairs (A,B) with A before B in the input list order.
+
+    Order within a pair carries no meaning any more: seat is drawn per game
+    (`expand_pair_seeds`), so emitting both orderings would only duplicate
+    work. `include_self` adds each bot against itself — those games say nothing
+    about strength but are a clean, strength-free estimator of the seat and
+    draw parameters.
+    """
     scripts = [p.resolve() for p in run_scripts]
     if len(scripts) < 2 and not include_self:
         raise ValueError("need at least two bot run.sh paths")
     pairs: list[tuple[Path, Path]] = []
-    if include_self:
-        for a, b in itertools.product(scripts, repeat=2):
-            pairs.append((a, b))
-        return pairs
     for i, a in enumerate(scripts):
         for b in scripts[i + 1 :]:
             pairs.append((a, b))
+    if include_self:
+        pairs.extend((a, a) for a in scripts)
     return pairs
 
 
+# How a pair's games are split between the two seats.
+RANDOM_SEATS = "random"  # one game per map seed, orientation drawn from the stream
+ALTERNATING_SEATS = "alternate"  # each map seed played both ways: exactly 50/50
+SEAT_POLICIES = (RANDOM_SEATS, ALTERNATING_SEATS)
+
+
 def _pair_rng(round_seed: int, bot_a: str, bot_b: str) -> random.Random:
-    """Deterministic RNG stream for one pair, derived from the round seed."""
-    material = f"{round_seed}:{bot_a}\0{bot_b}".encode()
+    """
+    Deterministic RNG stream for one pair, derived from the round seed.
+
+    The key is **orientation-independent** (the two ids are sorted). It has to
+    be: the stream is what chooses the seat, so keying it on the orientation
+    would make the pair's RNG depend on the answer it is being asked for. The
+    old oriented key is also why `--swap-sides` never actually mirrored —
+    `(a, b)` and `(b, a)` drew entirely different map seeds, so it bought 2×
+    the games and an unmatched sample.
+    """
+    first, second = sorted((bot_a, bot_b))
+    material = f"{round_seed}:{first}\0{second}".encode()
     # Prefer hashlib for stable cross-platform mix; avoid Python hash salt.
     import hashlib
 
     digest = hashlib.sha256(material).digest()
     return random.Random(int.from_bytes(digest[:8], "big"))
+
+
+def _draw_seeds(rng: random.Random, count: int) -> list[int]:
+    chosen: set[int] = set()
+    while len(chosen) < count:
+        chosen.add(rng.randrange(0, 2**31 - 1))
+    return sorted(chosen)
 
 
 def expand_pair_seeds(
@@ -79,32 +107,58 @@ def expand_pair_seeds(
     games_per_pair: int,
     round_seed: int,
     fixed_seeds: list[int] | None = None,
+    seat_policy: str = RANDOM_SEATS,
 ) -> list[tuple[Path, Path, int]]:
     """
-    Expand pairs into (bot_a, bot_b, map_seed) match specs.
+    Expand pairs into (seat_a, seat_b, map_seed) match specs.
 
-    When `fixed_seeds` is set, every pair plays that seed list.
-    Otherwise each pair draws `games_per_pair` distinct random map seeds.
+    Seat assignment is part of the draw, not a property of roster position.
+    Under the old scheme "sits in seat A" and "appears earlier in the roster"
+    were the same variable, so the fitted seat advantage was aliased with the
+    strength parameters and its variance inflated ~2.9×.
+
+    `seat_policy`:
+
+    - `"random"` — one game per map seed, orientation drawn from the pair's
+      stream. Balances in expectation and costs **zero extra games**, which is
+      what makes it right for large exploratory rounds.
+    - `"alternate"` — every map seed is played in **both** orientations, so the
+      split is exactly 50/50 by construction and map difficulty cancels within
+      each matched pair. Half as many distinct seeds for the same game count;
+      an odd `games_per_pair` rounds up to keep the balance exact. This is what
+      decision arms use, where balancing only in expectation is not good enough
+      (over 1150 games the seat-A count is 575 ± 17).
+
+    Self-play pairs play one game per seed under either policy — both seats
+    hold the same program, so mirroring would just buy the same game twice.
     """
     if games_per_pair < 1:
         raise ValueError(f"games_per_pair must be >= 1 (got {games_per_pair})")
+    if seat_policy not in SEAT_POLICIES:
+        raise ValueError(f"unknown seat policy {seat_policy!r}; use one of {SEAT_POLICIES}")
 
     specs: list[tuple[Path, Path, int]] = []
-    if fixed_seeds is not None:
-        for a, b in pairs:
-            for seed in fixed_seeds:
-                specs.append((a, b, seed))
-        return specs
-
     for a, b in pairs:
         a_id = bot_id_from_run_sh(a)
         b_id = bot_id_from_run_sh(b)
         rng = _pair_rng(round_seed, a_id, b_id)
-        chosen: set[int] = set()
-        while len(chosen) < games_per_pair:
-            chosen.add(rng.randrange(0, 2**31 - 1))
-        for seed in sorted(chosen):
-            specs.append((a, b, seed))
+        # Resolve the pair to a canonical orientation so the seat decision does
+        # not depend on how the caller happened to order it.
+        low, high = (a, b) if a_id <= b_id else (b, a)
+        self_play = a_id == b_id
+
+        paired = seat_policy == ALTERNATING_SEATS and not self_play
+        wanted = -(-games_per_pair // 2) if paired else games_per_pair
+        seeds = list(fixed_seeds) if fixed_seeds is not None else _draw_seeds(rng, wanted)
+
+        for seed in seeds:
+            if paired:
+                specs.append((low, high, seed))
+                specs.append((high, low, seed))
+            elif self_play or rng.random() < 0.5:
+                specs.append((low, high, seed))
+            else:
+                specs.append((high, low, seed))
     return specs
 
 
@@ -117,8 +171,9 @@ def write_round_manifest(
     jobs: int,
     bots: list[str],
     specs: list[tuple[Path, Path, int]],
-    swap_sides: bool,
+    seat_policy: str,
     fixed_seeds: list[int] | None,
+    engine: str | None = None,
     content_hashes: dict[str, str] | None = None,
 ) -> Path:
     """Write `manifest.json` describing the round grid."""
@@ -138,7 +193,8 @@ def write_round_manifest(
         "jobs": jobs,
         "bots": bots,
         "bot_content_hashes": content_hashes or {},
-        "swap_sides": swap_sides,
+        "engine_version": engine,
+        "seat_policy": seat_policy,
         "fixed_seeds": fixed_seeds,
         "match_count": len(assignments),
         "assignments": assignments,
@@ -161,26 +217,23 @@ def run_tournament(
     update_ratings: bool = True,
     timeout: float | None = None,
     include_self: bool = False,
-    swap_sides: bool = False,
+    seat_policy: str = RANDOM_SEATS,
     strict_versions: bool = False,
     jobs: int | None = None,
 ) -> list[GameRecord]:
     """
     Run games_per_pair (or fixed_seeds) × pairs under competition mode.
 
-    Stores each game under data/games/<round>/, then rebuilds Elo once when
+    Stores each game under data/games/<round>/, then refits ratings once when
     update_ratings is True.
     """
     pairs = bot_pairs(run_scripts, include_self=include_self)
-    if swap_sides:
-        mirrored = [(b, a) for a, b in pairs if a != b]
-        pairs = pairs + mirrored
-
     specs = expand_pair_seeds(
         pairs,
         games_per_pair=games_per_pair,
         round_seed=round_seed,
         fixed_seeds=fixed_seeds,
+        seat_policy=seat_policy,
     )
     directory = games_dir or round_games_dir(round_name)
     worker_jobs = cap_jobs(default_jobs() if jobs is None else jobs)
@@ -202,8 +255,9 @@ def run_tournament(
         jobs=worker_jobs,
         bots=bot_ids,
         specs=specs,
-        swap_sides=swap_sides,
+        seat_policy=seat_policy,
         fixed_seeds=fixed_seeds,
+        engine=engine,
         content_hashes=content_hashes,
     )
     print(f"[tournament] wrote {manifest_path}")
@@ -317,9 +371,15 @@ def main(argv: list[str] | None = None) -> int:
         help="also play each bot against itself (and all ordered pairs)",
     )
     parser.add_argument(
-        "--swap-sides",
-        action="store_true",
-        help="also play each pair with sides swapped (off by default)",
+        "--seat-policy",
+        choices=SEAT_POLICIES,
+        default=RANDOM_SEATS,
+        help=(
+            "how a pair's games split between seats: 'random' draws the seat "
+            "per game (balanced in expectation, zero extra games); 'alternate' "
+            "plays every map seed both ways (exactly 50/50, matched pairs) — "
+            f"use it for decision arms (default: {RANDOM_SEATS})"
+        ),
     )
     parser.add_argument(
         "--strict-versions",
@@ -345,7 +405,7 @@ def main(argv: list[str] | None = None) -> int:
         update_ratings=not args.no_ratings,
         timeout=args.timeout,
         include_self=args.include_self,
-        swap_sides=args.swap_sides,
+        seat_policy=args.seat_policy,
         strict_versions=args.strict_versions,
         jobs=args.jobs,
     )
