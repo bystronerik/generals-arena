@@ -20,6 +20,8 @@ from arena.records.store import (
     GameRecord,
     duration_seconds_between,
     make_game_id,
+    require_content_hash,
+    require_non_empty,
 )
 
 _TELEMETRY_PREFIX_RE = re.compile(
@@ -136,27 +138,31 @@ def record_from_match_result(
     bot_b: str,
     seed: int,
     mode: str,
-    bot_a_commit: str,
-    bot_b_commit: str,
+    round_name: str,
+    bot_a_content_hash: str,
+    bot_b_content_hash: str,
+    engine_version: str,
     started_at: str,
     finished_at: str,
-    bot_a_content_hash: str | None = None,
-    bot_b_content_hash: str | None = None,
 ) -> GameRecord:
     """
     Build a stored GameRecord from a CompetitionMatchResult.
 
     Applies bot telemetry from `result.stderr`, so callers only supply the
-    identity and timing fields the match itself does not carry.
+    identity and timing fields the match itself does not carry. The identity
+    fields are required: a record whose bot hashes or engine era are unknown
+    cannot be rated (schema v4).
     """
     record = GameRecord(
         game_id=make_game_id(bot_a, bot_b, seed),
         seed=seed,
         mode=mode,
+        round=round_name,
         bot_a=bot_a,
         bot_b=bot_b,
-        bot_a_commit_or_tag=bot_a_commit,
-        bot_b_commit_or_tag=bot_b_commit,
+        bot_a_content_hash=require_content_hash(bot_a_content_hash, "bot_a"),
+        bot_b_content_hash=require_content_hash(bot_b_content_hash, "bot_b"),
+        engine_version=require_non_empty(engine_version, "engine_version"),
         winner=result.winner,
         turns=result.turns,
         terminated=result.terminated,
@@ -165,8 +171,6 @@ def record_from_match_result(
         finished_at=finished_at,
         schema_version=CURRENT_SCHEMA_VERSION,
         duration_seconds=duration_seconds_between(started_at, finished_at),
-        bot_a_content_hash=bot_a_content_hash,
-        bot_b_content_hash=bot_b_content_hash,
         castles_built_a=result.castles_built_a,
         castles_built_b=result.castles_built_b,
     )

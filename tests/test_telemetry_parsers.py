@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from arena.records.store import CURRENT_SCHEMA_VERSION, GameRecord
 from arena.records.telemetry import (
     BotTelemetry,
@@ -36,10 +38,12 @@ def _minimal_record() -> GameRecord:
         game_id="g1",
         seed=0,
         mode="competition",
+        round="roundT",
         bot_a="a",
         bot_b="b",
-        bot_a_commit_or_tag="abc",
-        bot_b_commit_or_tag="abc",
+        bot_a_content_hash="0123456789ab",
+        bot_b_content_hash="ba9876543210",
+        engine_version="9e3b9d1",
         winner="draw",
         turns=10,
         terminated=False,
@@ -126,8 +130,10 @@ def test_record_from_match_result_fills_identity_timing_and_telemetry():
         bot_b="smoke",
         seed=7,
         mode="competition",
-        bot_a_commit="abc1234",
-        bot_b_commit="abc1234",
+        round_name="round5",
+        bot_a_content_hash="0123456789ab",
+        bot_b_content_hash="ba9876543210",
+        engine_version="9e3b9d1",
         started_at="2026-01-01T00:00:00Z",
         finished_at="2026-01-01T00:01:30Z",
     )
@@ -136,7 +142,45 @@ def test_record_from_match_result_fills_identity_timing_and_telemetry():
     assert record.schema_version == CURRENT_SCHEMA_VERSION
     assert record.duration_seconds == 90.0
     assert (record.castles_built_a, record.castles_built_b) == (2, 1)
+    assert (record.round, record.engine_version) == ("round5", "9e3b9d1")
+    assert record.bot_a_content_hash == "0123456789ab"
     # telemetry merged from stderr, not passed in separately
     assert record.final_land_a == 50
     assert record.final_land_b == 30
     assert record.metrics["first_sighting_turn_a"] == 200
+
+
+@pytest.mark.parametrize(
+    "override, message",
+    [
+        ({"bot_a_content_hash": "unknown"}, "unknown"),
+        ({"bot_b_content_hash": ""}, "non-empty"),
+        ({"engine_version": ""}, "non-empty"),
+    ],
+)
+def test_record_from_match_result_rejects_a_missing_identity(override, message):
+    """A record with no rating identity must never reach the store."""
+    result = SimpleNamespace(
+        winner="draw",
+        turns=1200,
+        terminated=False,
+        truncated=True,
+        castles_built_a=None,
+        castles_built_b=None,
+        stderr="",
+    )
+    kwargs = {
+        "bot_a": "blitz",
+        "bot_b": "smoke",
+        "seed": 0,
+        "mode": "competition",
+        "round_name": "round5",
+        "bot_a_content_hash": "0123456789ab",
+        "bot_b_content_hash": "ba9876543210",
+        "engine_version": "9e3b9d1",
+        "started_at": "2026-01-01T00:00:00Z",
+        "finished_at": "2026-01-01T00:01:00Z",
+        **override,
+    }
+    with pytest.raises(ValueError, match=message):
+        record_from_match_result(result, **kwargs)

@@ -2,19 +2,25 @@
 
 Minimum fields for one stored match under
 `data/games/<round>/<game_id>.json` (batch rounds) or
-`data/games/<game_id>.json` (legacy / single-match store).
+`data/games/<game_id>.json` (single-match store).
 
-## Required fields (schema v1)
+**Schema v4 is the only readable version.** `GameRecord.from_dict` rejects
+anything older, loudly. Every pre-v4 record was deleted rather than migrated:
+none of them carried a content hash, so none of them had a rating identity.
+
+## Required fields (schema v4)
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | `game_id` | string | unique id |
-| `seed` | int | matchup seed |
+| `seed` | int | map seed |
 | `mode` | string | always `"competition"` for arena games |
+| `round` | string | round name — **stored, not inferred from the path** |
 | `bot_a` | string | bot id / path label |
 | `bot_b` | string | bot id / path label |
-| `bot_a_commit_or_tag` | string | repo HEAD when the game ran — **not** a per-bot version (see `bot_a_content_hash`) |
-| `bot_b_commit_or_tag` | string | same value as bot A for arena-run games |
+| `bot_a_content_hash` | string | 12-hex source-closure hash — the rating identity |
+| `bot_b_content_hash` | string | same, for bot B |
+| `engine_version` | string | `competition-module` submodule SHA |
 | `winner` | string | `"a"` \| `"b"` \| `"draw"` |
 | `turns` | int | turns played |
 | `terminated` | bool | general capture / deathtouch win path |
@@ -22,27 +28,31 @@ Minimum fields for one stored match under
 | `started_at` | string | ISO-8601 |
 | `finished_at` | string | ISO-8601 |
 
-## Optional fields (schema v2+)
+`bot_a_commit_or_tag` / `bot_b_commit_or_tag` were **removed** at v4. A repo
+HEAD pin is not a bot version: it moves when any unrelated file is committed
+and stays put when a bot is edited without committing. The per-hash commit now
+lives in the version registry
+([bot-version-registry.md](bot-version-registry.md)), where it is recorded
+alongside a dirty-tree flag and a git ref that actually resolves.
 
-New records set `schema_version` to `3`. Older records default to `1` when the
-key is absent. Read every optional key with `.get()`; missing means not
-measured, never zero.
+## Optional fields
+
+Read every optional key with `.get()`; missing means not measured, never zero.
 
 | Field | Type | Source |
 | --- | --- | --- |
-| `schema_version` | int | `3` for new records; `1` when absent |
+| `schema_version` | int | `4`; absent or lower is a hard error |
 | `duration_seconds` | float or null | wall clock between `started_at` and `finished_at` |
-| `bot_a_content_hash` / `_b` | string or null | schema v3; `arena/records/fingerprint.py` |
 | `castles_built_a` / `_b` | int or null | `[matchup] castles built: N (...) vs M (...)` |
 | `final_land_a` / `_b` | int or null | bot stderr `[telemetry]` line (last frame) |
 | `final_army_a` / `_b` | int or null | same |
 | `metrics` | object | free-form counters; default `{}` |
 
-### Bot content hash (schema v3)
+## Bot content hash
 
-`bot_a_content_hash` / `bot_b_content_hash` pin the *bot*, where
-`bot_a_commit_or_tag` only pins the repo. A 12-hex-character SHA-256 over the
-bot's source closure, computed by `arena/records/fingerprint.py`:
+`bot_a_content_hash` / `bot_b_content_hash` pin the *bot*. A 12-hex-character
+SHA-256 over the bot's source closure, computed by
+`arena/records/fingerprint.py`:
 
 - every file in `bots/<id>/`, excluding `__pycache__` and `*.pyc`;
 - every module under `bots/` it imports, transitively — this crosses bot
@@ -51,13 +61,13 @@ bot's source closure, computed by `arena/records/fingerprint.py`:
 - shell `source` targets, so `cm_*` bots cover `_common/cm_run.sh`.
 
 Imports that do not resolve under `bots/` (stdlib, `jax`, `generals`) are
-excluded — third-party versions are the lockfile's job. `"unknown"` when the
-bot directory cannot be read. Absent (`null`) on schema v1 and v2 records.
+excluded — third-party versions are the lockfile's job.
 
-Two games share a bot's content hash only if that bot was byte-identical,
-which is what rating identity should key on: the repo commit changes when any
-unrelated file is committed, and does not change when a bot is edited without
-committing.
+Two games share a bot's content hash only if that bot was byte-identical. The
+hash is required and must never be `"unknown"`: `fingerprint.bot_content_hash`
+raises instead of returning a sentinel, and both `record_from_match_result`
+and `GameRecord.from_dict` reject it. A sentinel hash would pool every
+unreadable closure into one rated entity.
 
 Inspect a roster:
 
@@ -65,7 +75,28 @@ Inspect a roster:
 python -m arena.records.fingerprint --files proteus cm_random
 ```
 
-### Bot stderr telemetry
+Map a hash back to source:
+
+```bash
+python -m arena.records.registry --files <hash>
+```
+
+## Engine version
+
+The SHA of the checked-out `competition-module`, read from the submodule's own
+HEAD — the checkout that actually played the game, not the gitlink in the
+superproject's tree. A rules or engine change moves win probabilities, so
+records from either side of a submodule bump are **never** pooled: the rating
+policy counts them under `excluded.engine_mismatch` instead. A bump invalidates
+the leaderboard and needs a fresh regeneration round.
+
+## Round
+
+Stored on the record so eligibility never has to parse a path. Batch rounds
+pass their own name; one-off matches through `arena/matches/run_match.py`
+default to `adhoc` and can override it with `--round`.
+
+## Bot stderr telemetry
 
 Each bot may write one line to stderr when stdin reaches EOF:
 
@@ -87,7 +118,7 @@ See [`docs/research/strategies/optimize-existing.md`](../research/strategies/opt
 
 ## Rules
 
-- Store every game **before** updating ratings.
+- Store every game **before** refitting ratings.
 - Arena code lives in `arena/records/store.py`.
 - Do not invent extra required fields without updating this page.
 - Arena matches set `mode` to `"competition"` only.
@@ -96,4 +127,5 @@ See [`docs/research/strategies/optimize-existing.md`](../research/strategies/opt
 
 - [match-runner.md](match-runner.md)
 - [ratings.md](ratings.md)
+- [bot-version-registry.md](bot-version-registry.md)
 - [tournament.md](tournament.md)

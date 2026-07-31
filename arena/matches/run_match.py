@@ -11,11 +11,15 @@ from arena.records.store import (
     GAMES_DIR,
     GameRecord,
     bot_id_from_run_sh,
-    git_commit_or_tag,
+    engine_version,
     save_game,
     utc_now_iso,
 )
 from arena.records.telemetry import record_from_match_result
+
+# Round name for one-off matches that belong to no measurement round. Stored
+# explicitly so the eligibility filter never has to guess from a path.
+ADHOC_ROUND = "adhoc"
 
 
 def run_and_store(
@@ -24,23 +28,20 @@ def run_and_store(
     *,
     seed: int = 0,
     mode: str = "competition",
+    round_name: str = ADHOC_ROUND,
     games_dir: Path | None = None,
     bot_a_id: str | None = None,
     bot_b_id: str | None = None,
-    bot_a_commit: str | None = None,
-    bot_b_commit: str | None = None,
     bot_a_content_hash: str | None = None,
     bot_b_content_hash: str | None = None,
     timeout: float | None = None,
     update_ratings: bool = False,
 ) -> GameRecord:
-    """Run one competition match, store JSON, optionally update ratings."""
+    """Run one competition match, store JSON, optionally refit ratings."""
     a_path = bot_a_run.resolve()
     b_path = bot_b_run.resolve()
     bot_a = bot_a_id or bot_id_from_run_sh(a_path)
     bot_b = bot_b_id or bot_id_from_run_sh(b_path)
-    commit_a = bot_a_commit if bot_a_commit is not None else git_commit_or_tag()
-    commit_b = bot_b_commit if bot_b_commit is not None else commit_a
     hash_a = bot_a_content_hash if bot_a_content_hash is not None else bot_content_hash(a_path)
     hash_b = bot_b_content_hash if bot_b_content_hash is not None else bot_content_hash(b_path)
 
@@ -56,12 +57,12 @@ def run_and_store(
         bot_b=bot_b,
         seed=seed,
         mode=mode,
-        bot_a_commit=commit_a,
-        bot_b_commit=commit_b,
-        started_at=started_at,
-        finished_at=finished_at,
+        round_name=round_name,
         bot_a_content_hash=hash_a,
         bot_b_content_hash=hash_b,
+        engine_version=engine_version(),
+        started_at=started_at,
+        finished_at=finished_at,
     )
     path = save_game(record, games_dir or GAMES_DIR)
     print(f"[run_match] stored {path}")
@@ -100,14 +101,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--bot-a-id", default=None, help="override bot A id label")
     parser.add_argument("--bot-b-id", default=None, help="override bot B id label")
     parser.add_argument(
-        "--bot-a-commit",
-        default=None,
-        help="override bot A commit/tag pin",
-    )
-    parser.add_argument(
-        "--bot-b-commit",
-        default=None,
-        help="override bot B commit/tag pin",
+        "--round",
+        default=ADHOC_ROUND,
+        help=f"round name stored on the record (default: {ADHOC_ROUND})",
     )
     parser.add_argument(
         "--timeout",
@@ -118,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--update-ratings",
         action="store_true",
-        help="after storing the game, apply Elo and rewrite leaderboard",
+        help="after storing the game, refit ratings and rewrite the leaderboard",
     )
     args = parser.parse_args(argv)
 
@@ -127,11 +123,10 @@ def main(argv: list[str] | None = None) -> int:
         args.bot_b,
         seed=args.seed,
         mode=args.mode,
+        round_name=args.round,
         games_dir=args.games_dir,
         bot_a_id=args.bot_a_id,
         bot_b_id=args.bot_b_id,
-        bot_a_commit=args.bot_a_commit,
-        bot_b_commit=args.bot_b_commit,
         timeout=args.timeout,
         update_ratings=args.update_ratings,
     )

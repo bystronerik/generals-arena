@@ -6,6 +6,7 @@ import pytest
 from arena.records.fingerprint import (
     BOTS_DIR,
     HASH_LENGTH,
+    UnhashableBotError,
     bot_content_hash,
     bot_content_hashes,
     bot_source_closure,
@@ -76,8 +77,10 @@ def test_unrelated_bots_have_different_hashes():
     assert set(hashes) == {"smoke", "aegis", "proteus"}
 
 
-def test_missing_bot_dir_is_unknown_not_an_error():
-    assert bot_content_hash(BOTS_DIR / "does_not_exist" / "run.sh") == "unknown"
+def test_missing_bot_dir_raises_rather_than_returning_a_sentinel():
+    """A `"unknown"` hash would pool unrelated programs into one rated entity."""
+    with pytest.raises(UnhashableBotError):
+        bot_content_hash(BOTS_DIR / "does_not_exist" / "run.sh")
 
 
 @pytest.mark.parametrize(

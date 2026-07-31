@@ -1,10 +1,11 @@
 """
 Content hash of a bot's source closure, for rating identity.
 
-`bot_a_commit_or_tag` records repo HEAD (`store.git_commit_or_tag`), which
-moves whenever *anything* in the repo is committed and stays put when a bot is
-edited without committing. That makes it useless for deciding whether two
-stored games were played by the same program.
+A repo HEAD pin (`store.git_commit_or_tag`) moves whenever *anything* in the
+repo is committed and stays put when a bot is edited without committing, which
+makes it useless for deciding whether two stored games were played by the same
+program. Game records dropped it at schema v4; this hash is the rating
+identity, and `arena/records/registry.py` is what maps it back to source.
 
 The hash here covers exactly the files a bot's behaviour depends on: every file
 in its own directory, plus every module under `bots/` it imports, transitively.
@@ -26,7 +27,6 @@ from __future__ import annotations
 import ast
 import hashlib
 import re
-from functools import lru_cache
 from pathlib import Path
 
 from arena.records.store import REPO_ROOT, bot_id_from_run_sh
@@ -179,25 +179,30 @@ def content_hash_for_dir(bot_dir: Path) -> str:
     return digest.hexdigest()[:HASH_LENGTH]
 
 
-@lru_cache(maxsize=None)
-def _cached_hash(bot_dir_str: str) -> str:
-    return content_hash_for_dir(Path(bot_dir_str))
+class UnhashableBotError(RuntimeError):
+    """A bot's source closure could not be read, so it has no rating identity."""
 
 
 def bot_content_hash(run_sh: Path) -> str:
     """
-    Content hash for the bot owning `run_sh`, or "unknown" if it cannot be read.
+    Content hash for the bot owning `run_sh`.
 
-    Cached per process: bot sources do not change mid-round, and a tournament
-    would otherwise re-hash the same closure once per match.
+    Raises rather than returning a sentinel: under hash-keyed rating identity a
+    `"unknown"` hash silently pools unrelated programs into one rated entity.
+
+    Deliberately **not** memoized. The previous per-process `lru_cache` keyed on
+    the directory went stale the moment a bot was edited under a long-lived pool
+    worker, which then labelled every later match with the pre-edit hash. A
+    fresh closure walk costs ~9 ms against a ~3 s match; a wrong identity costs
+    the experiment. Callers that hash a whole roster do it once, up front.
     """
     try:
         bot_dir = run_sh.resolve().parent
         if not bot_dir.is_dir():
-            return "unknown"
-        return _cached_hash(str(bot_dir))
-    except OSError:
-        return "unknown"
+            raise UnhashableBotError(f"no bot directory beside {run_sh}")
+        return content_hash_for_dir(bot_dir)
+    except OSError as exc:
+        raise UnhashableBotError(f"cannot read the source closure of {run_sh}: {exc}") from exc
 
 
 def bot_content_hashes(run_scripts: list[Path]) -> dict[str, str]:

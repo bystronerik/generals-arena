@@ -2,6 +2,11 @@
 
 Keep this module free of top-level JAX imports so `worker_initializer` can pin
 CPU threads before the first match imports competition_match.
+
+Workers never hash a roster and never write the version registry: the parent
+does both once, before the pool starts, and passes the results down. A worker
+that hashed for itself would race an edit made mid-round, and a worker that
+wrote the registry would race its siblings.
 """
 
 from __future__ import annotations
@@ -12,16 +17,21 @@ from typing import Any
 from arena.records.store import (
     GameRecord,
     bot_id_from_run_sh,
-    git_commit_or_tag,
     save_game,
     utc_now_iso,
 )
 
 
+def _required(payload: dict[str, Any], key: str) -> str:
+    value = payload.get(key)
+    if value is None or not str(value).strip():
+        raise ValueError(f"worker payload is missing {key!r}; the parent must supply it")
+    return str(value)
+
+
 def run_one_worker(payload: dict[str, Any]) -> GameRecord:
     """One in-process competition match + store (ProcessPool entry point)."""
     from arena.matches.competition import run_competition_match
-    from arena.records.fingerprint import bot_content_hash
     from arena.records.telemetry import record_from_match_result
 
     a = Path(payload["bot_a_run"])
@@ -30,12 +40,13 @@ def run_one_worker(payload: dict[str, Any]) -> GameRecord:
     games_dir = Path(payload["games_dir"])
     mode = str(payload.get("mode", "competition"))
     timeout = payload.get("timeout")
-    commit = str(payload.get("commit") or git_commit_or_tag())
     bot_a = bot_id_from_run_sh(a)
     bot_b = bot_id_from_run_sh(b)
 
-    hash_a = str(payload.get("bot_a_content_hash") or bot_content_hash(a))
-    hash_b = str(payload.get("bot_b_content_hash") or bot_content_hash(b))
+    round_name = _required(payload, "round")
+    hash_a = _required(payload, "bot_a_content_hash")
+    hash_b = _required(payload, "bot_b_content_hash")
+    engine = _required(payload, "engine_version")
 
     started_at = utc_now_iso()
     result = run_competition_match(
@@ -53,12 +64,12 @@ def run_one_worker(payload: dict[str, Any]) -> GameRecord:
         bot_b=bot_b,
         seed=seed,
         mode=mode,
-        bot_a_commit=commit,
-        bot_b_commit=commit,
-        started_at=started_at,
-        finished_at=finished_at,
+        round_name=round_name,
         bot_a_content_hash=hash_a,
         bot_b_content_hash=hash_b,
+        engine_version=engine,
+        started_at=started_at,
+        finished_at=finished_at,
     )
     save_game(record, games_dir)
     return record

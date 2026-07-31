@@ -15,7 +15,7 @@ from arena.records.store import (
     GAMES_DIR,
     GameRecord,
     bot_id_from_run_sh,
-    git_commit_or_tag,
+    engine_version,
     round_games_dir,
     utc_now_iso,
 )
@@ -183,9 +183,11 @@ def run_tournament(
     )
     directory = games_dir or round_games_dir(round_name)
     worker_jobs = cap_jobs(default_jobs() if jobs is None else jobs)
-    commit = git_commit_or_tag()
+    engine = engine_version()
     bot_ids = [bot_id_from_run_sh(p) for p in run_scripts]
-    # Hash each roster entry once here rather than per match in every worker.
+    # Hash each roster entry once here rather than per match in every worker:
+    # one hash for the whole round cannot go stale mid-round the way a
+    # long-lived worker's own hash could.
     content_hashes = bot_content_hashes(run_scripts)
 
     manifest_path = write_round_manifest(
@@ -213,10 +215,11 @@ def run_tournament(
             "seed": seed,
             "games_dir": str(directory),
             "mode": "competition",
+            "round": round_name,
             "timeout": timeout,
-            "commit": commit,
-            "bot_a_content_hash": content_hashes.get(bot_id_from_run_sh(a)),
-            "bot_b_content_hash": content_hashes.get(bot_id_from_run_sh(b)),
+            "engine_version": engine,
+            "bot_a_content_hash": content_hashes[bot_id_from_run_sh(a)],
+            "bot_b_content_hash": content_hashes[bot_id_from_run_sh(b)],
         }
         for a, b, seed in specs
     ]

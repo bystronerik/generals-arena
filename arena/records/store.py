@@ -7,6 +7,7 @@ import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
@@ -28,18 +29,24 @@ def round_games_dir(round_name: str, *, games_root: Path | None = None) -> Path:
 
 Winner = Literal["a", "b", "draw"]
 
-# Schema version stamped on records this code writes. Records without the
-# field predate it and read back as 1. See docs/arena/game-record-schema.md.
-CURRENT_SCHEMA_VERSION = 3
+# Schema version stamped on records this code writes. v4 is the first version
+# the rating layer will read: it makes both content hashes required (rating
+# identity must never silently degrade) and adds `engine_version` and `round`.
+# There is no v3 reader — every pre-v4 record was deleted, not migrated.
+# See docs/arena/game-record-schema.md.
+CURRENT_SCHEMA_VERSION = 4
+MIN_SCHEMA_VERSION = 4
 
 REQUIRED_FIELDS = (
     "game_id",
     "seed",
     "mode",
+    "round",
     "bot_a",
     "bot_b",
-    "bot_a_commit_or_tag",
-    "bot_b_commit_or_tag",
+    "bot_a_content_hash",
+    "bot_b_content_hash",
+    "engine_version",
     "winner",
     "turns",
     "terminated",
@@ -51,8 +58,6 @@ REQUIRED_FIELDS = (
 OPTIONAL_FIELDS = (
     "schema_version",
     "duration_seconds",
-    "bot_a_content_hash",
-    "bot_b_content_hash",
     "castles_built_a",
     "castles_built_b",
     "final_land_a",
@@ -62,6 +67,11 @@ OPTIONAL_FIELDS = (
     "metrics",
 )
 
+# A hash that names no program. `fingerprint` used to return this on any
+# OSError; under hash-keyed identity it would pool unrelated programs into one
+# rated entity, so it is rejected at both the write and the read boundary.
+UNKNOWN_HASH = "unknown"
+
 
 @dataclass
 class GameRecord:
@@ -70,22 +80,27 @@ class GameRecord:
     game_id: str
     seed: int
     mode: str
+    # Round name, stored rather than inferred: eligibility must not depend on
+    # parsing the path a record happens to sit at.
+    round: str
     bot_a: str
     bot_b: str
-    bot_a_commit_or_tag: str
-    bot_b_commit_or_tag: str
+    # Hash of each bot's source closure (arena/records/fingerprint.py). This is
+    # the rating identity — not the repo-wide commit pin, which moves whenever
+    # anything is committed and stays put when a bot is edited.
+    bot_a_content_hash: str
+    bot_b_content_hash: str
+    # `competition-module` submodule SHA. A rules or engine change moves win
+    # probabilities, so records from two eras must never pool.
+    engine_version: str
     winner: Winner
     turns: int
     terminated: bool
     truncated: bool
     started_at: str
     finished_at: str
-    schema_version: int = 1
+    schema_version: int = CURRENT_SCHEMA_VERSION
     duration_seconds: float | None = None
-    # Hash of each bot's source closure (arena/records/fingerprint.py). Rating identity
-    # should key on this, not on the repo-wide commit pin. None on schema < 3.
-    bot_a_content_hash: str | None = None
-    bot_b_content_hash: str | None = None
     castles_built_a: int | None = None
     castles_built_b: int | None = None
     final_land_a: int | None = None
@@ -102,6 +117,12 @@ class GameRecord:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> GameRecord:
+        version = int(data.get("schema_version", 1))
+        if version < MIN_SCHEMA_VERSION:
+            raise ValueError(
+                f"game record schema v{version} is not readable; "
+                f"v{MIN_SCHEMA_VERSION} is the minimum (no pre-v4 record survives)"
+            )
         missing = [f for f in REQUIRED_FIELDS if f not in data]
         if missing:
             raise ValueError(f"game record missing fields: {missing}")
@@ -113,20 +134,20 @@ class GameRecord:
             game_id=str(data["game_id"]),
             seed=int(data["seed"]),
             mode=str(data["mode"]),
+            round=str(data["round"]),
             bot_a=str(data["bot_a"]),
             bot_b=str(data["bot_b"]),
-            bot_a_commit_or_tag=str(data["bot_a_commit_or_tag"]),
-            bot_b_commit_or_tag=str(data["bot_b_commit_or_tag"]),
+            bot_a_content_hash=require_content_hash(data["bot_a_content_hash"], "bot_a"),
+            bot_b_content_hash=require_content_hash(data["bot_b_content_hash"], "bot_b"),
+            engine_version=require_non_empty(data["engine_version"], "engine_version"),
             winner=winner,
             turns=int(data["turns"]),
             terminated=bool(data["terminated"]),
             truncated=bool(data["truncated"]),
             started_at=str(data["started_at"]),
             finished_at=str(data["finished_at"]),
-            schema_version=int(data.get("schema_version", 1)),
+            schema_version=version,
             duration_seconds=optional_float(data.get("duration_seconds")),
-            bot_a_content_hash=optional_str(data.get("bot_a_content_hash")),
-            bot_b_content_hash=optional_str(data.get("bot_b_content_hash")),
             castles_built_a=optional_int(data.get("castles_built_a")),
             castles_built_b=optional_int(data.get("castles_built_b")),
             final_land_a=optional_int(data.get("final_land_a")),
@@ -156,6 +177,29 @@ def optional_str(value: Any) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def require_non_empty(value: Any, field: str) -> str:
+    """Coerce a required string field, rejecting None and empty."""
+    if value is None or not str(value).strip():
+        raise ValueError(f"{field} must be a non-empty string")
+    return str(value)
+
+
+def require_content_hash(value: Any, side: str) -> str:
+    """
+    Coerce a required content hash, rejecting the `"unknown"` sentinel.
+
+    An `"unknown"` hash would pool every unreadable closure into one rated
+    entity — a silent identity collision between unrelated programs.
+    """
+    digest = require_non_empty(value, f"{side}_content_hash")
+    if digest == UNKNOWN_HASH:
+        raise ValueError(
+            f"{side}_content_hash is {UNKNOWN_HASH!r}; a record with no readable "
+            f"bot closure has no rating identity and must not be stored"
+        )
+    return digest
 
 
 def coerce_metrics(value: Any) -> dict[str, Any]:
@@ -285,5 +329,28 @@ def git_head_sha(*, short: bool = True, repo_root: Path | None = None) -> str | 
 
 
 def git_commit_or_tag(repo_root: Path | None = None) -> str:
-    """Best-effort version pin for game records: HEAD short SHA or 'unknown'."""
+    """Best-effort version pin for classic records: HEAD short SHA or 'unknown'."""
     return git_head_sha(short=True, repo_root=repo_root) or "unknown"
+
+
+ENGINE_SUBMODULE = "competition-module"
+
+
+@lru_cache(maxsize=None)
+def engine_version(repo_root: str | None = None) -> str:
+    """
+    SHA of the checked-out `competition-module`, stamped on every game record.
+
+    The submodule is the engine: a bump moves win probabilities, so ratings
+    from either side of one must never pool (plan §9 q2). Read from the
+    submodule's own HEAD rather than the gitlink in the superproject's tree,
+    because it is the checkout that actually played the game.
+    """
+    root = Path(repo_root) if repo_root else REPO_ROOT
+    sha = git_head_sha(short=False, repo_root=root / ENGINE_SUBMODULE)
+    if not sha:
+        raise ValueError(
+            f"cannot read {ENGINE_SUBMODULE} HEAD under {root}; every game record "
+            f"needs an engine_version to keep eras from pooling"
+        )
+    return sha

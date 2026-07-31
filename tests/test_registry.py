@@ -49,7 +49,6 @@ class Sandbox:
         (self.bot_dir / "agent.py").write_text(
             f"from _common import wire\n{body}\n", encoding="utf-8"
         )
-        fingerprint._cached_hash.cache_clear()
 
     def commit(self) -> None:
         _git(self.repo, "add", "-A", str(self.bot_dir))
@@ -82,7 +81,6 @@ def sandbox(repo, request, monkeypatch):
 
     monkeypatch.setattr(fingerprint, "REPO_ROOT", repo)
     monkeypatch.setattr(fingerprint, "BOTS_DIR", repo / "bots")
-    fingerprint._cached_hash.cache_clear()
 
     box = Sandbox(
         repo=repo,

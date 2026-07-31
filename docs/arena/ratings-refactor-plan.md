@@ -4,9 +4,24 @@ Replace sequential elote Elo with a batch-fit rating model that can answer one
 question: **did this bot change make the bot stronger?**
 
 Status: **plan only, no code written.** Nothing in this document has been
-implemented. Numbers marked *(measured)* come from probes against the current
+implemented. All open questions are resolved as of 2026-07-31 — see §9. Numbers marked *(measured)* come from probes against the current
 `data/games/` (7261 records, 2026-07-31); probe scripts were throwaway and are
 not committed.
+
+**Measurement audit (2026-07-31).** The §1 audit was re-verified against the
+repo and reproduces exactly — order-dependence (250.5 Elo), draw/truncation
+identity, seat-A rate, timestamp collisions, elote's 2.27e-13 drift and its
+missing covariance all confirmed. Three corrections were applied: the seat term
+`β` (§0, A12, §2, §3), the draw sample-size cost (§3, §9 q3), and two unlisted
+`ratings.py` consumers (A3, §3, §6). Three *(measured)* figures **remain
+unreproduced and should not be relied on** until re-derived:
+
+- **A14's "weak prior pushes `blitz` to 2716"** — re-running the fit gives 3072
+  (σ₀→∞) or 2971 (σ₀=400) under Davidson + seat, and 2269 under half-win. The
+  qualitative point (a weak prior lets the top entity run away) still holds.
+- **3.11 s mean per match** — measured 3.067 s overall, 3.058 s for `round4`.
+  All §6 cost estimates are therefore ~1.5% conservative.
+- **0.92 s to load 7261 records** — measured 0.72 s warm.
 
 ---
 
@@ -18,9 +33,9 @@ not committed.
 | Identity | `bot_id` | `(bot_id, content_hash)` |
 | Order dependence | up to **250 Elo** spread over shuffles *(measured)* | none — integer sufficient statistics, unique convex optimum |
 | Uncertainty | none | covariance matrix; SE, CI, `P(B > A)`, `games_to_resolve` |
-| Seat effect | unmodeled, uncancelled (**+59 Elo** *(measured)*) | fitted shared parameter `β` |
+| Seat effect | unmodeled, uncancelled (**+88.5 ± 15.9 Elo** *(measured)*) | fitted shared parameter `β`, on randomized seats (§10) |
 | Draws | `tied()` no-op; 35.2% of games *(measured)* | fitted Davidson parameter `ν` |
-| Anchor | none — scale floats | one entity pinned at exactly 1500.0 |
+| Anchor | none — scale floats | `cm_expander` pinned at exactly 1500.0 |
 | Version traceability | none | committed registry + `refs/bot-versions/<hash>` |
 | Incremental update | yes, diverges from rebuild | removed; every write refits |
 | Dependency | `elote` (using `EloCompetitor`) | `numpy` at runtime; `elote` demoted to a test-only oracle |
@@ -63,8 +78,13 @@ persisted book, applies one match, and writes it back;
 [`ratings.py:226`](../../arena/records/ratings.py:226) (`rebuild_from_games`) throws the
 book away and replays everything. Path-dependent Elo means the two produce
 different numbers from the same games, and nothing reconciles them.
-[`run_match.py:73`](../../arena/matches/run_match.py:73) uses the first,
-[`tournaments/competition.py:240`](../../arena/tournaments/competition.py:240) the second.
+[`run_match.py:73`](../../arena/matches/run_match.py:73) uses the first;
+[`tournaments/competition.py:240`](../../arena/tournaments/competition.py:240) and
+[`measure_heuristics.py:363`](../../scripts/measure_heuristics.py:363) both use the
+second. Four call sites in total reach the rating layer — the two above, plus
+[`measure_heuristics.py:216`](../../scripts/measure_heuristics.py:216) (A4) and the
+[`scripts/leaderboard.py:13`](../../scripts/leaderboard.py:13) CLI wrapper — and each
+must be accounted for in the migration (§6 step 6).
 
 **A4 — Round reports carry a third, different Elo.**
 [`scripts/measure_heuristics.py:216`](../../scripts/measure_heuristics.py:216)
@@ -123,8 +143,24 @@ unordered pair once; `swap_sides` defaults to `False`
 [`measure_heuristics.py:497`](../../scripts/measure_heuristics.py:497) hardcodes
 `swap_sides=False`.
 *Measured:* seat A wins **2575** of **4704** decisive games (54.7%, ≈6.5σ);
-a joint fit that includes a seat term puts it at **+58.6 Elo**. Sequential Elo
-credits that to whichever bot happened to be listed first.
+a joint Davidson + seat fit (σ₀=200, anchored) puts it at **+88.5 ± 15.9 Elo**.
+Sequential Elo credits that to whichever bot happened to be listed first.
+
+Two cautions on that estimate, both consequences of the same design flaw this
+defect describes. **It is highly specification-sensitive** — β ranges over
+**29.6 to 98.8 Elo** across the draw model × prior grid (half-win pins it near
+the raw 33.0 Elo implied by the 54.7% seat-A rate; Davidson roughly triples it).
+And **it is badly identified**: only **56 of 148 unordered pairs (38%), covering
+39% of games, appear in both seat orders**, so β is aliased with the strengths
+and its variance is inflated **2.9×** over the fixed-θ conditional (SE 15.9
+joint vs 9.30 conditional). Both numbers should be re-derived from the
+regenerated, seat-randomized round (§6 step 8) before anything depends on them.
+
+**Resolved by §10 (decided).** Seat assignment becomes randomized per game from
+the seeded stream, with both orientations sharing a map seed. That makes `β`
+orthogonal to the strength parameters and to roster position, so this defect
+dissolves at the design level rather than being modelled around. The model needs
+no change for it — see §10.
 
 **A13 — Draws are 35% of the data and carry no model.**
 [`ratings.py:77`](../../arena/records/ratings.py:77) calls `a.tied(b)`, a no-op at equal
@@ -270,8 +306,8 @@ modeling a phenomenon we have eliminated. It also lacks a seat term and Davidson
 draws out of the box.
 
 Put precisely: **BTDS is WHR with the drift set to zero, plus the two nuisance
-parameters we actually need.** If engine-era drift later needs modeling (§7
-open question 2), WHR's machinery is the right thing to revisit.
+parameters we actually need.** If engine-era drift later needs modeling (§9
+q2), WHR's machinery is the right thing to revisit.
 
 ### Evaluated: elote's `BradleyTerryCompetitor`
 
@@ -312,22 +348,26 @@ estimator, which makes elote a usable **independent oracle** (see below).
    scale.** `tied()` adds 0.5 to each side's head-to-head. *(Measured, our
    solver, identical prior, varying only the draw model and seat term:)*
 
-   | Variant | Full spread | Bottom-9 spread | `garrison` → `expand_plus` |
-   | --- | ---: | ---: | ---: |
-   | half-win, no seat | 791 | 69 | 38 |
-   | half-win, + seat | 820 | 89 | 71 |
-   | Davidson, no seat | 1980 | 196 | 111 |
-   | Davidson, + seat | **1994** | **222** | **168** |
+   | Variant | Full spread | Bottom-9 spread | `garrison` → `expand_plus` | `β` |
+   | --- | ---: | ---: | ---: | ---: |
+   | half-win, no seat | 798.7 | 70.0 | 39.2 | — |
+   | half-win, + seat | 839.2 | 100.3 | 79.4 | 32.7 |
+   | Davidson, no seat | 2050.0 | 207.6 | 116.4 | — |
+   | Davidson, + seat | **2162.4** | **278.9** | **222.6** | **88.5** |
 
-   Half-win collapses the nine draw-heavy bots into a **69-Elo** band that
-   Davidson resolves into **196**. For a system whose job is detecting ~25-Elo
-   changes, a ~3× scale compression concentrated exactly among the bots that
-   draw with each other is disqualifying. Under elote's own fit the same nine sit
-   between 1462.6 and 1533.4 — a 71-Elo band containing most of the roster.
+   Half-win collapses the draw-heavy tail into a **70-Elo** band that Davidson
+   resolves into **208**. For a system whose job is detecting ~25-Elo changes, a
+   ~3× scale compression concentrated exactly among the bots that draw with each
+   other is disqualifying. Under elote's own fit that same tail sits between
+   1462.6 and 1533.4 once re-anchored on `expander_python` — a 71-Elo band
+   containing eleven of the twenty-two entities.
 3. **No seat term.** Hunter's MM has a home-advantage variant; elote implements
-   the plain model. The measured effect is **+50 to +59 Elo** depending on
-   specification — real, and not something a post-hoc correction can absorb,
-   because it must be estimated jointly with the strengths.
+   the plain model. The measured effect ranges from **+29.6 to +98.8 Elo**
+   depending on specification (A12) — real under every one of them, and not
+   something a post-hoc correction can absorb, because it must be estimated
+   jointly with the strengths. That the range is this wide is itself the
+   argument: a fixed offset cannot stand in for a parameter whose value depends
+   on the draw model it is fitted alongside.
 4. **Mean-centred scale, mostly fixable.** `_recalculate_ratings` normalizes to
    mean log-strength zero, so adding a 40-game punching bag shifts every existing
    rating by *(measured)* **+53.6 to +56.5 Elo**. Re-anchoring on
@@ -395,7 +435,7 @@ arena/records/
 ```
 
 `model.py` has no IO and no `arena` imports — it is testable against synthetic
-count tables alone, which keeps the recovery tests fast (§6).
+count tables alone, which keeps the recovery tests fast (§7).
 
 ### Public API
 
@@ -466,8 +506,9 @@ SE(Δ) after n games ≈ s / √( n · ¼ · [(p_a + p_b) − (p_a − p_b)²] )
 
 Sanity values: evenly matched, no draws → `SE(Δ) = 347.4/√n` (n=100 → 35 Elo).
 Evenly matched at the observed 35% draw rate → `SE(Δ) = 430.9/√n`
-(n=100 → 43 Elo; n=1150 → 12.7 Elo). Draws cost about **24% more games** for the
-same precision — not catastrophic, and cheap to buy (matches average 3.11 s
+(n=100 → 43 Elo; n=1150 → 12.7 Elo). Draws inflate the SE by **24%** at fixed
+`n`; since `n` scales as `SE²`, that is **≈54% more games** for the same
+precision — not catastrophic, and cheap to buy (matches average 3.11 s
 *(measured)*, so 1150 games ≈ **5.4 min** wall clock at 11 jobs).
 
 ### On-disk state
@@ -478,7 +519,7 @@ so identical inputs give a byte-identical file (fixes A17):
 ```json
 {
   "version": 1,
-  "anchor": "expander_python@0f3a91cc21de",
+  "anchor": "cm_expander@0f3a91cc21de",
   "anchor_rating": 1500.0,
   "prior": {"mean": 1500.0, "sigma": 200.0, "seat_sigma": 200.0, "draw_sigma": 2.0},
   "policy": {"modes": ["competition"], "engine_version": "9e3b9d1…",
@@ -486,7 +527,7 @@ so identical inputs give a byte-identical file (fixes A17):
   "counts_digest": "sha256:…",
   "solver": {"iterations": 7, "max_abs_grad": 3.1e-12, "converged": true},
   "excluded": {"mode_not_competition": 0, "unregistered_hash": 0, "engine_mismatch": 0},
-  "seat_advantage": {"value": 58.61, "se": 4.12},
+  "seat_advantage": {"value": 88.54, "se": 15.88},
   "draw_log_nu": {"value": 1.5408, "se": 0.031},
   "entities": [
     {"entity": "blitz@ab12cd34ef56", "bot_id": "blitz", "content_hash": "ab12cd34ef56",
@@ -537,6 +578,12 @@ Writers that must change: [`telemetry.record_from_match_result`](../../arena/rec
   `fit_ratings` on the round's own count table, and its output is explicitly
   labelled *round-local, anchor-free* to stop it being confused with the global
   leaderboard (A4).
+- [`measure_heuristics.py:363`](../../scripts/measure_heuristics.py:363) — the
+  `--update-ratings` tail of `run_grid` — swaps `rebuild_from_games` for a refit.
+- [`scripts/leaderboard.py`](../../scripts/leaderboard.py) imports
+  `arena.records.ratings.main` and defaults to `--print`. It is repointed at
+  `arena.records.ratings.cli`; the `--print` default and the `--initial-rating`
+  flag both go away (there is no initial rating under a batch fit).
 
 ---
 
@@ -552,7 +599,7 @@ The existing rules ([`.gitignore:11-14`](../../.gitignore)) are **file globs sco
 directory under `data/` needs **no carve-out and no negation pattern**. The
 `.gitignore` change is therefore one comment line documenting that
 `data/bot_versions/` is deliberately committed, plus a test that asserts it
-stays that way (§6 T11) — a negation entry without a preceding ignore would be a
+stays that way (§7 T11) — a negation entry without a preceding ignore would be a
 no-op and worse than the test.
 
 One file per bot rather than one per hash, so that `git log -p
@@ -703,9 +750,13 @@ arms.
 
 **Seat balance is required for decision arms.** Because `β` is fitted, large
 exploratory rounds do *not* need `--swap-sides` (which saves 50% of the compute —
-a change from the current protocol's implicit assumption). But if the candidate
-always sits in seat A and the baseline in seat B, `β` and the contrast are
-aliased within that subset. Decision arms must play **both seat orders equally**.
+a change from the current protocol's implicit assumption); they randomize seat
+within their existing game budget instead (§10). But if the candidate always sits
+in seat A and the baseline in seat B, `β` and the contrast are aliased within
+that subset, and randomization only balances *in expectation* (over 1150 games,
+seat-A count is 575 ± 17). Decision arms therefore use **deterministic
+alternation — exactly 50/50 — on matched map seeds**, which strictly dominates
+randomizing and additionally cancels map difficulty within each pair.
 
 **Gate (any failure → `unproven`, with the reason).**
 
@@ -756,7 +807,7 @@ Specific answers:
 
 - **Classic and remote games: still excluded**, as [`AGENTS.md:64,113`](../../AGENTS.md)
   requires. Now enforced three ways: the mode filter, a loader that only ever
-  scans `data/games/`, and a test (§6 T9). Today it is enforced by convention only.
+  scans `data/games/`, and a test (§7 T9). Today it is enforced by convention only.
 - **Truncated games: included, as draws.** A 1200-turn truncation *is* a draw
   under [`RULES.md:147`](../../RULES.md), and *(measured)* 100% of current draws are
   truncations. Excluding them would delete 35% of all data and bias the pool
@@ -789,7 +840,7 @@ load dominates at roughly 90 s plus inode pressure. Mitigations, in order:
    history.
 2. Optional round compaction: fold a finished round dir into one
    `games.jsonl`. Deferred — per-file writes are what makes the process pool
-   safe; compaction would be a separate end-of-round step (migration step 8).
+   safe; compaction would be a separate end-of-round step (migration step 9).
 
 ---
 
@@ -805,10 +856,11 @@ outright, and no code path reads schema < 4 or hashless records.
 | 2 | **Registry module.** `arena/records/registry.py` + CLI (`--register/--verify/--diff/--files`), git-ref anchoring, `--strict`. No consumers yet. | — | module + tests T10–T12 |
 | 3 | **GameRecord v4.** Required content hashes, add `engine_version` + `round`, drop `*_commit_or_tag`; `fingerprint` raises instead of returning `"unknown"`; fix the stale-cache window (A7). Update `telemetry.py`, `worker.py`, `run_match.py`, and `docs/arena/game-record-schema.md`. | `"unknown"` fallback | schema + writers + doc |
 | 4 | **Wire registration in.** Parent-side registration in `run_tournament` and `run_and_store`; workers assert-only. | — | runner changes |
-| 5 | **New ratings package.** `arena/records/ratings/{policy,counts,model,fit,lineage,io,cli}.py`; delete `arena/records/ratings.py`; move `elote` from `requirements.txt` to a test-only dependency and add `numpy`; update `reporting.leaderboard_table_lines` for CI/provisional columns; rewrite `measure_heuristics.round_leaderboard_snippet`. | `RatingBook`, `rate_stored_game`, `rebuild_from_games`, runtime use of `elote` | model + tests T1–T9, T13, T15 |
-| 6 | **Counts cache.** Per-round cache + digest invalidation. Optional at current scale; required before 100×. | — | cache layer |
-| 7 | **Regenerate.** Register every roster bot, then run one full anchored round. Cost below. | — | registry entries + round report only (games stay gitignored) |
-| 8 | **Docs and skills sync.** Rewrite `docs/arena/ratings.md`; new `docs/arena/bot-version-registry.md`; update `docs/arena/game-record-schema.md`, `docs/research/experiment-protocol.md`, `docs/index.md`, `AGENTS.md`, `.cursor/skills/evaluate-bot-change/`, `.cursor/skills/update-leaderboard/`. | stale elote references | docs |
+| 5 | **Seat selection (§10).** Make `_pair_rng`'s key orientation-independent (sort the two bot ids); draw seat per game from the seeded stream; emit both orientations on the **same map seed** so pairs are matched. Decision arms get deterministic alternation instead of randomization. `--swap-sides` is removed — it costs 2× the games for an unmatched sample. | `--swap-sides` | `competition.py` changes + test T16 |
+| 6 | **New ratings package.** `arena/records/ratings/{policy,counts,model,fit,lineage,io,cli}.py`; delete `arena/records/ratings.py`; move `elote` from `requirements.txt` to a test-only dependency and add `numpy`; update `reporting.leaderboard_table_lines` for CI/provisional columns. Repoint **all four** consumers: `competition.py:241`, `measure_heuristics.py:363`, `measure_heuristics.round_leaderboard_snippet`, and `scripts/leaderboard.py:13`; `run_match.py:74` loses `rate_stored_game`. Rewrite `tests/test_ratings.py` (A19's idempotence test goes with the API). | `RatingBook`, `rate_stored_game`, `rebuild_from_games`, runtime use of `elote` | model + tests T1–T9, T13, T15 |
+| 7 | **Counts cache.** Per-round cache + digest invalidation. Optional at current scale; required before 100×. | — | cache layer |
+| 8 | **Regenerate.** Register every roster bot, then run one full anchored round with randomized seats. Cost below. | — | registry entries + round report only (games stay gitignored) |
+| 9 | **Docs and skills sync.** Rewrite `docs/arena/ratings.md`; new `docs/arena/bot-version-registry.md` and `docs/arena/decision-rule.md` (§9 q6); add the not-comparable banner to `docs/research/measurements/round1–4.md` (§9 q7); update `docs/arena/game-record-schema.md`, `docs/research/experiment-protocol.md`, `docs/index.md`, `AGENTS.md`, `.cursor/skills/evaluate-bot-change/`, `.cursor/skills/update-leaderboard/`. | stale elote references | docs |
 
 ### Regeneration cost
 
@@ -816,15 +868,16 @@ outright, and no code path reads schema < 4 or hashless records.
 
 | Round | Games | Serial bot-hours | Wall clock @ 11 jobs |
 | --- | --- | --- | --- |
-| Full 23-entity round robin, 50 games/pair, no seat swap | 12,650 | 10.9 h | **~60 min** |
-| Same with `--swap-sides` | 25,300 | 21.9 h | ~2.0 h |
-| Reduced: 30 games/pair, no seat swap | 7,590 | 6.6 h | ~36 min |
-| One decision arm (`±25` CI, seat-balanced) | 1,150 | 1.0 h | **~5.4 min** |
+| Full 23-entity round robin, 50 games/pair, randomized seats | 12,650 | 10.9 h | **~60 min** |
+| Reduced: 30 games/pair, randomized seats | 7,590 | 6.6 h | ~36 min |
+| One decision arm (`±25` CI, alternating seats, matched seeds) | 1,150 | 1.0 h | **~5.4 min** |
 
-**Recommendation:** one ~60-minute full round without seat swap (`β` is fitted,
-so balance is not needed for identifiability), then per-experiment decision arms
-of ~1150 games each. Budget **≈1.5 bot-hours of wall clock** for the whole
-migration, plus ~6 minutes per subsequent bot change.
+**Recommendation:** one ~60-minute full round with randomized seats, then
+per-experiment decision arms of ~1150 games each. Randomizing seat *within* the
+existing budget costs **zero extra games** — the old `--swap-sides` doubling
+(25,300 games, ~2.0 h) bought an unmatched sample and is removed in step 5.
+Budget **≈1.5 bot-hours of wall clock** for the whole migration, plus ~6 minutes
+per subsequent bot change.
 
 ---
 
@@ -840,7 +893,7 @@ a "2000 games per pair" test costs microseconds.
 | **T2** | Count-table canonicality | Cells are emitted in sorted entity order; counts are exact integers; merging per-round caches in any order gives the same digest as one-shot aggregation. |
 | **T3** | **Anchor stability** | Anchor rating is exactly `1500.0` in every fit; adding an entity with zero games moves no other rating by `> 1e-9`; adding a fully disconnected clique does not shift the anchored component. |
 | **T4** | **Recovery of known strengths** | Generate counts from the model with known `θ` spread over ±300; recovered `θ` within 3·SE, RMSE `< 15` Elo. |
-| **T5** | **Seat-advantage recovery** | Data generated with `β = +60` on a deliberately seat-imbalanced design: `β̂` within 3·SE of 60, and entity ratings unbiased — while a control fit with `β` forced to 0 shows the expected bias, proving the term earns its place. |
+| **T5** | **Seat-advantage recovery** | Data generated with `β = +60` on a deliberately seat-imbalanced design: `β̂` within 3·SE of 60, and entity ratings unbiased — while a control fit with `β` forced to 0 shows the expected bias, proving the term earns its place. The imbalanced *fixture* stays valid even though production (§10) no longer generates data that way — it is the harder case. |
 | **T6** | Draw model | `ν̂` reproduces the simulated draw rate; a 100%-draw pair leaves both entities at the prior mean with large SE. |
 | **T7** | **Sparse / undefeated** | A 6–0 entity gets a *finite* rating bounded by the prior and `provisional = True`; a 0-game entity sits at exactly 1500.0 with `SE = σ₀`; removing a provisional entity from *display* does not change any other rating. |
 | **T8** | Probability + sample size | `p_stronger` equals `Φ(Δ/SE(Δ))`; `games_to_resolve(target_se)` returns an `n` such that a refit with `n` extra simulated games hits the target SE within ±20%. |
@@ -851,6 +904,7 @@ a "2000 games per pair" test costs microseconds.
 | **T13** | Reproducible artifacts | Two fits over the same games produce a byte-identical `fit.json` (no timestamps in the payload — the A17 regression guard). |
 | **T14** | Determinism environment | The fit is unchanged with `OPENBLAS_NUM_THREADS=1` vs unset. If this proves flaky, `fit.py` pins the thread count and the test asserts the pin (see C2). |
 | **T15** | **Independent solver oracle** | Under matched conditions — no draws, seat term forced to 0, `BradleyTerryCompetitor.configure_class(reg=1e-6, tol=1e-12)` and our prior `σ → ∞` — our Newton fit and elote's MM fit agree on a synthetic well-connected set to `< 0.01` Elo after mean-centring. *(Measured on an 8-entity / 3360-game set: max diff **0.004 Elo**, both at RMSE 13.6 vs the generating truth.)* Validates our solver against a separately-written implementation of the same estimator. Keeps `elote` as a dev dependency — see §9 q10. |
+| **T16** | **Seat randomization + matched seeds** (§10, step 5) | `_pair_rng` returns the same stream for `(a, b)` and `(b, a)`; a round at a fixed `--round-seed` is reproducible game-for-game including seat choice; both orientations of a pair draw the **same** map seed list; over a large seeded round the seat-A share is within sampling tolerance of 50%; a decision arm is exactly 50/50 by construction, not by expectation. |
 
 ---
 
@@ -866,15 +920,20 @@ when a hash reappears. Both cannot hold. **Proposed resolution:** split
 if you would rather a reverted hash be a *distinct* entity with its own rating —
 that is defensible if you suspect the engine or opponent pool drifted between
 the two eras, but it throws away pooled games and makes "same code, same
-rating" false.
+rating" false. **Decision: proposed resolution adopted.** Engine drift between
+eras is handled by q2's hard era boundary, which removes the only motivation for
+splitting a reverted hash into two entities.
 
 **C2 — "bit-identical" is achievable for the counts, not literally for the
 floats.** Integer sufficient statistics are exactly reproducible, and the
 optimum is unique, but floating-point reduction order inside BLAS can differ
 across thread counts. **Proposed contract:** (a) `CountTable` digest identical,
 (b) fitted values equal to `< 1e-9`, (c) published values rounded to 2 dp and
-therefore literally identical. Accept, or should `fit.py` pin BLAS threads to 1
-and claim true bit-identity at some speed cost?
+therefore literally identical. **Decision: contract accepted as proposed**, no
+BLAS pin up front — at a few hundred rows the solver is not thread-bound, so a
+pin would buy a stronger claim for no measurable cost saving either way. T14
+guards the assumption; if it proves flaky, `fit.py` pins the thread count and
+T14 asserts the pin instead.
 
 **C3 — "pure function of the set of stored games" is not quite the whole
 truth.** The fit is a pure function of *(games, registry, policy, prior,
@@ -893,50 +952,183 @@ expensive.
 
 ---
 
-## 9. Open questions
+## 9. Decisions
 
-1. **Anchor identity.** `expander_python` is the natural anchor, but it lives in
-   `competition-module/…`, outside `bots/` — so
-   [`bot_source_closure`](../../arena/records/fingerprint.py:131) cannot resolve its
-   imports (it searches only the bot dir and `bots/`), and its real version is
-   the submodule SHA. Options: **(a)** copy it to `bots/_anchor/` and freeze it
-   (registry-visible and hashable, but diverges from upstream); **(b)** anchor on
-   the submodule SHA and treat any anchor change as an era boundary. Which?
-   The same question applies to the `cm_*` benchmark bots.
-2. **Engine eras.** I propose adding `engine_version` (submodule SHA) to every
-   record and refusing to pool across eras, with a `--era` flag to refit a past
-   one. Confirm — this means a submodule bump invalidates the whole leaderboard
-   and costs one ~60-minute regeneration round.
-3. **Draws are timeouts, and they cost ~24% more games.** All 2557 draws are
-   1200-turn truncations. A land-margin tiebreak at the cap would convert most
-   into decisive results, but that is a **deviation from `RULES.md:147`**. Off
-   the table, or worth a rating-only `--tiebreak` scoring mode (games still
-   stored as draws, scored as margin wins)?
-4. **Cross-bot closure coupling.** `proteus` imports `aegis`/`blitz`/`boom`/
-   `metro`, so editing `aegis` forks proteus's lineage even though proteus's own
-   code did not change. Behaviourally correct, but should such steps be labelled
-   `inherited` in the lineage report so they are not mistaken for a proteus
-   experiment?
-5. **`min_games_display = 30`** — confirm. Provisional entities stay in the fit
-   either way; this only controls the ranked block and baseline eligibility.
-6. **Thresholds in the skill body.** `evaluate-bot-change` currently forbids
-   Composer from inventing a threshold. The new rule embeds `±10`, `±25`, `200`,
-   `60`, `0.95`. Do those live in the skill body, or in a
-   `docs/arena/decision-rule.md` that the skill links so there is one source of
-   truth?
-7. **Historical reports.** `docs/research/measurements/round1–4.{json,md}`
-   contain Elo tables from the deleted model. Leave them as history, add a
-   banner, or delete?
-8. **Prior strength `σ₀ = 200`** (≈3 pseudo-games). Weaker means less bias on
-   small samples and wilder undefeated entities; stronger means a more stable
-   leaderboard and shrunken deltas. Happy with 200, or should it be tuned by
-   cross-validation on the regenerated round?
-9. **Registry ref sharing.** `refs/bot-versions/*` needs an explicit push/fetch
-   refspec (§4). Add it to `.git/config` as a documented setup step, or keep the
-   refs purely local and rely on `git_commit` + `files` for anyone else?
-10. **Keep `elote` as a dev dependency for T15?** It buys one genuinely strong
-    test — our Newton solver checked against an independently written MM
-    implementation of the same estimator (measured agreement: 0.004 Elo) — at
-    the cost of carrying a dependency used nowhere in the runtime. Keep it,
-    or drop it and settle for the analytic two-entity check
-    (`Δ = s·ln(w/l)`), which is weaker but dependency-free?
+Answered 2026-07-31. Q1–Q3 and the §10 fold-in were decided explicitly; the rest
+are applied defaults, recorded here so the implementation has one source of truth.
+
+### Decided
+
+**q1 — Anchor identity: `cm_expander`, pinned at exactly 1500.0.**
+The original candidate `expander_python` lives in
+`competition-module/competition/agents/expander_python/`, outside `bots/`, so
+[`bot_source_closure`](../../arena/records/fingerprint.py:131) (which searches only the
+bot dir and `bots/`) cannot resolve its imports and it has no meaningful content
+hash. [`bots/cm_expander/`](../../bots/cm_expander/agent.py) is already an in-repo
+wrapper over the *same* upstream `generals.agents.ExpanderAgent`, carrying the
+comment "do not retune". It hashes cleanly today, needs no code copied out of the
+submodule, and the upstream behaviour it wraps is covered by `engine_version`
+(q2) rather than by its hash.
+
+Consequences: `expander_python` stops being a *rated* entity — it and
+`cm_expander` were always the same agent reached two ways. The
+`EXPANDER_PYTHON` special case in
+[`reporting.bot_run_sh:53`](../../arena/records/reporting.py:53) **stays**, so the
+submodule agent can still be run ad hoc; it simply has no registry entry and is
+therefore excluded by `policy.require_registered` and counted in `excluded`
+rather than silently pooled. It drops out of the standard roster.
+The same resolution covers `cm_harvester`, `cm_hunter` and `cm_random`: all four
+are `bots/`-resident wrappers, so their closures hash the wrapper plus `_common`,
+and a submodule bump moves `engine_version`, not their content hash — which is
+exactly the intended split between "the program changed" and "the engine changed".
+
+Rejected: copying to `bots/_anchor/` (forks upstream and duplicates
+`cm_expander`); anchoring on the submodule SHA (leaves the anchor outside the
+registry, forcing an exemption to `policy.require_registered`).
+
+**q2 — Engine eras: strict separation, confirmed.**
+`engine_version` (the `competition-module` submodule SHA) is required on every
+record; records from another era are counted in `excluded` and **never** pooled;
+`--era` refits a past one. A rules or engine change moves win probabilities, so
+pooling across a bump would be a silent correctness bug. Accepted cost: a
+submodule bump invalidates the leaderboard and requires one ~60-minute
+regeneration round (§6 step 8).
+
+**q3 — Draws: no tiebreak.**
+All 2557 current draws are 1200-turn truncations, and Davidson draws cost ~54%
+more games per decision arm. That stays. [`RULES.md:147`](../../RULES.md) remains the
+single definition of a draw: no `--tiebreak` scoring mode, and no engine-side
+land-margin rule. The extra games are ~2 minutes per decision arm — far cheaper
+than either a rules deviation or two ratings for one game set. Gate 3 of §5 (≥60
+decisive games per arm) is what protects against genuinely uninformative arms.
+
+**§10 — Randomized seat selection: folded in.**
+Seat is drawn per game from the seeded stream, `_pair_rng`'s key becomes
+orientation-independent, and both orientations of a pair share a map seed
+(matched pairs). `--swap-sides` is removed. Costs zero extra games. Amends A12,
+§5, §6 (new step 5, regeneration table), and adds T16.
+
+### Applied defaults
+
+Overridable, but the plan now assumes these.
+
+| # | Question | Default applied |
+| --- | --- | --- |
+| q4 | Cross-bot closure coupling (`proteus` imports `aegis`/`blitz`/`boom`/`metro`, so editing `aegis` forks proteus's lineage) | **Label such steps `inherited`** in the lineage report. The forked entity is behaviourally correct and must stay; the label stops it being read as a proteus experiment. Cheap — `lineage.py` compares the closure file lists of consecutive steps and marks a step `inherited` when no file under the bot's own directory changed. |
+| q5 | `min_games_display = 30` | **Confirmed.** Provisional entities participate in the fit either way; this controls only the ranked block and baseline eligibility. |
+| q6 | Where the decision thresholds live | **`docs/arena/decision-rule.md`**, linked from `.cursor/skills/evaluate-bot-change/SKILL.md`. One source of truth for `±10`, `±25`, `200`, `60`, `0.95`; the skill's existing "do not invent a threshold" rule then has something to point at. |
+| q7 | Historical `docs/research/measurements/round1–4.{json,md}` | **Keep, with a banner.** They are the record of what was run. Banner states the Elo tables come from the removed sequential model, are order-dependent (A1/A4), and are not comparable to any post-refactor number. Deleting them would erase experiment history; leaving them unmarked would invite comparison. |
+| q8 | Prior strength `σ₀ = 200` (≈3 pseudo-games) | **Keep 200 for the migration**, revisit after the regenerated round. It is 1.5% weight against a 200-game arm — small enough not to distort decisions, large enough to bound an undefeated entity (A14). Cross-validating it before there is a clean seat-randomized dataset would tune to the old design's artifacts. |
+| q9 | `refs/bot-versions/*` sharing | **Local by default**, with the push/fetch refspecs documented in `docs/arena/bot-version-registry.md` as an opt-in step. Single-developer repo today; `git_commit` + the `files` closure in the registry already let anyone else reconstruct a diff. §4's `git-unresolvable` reporting covers the gap and never touches ratings. |
+| q10 | Keep `elote` as a dev dependency for T15 | **Keep it.** Checking our Newton solver against an independently written MM implementation of the same estimator (measured agreement 0.004 Elo) is worth more than one dev-only dependency, and no self-consistency test can substitute. It leaves `requirements.txt` entirely; runtime depends only on `numpy`. |
+
+### Still open (deliberately deferred)
+
+- **C4 parent shrinkage** — default no; revisit only if ~1150-game decision arms
+  prove expensive in practice.
+- **WHR / engine-era drift** — revisit only if q2's hard era boundary turns out
+  to be too blunt.
+- **Round compaction** (§5, §6 step 9) — deferred until the game count
+  approaches 100× current.
+
+---
+
+## 10. Randomized seat selection (adopted)
+
+Written after the §1 measurement audit, in response to "what would randomized
+seat selection change in the rating logic?". **Adopted and folded into §1–§9**
+(see §9); this section is retained as the rationale. The amendments it made are
+listed at the end. Implementation is §6 step 5, tested by T16.
+
+### Nothing in the model changes
+
+`counts.py` already keys cells on the **ordered** pair `(i, j)`, and `model.py`'s
+predictor is already `d = (θ_i − θ_j + β)/s`. Randomizing seats changes *which*
+cells get incremented, never the shape of the table or the likelihood.
+**`counts.py`, `model.py` and `fit.py` need zero changes**, and R1 is untouched —
+still integer sufficient statistics, still a unique convex optimum, still a
+bit-identical digest under reordering.
+
+The change is entirely in the *experimental design*, and therefore in what the
+fitted `β` is worth.
+
+### What it fixes: `β` is currently confounded with roster position
+
+[`bot_pairs`](../../arena/tournaments/competition.py:48) emits each unordered pair
+as `(i, j)` with `i < j` in roster order. So **"sits in seat A" and "appears
+earlier in the roster" are the same variable**, and the fit cannot separate them.
+`β` is not a clean seat estimate; it is seat *plus* roster position.
+
+*(Measured)* Only **56 of 148 unordered pairs (38%)**, covering **39% of games**,
+appear in both orientations. That aliasing inflates `β`'s variance **2.9×**:
+
+| Quantity | Value |
+| --- | ---: |
+| `SE(β)`, full joint covariance | **15.88** Elo |
+| `SE(β)`, holding every `θ` and `κ` fixed | **9.30** Elo |
+| Variance inflation from aliasing | **2.9×** |
+
+Randomizing seat assignment makes `β` asymptotically orthogonal to the strength
+parameters, dropping `SE(β)` to roughly that 9.30 floor. The more important gain
+is that **the point estimate becomes trustworthy at all**: the Davidson fit
+currently reports `β = 88.5` while the raw decisive seat-A rate (54.74%) implies
+only **33.0** Elo. Part of that gap is the Davidson scale and part is the
+confound, and *this data cannot decompose it*. That is the whole reason A12 now
+carries a re-derive-before-relying-on-it flag.
+
+### What it does not fix
+
+**§5's seat-balance gate for decision arms stays.** Randomization balances only
+*in expectation* — over 1150 games the seat-A count is 575 ± 17. Deterministic
+alternation gives exactly 50/50 and strictly dominates; there is no variance
+argument for randomizing when you can balance by construction.
+
+| Round type | Seat policy |
+| --- | --- |
+| Large exploratory / regeneration rounds | randomize per game from the seeded stream |
+| Decision arms (§5) | deterministic alternation, exact 50/50 |
+
+### The larger prize: `--swap-sides` does not currently mirror
+
+*(Measured)* [`expand_pair_seeds`](../../arena/tournaments/competition.py:76) keys
+`_pair_rng` on the **oriented** pair `(a_id, b_id)`, so the mirrored copy added at
+[`competition.py:174`](../../arena/tournaments/competition.py:174) draws an entirely
+different seed set:
+
+```
+forward seeds : [235402238, 477427764, 1535961411, 1900634047, 2104985910]
+mirrored seeds: [231338703, 1651853115, 1688816600, 1870715184, 2071925884]
+```
+
+So `--swap-sides` costs 2× the games and returns an **unmatched** sample, not a
+paired one. (`--fixed-seeds` is the exception — both orientations then play the
+same list, which *is* mirrored.)
+
+Implementing seat selection as **same map seed, both orientations** yields a
+matched-pairs design that cancels map difficulty within each pair. For detecting
+~25-Elo changes that variance reduction is likely worth more than the `β` gain,
+since map difficulty is plausibly a larger nuisance than seat. And unlike
+`--swap-sides`, randomizing seat *within* an existing game budget costs **zero
+extra games** — which makes §6's "one ~60-minute full round without seat swap"
+strictly better rather than a compromise.
+
+### Implementation constraint
+
+Seat choice must be drawn from the seeded stream, and `_pair_rng`'s key must
+become **orientation-independent** (sort the two bot ids) — otherwise the pair's
+RNG depends on the orientation that RNG is being asked to choose.
+
+Note the distinction: this governs **round** reproducibility from `--round-seed`,
+**not** rating order-independence. The fit reads stored records, so R1 holds
+either way.
+
+### Sections amended
+
+| Section | Amendment |
+| --- | --- |
+| **§0** | Seat row now reads "fitted `β`, on randomized seats" |
+| **A12** | Defect dissolves at the design level; carries a pointer here, and its `β` figures stay flagged until re-derived from the regenerated round |
+| **§5** (seat balance) | Relaxed for exploratory rounds (randomize within budget); decision arms use deterministic alternation on matched seeds |
+| **§6** | New **step 5** (seat selection, removes `--swap-sides`); steps 5–8 renumbered to 6–9; regeneration table drops the `--swap-sides` row |
+| **T5** | Unchanged as a test — a deliberately seat-imbalanced *fixture* stays valid even when production no longer looks like that |
+| **T16** | New — seat randomization, orientation-independent `_pair_rng`, matched map seeds, exact 50/50 in decision arms |

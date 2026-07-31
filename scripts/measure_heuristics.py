@@ -171,7 +171,13 @@ def game_entry_from_record(record: GameRecord, *, tag: str = "") -> GameEntry:
     )
 
 
-def run_one(spec: MatchSpec, *, update_ratings: bool, games_dir: Path | None = None) -> GameEntry:
+def run_one(
+    spec: MatchSpec,
+    *,
+    update_ratings: bool,
+    round_name: str,
+    games_dir: Path | None = None,
+) -> GameEntry:
     from arena.matches.run_match import run_and_store
 
     a_path = bot_run_sh(spec.bot_a)
@@ -181,6 +187,7 @@ def run_one(spec: MatchSpec, *, update_ratings: bool, games_dir: Path | None = N
         b_path,
         seed=spec.seed,
         mode="competition",
+        round_name=round_name,
         games_dir=games_dir,
         update_ratings=update_ratings,
     )
@@ -220,10 +227,12 @@ def round_leaderboard_snippet(games: list[GameEntry]) -> str:
             game_id=g.game_id,
             seed=g.seed,
             mode="competition",
+            round="round-local",
             bot_a=g.bot_a,
             bot_b=g.bot_b,
-            bot_a_commit_or_tag="",
-            bot_b_commit_or_tag="",
+            bot_a_content_hash="0" * 12,
+            bot_b_content_hash="0" * 12,
+            engine_version="round-local",
             winner=g.winner,  # type: ignore[arg-type]
             turns=g.turns,
             terminated=g.terminated,
@@ -353,7 +362,9 @@ def _run_legacy_grid(
             f"[measure] ({i}/{len(specs)}) {spec.bot_a} vs {spec.bot_b} "
             f"seed={spec.seed} [{spec.tag}]"
         )
-        entry = run_one(spec, update_ratings=False, games_dir=games_dir)
+        entry = run_one(
+            spec, update_ratings=False, round_name=round_name, games_dir=games_dir
+        )
         games.append(entry)
         print(
             f"[measure]   -> {entry.winner_bot} turns={entry.turns} "
