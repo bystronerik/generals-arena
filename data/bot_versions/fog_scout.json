@@ -5,6 +5,11 @@
       "at": "2026-07-31T16:05:57Z",
       "content_hash": "fbe69bc22f05",
       "seq": 1
+    },
+    {
+      "at": "2026-07-31T20:34:06Z",
+      "content_hash": "62b1acf0c289",
+      "seq": 2
     }
   ],
   "version": 1,
@@ -42,6 +47,41 @@
       ],
       "first_seen_at": "2026-07-31T16:05:57Z",
       "git_commit": "141d4f08b407198b19ad1a0f5ac6235ace645118",
+      "git_dirty": false
+    },
+    {
+      "closure_ref": "refs/bot-versions/62b1acf0c289",
+      "closure_tree": "ff268c66b72a120e6dbeffd8c41be26cd83b3897",
+      "content_hash": "62b1acf0c289",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "c4d10c75dec925b84edfdb633a4e6ba5a1705b24",
+          "path": "bots/fog_scout/agent.py",
+          "sha256": "769183a4e32fff0b60efb940ffd1c853614bf235610405f16d85fb1d8b237e27"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/fog_scout/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "f4b30ee05bb279973185c9a7fda3b253259bd21c",
+          "path": "bots/fog_scout/run.sh",
+          "sha256": "e3039807d61cee3dd5c59a996bcef745b1549d0f8d9513e2070bf3847c65db16"
+        }
+      ],
+      "first_seen_at": "2026-07-31T20:34:06Z",
+      "git_commit": "d38034a54773f11038f841a8d21f2c4d0f3594ee",
       "git_dirty": false
     }
   ]

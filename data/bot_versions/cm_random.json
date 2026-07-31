@@ -5,6 +5,11 @@
       "at": "2026-07-31T16:05:57Z",
       "content_hash": "780306b7ef01",
       "seq": 1
+    },
+    {
+      "at": "2026-07-31T20:34:07Z",
+      "content_hash": "c40b594eb92c",
+      "seq": 2
     }
   ],
   "version": 1,
@@ -52,6 +57,51 @@
       ],
       "first_seen_at": "2026-07-31T16:05:57Z",
       "git_commit": "141d4f08b407198b19ad1a0f5ac6235ace645118",
+      "git_dirty": false
+    },
+    {
+      "closure_ref": "refs/bot-versions/c40b594eb92c",
+      "closure_tree": "7164106eaf4985200da9cd98c53f0ff4cd6e0eda",
+      "content_hash": "c40b594eb92c",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "7256f6c208014c288d515019136e1a5c97d54aa0",
+          "path": "bots/_common/cm_adapter.py",
+          "sha256": "c6c517fdc5f8244a4df297211a989fbfb6c144c8c09450a7df8aa0798e91ef1c"
+        },
+        {
+          "blob": "727f791e4c1bd60e356a870cfba676fb13125e2f",
+          "path": "bots/_common/cm_run.sh",
+          "sha256": "d9c1b5d945b89e740dafb81c7e9a065f17aa8d8731348e35162b1945322b4f3d"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "db92275e7651e5dd351a9f20d53e1cb769563da2",
+          "path": "bots/cm_random/agent.py",
+          "sha256": "bfa0afb504e0634c161f09f63948491bd80834b7bbcad797dd7a1afd41a086bc"
+        },
+        {
+          "blob": "c7faed2d31e2adc846dedbeaac140d10d34746e0",
+          "path": "bots/cm_random/main.py",
+          "sha256": "b46bb95732c97ffc985fe48afb8e308221a97b74841ece3281a6de69d8fb2e90"
+        },
+        {
+          "blob": "997c2d2ea937023fea8a366890c06a0d22f895cd",
+          "path": "bots/cm_random/run.sh",
+          "sha256": "dd83a69eb4bfc98cea76d6490c16fad6649d6d4bb23c8db6637fd9cc3df8bd15"
+        }
+      ],
+      "first_seen_at": "2026-07-31T20:34:07Z",
+      "git_commit": "d38034a54773f11038f841a8d21f2c4d0f3594ee",
       "git_dirty": false
     }
   ]
