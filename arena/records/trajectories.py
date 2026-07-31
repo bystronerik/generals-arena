@@ -322,8 +322,9 @@ class Trajectory:
         """
         A per-turn engine series: `land`, `army`, or `land_margin`.
 
-        `land_margin` is A-perspective on both seats — the margin is one
-        quantity, and its sign already says whose it is.
+        Always from `seat`'s point of view, so `land_margin_b` means "B's lead"
+        exactly as `land_margin_a` means A's — the same convention the
+        engine-truth finals already use.
         """
         index = SEATS.index(seat)
         if name == "land":
@@ -331,7 +332,8 @@ class Trajectory:
         if name == "army":
             return tuple(f.army[index] for f in self.frames)
         if name == "land_margin":
-            return tuple(f.land[0] - f.land[1] for f in self.frames)
+            other = 1 - index
+            return tuple(f.land[index] - f.land[other] for f in self.frames)
         raise ValueError(f"unknown engine series {name!r}")
 
 

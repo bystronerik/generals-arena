@@ -88,9 +88,9 @@ def test_series_are_readable_per_seat(tmp_path):
     assert traj.series("land", "a") == (1, 2, 3, 4)
     assert traj.series("land", "b") == (3, 2, 1, 0)
     assert traj.series("army", "b") == (2, 4, 6, 8)
-    # The margin is one A-perspective quantity; its sign says whose it is.
+    # Seat-relative, so `land_margin_b` means B's lead, like the finals do.
     assert traj.series("land_margin", "a") == (-2, 0, 2, 4)
-    assert traj.series("land_margin", "b") == (-2, 0, 2, 4)
+    assert traj.series("land_margin", "b") == (2, 0, -2, -4)
 
 
 def test_an_unknown_series_name_raises(tmp_path):

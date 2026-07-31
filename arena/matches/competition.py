@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import argparse
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from arena.paths import REPO_ROOT
 
@@ -20,6 +21,7 @@ if str(_COMP) not in sys.path:
 
 from arena.matches.loop import run_stdio_match  # noqa: E402
 from arena.records.store import Winner, bot_id_from_run_sh  # noqa: E402
+from arena.records.telemetry import series_metrics  # noqa: E402
 from arena.records.trajectories import TrajectoryRecorder  # noqa: E402
 from generals import GeneralsEnv  # noqa: E402
 
@@ -42,6 +44,9 @@ class CompetitionMatchResult:
     final_army_a: int | None
     final_army_b: int | None
     stderr: str
+    # Reducer output over the recorded per-turn series. Empty on an unrecorded
+    # match — missing means not measured, never zero.
+    series_metrics: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -118,6 +123,9 @@ def run_competition_match(
         final_army_a=result.final_army_a,
         final_army_b=result.final_army_b,
         stderr=result.stderr,
+        series_metrics=(
+            series_metrics(record.directory, record.game_id) if record is not None else {}
+        ),
     )
 
 

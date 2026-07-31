@@ -18,11 +18,20 @@ probe metrics. See docs/arena/game-record-schema.md.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from arena.records.store import (
     CURRENT_SCHEMA_VERSION,
     GameRecord,
+)
+from arena.records.telemetry_schema import ENGINE_KEY_NAMES, coerce, metric_keys
+from arena.records.trajectories import (
+    SEATS,
+    read_trace,
+    read_trajectory,
+    trace_path,
+    trajectory_path,
 )
 
 
@@ -56,6 +65,57 @@ def engine_metrics(result) -> dict[str, Any]:
     return metrics
 
 
+class ConflictingMetric(ValueError):
+    """Two sources disagree about one metric key."""
+
+
+def _merge(into: dict[str, Any], new: dict[str, Any]) -> None:
+    """
+    Merge reducer output, refusing to overwrite a differing value.
+
+    Some keys are reachable two ways — `land_margin_a` is both an engine final
+    and the `final` reducer over the recorded margin series. They must agree,
+    because they are the same measurement; if they ever do not, one of them is
+    wrong and silently keeping either would hide it.
+    """
+    for key, value in new.items():
+        if key in into and into[key] != value:
+            raise ConflictingMetric(
+                f"metric {key!r} computed twice with different values: "
+                f"{into[key]!r} and {value!r}"
+            )
+        into[key] = value
+
+
+def series_metrics(directory: Path, game_id: str) -> dict[str, Any]:
+    """
+    Reduce a recorded game's per-turn series into `metrics`.
+
+    `{}` when the game was not recorded — which is the common case, and the
+    reason unrecorded records carry engine finals and nothing else. A seat
+    whose bot has no probe contributes engine series only.
+    """
+    path = trajectory_path(game_id, directory)
+    if not path.is_file():
+        return {}
+
+    traj = read_trajectory(path)
+    metrics: dict[str, Any] = {}
+    for seat in SEATS:
+        for name in ENGINE_KEY_NAMES:
+            _merge(metrics, metric_keys(name, traj.series(name, seat), seat=seat))
+        trace = trace_path(game_id, seat, directory)
+        if trace.is_file():
+            for name, values in read_trace(trace).items():
+                # Coerced here as well as at trace time. The reducers must not
+                # depend on the writer having typed the file correctly — a
+                # BOOL01 read back as 0/1 would reduce to 0/1, not to a bool,
+                # and an undeclared key must fail before it reaches a record.
+                typed = [coerce(name, value) for value in values]
+                _merge(metrics, metric_keys(name, typed, seat=seat))
+    return metrics
+
+
 def record_from_match_result(
     result,
     *,
@@ -79,6 +139,9 @@ def record_from_match_result(
     `game_id` is passed in rather than minted here: a trajectory is keyed by
     the game it belongs to, so the id has to exist before the first turn.
     """
+    metrics = engine_metrics(result)
+    _merge(metrics, getattr(result, "series_metrics", None) or {})
+
     return GameRecord(
         game_id=game_id,
         seed=seed,
@@ -93,5 +156,5 @@ def record_from_match_result(
         turns=result.turns,
         truncated=result.truncated,
         schema_version=CURRENT_SCHEMA_VERSION,
-        metrics=engine_metrics(result),
+        metrics=metrics,
     )
