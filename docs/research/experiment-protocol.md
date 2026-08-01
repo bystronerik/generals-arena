@@ -30,6 +30,13 @@ Use this for every measurable bot or arena change.
   refitted once after the round. There is no incremental rating update.
 - A decision compares two **content hashes**, not two bot ids. The hash moves
   on its own when the bot's source closure changes; the registry records it.
+- Both arms of a contrast must be measured **in the same rounds**, with matched
+  seed lists and `--seat-policy alternate`. A baseline measured in earlier
+  rounds is not a valid comparator: round-to-round drift alone has measured at
+  +46 Elo between byte-identical programs (see
+  [`docs/arena/decision-rule.md`](../arena/decision-rule.md)). Re-run the
+  baseline alongside the candidate — `bots/macaria_base/` is a frozen
+  pre-change copy of macaria kept for exactly this.
 - Never quote a leaderboard rank as a result. Quote the contrast.
 - Two engine eras never pool. If `excluded.engine_mismatch` is non-zero after a
   refit, the `competition-module` submodule moved and the leaderboard needs a

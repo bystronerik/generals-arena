@@ -29,6 +29,19 @@ python -m arena.tournaments.competition \
   --seat-policy alternate --strict-versions
 ```
 
+## Cross-round baselines are not comparators
+
+Both arms must be measured in the same rounds. This is measured, not
+theoretical: in the macaria hunt evaluation (2026-08-01), two **byte-identical**
+macaria programs — `macaria@80f3047ac205` from rounds `macaria-r1`/`macaria-r2`
+vs `macaria_base@862ac0189a1a` from rounds `macaria-hunt-*` — fitted at
+**+46.07 ± 22.01 Elo, P = 0.982**, though no code differed. Round-to-round
+drift of that size exceeds the 10 and 25 Elo thresholds below, so a contrast
+against a baseline measured in earlier rounds measures the rounds, not the
+change. Re-measure the baseline in the same rounds as the candidate, with
+matched seed lists and alternated seats; `bots/macaria_base/` exists as a
+frozen copy of pre-change macaria for exactly this purpose.
+
 ## Gate
 
 Any failure means `unproven`, with the reason named.
