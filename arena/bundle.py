@@ -20,6 +20,14 @@ file set behind the bot's rating identity — so the bundle of hash X is the
 program rated as X. cm_* bots are refused: they depend on the
 competition-module submodule, which we do not ship.
 
+Python sources are stripped of prose — both `#` comments and docstrings — **on
+the way into the zip only**; the repo files are never touched. Every line
+number is preserved (stripped lines go blank rather than disappearing), so a
+judge traceback still points at the right line of the original file.
+`--keep-comments` disables the step. Nothing under `bots/` reads `__doc__`, so
+dropping docstrings costs nothing there; a bot that starts to would need this
+step made selective.
+
 Judge environment facts (https://www.generals.bot/docs): `run.sh` is the sole
 entrypoint, executed from within the submission directory; zip <= 50 MB,
 unpacked <= 512 MB and <= 10,000 files; CPython 3.12 with the packages pinned
@@ -28,10 +36,13 @@ in competition-module/competition/requirements.txt preinstalled; no network.
 
 from __future__ import annotations
 
+import ast
+import io
 import os
 import shutil
 import subprocess
 import sys
+import tokenize
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -201,14 +212,132 @@ def check_limits(
     return zip_bytes, unpacked_bytes, file_count
 
 
+def strip_comments(source: str, origin: str = "<source>") -> str:
+    """
+    Drop `#` comments from Python source, preserving every line number.
+
+    Token-based, so a `#` inside a string literal is untouched. Only the
+    comment span is erased: what precedes it on the line stays, and the newline
+    stays, so a comment-only line turns into a blank line and line numbers
+    survive into judge tracebacks. A first-line shebang is kept: it is an exec
+    directive. Docstrings are prose too, but they are string expressions rather
+    than comment tokens — `strip_prose_strings` handles those.
+    """
+    try:
+        comment_starts = {
+            tok.start[0]: tok.start[1]
+            for tok in tokenize.generate_tokens(io.StringIO(source).readline)
+            if tok.type == tokenize.COMMENT
+            and not (tok.start[0] == 1 and tok.start[1] == 0 and tok.string.startswith("#!"))
+        }
+    except (tokenize.TokenError, SyntaxError, IndentationError) as exc:
+        raise BundleError(f"cannot tokenize {origin}: {exc}") from exc
+
+    out: list[str] = []
+    for lineno, line in enumerate(source.splitlines(keepends=True), start=1):
+        col = comment_starts.get(lineno)
+        if col is not None:
+            newline = line[len(line.rstrip("\r\n")) :]
+            line = line[:col].rstrip() + newline
+        out.append(line)
+    return "".join(out)
+
+
+def _is_prose(stmt: ast.stmt) -> bool:
+    """A statement that is nothing but a string literal: evaluated, discarded."""
+    return (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant)
+            and isinstance(stmt.value.value, str))
+
+
+def _statement_lists(tree: ast.AST):
+    """Every statement list in the tree, with the node that owns it."""
+    for node in ast.walk(tree):
+        for field in ("body", "orelse", "finalbody"):
+            stmts = getattr(node, field, None)
+            if isinstance(stmts, list) and stmts and isinstance(stmts[0], ast.stmt):
+                yield node, stmts
+
+
+def strip_prose_strings(source: str, origin: str = "<source>") -> str:
+    """
+    Drop every bare string-literal statement, preserving each line number.
+
+    That covers module/class/function docstrings *and* the PEP 258 attribute
+    docstrings that trail an assignment — both are `Expr(Constant(str))`, a
+    constant evaluated and thrown away, so removing either cannot change what
+    the program does. String *values* the program uses are untouched, as are
+    f-strings, which can run code.
+
+    Spans are blanked in place. When a block's statements were all prose,
+    `pass` takes the first one's place at the same column, so the block stays
+    legal and nothing below it shifts line.
+
+    Prose sharing a line with code (`def f(): "doc"`, or a trailing `; x = 1`)
+    is left alone — blanking it there would either break the syntax or need a
+    reflow that moves line numbers.
+    """
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as exc:
+        raise BundleError(f"cannot parse {origin}: {exc}") from exc
+
+    lines = source.splitlines(keepends=True)
+    edits: dict[int, tuple[int, str]] = {}  # first line -> (column, replacement)
+    blanked: set[int] = set()
+
+    for owner, stmts in _statement_lists(tree):
+        prose = [s for s in stmts if _is_prose(s)]
+        # Emptying a block is a syntax error; an empty module is fine.
+        needs_pass = len(prose) == len(stmts) and not isinstance(owner, ast.Module)
+        for stmt in prose:
+            start, end = stmt.lineno, stmt.end_lineno or stmt.lineno
+            if lines[start - 1][: stmt.col_offset].strip():
+                continue  # code precedes it on the line
+            if lines[end - 1][stmt.end_col_offset or 0 :].strip():
+                continue  # code follows it on the line
+            edits[start] = (stmt.col_offset, "pass" if needs_pass else "")
+            blanked.update(range(start + 1, end + 1))
+            needs_pass = False  # at most one filler per block
+
+    out: list[str] = []
+    for lineno, line in enumerate(lines, start=1):
+        newline = line[len(line.rstrip("\r\n")) :]
+        if lineno in edits:
+            col, replacement = edits[lineno]
+            line = (line[:col] + replacement).rstrip() + newline
+        elif lineno in blanked:
+            line = newline
+        out.append(line)
+    return "".join(out)
+
+
+def _member_bytes(path: Path, arcname: str, *, strip: bool) -> bytes:
+    """Bytes to zip for one closure file: verbatim, or prose-stripped."""
+    data = path.read_bytes()
+    if not strip or not arcname.endswith(".py"):
+        return data
+    try:
+        source = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data  # not a UTF-8 source; ship it byte-for-byte
+    return strip_comments(strip_prose_strings(source, arcname), arcname).encode("utf-8")
+
+
 def write_bundle(
     bot_id: str,
     out_path: Path | None = None,
     *,
     extra_includes: list[str] | None = None,
     force: bool = False,
+    strip_comments_in_zip: bool = True,
 ) -> BundleInfo:
-    """Build, audit, and limit-check the submission zip for `bot_id`."""
+    """
+    Build, audit, and limit-check the submission zip for `bot_id`.
+
+    `strip_comments_in_zip` removes comments and docstrings from the Python
+    sources as they are written into the archive. Files on disk are read-only
+    here — the repo copies keep their prose.
+    """
     members = bundle_members(bot_id, extra_includes)
     audit_imports([path for path, _ in members])
     content_hash = bot_content_hash(BOTS_DIR / bot_id / "run.sh")
@@ -222,7 +351,7 @@ def write_bundle(
     with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         _write_entry(zf, "run.sh", _root_run_sh(bot_id).encode("ascii"))
         for path, arcname in members:
-            _write_entry(zf, arcname, path.read_bytes())
+            _write_entry(zf, arcname, _member_bytes(path, arcname, strip=strip_comments_in_zip))
 
     zip_bytes, unpacked_bytes, file_count = check_limits(out_path)
     return BundleInfo(
@@ -328,10 +457,19 @@ def main(argv: list[str] | None = None) -> int:
                         help="extra repo-root-relative file the import walk cannot see")
     parser.add_argument("--no-smoke", action="store_true", help="skip the standalone smoke run")
     parser.add_argument("--force", action="store_true", help="overwrite an existing output zip")
+    parser.add_argument("--keep-comments", action="store_true",
+                        help="ship the Python sources verbatim "
+                             "(default: strip comments and docstrings in the zip)")
     args = parser.parse_args(argv)
 
     try:
-        info = write_bundle(args.bot, args.output, extra_includes=args.include, force=args.force)
+        info = write_bundle(
+            args.bot,
+            args.output,
+            extra_includes=args.include,
+            force=args.force,
+            strip_comments_in_zip=not args.keep_comments,
+        )
         if not args.no_smoke:
             with tempfile.TemporaryDirectory(prefix="bundle-smoke-") as tmp:
                 action = smoke_check(info.zip_path, Path(tmp))

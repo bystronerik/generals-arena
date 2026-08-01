@@ -1,6 +1,7 @@
 """Submission bundler: closure selection, zip layout, limits, standalone run."""
 from __future__ import annotations
 
+import ast
 import hashlib
 import tempfile
 import zipfile
@@ -10,11 +11,14 @@ import pytest
 
 from arena.bundle import (
     BundleError,
+    _is_prose,
     audit_imports,
     bundle_members,
     check_limits,
     default_output_path,
     smoke_check,
+    strip_comments,
+    strip_prose_strings,
     third_party_imports,
     write_bundle,
 )
@@ -148,6 +152,152 @@ def test_the_bundle_carries_no_instrumentation(tmp_path):
     assert not any(n.startswith("arena/") for n in names)
     for symbol in ("telemetry", "_telemetry_line", "telemetry_extras"):
         assert symbol not in wire
+
+
+def test_strip_comments_keeps_code_strings_and_line_numbers():
+    source = (
+        "#!/usr/bin/env python\n"
+        "# leading comment\n"
+        'BASE = "#4 not a comment"  # trailing comment\n'
+        "\n"
+        "def f():\n"
+        "    return 1  # tail\n"
+    )
+    stripped = strip_comments(source)
+
+    assert stripped == (
+        "#!/usr/bin/env python\n"      # shebang is an exec directive, not a comment
+        "\n"
+        'BASE = "#4 not a comment"\n'  # the `#` inside the literal survives
+        "\n"
+        "def f():\n"
+        "    return 1\n"
+    )
+    # Line numbers are preserved, so judge tracebacks still point at the source.
+    assert len(stripped.splitlines()) == len(source.splitlines())
+
+
+def test_strip_prose_blanks_docstrings_and_keeps_line_numbers():
+    source = (
+        '"""Module doc.\n\nSecond paragraph.\n"""\n'
+        "import os\n"
+        "\n"
+        "class C:\n"
+        '    """Class doc."""\n'
+        "    def f(self):\n"
+        '        """Only statement in the body."""\n'
+        "    def g(self):\n"
+        '        """Doc, then code."""\n'
+        '        return "a real string"\n'
+    )
+    stripped = strip_prose_strings(source)
+
+    assert stripped == (
+        "\n\n\n\n"
+        "import os\n"
+        "\n"
+        "class C:\n"
+        "\n"                      # class keeps a body: f and g follow
+        "    def f(self):\n"
+        "        pass\n"          # emptied body needs a statement
+        "    def g(self):\n"
+        "\n"
+        '        return "a real string"\n'  # a used string value is not prose
+    )
+    assert len(stripped.splitlines()) == len(source.splitlines())
+
+
+def test_strip_prose_catches_attribute_docstrings():
+    """PEP 258 prose after an assignment is not an AST docstring, but is prose."""
+    source = (
+        "LIMIT = 3\n"
+        '"""How many hops a chain may stall for."""\n'
+        "NAME = str(LIMIT)\n"
+        'HELP = "a value, not prose"\n'
+        'f"{LIMIT} interpolated"\n'
+    )
+    assert strip_prose_strings(source) == (
+        "LIMIT = 3\n"
+        "\n"
+        "NAME = str(LIMIT)\n"
+        'HELP = "a value, not prose"\n'
+        'f"{LIMIT} interpolated"\n'  # an f-string can run code; never touched
+    )
+
+
+def test_strip_prose_keeps_an_all_prose_block_legal():
+    source = "if x:\n    'only'\n    'prose'\nelse:\n    y = 1\n"
+    stripped = strip_prose_strings(source)
+    assert stripped == "if x:\n    pass\n\nelse:\n    y = 1\n"
+    compile(stripped, "<t>", "exec")
+
+
+def test_strip_prose_leaves_a_shared_line_alone():
+    """Blanking in place cannot fix these without moving line numbers."""
+    for source in ('def f(): "doc"\n', 'def f():\n    "doc"; x = 1\n    return x\n'):
+        assert strip_prose_strings(source) == source
+
+
+def test_strip_prose_rejects_unparseable_source():
+    with pytest.raises(BundleError, match="cannot parse"):
+        strip_prose_strings("def f(\n", "broken.py")
+
+
+def test_strip_comments_survives_a_comment_inside_a_continuation():
+    source = "x = (1 +  # add\n     2)\n"
+    assert strip_comments(source) == "x = (1 +\n     2)\n"
+    scope: dict = {}
+    exec(compile(strip_comments(source), "<t>", "exec"), scope)
+    assert scope["x"] == 3
+
+
+def test_bundle_ships_python_without_prose_and_leaves_the_repo_intact(tmp_path):
+    agent_src = BOTS_DIR / "smoke" / "agent.py"
+    before = agent_src.read_bytes()
+    assert b'"""' in before, "the fixture must have prose to strip"
+
+    info = write_bundle("smoke", tmp_path / "smoke.zip")
+    with zipfile.ZipFile(info.zip_path) as zf:
+        for name in zf.namelist():
+            if not name.endswith(".py"):
+                continue
+            text = zf.read(name).decode("utf-8")
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                if lineno == 1 and line.startswith("#!"):
+                    continue
+                assert "#" not in _outside_strings(line), f"{name}:{lineno}: {line}"
+            tree = ast.parse(text)  # the stripped member is still valid Python
+            for node in ast.walk(tree):
+                for field in ("body", "orelse", "finalbody"):
+                    stmts = getattr(node, field, None)  # Lambda.body is an expression
+                    if not isinstance(stmts, list):
+                        continue
+                    for stmt in stmts:
+                        assert not _is_prose(stmt), f"{name}:{stmt.lineno}: prose survived"
+
+    assert agent_src.read_bytes() == before, "bundling must not rewrite repo sources"
+
+
+def _outside_strings(line: str) -> str:
+    """The part of a line with quoted spans blanked out, for a crude `#` scan."""
+    out, quote = [], ""
+    for ch in line:
+        if quote:
+            out.append(" ")
+            if ch == quote:
+                quote = ""
+        elif ch in "\"'":
+            quote = ch
+            out.append(" ")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def test_keep_comments_ships_sources_verbatim(tmp_path):
+    info = write_bundle("smoke", tmp_path / "verbatim.zip", strip_comments_in_zip=False)
+    with zipfile.ZipFile(info.zip_path) as zf:
+        assert zf.read("bots/smoke/agent.py") == (BOTS_DIR / "smoke" / "agent.py").read_bytes()
 
 
 def test_a_probe_beside_the_agent_stays_out_of_the_bundle():
