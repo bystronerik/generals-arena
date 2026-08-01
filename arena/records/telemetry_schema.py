@@ -119,6 +119,45 @@ _PROBE_KEYS = (
         F,
     ),
     _key("guard", Kind.INT, "boom: army held back to guard the general", F, MEAN, MAX),
+    _key(
+        "searched",
+        Kind.BOOL01,
+        "yankee: the tactical MCTS ran this turn (it is scoped to a window, "
+        "so this is mostly 0 — see bots/yankee/search.py)",
+        F,
+        MEAN,
+        AUC,
+        FIRST,
+    ),
+    _key(
+        "overrode",
+        Kind.BOOL01,
+        "yankee: the MCTS returned a move other than the core's. The pair "
+        "(searched, overrode) separates 'the search never ran' from 'it ran "
+        "and agreed', which are different defects with the same symptom",
+        F,
+        MEAN,
+        AUC,
+    ),
+    _key(
+        "search_iters",
+        Kind.INT,
+        "yankee: MCTS iterations completed this turn, 0 when it did not run; "
+        "the budget is wall-clock, so this is how much search the 40 ms "
+        "actually bought on this machine",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "move_ms",
+        Kind.INT,
+        "yankee: wall-clock milliseconds for the whole move, heuristic plus "
+        "search (RULES.md §08 budgets 150)",
+        F,
+        MEAN,
+        MAX,
+    ),
 )
 
 # Engine keys: ground truth, recorded per turn by the trajectory recorder.
