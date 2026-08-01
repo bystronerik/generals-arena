@@ -24,6 +24,7 @@ Small topic files for the Generals Arena research repo.
 - [remote eval of heuristics](engine/remote-eval-heuristics.md) — playing humans on classic generals.io, and why it is not a competition result
 - [remote play setup](engine/remote-play-setup.md) — env vars, CLI, and logging for live generals.io
 - [leaderboard replays](engine/leaderboard-replays.md) — scraped generals.bot games: format, layout, and why they are not arena matches
+- [replay analysis](engine/replay-analysis.md) — `scripts/replay.py`: timeline, events, fog vs action, and flaw aggregates over scraped replays
 
 ## Bots
 
