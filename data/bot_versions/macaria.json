@@ -10,6 +10,16 @@
       "at": "2026-08-01T11:34:21Z",
       "content_hash": "80f3047ac205",
       "seq": 2
+    },
+    {
+      "at": "2026-08-01T18:47:39Z",
+      "content_hash": "7a43ff7c6b65",
+      "seq": 3
+    },
+    {
+      "at": "2026-08-01T18:47:39Z",
+      "content_hash": "9fcc5f734f7e",
+      "seq": 4
     }
   ],
   "version": 1,
@@ -142,6 +152,136 @@
       ],
       "first_seen_at": "2026-08-01T11:34:21Z",
       "git_commit": "28df91e55372558675dd17024fe3845c6a903b39",
+      "git_dirty": false
+    },
+    {
+      "closure_ref": "refs/bot-versions/7a43ff7c6b65",
+      "closure_tree": "4996458bc25167d6ab0f4f3cb61940e3d1e2b66b",
+      "content_hash": "7a43ff7c6b65",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "aa2a1e7ad3907e3a05929d073035c7a3499f272d",
+          "path": "bots/_common/oppmodel.py",
+          "sha256": "dcc368d4467d0ea9a75890e1b53bd56b8b395f0330b78de16c97c8074b8eb6ad"
+        },
+        {
+          "blob": "cb6c3a876ef807d9e727299cc02c2b37f0029ee9",
+          "path": "bots/_common/strategy_common.py",
+          "sha256": "b2e424533aebc44fac5f6edb7205f21cb8431fcd6e557a4d965445d6f1138590"
+        },
+        {
+          "blob": "f6f0039947e2af2a2f331a80a9bb99818cdf3552",
+          "path": "bots/_common/tactics.py",
+          "sha256": "24fc3bd20b5a5b4f5d8fa17a206d2ae9ae9f8e927d63e19673d90311150be9b6"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "42682fa40d2045aeabd2169ef9d45eac7292949d",
+          "path": "bots/macaria/agent.py",
+          "sha256": "49001e152a065e0f6d47e89e8e04b87afd8268418c450e2161ac0872fe094011"
+        },
+        {
+          "blob": "39bbb27433f2d9617ff18cda02cf476e155cf16b",
+          "path": "bots/macaria/blitz_core.py",
+          "sha256": "c37a115a8b438425be4a4622256a659684fb284ba808bdc9ee9f55f802900fef"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/macaria/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "668b8b21ec29c40efa9d994d22e231deb56bd9d2",
+          "path": "bots/macaria/params.py",
+          "sha256": "84c9fd22497dab85fd26dd7ff2c4fb196748f7e193e845d28e9bdcb8eee5a682"
+        },
+        {
+          "blob": "e7d78ac169a30678efe60bdb108611f9d932e630",
+          "path": "bots/macaria/run.sh",
+          "sha256": "3a4eb8902a76a3bd1a8e9292feef29339976c72786d157da3a20edfcbf296f56"
+        },
+        {
+          "blob": "9e9ddb683a3f7a0e726c2d47e06802aa297430d6",
+          "path": "bots/macaria/search.py",
+          "sha256": "4098f3eb3294afafa6192b38def96721d799f929d0f0b47dc46292b5ada89e7f"
+        }
+      ],
+      "first_seen_at": "2026-08-01T18:47:39Z",
+      "git_commit": "e649fea1863945aa67eeb0ebf7ec62f9720d4cfe",
+      "git_dirty": true
+    },
+    {
+      "closure_ref": "refs/bot-versions/9fcc5f734f7e",
+      "closure_tree": "a59a2927aca15150463e70c7f5e962078f54ccb0",
+      "content_hash": "9fcc5f734f7e",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "aa2a1e7ad3907e3a05929d073035c7a3499f272d",
+          "path": "bots/_common/oppmodel.py",
+          "sha256": "dcc368d4467d0ea9a75890e1b53bd56b8b395f0330b78de16c97c8074b8eb6ad"
+        },
+        {
+          "blob": "cb6c3a876ef807d9e727299cc02c2b37f0029ee9",
+          "path": "bots/_common/strategy_common.py",
+          "sha256": "b2e424533aebc44fac5f6edb7205f21cb8431fcd6e557a4d965445d6f1138590"
+        },
+        {
+          "blob": "f6f0039947e2af2a2f331a80a9bb99818cdf3552",
+          "path": "bots/_common/tactics.py",
+          "sha256": "24fc3bd20b5a5b4f5d8fa17a206d2ae9ae9f8e927d63e19673d90311150be9b6"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "42682fa40d2045aeabd2169ef9d45eac7292949d",
+          "path": "bots/macaria/agent.py",
+          "sha256": "49001e152a065e0f6d47e89e8e04b87afd8268418c450e2161ac0872fe094011"
+        },
+        {
+          "blob": "cf3987470eb103360eba0943b065aaac3fc23ac2",
+          "path": "bots/macaria/blitz_core.py",
+          "sha256": "1665ba266058f12c2c97f6b11e81c049a9e7b3d3b1c18f363cbee2382d153681"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/macaria/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "907145458363401d32b93b8d68456f780a9b4e7d",
+          "path": "bots/macaria/params.py",
+          "sha256": "5a49cb2b749f87c62b267e3d412a2a25daa33a9d0517729e4a972454d453e9b0"
+        },
+        {
+          "blob": "e7d78ac169a30678efe60bdb108611f9d932e630",
+          "path": "bots/macaria/run.sh",
+          "sha256": "3a4eb8902a76a3bd1a8e9292feef29339976c72786d157da3a20edfcbf296f56"
+        },
+        {
+          "blob": "9e9ddb683a3f7a0e726c2d47e06802aa297430d6",
+          "path": "bots/macaria/search.py",
+          "sha256": "4098f3eb3294afafa6192b38def96721d799f929d0f0b47dc46292b5ada89e7f"
+        }
+      ],
+      "first_seen_at": "2026-08-01T18:47:39Z",
+      "git_commit": "e649fea1863945aa67eeb0ebf7ec62f9720d4cfe",
       "git_dirty": false
     }
   ]
