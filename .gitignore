@@ -31,3 +31,8 @@ data/classic_games/*.json
 
 # Per-turn trajectories (derived, opt-in; see docs/arena/trajectories.md)
 data/trajectories/**
+
+# Scraped generals.bot leaderboard replays (~0.6 MB each, hundreds of MB per
+# player; re-fetchable with scripts/scrape_replays.py). Keep the directory.
+competition-replays/*
+!competition-replays/.gitkeep

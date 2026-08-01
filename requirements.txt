@@ -13,3 +13,7 @@
 # Nothing here needs SciPy. numpy already arrives via competition-module; this
 # makes the arena's own dependency on it explicit.
 numpy
+
+# Only for scripts/scrape_replays.py, which drives competition-scraper's async
+# downloader. No bot and no arena runtime imports it.
+httpx>=0.27

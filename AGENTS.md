@@ -12,6 +12,9 @@ Process rules for agents that work in this repo. Put game and bot knowledge in `
 - Remote play uses `client/generals_client` via `arena/remote/bridge.py` and
   `scripts/remote_play.py`. That path targets **live generals.io** (classic
   rules), not the competition sandbox. Keep that distinction explicit.
+- Scraped `generals.bot` leaderboard replays are **observational data, not arena
+  matches**. They never enter `data/games/` or a rating fit. See
+  [Leaderboard replays](#leaderboard-replays-scraped) below.
 
 ## File placement
 
@@ -26,6 +29,7 @@ Process rules for agents that work in this repo. Put game and bot knowledge in `
 | Match JSON / rating snapshots (derived, gitignored) | `data/games/`, `data/ratings/` |
 | Per-turn trajectories (derived, gitignored, opt-in `--record`) | `data/trajectories/` |
 | Bot version registry (committed) | `data/bot_versions/` |
+| Scraped leaderboard replays (derived, gitignored) | `competition-replays/<player>/{win,lose,draw}/` |
 | Cursor skills | `.cursor/skills/` |
 
 Do not put strategy content in `AGENTS.md` or skill files beyond process pointers that link into `docs/`.
@@ -68,6 +72,29 @@ Process rules for that criterion:
   ruleset.
 - Plan, gates, and task order:
   [`docs/research/strategies/human-95-plan.md`](docs/research/strategies/human-95-plan.md).
+
+## Leaderboard replays (scraped)
+
+Finished competition-rules games from the `generals.bot` leaderboard, fetched by
+the `competition-scraper` submodule:
+
+```bash
+python scripts/scrape_replays.py                    # default player: erik.bystron
+python scripts/scrape_replays.py erik.bystron prady --concurrency 8
+```
+
+Process rules:
+
+- Output goes to `competition-replays/<player>/{win,lose,draw}/` — gitignored
+  except `.gitkeep`. Roughly 0.6 MB per replay; never commit them.
+- Runs are incremental (existing `<id>.json` is skipped) and the list endpoint
+  has no pagination, so history only accumulates by re-running periodically.
+- These games are **observational data**. They are not produced by our runner,
+  carry no bot version, and must never be written into `data/games/`,
+  `data/ratings/`, or `data/remote_games/`.
+- Needs `httpx`; `git submodule update --init competition-scraper` first.
+- Format, field meanings, and the sampling caveats that affect analysis:
+  [`docs/engine/leaderboard-replays.md`](docs/engine/leaderboard-replays.md).
 
 ## Subagent roles (workflow only)
 

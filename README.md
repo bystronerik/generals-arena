@@ -17,6 +17,7 @@ generals-arena/
 ├── pytest.ini                # unified test discovery
 ├── competition-module/       # git submodule (engine + matchup)
 ├── client/                   # generals_client submodule (live generals.io)
+├── competition-scraper/      # git submodule (generals.bot replay downloader)
 ├── bots/                     # stdio competition bots
 ├── arena/                    # match runner, ratings, store
 ├── tests/                    # core pytest suite
@@ -24,6 +25,7 @@ generals-arena/
 ├── data/ratings/             # fit + leaderboard snapshots (local; gitignored)
 ├── data/bot_versions/        # bot version registry (committed)
 ├── data/remote_games/        # live classic session logs (gitignored)
+├── competition-replays/      # scraped generals.bot replays (gitignored)
 ├── scripts/                  # thin CLIs
 ├── docs/                     # game and bot knowledge (small files)
 └── .cursor/skills/           # Cursor skills
@@ -115,6 +117,18 @@ Decide keep-or-revert from the pairwise contrast, never from rank:
 See [`docs/arena/tournament.md`](docs/arena/tournament.md),
 [`docs/arena/ratings.md`](docs/arena/ratings.md), and
 [`docs/arena/bot-version-registry.md`](docs/arena/bot-version-registry.md).
+
+## Leaderboard replays
+
+Download finished competition games from the `generals.bot` leaderboard into
+`competition-replays/` (gitignored, ~0.6 MB per replay):
+
+```bash
+python scripts/scrape_replays.py erik.bystron
+```
+
+They are observational data only — never fed into `data/games/` or the rating
+fit. See [`docs/engine/leaderboard-replays.md`](docs/engine/leaderboard-replays.md).
 
 ## Docs
 

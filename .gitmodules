@@ -4,3 +4,6 @@
 [submodule "client"]
 	path = client
 	url = git@github.com:bystronerik/generals-client.git
+[submodule "competition-scraper"]
+	path = competition-scraper
+	url = git@github.com:bystronerik/generals-scraper.git
