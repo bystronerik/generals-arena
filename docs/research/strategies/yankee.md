@@ -36,8 +36,11 @@ propagate. Accepted — both are rated roster entities, not libraries.
 
 The brief's baseline (46-4 over 50 games, all four losses at turns 202-314, all
 four with cm_hunter in seat A) comes from `round5`, which played proteus
-`91d2a88f8316`. The lineage head is `7ae237e99d34`, two steps later. Re-measured
-on the head, seat-alternated, 300 games:
+`91d2a88f8316`. The lineage head is `7ae237e99d34`, two steps later — the
+detection rework of
+[`017-proteus-detection-rework.md`](../experiments/017-proteus-detection-rework.md),
+which shipped as "proven flat". Re-measured on the head, seat-alternated,
+300 games:
 
 | | games | W | L | D | winrate |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -182,6 +185,40 @@ scored well and every attacking move scored badly. It now scores only facts —
 army share, land share, and whether a stack our general cannot stop is still
 alive.
 
+**Two refusals, and both are consequences of gaps the design already admits.**
+They were found the hard way: after the fixes above, the pooled contrast over
+2310 games read flat, and *hid* two per-opponent regressions — fog_scout 0.894
+→ 0.824 and metro 0.912 → 0.859 against proteus. A four-arm paired screen
+attributed both to the search and cleared the endgame core:
+
+| | fog_scout | metro |
+| --- | ---: | ---: |
+| both off | 0.850 | 0.925 |
+| MCTS only | 0.795 | 0.825 |
+| deathtouch only | 0.865 | 0.915 |
+
+Both are opponents yankee answers with **boom**, and that is the mechanism.
+blitz's cross-turn state is self-healing — `ensure_stack` and the chain-head
+check both re-derive from the board, so an override costs a turn. boom's is
+not: `build_target`, `build_stack`, `strike_tile` and `striking` are latches it
+sets while choosing and trusts afterwards. Worse, boom's *build* is the last
+move of a multi-turn plan, and the search models no builds at all — so it was
+vetoing an action it cannot represent, which costs every castle rather than
+one.
+
+Hence `mcts_cores = "blitz"` and `mcts_skip_builds = True`. Re-measured, 200
+paired games each:
+
+| | both off | unrestricted search | restricted (shipped) |
+| --- | ---: | ---: | ---: |
+| fog_scout | 0.850 | 0.845 | **0.870** |
+| metro | 0.925 | 0.900 | **0.925** |
+| cm_hunter | 0.890 | 0.945 | **0.945** |
+
+The generalisation worth keeping: **a search bolted onto a heuristic bot may
+only override moves whose author does not depend on having made them.** That is
+a property of the core, not of the search, and it has to be checked per core.
+
 **Time.** 40 ms cap on the search, checked inside the rollout loop once per
 simulated ply, not merely between iterations. The cap is
 `min(40 ms, 110 ms − time already spent this turn)`, so a slow core shrinks the
@@ -248,7 +285,7 @@ cm_hunter target.
 
 ## 5. Results
 
-See [`../measurements/yankee-r1.md`](../measurements/yankee-r1.md).
+See [`../measurements/yankee.md`](../measurements/yankee.md).
 
 ## 6. Diversity check
 

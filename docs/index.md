@@ -46,6 +46,7 @@ Small topic files for the Generals Arena research repo.
 - [metro](bots/metro.md) — castle network + mandatory pressure waves (migrated from generals-bot)
 - [aegis](bots/aegis.md) — turtle + event-driven counterattack (migrated from generals-bot)
 - [proteus](bots/proteus.md) — adaptive switcher over blitz/boom/metro/aegis (migrated from generals-bot)
+- [yankee](bots/yankee.md) — proteus plus a scoped MCTS and a RULES.md §07 endgame core
 
 ## Arena
 
