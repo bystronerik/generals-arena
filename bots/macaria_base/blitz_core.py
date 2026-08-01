@@ -13,7 +13,8 @@ hash and shift the baseline under its own comparison
 (`docs/arena/decision-rule.md`, "connectivity"). A vendored copy makes the
 baseline immovable by construction: nothing macaria does can reach it.
 
-**Mechanical deltas from the original**, none behavioural at shipped defaults:
+**Deltas from the original**, all mechanical, none behavioural at shipped
+defaults:
 
 - every module-level behavioural constant (`DEATHTOUCH_TURN`,
   `CHASE_DEFEND_FROM`, the never-reserve `StrategyContext`, the `or 50` wave
@@ -22,30 +23,6 @@ baseline immovable by construction: nothing macaria does can reach it.
 - the module-level `_STRATEGY` singleton became `strategy_context(config)`,
   since those constants are now per-config;
 - the original's `Agent` class is gone — `agent.py` is macaria's entrypoint.
-
-**Behavioural delta: the general hunt.** Upstream blitz decides *where the
-enemy lives* from `visible_enemy_tiles` — `enemy_anchor` takes the enemy cell
-farthest from us, `contact_target` takes the fog just behind their front line.
-Both read a quantity that, in a game we are losing, sits inside our own half:
-the opponent's forward tiles. 318 scraped leaderboard games say what that costs
-(`docs/engine/replay-analysis.md`) — in 97 of 127 losses the bot never once had
-vision of the opponent's general, while every wave it launched was aimed at an
-incidentally visible enemy tile.
-
-`hunt_target` replaces that reading with the belief the bot already maintains
-and never used: `BeliefState.candidates`, seeded with every cell at least
-`min_general_distance` BFS steps from ours (RULES.md §01) and pruned as we look
-at them. It is a live prior over the enemy's half by construction. Three call
-sites now consult it while the general is unsighted — the expansion bias
-(`enemy_anchor`), the wave's target (`strike_target`, with `contact_target`
-restricted to cells the belief still allows), and the expansion tiebreak
-(`directed_expansion_step`). `required_army` is the fourth change and the only
-one on the *sighted* side: with the general located, the bar is what it takes
-to kill it, not 70% of a larger opponent's army.
-
-The knobs are `hunt_*`, `expand_bias_first` and `finish_margin` in
-`params.py`; `hunt_enabled=False` and `expand_bias_first=False` together
-restore upstream targeting.
 
 Original docstring follows.
 
@@ -177,50 +154,12 @@ class BlitzConfig:
     """Switch the strike stack to another cell once that cell holds this
     multiple of the current stack (i.e. the old strike died)."""
 
-    finish_margin: int = 2
-    """Army wanted on top of the estimated general garrison before a wave
-    aimed at a *located* general is allowed to launch."""
-
     # ---------------------------------------------------------- targeting
     retarget_interval: int = 20
     """Re-estimate a fogged enemy general at most this often."""
 
     contact_radius: int = 6
     """How far behind their visible front line to look for their general."""
-
-    hunt_enabled: bool = True
-    """Take the unsighted general's whereabouts from the belief over where it
-    can be, not from whichever enemy tile is in vision. Off = upstream blitz."""
-
-    hunt_drives_anchor: bool = False
-    """Let the hunt cell set the *expansion bias* as well as the wave's
-    target. Measured off: the bias grid is consulted every turn, so a hunt
-    cell deep in unexplored ground drags chain expansion across the map for
-    information the wave collects anyway."""
-
-    hunt_interval: int = 8
-    """Recompute the hunt cell at most this often — the wave needs a target
-    that holds still long enough to be walked at."""
-
-    hunt_reveal_radius: int = 2
-    """Half-width of the box counting still-possible general cells around a
-    hunt candidate: how much of the belief one visit would prune."""
-
-    hunt_prior_decay: float = 0.35
-    """Weight of the direction prior. A candidate ``d`` hops from the enemy
-    land we have ever seen — or, before contact, from the mirror of our own
-    general — is discounted by ``1 + decay * d``. This is what stops the hunt
-    from shaving whichever edge of the candidate ring happens to be nearest."""
-
-    hunt_travel_decay: float = 0.05
-    """Weight of travel in the same score: a candidate ``d`` hops from our
-    nearest land is discounted by ``1 + decay * d``. Deliberately small — the
-    wave has to cross the map either way, and pricing travel like the prior is
-    how "explore the nearest unknown" beats "go where they live"."""
-
-    expand_bias_first: bool = True
-    """While the general is unsighted, rank expansion captures by how
-    enemy-ward they are before how much fog they reveal."""
 
     # ---------------------------------------------------------- defence
     defense_dist: int = 12
@@ -299,12 +238,6 @@ class BlitzMemory:
     strikes: int = 0
     phase: str = PHASE_IDLE
     last_turn: int = -1
-    hunt_cell: Cell | None = None
-    hunt_turn: int = -1
-    enemy_seen: set[Cell] = field(default_factory=set)
-    """Every cell we have ever seen the opponent own. Their footprint points
-    back at their general the way one turn's vision of it cannot: fog hides
-    their land again the moment we look away."""
 
     def __post_init__(self) -> None:
         if self.belief is None:
@@ -319,7 +252,6 @@ class BlitzMemory:
         if self.my_general is None:
             self.my_general = locate_own_general(obs)
         self.belief.update(obs, self.my_general)
-        self.enemy_seen.update(visible_enemy_tiles(obs))
 
 
 def _owned_cells(obs) -> list[Cell]:
@@ -338,149 +270,14 @@ def _move(src: Cell, dst: Cell):
     return (0, src[0], src[1], d, 0)
 
 
-def scouting(mem: BlitzMemory, config: BlitzConfig) -> bool:
-    """True while the general is unsighted and expansion doubles as the hunt."""
-    return config.expand_bias_first and mem.belief.enemy_general is None
-
-
-def directed_expansion_step(obs, reserve=None, bias_dist=None, bias_first=False):
-    """`_common.tactics.expansion_step`, with the enemy-ward tiebreak promoted.
-
-    Upstream ranks a capture by the fog it reveals *first* and by the bias grid
-    only on ties. Early on, with most of the board fogged, nearly every capture
-    reveals eight or nine cells, so the tie almost never comes up and the
-    frontier grows wherever it already is. While the general is unsighted
-    macaria reads the bias first — the order `chain_step` already uses — which
-    is the difference between expanding and scouting.
-
-    Only the adjacent-capture pass is re-ranked; with nothing adjacent to take
-    this defers to the shared walk-toward-open-land, which follows the same
-    bias grid anyway.
-    """
-    if not bias_first or bias_dist is None:
-        return expansion_step(obs, reserve=reserve, bias_dist=bias_dist)
-    H, W = obs.H, obs.W
-    reserve = reserve or set()
-    best, best_key = None, None
-    for r in range(H):
-        for c in range(W):
-            if obs.owner_grid[r][c] != 1 or (r, c) in reserve:
-                continue
-            a = obs.army_grid[r][c] - 1
-            if a < 1:
-                continue
-            for d, (dr, dc) in enumerate(DIRECTIONS):
-                nr, nc = r + dr, c + dc
-                if not (0 <= nr < H and 0 <= nc < W):
-                    continue
-                if obs.owner_grid[nr][nc] != 0 or obs.type_grid[nr][nc] != 1:
-                    continue
-                if obs.army_grid[nr][nc] >= a:
-                    continue
-                key = (
-                    -bias_dist[nr][nc],
-                    fog_reveal(obs, nr, nc),
-                    -obs.army_grid[r][c],
-                    (nr, nc),
-                )
-                if best_key is None or key > best_key:
-                    best_key, best = key, (0, r, c, d, 0)
-    if best is not None:
-        return best
-    return expansion_step(obs, reserve=reserve, bias_dist=bias_dist)
-
-
 # ---------------------------------------------------------------- targeting
-def hunt_target(obs, mem: BlitzMemory, config: BlitzConfig) -> Cell | None:
-    """Where to look for a general we have never seen.
-
-    The belief carries `candidates`: every cell at least
-    ``min_general_distance`` BFS steps from ours (RULES.md §01 guarantees the
-    separation), minus every cell we have already looked at. That set is a
-    prior over the enemy's half that survives the opponent walking into our
-    half — which is exactly where `visible_enemy_tiles` stops being one.
-
-    Each candidate is scored by how much of the belief a visit would prune
-    (candidates in the ``hunt_reveal_radius`` box around it, since vision is a
-    3x3 stamp and a wave arriving there sweeps a neighbourhood), discounted by
-    two distances: hops from the direction prior, and hops of travel. The
-    prior is the enemy land we have ever seen — their footprint points back at
-    their general — and before contact, the mirror of our own general. Travel
-    is priced far more cheaply than the prior on purpose: score them alike and
-    the hunt degenerates into shaving the near edge of the candidate ring,
-    which on a padded board (RULES.md §01 code cross-check) is our own empty
-    corner. The answer is cached for ``hunt_interval`` turns — a target that
-    moves every tick is a stack that never arrives.
-    """
-    if not config.hunt_enabled or mem.belief.enemy_general is not None:
-        return None
-    cands = mem.belief.candidates
-    if not cands:
-        return None
-
-    cached = mem.hunt_cell
-    if (
-        cached is not None
-        and cached in cands
-        and obs.turn - mem.hunt_turn < config.hunt_interval
-    ):
-        return cached
-
-    mine = _owned_cells(obs)
-    from_home = multi_bfs(obs, mine) if mine else None
-    from_prior = None
-    if config.hunt_prior_decay > 0:
-        if mem.enemy_seen:
-            from_prior = multi_bfs(obs, sorted(mem.enemy_seen))
-        elif mem.my_general is not None:
-            mirror = mirror_tile(obs, *mem.my_general)
-            if mirror is not None:
-                from_prior = multi_bfs(obs, [mirror])
-
-    far = obs.H + obs.W
-    radius = config.hunt_reveal_radius
-    best, best_key = None, None
-    for cell in cands:
-        r, c = cell
-        cost = from_home[r][c] if from_home is not None else 0
-        if cost >= UNREACHABLE:
-            continue
-        penalty = 1.0 + config.hunt_travel_decay * cost
-        if from_prior is not None:
-            away = from_prior[r][c]
-            penalty *= 1.0 + config.hunt_prior_decay * min(away, far)
-        prune = 0
-        for rr in range(r - radius, r + radius + 1):
-            for cc in range(c - radius, c + radius + 1):
-                if (rr, cc) in cands:
-                    prune += 1
-        key = (prune / penalty, -cost, (-r, -c))
-        if best_key is None or key > best_key:
-            best_key, best = key, cell
-
-    if best is None:
-        return None
-    mem.hunt_cell = best
-    mem.hunt_turn = obs.turn
-    return best
-
-
-def enemy_anchor(obs, mem: BlitzMemory, config: BlitzConfig | None = None) -> Cell | None:
+def enemy_anchor(obs, mem: BlitzMemory) -> Cell | None:
     """Best cheap guess of "the enemy's side of the map".
 
-    Known general > the hunt cell > the enemy cell farthest from us > mirror
-    of our general. The hunt outranks the visible-tile reading because that
-    reading points at their *forward* land, which in a losing game is inside
-    our own half — the anchor drives the expansion bias, so an anchor behind
-    our own front line is a bot that expands in circles at home.
+    Known general > the enemy cell farthest from us > mirror of our general.
     """
     if mem.belief.enemy_general is not None:
         return mem.belief.enemy_general
-    config = config or mem.config
-    if config.hunt_drives_anchor:
-        hunt = hunt_target(obs, mem, config)
-        if hunt is not None:
-            return hunt
     enemies = visible_enemy_tiles(obs)
     if enemies:
         if mem.my_general is None:
@@ -498,18 +295,18 @@ def enemy_anchor(obs, mem: BlitzMemory, config: BlitzConfig | None = None) -> Ce
     return mirror_tile(obs, *mem.my_general)
 
 
-def bias_distances(obs, mem: BlitzMemory, config: BlitzConfig | None = None) -> list[list[int]] | None:
+def bias_distances(obs, mem: BlitzMemory) -> list[list[int]] | None:
     """Distance grid from the enemy anchor — lower means "more enemy-ward"."""
-    anchor = enemy_anchor(obs, mem, config)
+    anchor = enemy_anchor(obs, mem)
     if anchor is None:
         return None
     return multi_bfs(obs, [anchor])
 
 
-def unscouted_target(obs, mem: BlitzMemory, config: BlitzConfig | None = None) -> Cell | None:
+def unscouted_target(obs, mem: BlitzMemory) -> Cell | None:
     """Pre-contact probe: fog nearest the mirror-side anchor (not the fog
     farthest from us, which on a real map is a corner)."""
-    anchor = enemy_anchor(obs, mem, config)
+    anchor = enemy_anchor(obs, mem)
     if anchor is None:
         return None
     if obs.type_grid[anchor[0]][anchor[1]] == 0:
@@ -526,20 +323,9 @@ def unscouted_target(obs, mem: BlitzMemory, config: BlitzConfig | None = None) -
     return min(fog, key=lambda cell: (from_anchor[cell[0]][cell[1]], cell))
 
 
-def contact_target(
-    obs,
-    mem: BlitzMemory,
-    radius: int = 6,
-    allowed: set[Cell] | None = None,
-) -> Cell | None:
+def contact_target(obs, mem: BlitzMemory, radius: int = 6) -> Cell | None:
     """Post-contact guess: the fog behind their front line, farthest from
-    our territory (their visible cells are their newest land).
-
-    ``allowed`` restricts the answer to cells that could still *be* their
-    general. Without it the fog behind an enemy tendril that has walked into
-    our half reads as "their side of the map", and the wave is sent five hops
-    from home to hit nothing.
-    """
+    our territory (their visible cells are their newest land)."""
     enemies = visible_enemy_tiles(obs)
     if not enemies:
         return None
@@ -548,9 +334,7 @@ def contact_target(
         (r, c)
         for r in range(obs.H)
         for c in range(obs.W)
-        if obs.type_grid[r][c] == 0
-        and from_enemy[r][c] <= radius
-        and (allowed is None or (r, c) in allowed)
+        if obs.type_grid[r][c] == 0 and from_enemy[r][c] <= radius
     ]
     if not fog:
         return None
@@ -593,14 +377,11 @@ def strike_target(obs, mem: BlitzMemory, config: BlitzConfig) -> Cell | None:
     if not stale:
         return current
 
-    allowed = mem.belief.candidates if config.hunt_enabled else None
-    estimate = contact_target(obs, mem, config.contact_radius, allowed=allowed)
+    estimate = contact_target(obs, mem, config.contact_radius)
     if estimate is None:
-        estimate = hunt_target(obs, mem, config)
+        estimate = unscouted_target(obs, mem)
     if estimate is None:
-        estimate = unscouted_target(obs, mem, config)
-    if estimate is None:
-        estimate = enemy_anchor(obs, mem, config)
+        estimate = enemy_anchor(obs, mem)
     mem.target = estimate
     mem.target_turn = obs.turn
     return estimate
@@ -783,12 +564,7 @@ def opening_move(obs, mem: BlitzMemory, config: BlitzConfig, bias=None, deadline
 
     # Spare army on old chains keeps nibbling; the general's stack is
     # reserved for the next chain launch.
-    return directed_expansion_step(
-        obs,
-        reserve={general},
-        bias_dist=bias,
-        bias_first=scouting(mem, config),
-    )
+    return expansion_step(obs, reserve={general}, bias_dist=bias)
 
 
 # ------------------------------------------------------------------ assault
@@ -877,34 +653,13 @@ def ensure_stack(obs, mem: BlitzMemory, config: BlitzConfig) -> tuple[Cell | Non
     return current, False
 
 
-def required_army(
-    obs,
-    mem: BlitzMemory,
-    config: BlitzConfig,
-    travel: int = 0,
-    target: Cell | None = None,
-) -> int:
+def required_army(obs, mem: BlitzMemory, config: BlitzConfig, travel: int = 0) -> int:
     """Enough to beat the defence the scoreboard implies, plus one army per
-    hop of the approach.
-
-    With the general **located** the bar is instead what it takes to kill it,
-    whichever is smaller. Against an opponent three times our size the
-    scoreboard number is a wave that never launches, so the general we finally
-    found goes untouched while the rally deadline dribbles out
-    minimum-size waves. From the deathtouch turn (RULES.md §07) two army ends
-    the game and nothing larger is worth waiting for.
-    """
-    travel_cost = int(config.travel_margin * max(0, travel))
+    hop of the approach."""
     defence = int(config.strike_ratio * mem.opp.opponent_mobile())
-    scoreboard = max(config.min_strike_floor, defence)
-
-    known = mem.belief.enemy_general
-    if known is None or target != known:
-        return scoreboard + travel_cost
-    if obs.turn >= config.deathtouch_turn:
-        return 2 + travel_cost
-    kill = enemy_general_army(obs, known) + config.finish_margin
-    return min(scoreboard, max(config.min_strike_floor, kill)) + travel_cost
+    return max(config.min_strike_floor, defence) + int(
+        config.travel_margin * max(0, travel)
+    )
 
 
 def rally_tile(obs, dist: list[list[float]]) -> Cell | None:
@@ -1004,9 +759,7 @@ def assault_move(obs, mem: BlitzMemory, config: BlitzConfig, target: Cell | None
         return None
     stack, restacked = ensure_stack(obs, mem, config)
     if stack is None:
-        return directed_expansion_step(
-            obs, bias_dist=bias, bias_first=scouting(mem, config)
-        )
+        return expansion_step(obs, bias_dist=bias)
     if mem.rally_until < 0:
         # First wave: no rebuild, the opening just finished.
         mem.rebuild_until = obs.turn
@@ -1022,7 +775,7 @@ def assault_move(obs, mem: BlitzMemory, config: BlitzConfig, target: Cell | None
         start_wave(obs, mem, config)
 
     if not mem.committed:
-        need = required_army(obs, mem, config, travel, target)
+        need = required_army(obs, mem, config, travel)
         # The deadline must not scale with the opponent, or the wave never
         # launches at all.
         deadline = (
@@ -1077,9 +830,7 @@ def assault_move(obs, mem: BlitzMemory, config: BlitzConfig, target: Cell | None
         concentrate = gather_step(obs, rally, min_army=2)
         if concentrate is not None:
             return concentrate
-    return directed_expansion_step(
-        obs, bias_dist=bias, bias_first=scouting(mem, config)
-    )
+    return expansion_step(obs, bias_dist=bias)
 
 
 def blitz_move(obs, mem: BlitzMemory, config: BlitzConfig | None = None):
@@ -1111,7 +862,7 @@ def blitz_move(obs, mem: BlitzMemory, config: BlitzConfig | None = None):
             mem.stack = dest if obs.owner_grid[dest[0]][dest[1]] == 1 else None
             return move
 
-    bias = bias_distances(obs, mem, config)
+    bias = bias_distances(obs, mem)
 
     if obs.turn < config.opening_end:
         # PASS here means "the general is still accumulating" — the opening
@@ -1124,9 +875,7 @@ def blitz_move(obs, mem: BlitzMemory, config: BlitzConfig | None = None):
     if move is not None:
         return move  # assault_move sets the sub-phase itself
 
-    move = directed_expansion_step(
-        obs, bias_dist=bias, bias_first=scouting(mem, config)
-    )
+    move = expansion_step(obs, bias_dist=bias)
     mem.phase = PHASE_REBUILD if move is not None else PHASE_IDLE
     return move or PASS
 

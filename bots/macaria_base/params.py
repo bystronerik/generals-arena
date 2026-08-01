@@ -66,55 +66,12 @@ class MacariaParams:
     #: Switch the strike stack to another cell once that cell holds this
     #: multiple of the current stack.
     blitz_restack_ratio: float = 1.5
-    #: Army wanted on top of the estimated general garrison before a wave
-    #: aimed at a *located* general launches. Raising it delays the finishing
-    #: wave; lowering it sends thinner ones at a general we can see.
-    blitz_finish_margin: int = 2
 
     # ---------------------------------------------- blitz core: targeting
     #: Re-estimate a fogged enemy general at most this often.
     blitz_retarget_interval: int = 20
     #: How far behind their visible front line to look for their general.
     blitz_contact_radius: int = 6
-
-    # ------------------------------------------- blitz core: general hunt
-    # Where the bot looks while it has never seen their general. Upstream
-    # blitz reads that off `visible_enemy_tiles`, which in a losing game
-    # points at their forward land inside *our* half; these knobs replace it
-    # with the belief over cells that could still hold a general. See
-    # `blitz_core`'s "Behavioural delta: the general hunt".
-
-    #: Master switch. With `blitz_expand_bias_first` also false, targeting is
-    #: upstream blitz's.
-    blitz_hunt_enabled: bool = True
-    #: Let the hunt cell set the *expansion bias* too, not just the wave's
-    #: target. Measured off: the bias grid is read every turn, so a hunt cell
-    #: deep in unexplored ground drags chain expansion across the map for
-    #: information the wave collects on its way anyway.
-    blitz_hunt_drives_anchor: bool = False
-    #: Turns the hunt cell is held before it is recomputed. Lower re-aims more
-    #: eagerly and risks a stack that never arrives; higher commits harder to
-    #: a guess that may already be pruned.
-    blitz_hunt_interval: int = 8
-    #: Half-width of the box counting still-possible general cells around a
-    #: hunt candidate. Larger prefers the bulk of the unknown region over the
-    #: cell that merely happens to be nearest.
-    blitz_hunt_reveal_radius: int = 2
-    #: Weight of the direction prior: a candidate `d` hops from the enemy land
-    #: we have ever seen — or, before contact, from the mirror of our own
-    #: general — is discounted by `1 + decay * d`. 0 makes the hunt a
-    #: travel-first sweep of the nearest unknown; raising it commits harder to
-    #: the quarter their territory points at.
-    blitz_hunt_prior_decay: float = 0.35
-    #: Weight of travel in the same score. Raising it toward the prior decay
-    #: turns the hunt back into "explore the nearest unknown", which on a
-    #: mountain-padded board is our own empty corner.
-    blitz_hunt_travel_decay: float = 0.05
-    #: While the general is unsighted, rank expansion captures by how
-    #: enemy-ward they are before how much fog they reveal. False restores
-    #: upstream's fog-first ranking, which grows the frontier wherever it
-    #: already is.
-    blitz_expand_bias_first: bool = True
 
     # ------------------------------------------------ blitz core: defence
     #: Only enemy cells within this BFS distance of our general count as a
@@ -281,16 +238,8 @@ def blitz_config(params: MacariaParams):
         travel_margin=params.blitz_travel_margin,
         feed_budget=params.blitz_feed_budget,
         restack_ratio=params.blitz_restack_ratio,
-        finish_margin=params.blitz_finish_margin,
         retarget_interval=params.blitz_retarget_interval,
         contact_radius=params.blitz_contact_radius,
-        hunt_enabled=params.blitz_hunt_enabled,
-        hunt_drives_anchor=params.blitz_hunt_drives_anchor,
-        hunt_interval=params.blitz_hunt_interval,
-        hunt_reveal_radius=params.blitz_hunt_reveal_radius,
-        hunt_prior_decay=params.blitz_hunt_prior_decay,
-        hunt_travel_decay=params.blitz_hunt_travel_decay,
-        expand_bias_first=params.blitz_expand_bias_first,
         defense_dist=params.blitz_defense_dist,
         defense_margin=params.blitz_defense_margin,
         own_tile_bonus=params.blitz_own_tile_bonus,

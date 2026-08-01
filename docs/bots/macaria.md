@@ -1,8 +1,13 @@
 # macaria
 
-`bots/macaria/`. Grounded idea: **take blitz's policy unchanged, and on the
-turns where a priority ladder is most likely to be locally wrong, search for a
-better move and play it instead.**
+`bots/macaria/`. Grounded idea: **take blitz's policy, and on the turns where a
+priority ladder is most likely to be locally wrong, search for a better move
+and play it instead.**
+
+Since r1 the vendored core also carries one strategic change of its own — the
+[general hunt](#the-general-hunt), which decides where an unsighted enemy
+general is from the belief over where it *can* be rather than from whichever
+enemy tile happens to be in vision.
 
 Spec: [`../research/strategies/macaria.md`](../research/strategies/macaria.md).
 Round report:
@@ -26,16 +31,92 @@ refers to stops being the program the baseline was measured on
 ([decision-rule.md](../arena/decision-rule.md), *connectivity*). A copy makes
 that mistake unreachable.
 
-The copy is behaviour-identical to blitz: verified move-for-move over 6 seeds
-against `cm_expander` (same capture turn on each: 476/254/232/570/331/179).
-Its only deltas are mechanical — every module-level behavioural constant blitz
-kept (`DEATHTOUCH_TURN`, `CHASE_DEFEND_FROM`, the never-reserve
-`StrategyContext`, the `or 50` wave period, the `// 2` general regen) is now a
-`BlitzConfig` field, and the module-level `_STRATEGY` singleton became
-`strategy_context(config)`.
+The copy was behaviour-identical to blitz at r1: verified move-for-move over 6
+seeds against `cm_expander` (same capture turn on each:
+476/254/232/570/331/179). Its deltas then were purely mechanical — every
+module-level behavioural constant blitz kept (`DEATHTOUCH_TURN`,
+`CHASE_DEFEND_FROM`, the never-reserve `StrategyContext`, the `or 50` wave
+period, the `// 2` general regen) is now a `BlitzConfig` field, and the
+module-level `_STRATEGY` singleton became `strategy_context(config)`.
 
 The cost is honest duplication: a later fix to blitz does not reach macaria.
-That is the right trade when the two are being *compared* rather than composed.
+That is the right trade when the two are being *compared* rather than composed
+— and it is also what made the general hunt below safe to add, since nothing
+macaria changes can move the baseline's content hash.
+
+## The general hunt
+
+The defect, from 318 scraped leaderboard games
+([replay analysis](../engine/replay-analysis.md)): in **97 of 127 losses the
+bot never once had vision of the opponent's general**, while its gather waves
+were aimed at whatever enemy tile happened to be visible. Canonically match
+15932 — closest approach 8 steps, reached at tick 36 and never again, land
+capped at 55 for 224 ticks while the opponent reached 144.
+
+The cause is that upstream reads "the enemy's side of the map" off
+`visible_enemy_tiles`: `enemy_anchor` takes the enemy cell farthest from us and
+`contact_target` takes the fog just behind their front line. In a game we are
+losing, their front line is *inside our own half*, so both point home. The
+anchor drives the expansion bias and the target drives the wave, so the whole
+bot orbits its own territory while the opponent walks in and finds the general.
+
+The fix reuses the belief macaria already maintained and never read:
+`BeliefState.candidates`, seeded with every cell at least
+`min_general_distance` BFS steps from ours (RULES.md §01) and pruned as we look
+at them.
+
+| Where | Before | After |
+| --- | --- | --- |
+| `hunt_target` | — | best remaining candidate: belief pruned per visit, discounted by hops from the enemy footprint we have ever seen (the mirror of our general before contact) and, much more cheaply, by travel |
+| `contact_target` | any fog behind their front | only fog the belief still allows to be a general |
+| `directed_expansion_step` | fog revealed first, direction on ties | direction first while the general is unsighted |
+| `required_army` | 70% of their mobile army | with the general **located**, what it takes to kill it — two army from the deathtouch turn (RULES.md §07) |
+
+Travel is priced an order of magnitude below the direction prior on purpose.
+Scored alike, the hunt degenerates into "explore the nearest unknown", which on
+a board mountain-padded to 21x21 is our own empty corner — the candidate ring
+sits ≥17 steps away in *every* direction, including behind us.
+
+Knobs: `blitz_hunt_*`, `blitz_expand_bias_first`, `blitz_finish_margin` in
+`params.py`. `MACARIA_TUNE='{"blitz_hunt_enabled": false,
+"blitz_expand_bias_first": false}'` restores upstream targeting.
+
+### What the arena said about it
+
+2,624 games against `macaria_base@862ac0189a1a` (rounds `macaria-hunt-*`;
+the evaluator's report is the record):
+**+18.82 ± 12.41 Elo, unproven.** The premise does not transfer from
+generals.bot to this panel, and the numbers say why.
+
+| | leaderboard (scraped) | arena panel (1,008 paired games) |
+| --- | --- | --- |
+| games with no sighting | 76% of losses | 10% of all games, 49% of losses |
+| where the old estimator pointed | our own half | median **6–8** hops from the true general |
+| never-sighted games | — | land margin ≈ 0 throughout, ~330 turns |
+
+So the bot was never lost on the wrong side of the map here. In never-sighted
+games its frontier parks a median **5** hops from the enemy general and spends
+35% of the game within 6 of it, and never reaches the Chebyshev-1 needed to
+see it — the wall is the defended ring around a general that has been growing
+since turn 0, not a failure to look. Sighting mostly *tracks* the economy:
+games sighted in both arms ran a +8 → +49 land margin, never-sighted games
+hovered at 0.
+
+The hunt does move vision — net **+16/+28/+34** paired games newly sighted with
+20/50/100 turns still to play — but it cost land (`land_mean` −3.20 ± 1.71,
+`land_max` −4.91 ± 4.01, `strikes` −0.31 ± 0.21), and in even games land is
+what decides. That is the whole result: a real information gain that the
+economy pays for at par.
+
+**`hunt_drives_anchor` (r2, default off).** Replay of the recorded
+trajectories showed `strike_target` reaching the hunt rung on only **15%** of
+post-opening turns in never-sighted games — `contact_target` preempts 84% —
+while `enemy_anchor` consulted the hunt on *every* turn, pointing the whole
+expansion bias grid at a belief cell that could be far away and behind their
+front. The hunt now sets the wave's target only. Paired over 240 seeds against
+six panel bots it buys back `land_mean` +1.81 ± 2.34 and `land_max`
++2.05 ± 6.29 for a flat winrate (−0.004 ± 0.048) and flat sighting (raw +3,
+early −3) — a per-turn cost removed from a mechanism that was not using it.
 
 ## Library survey — verdict: nothing fits, built from first principles
 

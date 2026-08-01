@@ -11,6 +11,11 @@ blitz's policy **unchanged** and adds one thing: on the turns where a
 heuristic ladder is most likely to be locally wrong, spend some of the move
 budget searching for a better move, and play it instead.
 
+> **r2 amendment.** "Unchanged" describes r1 and the r1 measurement only. The
+> vendored core now also carries the general hunt — see §7 — which is a change
+> to blitz's targeting, not to the search. Read every claim below about the
+> core being blitz as scoped to r1.
+
 The hypothesis is therefore narrow and falsifiable:
 
 > A heuristic that picks moves by priority ladder gives up measurable strength
@@ -111,8 +116,57 @@ and each panel opponent separately, so a pooled gain cannot hide a regression
 against one of them.
 
 **Control arm.** `MACARIA_TUNE='{"mcts_enabled": false}'` is macaria with the
-search off — which is the vendored core alone, i.e. blitz. Run on the same map
-seeds as the live arm, it separates the search's contribution from the core's.
-It is stored **outside `data/games/`** and rated by winrate only, never pooled:
-it plays under macaria's content hash while being a different program, and
-pooling it would merge two programs into one rated entity.
+search off — at r1 that was the vendored core alone, i.e. blitz. Run on the
+same map seeds as the live arm, it separates the search's contribution from the
+core's. It is stored **outside `data/games/`** and rated by winrate only, never
+pooled: it plays under macaria's content hash while being a different program,
+and pooling it would merge two programs into one rated entity.
+
+## 7. r2 — the general hunt
+
+The claim in §1 is about *tactics*. This is a separate, strategic defect,
+measured on 318 scraped leaderboard games rather than argued from the design:
+
+> In **97 of 127 losses macaria never once had vision of the opponent's
+> general.** Median closest approach of any owned tile to it: 3 in losses
+> against 0 in wins; median peak stack 49 against 67. In the canonical game
+> (match 15932) its closest approach was 8 steps, reached at tick 36 during the
+> opening and never again, and all five of its gather waves were aimed at
+> incidentally visible enemy tiles.
+
+Blitz's targeting reads "where the enemy lives" off `visible_enemy_tiles`. In a
+game it is losing, that quantity sits inside its *own* half — the opponent's
+forward tiles — so `enemy_anchor` (which drives the expansion bias) and
+`contact_target` (which drives the wave) both point home, and the bot orbits
+its own territory. The mechanism, the four call sites changed and the knobs are
+in [`../../bots/macaria.md#the-general-hunt`](../../bots/macaria.md).
+
+Falsifiable the same way §1 is, and on the same axis the defect was measured
+on: `blitz_hunt_enabled=false, blitz_expand_bias_first=false` is upstream
+targeting under the same content hash, so the contrast is the fraction of games
+in which the general is ever sighted with the game still live, not just the
+winrate. If the hunt is wrong, that fraction moves and the winrate does not —
+which is a different failure from "the hunt never fired".
+
+### Verdict: the third case, which the prediction above did not name
+
+2,624 games against `macaria_base@862ac0189a1a`: **+18.82 ± 12.41 Elo,
+P(B>A)=0.935 — unproven.** Vision moved (net +16/+28/+34 paired games newly
+sighted with 20/50/100 turns left) and the winrate did not, which is the
+"hunt is wrong" branch above. But the reason is the one nobody wrote down:
+**vision is not the lever here.** Only 10% of arena games go unsighted against
+49% of leaderboard losses; in the unsighted ones the *old* estimator was
+already a median 6–8 hops from the true general; and those games are even
+grinds (land margin ≈ 0) where the frontier stalls 5 hops out against a
+defended general, not games lost to looking in the wrong place.
+
+The generals.bot sample that motivated §7 is a different population — a
+different opponent pool, and losses only. Its 76%-unsighted headline is not a
+property of macaria that this panel reproduces.
+
+Numbers, the per-rung replay analysis, and the one r2 revision it justified
+(`hunt_drives_anchor`, default off) are in
+[`../../bots/macaria.md#what-the-arena-said-about-it`](../../bots/macaria.md).
+
+Not re-run as a measurement round after r2: the sanity sweeps in the
+implementing session are **not** the contrast. §6 still governs.
