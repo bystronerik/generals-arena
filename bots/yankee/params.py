@@ -108,6 +108,16 @@ class YankeeParams:
     #: Playout randomisation. At 0 the greedy policy makes every rollout from
     #: a root identical and the search collapses to a single line.
     mcts_epsilon: float = 0.25
+    #: Cores whose move the search is allowed to override, comma-separated;
+    #: empty means all of them. Restricted to blitz on measurement — see
+    #: `search.TacticalSearch.improve`. The deathtouch core is excluded on the
+    #: same reasoning plus a stronger one: past turn 800 it is already playing
+    #: the exact rule the search would be searching for.
+    mcts_cores: str = "blitz"
+    #: Never override a castle build. The search models no builds at all, so
+    #: it cannot price one, and boom's build is the last move of a multi-turn
+    #: plan — vetoing it costs every castle, not one.
+    mcts_skip_builds: bool = True
 
     # --------------------------------------------------------- deathtouch (§07)
     #: Turn the third core takes over. RULES.md §07's own threshold; the engine

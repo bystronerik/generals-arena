@@ -333,14 +333,44 @@ class TacticalSearch:
         self.stats = SearchStats()
 
     # ------------------------------------------------------------- interface
-    def improve(self, obs, heuristic, my_gen, enemy_gen, elapsed_ms: float):
+    def improve(self, obs, heuristic, my_gen, enemy_gen, elapsed_ms: float,
+                core: str = ""):
         """Return the move to play: `heuristic`, or a searched improvement.
 
         `elapsed_ms` is what the turn has already spent, so the cap can shrink
         to fit the remainder of §08's 150 ms rather than assume a fresh move.
+
+        Two refusals before any of that, both of them consequences of things
+        this file already admits it cannot model.
+
+        **Builds.** The search simulates no castle builds, in either
+        direction. A search that cannot represent an action has no basis for
+        vetoing it, and vetoing it repeatedly is worse than useless: boom's
+        build is the last move of a multi-turn plan (gather to `build_stack`,
+        then spend), so an override does not cost one castle, it costs every
+        castle.
+
+        **Which core is driving.** blitz's cross-turn state is self-healing —
+        `ensure_stack` and the chain-head check both re-derive from the board,
+        so an override costs a turn. boom's is not: `build_target`,
+        `build_stack`, `strike_tile` and `striking` are latches it sets while
+        choosing and trusts afterwards. Measured, over 200 paired games with
+        the search as the only difference: against the two opponents yankee
+        answers with boom, the search cost 5.5 and 10.0 points of winrate
+        (fog_scout 0.850 -> 0.795, metro 0.925 -> 0.825) while gaining 2.1
+        against cm_hunter, which yankee answers with blitz. Same search, same
+        budget; the difference is what it was overriding.
         """
         p = self.p
         if not p.mcts_enabled or my_gen is None:
+            self.stats.turns_skipped += 1
+            return heuristic
+
+        if core and p.mcts_cores and core not in p.mcts_cores.split(","):
+            self.stats.turns_skipped += 1
+            return heuristic
+
+        if p.mcts_skip_builds and heuristic is not None and heuristic[0] == 2:
             self.stats.turns_skipped += 1
             return heuristic
 

@@ -115,7 +115,8 @@ class Agent:
         # or missing reply is a fault, and 50 forfeit the game).
         elapsed_ms = (time.perf_counter() - started) * 1000.0
         move = self.search.improve(
-            obs, move, self._my_general(core), self._enemy_general(core), elapsed_ms
+            obs, move, self._my_general(core), self._enemy_general(core),
+            elapsed_ms, active,
         )
         self.last_move_ms = (time.perf_counter() - started) * 1000.0
         return move
