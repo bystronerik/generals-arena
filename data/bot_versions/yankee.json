@@ -5,6 +5,16 @@
       "at": "2026-08-01T07:07:02Z",
       "content_hash": "9d0f1b7e224c",
       "seq": 1
+    },
+    {
+      "at": "2026-08-01T09:07:21Z",
+      "content_hash": "67a2a9e6e444",
+      "seq": 2
+    },
+    {
+      "at": "2026-08-01T10:47:24Z",
+      "content_hash": "5f9aff334f46",
+      "seq": 3
     }
   ],
   "version": 1,
@@ -83,6 +93,196 @@
       "first_seen_at": "2026-08-01T07:07:02Z",
       "git_commit": "41210ca3c92331e6e17dadccd308a27e92651092",
       "git_dirty": true
+    },
+    {
+      "closure_ref": "refs/bot-versions/67a2a9e6e444",
+      "closure_tree": "687c82d47fd0ac3f50f3356f2aff9ed0b2d21246",
+      "content_hash": "67a2a9e6e444",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "727f791e4c1bd60e356a870cfba676fb13125e2f",
+          "path": "bots/_common/cm_run.sh",
+          "sha256": "d9c1b5d945b89e740dafb81c7e9a065f17aa8d8731348e35162b1945322b4f3d"
+        },
+        {
+          "blob": "aa2a1e7ad3907e3a05929d073035c7a3499f272d",
+          "path": "bots/_common/oppmodel.py",
+          "sha256": "dcc368d4467d0ea9a75890e1b53bd56b8b395f0330b78de16c97c8074b8eb6ad"
+        },
+        {
+          "blob": "cb6c3a876ef807d9e727299cc02c2b37f0029ee9",
+          "path": "bots/_common/strategy_common.py",
+          "sha256": "b2e424533aebc44fac5f6edb7205f21cb8431fcd6e557a4d965445d6f1138590"
+        },
+        {
+          "blob": "f6f0039947e2af2a2f331a80a9bb99818cdf3552",
+          "path": "bots/_common/tactics.py",
+          "sha256": "24fc3bd20b5a5b4f5d8fa17a206d2ae9ae9f8e927d63e19673d90311150be9b6"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "0dd9d701e1d2b6a6a6736e5b46fcf843736ffe9b",
+          "path": "bots/yankee/agent.py",
+          "sha256": "b813d411f9ef5c6a4b07fcf5ea7ff79dc90925f9c29de3fd2901c4845ccbd5b7"
+        },
+        {
+          "blob": "62eb314854488eec25f30ecde7860e0fb21fb815",
+          "path": "bots/yankee/blitz_core.py",
+          "sha256": "03f1975ad3ece13bd094d798df6f29f9c45708a5cf5861e38df9150c9c50af91"
+        },
+        {
+          "blob": "e8fc9ecc2379b91a0e82947eb0103d5cb3683232",
+          "path": "bots/yankee/boom_core.py",
+          "sha256": "b74bafe38e3febabeed10be4fb9e128c7d17555513c125e13141eb63f54bc8ed"
+        },
+        {
+          "blob": "7ffce4952504a36aa02b249eafdb77d021411ca4",
+          "path": "bots/yankee/classifier.py",
+          "sha256": "3396735167a2e232e9349eadea3dcb2de95841313defaa2a8ba392b20e123c70"
+        },
+        {
+          "blob": "b1a653339f8a631c531a6f9e165dda987ffda3fe",
+          "path": "bots/yankee/deathtouch.py",
+          "sha256": "95949efa49371f3fd339023ca298341d90c8939161afb058eb5e62bbfe849cf5"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/yankee/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "906840ebec067d2fe71a3a5fde39770f578bcb9e",
+          "path": "bots/yankee/params.py",
+          "sha256": "5c3d6af606ed77215ded2277c7f000b4c6b824a81775e47009e20df9c3eca3fd"
+        },
+        {
+          "blob": "e733ed449c1016515d5063f48480b684d1f75a45",
+          "path": "bots/yankee/run.sh",
+          "sha256": "9116da463ba848e4250b85d04a4d38c456bfecd01eba226a4b4a8f9552e2effa"
+        },
+        {
+          "blob": "22a5d865e4225199ddb8dea0963dc4a9fa04f1ab",
+          "path": "bots/yankee/search.py",
+          "sha256": "67d8cad09c888919cea3d3eb8f85498712ccc1db6936ee9bae77cb153a3fe063"
+        },
+        {
+          "blob": "21cd37c3c0678e25e420b2b9b3e3b30ee133f9e8",
+          "path": "bots/yankee/signals.py",
+          "sha256": "918d6e67972e03195480cd1fd910b733ebf90c30d649650c1358f4ea46490fb7"
+        },
+        {
+          "blob": "97259076b093e5e5366973056df66db86126d231",
+          "path": "bots/yankee/switcher.py",
+          "sha256": "437a3fcd6f06070c9952512973b8e3bedef555f86afafc9d2b764e3bdd8b07bd"
+        }
+      ],
+      "first_seen_at": "2026-08-01T09:07:21Z",
+      "git_commit": "28e00438ec878ab4b5bcd78b74afc7a51f884c18",
+      "git_dirty": false
+    },
+    {
+      "closure_ref": "refs/bot-versions/5f9aff334f46",
+      "closure_tree": "16a4dc9d69f0f54233a7b617a42c891fba12cb15",
+      "content_hash": "5f9aff334f46",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "727f791e4c1bd60e356a870cfba676fb13125e2f",
+          "path": "bots/_common/cm_run.sh",
+          "sha256": "d9c1b5d945b89e740dafb81c7e9a065f17aa8d8731348e35162b1945322b4f3d"
+        },
+        {
+          "blob": "aa2a1e7ad3907e3a05929d073035c7a3499f272d",
+          "path": "bots/_common/oppmodel.py",
+          "sha256": "dcc368d4467d0ea9a75890e1b53bd56b8b395f0330b78de16c97c8074b8eb6ad"
+        },
+        {
+          "blob": "cb6c3a876ef807d9e727299cc02c2b37f0029ee9",
+          "path": "bots/_common/strategy_common.py",
+          "sha256": "b2e424533aebc44fac5f6edb7205f21cb8431fcd6e557a4d965445d6f1138590"
+        },
+        {
+          "blob": "f6f0039947e2af2a2f331a80a9bb99818cdf3552",
+          "path": "bots/_common/tactics.py",
+          "sha256": "24fc3bd20b5a5b4f5d8fa17a206d2ae9ae9f8e927d63e19673d90311150be9b6"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "a96c5eb317291e4c650d9290ddcd1a252fe1db05",
+          "path": "bots/yankee/agent.py",
+          "sha256": "22d586b689a909d48dbf87c9634c98e8c315c0941b472a5f2fc9b35451a77586"
+        },
+        {
+          "blob": "62eb314854488eec25f30ecde7860e0fb21fb815",
+          "path": "bots/yankee/blitz_core.py",
+          "sha256": "03f1975ad3ece13bd094d798df6f29f9c45708a5cf5861e38df9150c9c50af91"
+        },
+        {
+          "blob": "e8fc9ecc2379b91a0e82947eb0103d5cb3683232",
+          "path": "bots/yankee/boom_core.py",
+          "sha256": "b74bafe38e3febabeed10be4fb9e128c7d17555513c125e13141eb63f54bc8ed"
+        },
+        {
+          "blob": "7ffce4952504a36aa02b249eafdb77d021411ca4",
+          "path": "bots/yankee/classifier.py",
+          "sha256": "3396735167a2e232e9349eadea3dcb2de95841313defaa2a8ba392b20e123c70"
+        },
+        {
+          "blob": "b1a653339f8a631c531a6f9e165dda987ffda3fe",
+          "path": "bots/yankee/deathtouch.py",
+          "sha256": "95949efa49371f3fd339023ca298341d90c8939161afb058eb5e62bbfe849cf5"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/yankee/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "964daf624ed49f43665253961af97605833ce94c",
+          "path": "bots/yankee/params.py",
+          "sha256": "be895157c8e0486844ff291d9e00ef02aaf12d34a12640157f1ce0319d79c343"
+        },
+        {
+          "blob": "e733ed449c1016515d5063f48480b684d1f75a45",
+          "path": "bots/yankee/run.sh",
+          "sha256": "9116da463ba848e4250b85d04a4d38c456bfecd01eba226a4b4a8f9552e2effa"
+        },
+        {
+          "blob": "31ab6e7d67b7c7f8751a1c68ab6c98f83b338837",
+          "path": "bots/yankee/search.py",
+          "sha256": "2620b56ab29a934ff2c4b8d9c2309a7433100c00acd5fae2b87f93695c5dbe7a"
+        },
+        {
+          "blob": "21cd37c3c0678e25e420b2b9b3e3b30ee133f9e8",
+          "path": "bots/yankee/signals.py",
+          "sha256": "918d6e67972e03195480cd1fd910b733ebf90c30d649650c1358f4ea46490fb7"
+        },
+        {
+          "blob": "97259076b093e5e5366973056df66db86126d231",
+          "path": "bots/yankee/switcher.py",
+          "sha256": "437a3fcd6f06070c9952512973b8e3bedef555f86afafc9d2b764e3bdd8b07bd"
+        }
+      ],
+      "first_seen_at": "2026-08-01T10:47:24Z",
+      "git_commit": "d6294abe923be11fd736a5b24086648079ca3af5",
+      "git_dirty": false
     }
   ]
 }
