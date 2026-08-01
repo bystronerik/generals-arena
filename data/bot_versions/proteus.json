@@ -27,6 +27,18 @@
       "content_hash": "7ae237e99d34",
       "note": "revert to seq 3",
       "seq": 5
+    },
+    {
+      "at": "2026-08-01T05:55:30Z",
+      "content_hash": "78bfa6234921",
+      "note": "revert to seq 2",
+      "seq": 6
+    },
+    {
+      "at": "2026-08-01T06:02:55Z",
+      "content_hash": "7ae237e99d34",
+      "note": "revert to seq 3",
+      "seq": 7
     }
   ],
   "version": 1,

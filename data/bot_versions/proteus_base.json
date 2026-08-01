@@ -1,0 +1,98 @@
+{
+  "bot_id": "proteus_base",
+  "steps": [
+    {
+      "at": "2026-08-01T06:02:23Z",
+      "content_hash": "7d0032477869",
+      "seq": 1
+    }
+  ],
+  "version": 1,
+  "versions": [
+    {
+      "closure_ref": "refs/bot-versions/7d0032477869",
+      "closure_tree": "e3305f12b720f683fd9393c1bf020756cfcc7f1a",
+      "content_hash": "7d0032477869",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "aa2a1e7ad3907e3a05929d073035c7a3499f272d",
+          "path": "bots/_common/oppmodel.py",
+          "sha256": "dcc368d4467d0ea9a75890e1b53bd56b8b395f0330b78de16c97c8074b8eb6ad"
+        },
+        {
+          "blob": "cb6c3a876ef807d9e727299cc02c2b37f0029ee9",
+          "path": "bots/_common/strategy_common.py",
+          "sha256": "b2e424533aebc44fac5f6edb7205f21cb8431fcd6e557a4d965445d6f1138590"
+        },
+        {
+          "blob": "f6f0039947e2af2a2f331a80a9bb99818cdf3552",
+          "path": "bots/_common/tactics.py",
+          "sha256": "24fc3bd20b5a5b4f5d8fa17a206d2ae9ae9f8e927d63e19673d90311150be9b6"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "1278bfb87e1bdb662f03439faa57581df0a4c9bf",
+          "path": "bots/aegis/agent.py",
+          "sha256": "b3381a7e223219f625535c8d339f411775f6cf8919f8bc40646cefbbf081e088"
+        },
+        {
+          "blob": "b567243ea17c05f890d3263b17d67cd03321dcb3",
+          "path": "bots/blitz/agent.py",
+          "sha256": "5cea218fa5b93e4c384b7294f461232de070f00d93b5afb95c54b7a3a53c9473"
+        },
+        {
+          "blob": "0ef10b64987fd48899e369fa50e2ec73e683b7c4",
+          "path": "bots/boom/agent.py",
+          "sha256": "0ea50f87d3ac21bfddca5a638c0f4f72a4b5de43be47a92deda1a2c4c8e8f3c5"
+        },
+        {
+          "blob": "f7df628a0df6f4da196a31fd78a937897abec143",
+          "path": "bots/metro/agent.py",
+          "sha256": "968df0bfade7c6ae391959db050afa57bbf63b68f3bc5ec582f43bc0ce8afd8b"
+        },
+        {
+          "blob": "9b75e7295bb2e96e021a7355f9a267dc2dd955dd",
+          "path": "bots/proteus_base/README.md",
+          "sha256": "b537a7ccd7d5f18d033ca7a34776491c4505e11b9a54c6fa2ca7f7b210e17092"
+        },
+        {
+          "blob": "b1ca485d545fb4c85f5dab53dd8d986868c727ac",
+          "path": "bots/proteus_base/agent.py",
+          "sha256": "f408544dc8b6f54e9c7d825bcf4afb80e57176bf9a5815b5160b18094ec1484d"
+        },
+        {
+          "blob": "91d8c38d4d710fd27150b41f9aa02e62d329c1fe",
+          "path": "bots/proteus_base/classifier.py",
+          "sha256": "7b2275d942c01b377cd24be49e16ee01b9a2b70115f14d47e2bf79b1d0c989cb"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/proteus_base/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "e7d78ac169a30678efe60bdb108611f9d932e630",
+          "path": "bots/proteus_base/run.sh",
+          "sha256": "3a4eb8902a76a3bd1a8e9292feef29339976c72786d157da3a20edfcbf296f56"
+        },
+        {
+          "blob": "8640197c98036b552ed6ac257ef5abca9dcf4615",
+          "path": "bots/proteus_base/switcher.py",
+          "sha256": "7def708a9a5d78d333d59a90ef18c40623c6a98ff332a2abb84a37ec034f5668"
+        }
+      ],
+      "first_seen_at": "2026-08-01T06:02:23Z",
+      "git_commit": "7bbe44eaa7f8ccaafc654e5211477995ddc23b18",
+      "git_dirty": false
+    }
+  ]
+}
