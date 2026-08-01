@@ -172,4 +172,8 @@ Verdict comes from the pairwise contrast in
 [`../../arena/decision-rule.md`](../../arena/decision-rule.md), never from a
 rank. Baseline is proteus HEAD before this change; candidate is after.
 
-See [`016-proteus-adaptive-switching.md`](../experiments/016-proteus-adaptive-switching.md).
+Verdict for this rework: **no change (proven flat)**, `delta = -3.37 +- 9.89`,
+`CI [-22.76, +16.01]`, `P(B>A) = 0.367` over 20,376 pooled games. It ships on
+simplicity and instrumentation, not strength. See
+[`017-proteus-detection-rework.md`](../experiments/017-proteus-detection-rework.md)
+and [`016-proteus-adaptive-switching.md`](../experiments/016-proteus-adaptive-switching.md).
