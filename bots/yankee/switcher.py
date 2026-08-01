@@ -30,6 +30,14 @@ COUNTER = {
     UNKNOWN: "default",
 }
 
+DEATHTOUCH = "deathtouch"
+"""The third core. Selected on the clock rather than on evidence, and that is
+not an inconsistency: RULES.md §07 *is* a clock rule. From turn 800 the board
+is playing a different game — one unit takes a general, so the general's own
+stack defends nothing and the only defence is a chase from a third tile — and
+no amount of opponent evidence changes when that starts. See
+yankee/deathtouch.py."""
+
 
 @dataclass
 class Switcher:
@@ -79,6 +87,10 @@ class Switcher:
     _last_switch_turn: int = field(default=-(10 ** 9), init=False)
     history: list[tuple[int, str, str]] = field(default_factory=list, init=False)
 
+    #: Turn the deathtouch core takes over, or `None` to leave it unreachable
+    #: (the control arm). Hysteresis does not apply: the rule does not flicker.
+    deathtouch_from: int | None = None
+
     @classmethod
     def from_params(cls, params: YankeeParams, default: str) -> "Switcher":
         """Build one from the tuned knobs rather than from the field defaults."""
@@ -88,6 +100,9 @@ class Switcher:
             leave_spine_streak=params.leave_spine_streak,
             return_spine_streak=params.return_spine_streak,
             cooldown=params.cooldown,
+            deathtouch_from=(
+                params.deathtouch_from if params.deathtouch_enabled else None
+            ),
         )
 
     def __post_init__(self) -> None:
@@ -95,6 +110,19 @@ class Switcher:
 
     def update(self, cls: Classification, turn: int) -> str:
         """Feed one classification; returns the strategy to play this turn."""
+        if self.deathtouch_from is not None and turn >= self.deathtouch_from:
+            # A hard override, deliberately outside the hysteresis: the streak
+            # machinery exists to debounce a *noisy estimate* of the opponent,
+            # and the turn number is not an estimate. Recorded in `history`
+            # once, so a trace still shows when the endgame began.
+            if self.current != DEATHTOUCH:
+                self.current = DEATHTOUCH
+                self.label = cls.label
+                self._last_switch_turn = turn
+                self._streak = 0
+                self.history.append((turn, cls.label, DEATHTOUCH))
+            return self.current
+
         proposal = COUNTER.get(cls.label, "default")
         if proposal == "default":
             proposal = self.default

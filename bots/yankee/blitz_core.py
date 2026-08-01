@@ -146,6 +146,44 @@ class BlitzConfig:
     defense_margin: int = 2
     """Extra army we want at home on top of the incoming threat."""
 
+    # ------------------------------------------------------ standing guard
+    # yankee's divergence from upstream blitz. `home_threat` above is a
+    # *reactive* model: it prices a threat it can currently see. Against
+    # cm_hunter that is measurably too late. Five losses replayed from the
+    # 300-game baseline all read the same way — the fist becomes visible at
+    # BFS distance 4-6 already sized (17-23 army), our general is holding
+    # 4-9, our own 11-16 stacks are 5-13 steps out, and the gather arrives
+    # two turns after the kill. Nothing was mispriced; the army was in the
+    # wrong place before the threat was observable, and no `defense_dist` or
+    # `defense_margin` value reaches that (a 200-game paired screen over both,
+    # plus opening_end, rally_ticks, strike_ratio and min_strike_floor, moved
+    # the winrate by at most +2 games in 200 — inside noise).
+    #
+    # The guard is *predictive* and, unlike everything else here, fog-proof:
+    # `opp_army - opp_land` is the opponent's mobile army, and both terms are
+    # scoreboard scalars the engine hands us every turn whether or not we can
+    # see a single enemy cell (RULES.md §06 hides cells, not the score). So we
+    # can size a garrison against an assault we have not seen yet.
+    guard_ratio: float = 0.0
+    """Fraction of the opponent's *mobile* army to keep within one move of
+    our general. 0 is upstream blitz: no standing garrison at all."""
+
+    guard_from: int = 60
+    """No guard during the opening — before contact the ratio is measuring
+    an expander's spare army, not an assault."""
+
+    guard_until: int = 320
+    """After the fist window closes the reactive model is enough, and a
+    standing garrison is just army not expanding."""
+
+    guard_cap: int = 40
+    """Hard ceiling, so a runaway opponent cannot talk us into turtling."""
+
+    guard_needs_fist: bool = True
+    """Only guard once this opponent has actually walked a sized stack at our
+    general (yankee sets `BlitzMemory.fist_seen` from `HomePressure`). Against
+    the expander cluster the guard would otherwise be pure cost."""
+
     # ---------------------------------------------------------- pathing
     own_tile_bonus: float = 0.05
     """Per-army discount for routing the strike through our own cells."""
@@ -180,6 +218,13 @@ class BlitzMemory:
     strikes: int = 0
     phase: str = PHASE_IDLE
     last_turn: int = -1
+
+    #: Has this opponent ever walked a sized stack at our general? Written by
+    #: yankee's Agent each turn from `HomePressure.duel_turn`, which latches
+    #: the conjunction "big *and* near" that the shared OpponentModel keeps
+    #: apart. The core never computes it, so upstream blitz's behaviour is
+    #: recovered exactly by leaving it False and `guard_ratio` at 0.
+    fist_seen: bool = False
 
     def observe(self, obs) -> None:
         """Fold this turn's observation in. Idempotent within a turn."""
@@ -361,6 +406,48 @@ def home_threat(obs, mem: BlitzMemory, config: BlitzConfig) -> tuple[int, Cell |
     # The general also produces one army every two turns while they walk.
     defense = obs.army_grid[general[0]][general[1]] + reinforcement + arrival // 2
     return threat - defense + config.defense_margin, threat_cell
+
+
+def home_guard(obs, mem: BlitzMemory, config: BlitzConfig) -> tuple[int, int]:
+    """``(held, wanted)`` for the standing guard — see `BlitzConfig.guard_ratio`.
+
+    *Held* counts the general's own stack plus every owned neighbour of it,
+    because a neighbour is one move from home and §05 resolves the defence on
+    the cell, not on the neighbourhood. Anything further away is not a
+    garrison; it is a gather that has not happened yet, which is precisely the
+    thing that arrives two turns late.
+
+    *Wanted* is a fraction of `opp_army - opp_land`. That is the opponent's
+    army minus the one unit §02 pins on each of its cells — the part that can
+    actually be concentrated into a fist — and it is readable through full fog.
+    """
+    general = mem.my_general
+    if general is None or config.guard_ratio <= 0.0:
+        return 0, 0
+    if not (config.guard_from <= obs.turn <= config.guard_until):
+        return 0, 0
+    if config.guard_needs_fist and not mem.fist_seen:
+        return 0, 0
+
+    wanted = min(config.guard_cap, int(config.guard_ratio * mem.opp.opponent_mobile()))
+    if wanted <= 0:
+        return 0, 0
+
+    held = obs.army_grid[general[0]][general[1]]
+    gr, gc = general
+    for dr, dc in DIRECTIONS:
+        nr, nc = gr + dr, gc + dc
+        if 0 <= nr < obs.H and 0 <= nc < obs.W and obs.owner_grid[nr][nc] == 1:
+            held += obs.army_grid[nr][nc] - 1
+    return held, wanted
+
+
+def guard_move(obs, mem: BlitzMemory, config: BlitzConfig):
+    """One step of army toward home, when the standing guard is short."""
+    held, wanted = home_guard(obs, mem, config)
+    if wanted <= 0 or held >= wanted:
+        return None
+    return gather_step(obs, mem.my_general, min_army=2, exclude={mem.my_general})
 
 
 def defense_move(obs, mem: BlitzMemory, config: BlitzConfig, threat_cell: Cell | None):
@@ -795,6 +882,17 @@ def blitz_move(obs, mem: BlitzMemory, config: BlitzConfig | None = None):
             dest = (move[1] + DIRECTIONS[move[3]][0], move[2] + DIRECTIONS[move[3]][1])
             mem.stack = dest if obs.owner_grid[dest[0]][dest[1]] == 1 else None
             return move
+
+    # Below the reactive model, above the attack: a guard move is what we do
+    # with a turn when nothing is visibly wrong and the scoreboard says a fist
+    # is affordable. It must not outrank `defense_move` — once the threat is
+    # real, killing it or covering it beats topping up a number.
+    guard = guard_move(obs, mem, config)
+    if guard is not None:
+        mem.phase = PHASE_DEFEND
+        dest = (guard[1] + DIRECTIONS[guard[3]][0], guard[2] + DIRECTIONS[guard[3]][1])
+        mem.stack = dest if obs.owner_grid[dest[0]][dest[1]] == 1 else None
+        return guard
 
     bias = bias_distances(obs, mem)
 

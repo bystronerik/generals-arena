@@ -24,13 +24,23 @@ Values live in `params.py`; behaviour lives in the vendored cores.
 """
 from __future__ import annotations
 
+import time
+
 from _common.oppmodel import OpponentModel
 from yankee.blitz_core import BlitzCore
 from yankee.boom_core import BoomCore
 from yankee.classifier import classify
-from yankee.params import YankeeParams, blitz_config, boom_params, load_params
+from yankee.deathtouch import DeathtouchCore
+from yankee.params import (
+    YankeeParams,
+    blitz_config,
+    boom_params,
+    deathtouch_config,
+    load_params,
+)
+from yankee.search import TacticalSearch
 from yankee.signals import HomePressure
-from yankee.switcher import Switcher
+from yankee.switcher import DEATHTOUCH, Switcher
 
 DEFAULT_STRATEGY = "blitz"
 """The spine (source calibration, re-measured): played from turn 0, because
@@ -60,8 +70,24 @@ class Agent:
             "boom": BoomCore(player_id, H, W, model=self.model,
                              params=boom_params(self.params)),
         }
+        if self.params.deathtouch_enabled:
+            # Constructed only when reachable. proteus's §2 records what
+            # happens otherwise: it warmed four cores the switcher could select
+            # two of, and paid two `observe()` calls a turn to reach a branch
+            # that did not exist.
+            self.cores[DEATHTOUCH] = DeathtouchCore(
+                player_id, H, W, model=self.model,
+                config=deathtouch_config(self.params),
+            )
+        # §02's move-order tie-break goes to player 0, and the owner codes in
+        # the observation are perspective-relative, so the search needs the
+        # real seat handed to it here or its forward model breaks ties by
+        # coin flip where the engine breaks them by fact.
+        self.search = TacticalSearch(player_id, self.params)
+        self.last_move_ms = 0.0
 
     def act(self, obs):
+        started = time.perf_counter()
         self.model.update(obs)
         self.pressure.update(obs)
         cls = classify(self.model, obs.turn, self.pressure, self.params)
@@ -72,7 +98,36 @@ class Agent:
             if name != active:
                 core.observe(obs)
 
-        return self.cores[active].decide(obs)
+        # The blitz core's standing guard keys off "this opponent has walked a
+        # sized stack at our general", which is exactly `HomePressure`'s latched
+        # conjunction and is not derivable from the shared OpponentModel (which
+        # latches "big" and "near" independently — the defect proteus's signals
+        # module exists to fix). Push it down rather than teach the core to
+        # recompute it.
+        self.cores["blitz"].memory.fist_seen = self.pressure.duel_turn is not None
+
+        core = self.cores[active]
+        move = core.decide(obs)
+
+        # The search is a filter on a move that already exists, never a
+        # replacement for computing one: whatever it does or fails to do in
+        # its budget, `move` is already a legal reply (RULES.md §08 — a late
+        # or missing reply is a fault, and 50 forfeit the game).
+        elapsed_ms = (time.perf_counter() - started) * 1000.0
+        move = self.search.improve(
+            obs, move, self._my_general(core), self._enemy_general(core), elapsed_ms
+        )
+        self.last_move_ms = (time.perf_counter() - started) * 1000.0
+        return move
+
+    @staticmethod
+    def _my_general(core):
+        return getattr(core.memory, "my_general", None)
+
+    @staticmethod
+    def _enemy_general(core):
+        belief = getattr(core.memory, "belief", None)
+        return getattr(belief, "enemy_general", None) if belief else None
 
     @property
     def label(self) -> str:
