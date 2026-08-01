@@ -11,14 +11,12 @@ import pytest
 
 from arena.bundle import (
     BundleError,
-    _is_prose,
     audit_imports,
     bundle_members,
     check_limits,
     default_output_path,
+    minify_source,
     smoke_check,
-    strip_comments,
-    strip_prose_strings,
     third_party_imports,
     write_bundle,
 )
@@ -154,104 +152,46 @@ def test_the_bundle_carries_no_instrumentation(tmp_path):
         assert symbol not in wire
 
 
-def test_strip_comments_keeps_code_strings_and_line_numbers():
+def test_minify_drops_prose_and_keeps_behaviour():
     source = (
-        "#!/usr/bin/env python\n"
-        "# leading comment\n"
-        'BASE = "#4 not a comment"  # trailing comment\n'
+        '''"""Module doc."""\n'''
+        "import os  # trailing comment\n"
         "\n"
-        "def f():\n"
-        "    return 1  # tail\n"
-    )
-    stripped = strip_comments(source)
-
-    assert stripped == (
-        "#!/usr/bin/env python\n"      # shebang is an exec directive, not a comment
-        "\n"
-        'BASE = "#4 not a comment"\n'  # the `#` inside the literal survives
-        "\n"
-        "def f():\n"
-        "    return 1\n"
-    )
-    # Line numbers are preserved, so judge tracebacks still point at the source.
-    assert len(stripped.splitlines()) == len(source.splitlines())
-
-
-def test_strip_prose_blanks_docstrings_and_keeps_line_numbers():
-    source = (
-        '"""Module doc.\n\nSecond paragraph.\n"""\n'
-        "import os\n"
-        "\n"
-        "class C:\n"
-        '    """Class doc."""\n'
-        "    def f(self):\n"
-        '        """Only statement in the body."""\n'
-        "    def g(self):\n"
-        '        """Doc, then code."""\n'
-        '        return "a real string"\n'
-    )
-    stripped = strip_prose_strings(source)
-
-    assert stripped == (
-        "\n\n\n\n"
-        "import os\n"
-        "\n"
-        "class C:\n"
-        "\n"                      # class keeps a body: f and g follow
-        "    def f(self):\n"
-        "        pass\n"          # emptied body needs a statement
-        "    def g(self):\n"
-        "\n"
-        '        return "a real string"\n'  # a used string value is not prose
-    )
-    assert len(stripped.splitlines()) == len(source.splitlines())
-
-
-def test_strip_prose_catches_attribute_docstrings():
-    """PEP 258 prose after an assignment is not an AST docstring, but is prose."""
-    source = (
         "LIMIT = 3\n"
-        '"""How many hops a chain may stall for."""\n'
-        "NAME = str(LIMIT)\n"
-        'HELP = "a value, not prose"\n'
-        'f"{LIMIT} interpolated"\n'
-    )
-    assert strip_prose_strings(source) == (
-        "LIMIT = 3\n"
+        '''"""Attribute prose: not an AST docstring, still prose."""\n'''
         "\n"
-        "NAME = str(LIMIT)\n"
-        'HELP = "a value, not prose"\n'
-        'f"{LIMIT} interpolated"\n'  # an f-string can run code; never touched
+        "def area(width: int, height: int) -> int:\n"
+        '''    """Docstring."""\n'''
+        "    scale_factor = 2\n"
+        "    return width * height * scale_factor\n"
     )
+    out = minify_source(source, "sample.py")
 
+    assert "#" not in out and '"""' not in out
+    assert "scale_factor" not in out          # locals are renamed
+    assert "def area(" in out                 # globals are not: imports rely on them
+    assert "LIMIT=3" in out.replace(" ", "")
 
-def test_strip_prose_keeps_an_all_prose_block_legal():
-    source = "if x:\n    'only'\n    'prose'\nelse:\n    y = 1\n"
-    stripped = strip_prose_strings(source)
-    assert stripped == "if x:\n    pass\n\nelse:\n    y = 1\n"
-    compile(stripped, "<t>", "exec")
-
-
-def test_strip_prose_leaves_a_shared_line_alone():
-    """Blanking in place cannot fix these without moving line numbers."""
-    for source in ('def f(): "doc"\n', 'def f():\n    "doc"; x = 1\n    return x\n'):
-        assert strip_prose_strings(source) == source
-
-
-def test_strip_prose_rejects_unparseable_source():
-    with pytest.raises(BundleError, match="cannot parse"):
-        strip_prose_strings("def f(\n", "broken.py")
-
-
-def test_strip_comments_survives_a_comment_inside_a_continuation():
-    source = "x = (1 +  # add\n     2)\n"
-    assert strip_comments(source) == "x = (1 +\n     2)\n"
     scope: dict = {}
-    exec(compile(strip_comments(source), "<t>", "exec"), scope)
-    assert scope["x"] == 3
+    exec(compile(out, "sample.py", "exec"), scope)
+    assert scope["area"](3, 4) == 24
+    assert scope["LIMIT"] == 3
+    assert scope["area"].__doc__ is None
 
 
-def test_bundle_ships_python_without_prose_and_leaves_the_repo_intact(tmp_path):
+def test_minify_leaves_string_values_alone():
+    out = minify_source('HELP = "a value, not prose"\n', "v.py")
+    scope: dict = {}
+    exec(compile(out, "v.py", "exec"), scope)
+    assert scope["HELP"] == "a value, not prose"
+
+
+def test_minify_rejects_unparseable_source():
+    with pytest.raises(BundleError, match="cannot minify"):
+        minify_source("def f(\n", "broken.py")
+
+
+def test_bundle_ships_minified_python_and_leaves_the_repo_intact(tmp_path):
     agent_src = BOTS_DIR / "smoke" / "agent.py"
     before = agent_src.read_bytes()
     assert b'"""' in before, "the fixture must have prose to strip"
@@ -262,40 +202,24 @@ def test_bundle_ships_python_without_prose_and_leaves_the_repo_intact(tmp_path):
             if not name.endswith(".py"):
                 continue
             text = zf.read(name).decode("utf-8")
-            for lineno, line in enumerate(text.splitlines(), start=1):
-                if lineno == 1 and line.startswith("#!"):
-                    continue
-                assert "#" not in _outside_strings(line), f"{name}:{lineno}: {line}"
-            tree = ast.parse(text)  # the stripped member is still valid Python
-            for node in ast.walk(tree):
-                for field in ("body", "orelse", "finalbody"):
-                    stmts = getattr(node, field, None)  # Lambda.body is an expression
-                    if not isinstance(stmts, list):
-                        continue
-                    for stmt in stmts:
-                        assert not _is_prose(stmt), f"{name}:{stmt.lineno}: prose survived"
+            ast.parse(text)  # the minified member is still valid Python
+            assert not text.startswith(("\n", " ", "\t")), f"{name}: opens with blank lines"
+            for node in ast.walk(ast.parse(text)):
+                if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                                     ast.AsyncFunctionDef)):
+                    assert ast.get_docstring(node) is None, f"{name}: docstring survived"
 
     assert agent_src.read_bytes() == before, "bundling must not rewrite repo sources"
 
 
-def _outside_strings(line: str) -> str:
-    """The part of a line with quoted spans blanked out, for a crude `#` scan."""
-    out, quote = [], ""
-    for ch in line:
-        if quote:
-            out.append(" ")
-            if ch == quote:
-                quote = ""
-        elif ch in "\"'":
-            quote = ch
-            out.append(" ")
-        else:
-            out.append(ch)
-    return "".join(out)
+def test_minified_bundle_is_smaller_than_the_verbatim_one(tmp_path):
+    small = write_bundle("smoke", tmp_path / "small.zip")
+    plain = write_bundle("smoke", tmp_path / "plain.zip", minify=False)
+    assert small.unpacked_bytes < plain.unpacked_bytes
 
 
-def test_keep_comments_ships_sources_verbatim(tmp_path):
-    info = write_bundle("smoke", tmp_path / "verbatim.zip", strip_comments_in_zip=False)
+def test_no_minify_ships_sources_verbatim(tmp_path):
+    info = write_bundle("smoke", tmp_path / "verbatim.zip", minify=False)
     with zipfile.ZipFile(info.zip_path) as zf:
         assert zf.read("bots/smoke/agent.py") == (BOTS_DIR / "smoke" / "agent.py").read_bytes()
 

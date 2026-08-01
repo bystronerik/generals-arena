@@ -147,7 +147,7 @@ telemetry code.** Per [game-record-schema.md](game-record-schema.md) §Bot
 content hash, the closure is every file in the bot's own directory plus every
 `bots/` module it imports transitively — which covers the `telemetry_extras()`
 methods inside each `agent.py` *and* `bots/_common/wire.py`'s emission code.
-[`bundle.py:118`](../../arena/bundle.py:118) ships exactly that closure. Two
+[`bundle.py:130`](../../arena/bundle.py:130) ships exactly that closure. Two
 consequences: today's bundles carry instrumentation the judge never uses
 (violating constraint 2), and **any edit to `wire.py` forks the content hash —
 and therefore the rated entity — of every bot at once**. Both are fixed by the

@@ -20,13 +20,17 @@ file set behind the bot's rating identity — so the bundle of hash X is the
 program rated as X. cm_* bots are refused: they depend on the
 competition-module submodule, which we do not ship.
 
-Python sources are stripped of prose — both `#` comments and docstrings — **on
-the way into the zip only**; the repo files are never touched. Every line
-number is preserved (stripped lines go blank rather than disappearing), so a
-judge traceback still points at the right line of the original file.
-`--keep-comments` disables the step. Nothing under `bots/` reads `__doc__`, so
-dropping docstrings costs nothing there; a bot that starts to would need this
-step made selective.
+Python members are minified **on the way into the zip only**; the repo files
+are never touched. python-minifier does the rewrite: comments, docstrings,
+annotations, and blank lines go, and locals are renamed, so a submitted bot
+carries its logic but not its strategy notes. `--no-minify` ships the sources
+verbatim.
+
+Two consequences worth knowing. Line numbers no longer correspond to the repo
+source, so a judge traceback locates a fault in the minified file, not in
+`bots/`; re-bundle with `--no-minify` when you need to read one. And nothing
+under `bots/` may rely on `__doc__` or on local variable names surviving
+(`getattr` by a name that minifies away) — neither does today.
 
 Judge environment facts (https://www.generals.bot/docs): `run.sh` is the sole
 entrypoint, executed from within the submission directory; zip <= 50 MB,
@@ -36,13 +40,10 @@ in competition-module/competition/requirements.txt preinstalled; no network.
 
 from __future__ import annotations
 
-import ast
-import io
 import os
 import shutil
 import subprocess
 import sys
-import tokenize
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -212,115 +213,50 @@ def check_limits(
     return zip_bytes, unpacked_bytes, file_count
 
 
-def strip_comments(source: str, origin: str = "<source>") -> str:
+# Minifier settings. `rename_globals` stays off: the closure spans modules that
+# import each other by name, and renaming across that boundary would break the
+# imports. Everything else is on, so the zip carries no comments, no
+# docstrings, and no local names worth reading.
+_MINIFY_OPTIONS = dict(
+    remove_literal_statements=True,   # docstrings and PEP 258 attribute prose
+    rename_globals=False,
+)
+
+
+def minify_source(source: str, origin: str = "<source>") -> str:
     """
-    Drop `#` comments from Python source, preserving every line number.
+    Rewrite one Python source into its minified equivalent for the zip.
 
-    Token-based, so a `#` inside a string literal is untouched. Only the
-    comment span is erased: what precedes it on the line stays, and the newline
-    stays, so a comment-only line turns into a blank line and line numbers
-    survive into judge tracebacks. A first-line shebang is kept: it is an exec
-    directive. Docstrings are prose too, but they are string expressions rather
-    than comment tokens — `strip_prose_strings` handles those.
-    """
-    try:
-        comment_starts = {
-            tok.start[0]: tok.start[1]
-            for tok in tokenize.generate_tokens(io.StringIO(source).readline)
-            if tok.type == tokenize.COMMENT
-            and not (tok.start[0] == 1 and tok.start[1] == 0 and tok.string.startswith("#!"))
-        }
-    except (tokenize.TokenError, SyntaxError, IndentationError) as exc:
-        raise BundleError(f"cannot tokenize {origin}: {exc}") from exc
-
-    out: list[str] = []
-    for lineno, line in enumerate(source.splitlines(keepends=True), start=1):
-        col = comment_starts.get(lineno)
-        if col is not None:
-            newline = line[len(line.rstrip("\r\n")) :]
-            line = line[:col].rstrip() + newline
-        out.append(line)
-    return "".join(out)
-
-
-def _is_prose(stmt: ast.stmt) -> bool:
-    """A statement that is nothing but a string literal: evaluated, discarded."""
-    return (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant)
-            and isinstance(stmt.value.value, str))
-
-
-def _statement_lists(tree: ast.AST):
-    """Every statement list in the tree, with the node that owns it."""
-    for node in ast.walk(tree):
-        for field in ("body", "orelse", "finalbody"):
-            stmts = getattr(node, field, None)
-            if isinstance(stmts, list) and stmts and isinstance(stmts[0], ast.stmt):
-                yield node, stmts
-
-
-def strip_prose_strings(source: str, origin: str = "<source>") -> str:
-    """
-    Drop every bare string-literal statement, preserving each line number.
-
-    That covers module/class/function docstrings *and* the PEP 258 attribute
-    docstrings that trail an assignment — both are `Expr(Constant(str))`, a
-    constant evaluated and thrown away, so removing either cannot change what
-    the program does. String *values* the program uses are untouched, as are
-    f-strings, which can run code.
-
-    Spans are blanked in place. When a block's statements were all prose,
-    `pass` takes the first one's place at the same column, so the block stays
-    legal and nothing below it shifts line.
-
-    Prose sharing a line with code (`def f(): "doc"`, or a trailing `; x = 1`)
-    is left alone — blanking it there would either break the syntax or need a
-    reflow that moves line numbers.
+    Delegates to python-minifier (pinned in requirements-dev.txt), which does
+    what three hand-rolled passes here used to do and more: comments,
+    docstrings, annotations, and blank lines go, locals are renamed, literals
+    are hoisted. Line numbers no longer correspond to the repo source — the
+    trade the aggressive setting buys is that a submitted bot no longer ships
+    its strategy in readable form.
     """
     try:
-        tree = ast.parse(source)
+        import python_minifier
+    except ImportError as exc:  # pragma: no cover - depends on the environment
+        raise BundleError(
+            "python-minifier is not installed; `pip install -r requirements-dev.txt` "
+            "or bundle with --no-minify"
+        ) from exc
+    try:
+        return python_minifier.minify(source, filename=origin, **_MINIFY_OPTIONS)
     except SyntaxError as exc:
-        raise BundleError(f"cannot parse {origin}: {exc}") from exc
-
-    lines = source.splitlines(keepends=True)
-    edits: dict[int, tuple[int, str]] = {}  # first line -> (column, replacement)
-    blanked: set[int] = set()
-
-    for owner, stmts in _statement_lists(tree):
-        prose = [s for s in stmts if _is_prose(s)]
-        # Emptying a block is a syntax error; an empty module is fine.
-        needs_pass = len(prose) == len(stmts) and not isinstance(owner, ast.Module)
-        for stmt in prose:
-            start, end = stmt.lineno, stmt.end_lineno or stmt.lineno
-            if lines[start - 1][: stmt.col_offset].strip():
-                continue  # code precedes it on the line
-            if lines[end - 1][stmt.end_col_offset or 0 :].strip():
-                continue  # code follows it on the line
-            edits[start] = (stmt.col_offset, "pass" if needs_pass else "")
-            blanked.update(range(start + 1, end + 1))
-            needs_pass = False  # at most one filler per block
-
-    out: list[str] = []
-    for lineno, line in enumerate(lines, start=1):
-        newline = line[len(line.rstrip("\r\n")) :]
-        if lineno in edits:
-            col, replacement = edits[lineno]
-            line = (line[:col] + replacement).rstrip() + newline
-        elif lineno in blanked:
-            line = newline
-        out.append(line)
-    return "".join(out)
+        raise BundleError(f"cannot minify {origin}: {exc}") from exc
 
 
-def _member_bytes(path: Path, arcname: str, *, strip: bool) -> bytes:
-    """Bytes to zip for one closure file: verbatim, or prose-stripped."""
+def _member_bytes(path: Path, arcname: str, *, minify: bool) -> bytes:
+    """Bytes to zip for one closure file: verbatim, or minified."""
     data = path.read_bytes()
-    if not strip or not arcname.endswith(".py"):
+    if not minify or not arcname.endswith(".py"):
         return data
     try:
         source = data.decode("utf-8")
     except UnicodeDecodeError:
         return data  # not a UTF-8 source; ship it byte-for-byte
-    return strip_comments(strip_prose_strings(source, arcname), arcname).encode("utf-8")
+    return minify_source(source, arcname).encode("utf-8")
 
 
 def write_bundle(
@@ -329,14 +265,13 @@ def write_bundle(
     *,
     extra_includes: list[str] | None = None,
     force: bool = False,
-    strip_comments_in_zip: bool = True,
+    minify: bool = True,
 ) -> BundleInfo:
     """
     Build, audit, and limit-check the submission zip for `bot_id`.
 
-    `strip_comments_in_zip` removes comments and docstrings from the Python
-    sources as they are written into the archive. Files on disk are read-only
-    here — the repo copies keep their prose.
+    `minify` rewrites the Python sources as they are written into the archive.
+    Files on disk are read-only here — the repo copies are untouched.
     """
     members = bundle_members(bot_id, extra_includes)
     audit_imports([path for path, _ in members])
@@ -351,7 +286,7 @@ def write_bundle(
     with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         _write_entry(zf, "run.sh", _root_run_sh(bot_id).encode("ascii"))
         for path, arcname in members:
-            _write_entry(zf, arcname, _member_bytes(path, arcname, strip=strip_comments_in_zip))
+            _write_entry(zf, arcname, _member_bytes(path, arcname, minify=minify))
 
     zip_bytes, unpacked_bytes, file_count = check_limits(out_path)
     return BundleInfo(
@@ -457,9 +392,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="extra repo-root-relative file the import walk cannot see")
     parser.add_argument("--no-smoke", action="store_true", help="skip the standalone smoke run")
     parser.add_argument("--force", action="store_true", help="overwrite an existing output zip")
-    parser.add_argument("--keep-comments", action="store_true",
+    parser.add_argument("--no-minify", action="store_true",
                         help="ship the Python sources verbatim "
-                             "(default: strip comments and docstrings in the zip)")
+                             "(default: minify each member into the zip)")
     args = parser.parse_args(argv)
 
     try:
@@ -468,7 +403,7 @@ def main(argv: list[str] | None = None) -> int:
             args.output,
             extra_includes=args.include,
             force=args.force,
-            strip_comments_in_zip=not args.keep_comments,
+            minify=not args.no_minify,
         )
         if not args.no_smoke:
             with tempfile.TemporaryDirectory(prefix="bundle-smoke-") as tmp:
