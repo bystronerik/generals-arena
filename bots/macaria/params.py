@@ -129,6 +129,76 @@ class MacariaParams:
 
     # --- knobs below this line are the search's own; see search.py ---
 
+    # ------------------------------------------------- search: scoping
+    #: T2 home tactical: a visible enemy stack of `mcts_min_enemy_army`+
+    #: within this Manhattan distance of our general fires the search.
+    mcts_scope_radius: int = 8
+    #: T4 contested contact: a qualifying stack within this Manhattan
+    #: distance of the core move's source or destination (post-opening).
+    mcts_scope_radius_move: int = 3
+    #: T1 finish window: with the enemy general's location known, one of our
+    #: 2+-army cells within this Manhattan distance of it fires the search.
+    mcts_finish_radius: int = 12
+    #: T3 endgame: from this turn the search fires on any visible contact
+    #: (2+ army, the lethal §07 minimum). Matches `blitz_chase_defend_from`.
+    mcts_endgame_from: int = 780
+    #: Smallest enemy stack that counts as tactical contact outside the
+    #: endgame — 1-army cells are pinned, and tiny stacks are noise.
+    mcts_min_enemy_army: int = 4
+
+    # --------------------------------------------- search: move matrix
+    #: Root candidate moves (ours); the core's move and PASS always survive
+    #: the cap. Rows beyond the cap are the least tactical ones.
+    mcts_max_root_moves: int = 10
+    #: Opponent replies per root move, PASS and the two row-specific
+    #: dangers (chase our source, attack our destination) included.
+    mcts_opp_replies: int = 6
+    #: Visible enemy stacks (largest first) that generate attack rows,
+    #: reply columns, and the paranoid marcher.
+    mcts_enemy_stacks: int = 3
+    #: Iterative-deepening ladder of rollout horizons, in plies. Each pass
+    #: re-evaluates the whole matrix; the deepest COMPLETED pass decides,
+    #: and a pass cut by the deadline is discarded whole.
+    mcts_horizons: tuple = (4, 6, 8, 10)
+
+    # ----------------------------------------------- search: evaluation
+    #: Leaf eval: weight of the army differential. Combat is diff-neutral
+    #: (equal armies die on both sides), so this prices lost stacks and won
+    #: garrisons, not aggression itself.
+    mcts_w_army: float = 1.0
+    #: Leaf eval: weight of the land differential (a won fight is
+    #: army-neutral and land-positive; this is what makes trades attractive).
+    mcts_w_land: float = 0.25
+    #: Leaf eval: penalty per army of the biggest enemy stack near our
+    #: general in excess of the general's own garrison.
+    mcts_w_threat: float = 1.5
+    #: Manhattan radius of the general-threat scan.
+    mcts_threat_radius: int = 3
+    #: Leaf eval: value of one BFS hop of remaining distance between our
+    #: walker and the strike target. Without it the paranoid min prefers
+    #: any local trade over pushing past a defender and the assault loses
+    #: its tempo one override at a time.
+    mcts_w_progress: float = 0.5
+    #: Terminal value of a simulated win (loss is its negation); plies-to-
+    #: outcome shift it so faster wins and slower losses rank higher.
+    mcts_win_score: float = 1000000.0
+    #: Value of a simulated mutual capture/touch — a DRAW under the
+    #: deathtouch modifier, never a win.
+    mcts_draw_score: float = 0.0
+
+    # ---------------------------------------------- search: time control
+    #: The best row must beat the core's own row by MORE than this to
+    #: override; ties and noise keep the core's move. Measured at 1.0 the
+    #: search overrode quiet rebuild moves often enough to starve the wave
+    #: economy; 3.0 (three army-units of simulated advantage) keeps the
+    #: overrides that decide fights and drops the marginal ones.
+    mcts_override_margin: float = 3.0
+    #: Decline to search — or to start another deepening pass — with less
+    #: than this many milliseconds left before the deadline.
+    mcts_min_headroom_ms: float = 3.0
+    #: Hard-draw turn (RULES.md §07); rollouts stop simulating past it.
+    mcts_draw_turn: int = 1200
+
 
 def load_params(base: MacariaParams | None = None) -> MacariaParams:
     """Shipped params, with `MACARIA_TUNE` applied when a sweep set it."""
