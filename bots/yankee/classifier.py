@@ -33,6 +33,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from _common.oppmodel import OpponentModel
+from yankee.params import YankeeParams
 from yankee.signals import HomePressure
 
 AGGRESSOR = "aggressor"
@@ -42,6 +43,12 @@ UNKNOWN = "unknown"
 #: Smallest stack at our door that counts as a committed attack rather than
 #: an expansion that happened to arrive. Below ~15 an opponent cannot take a
 #: defended general, so the stack is a raid, not a strike.
+#:
+#: These module constants are proteus's shipped values, kept as the defaults of
+#: `YankeeParams`. `classify` reads the params object, not these names, so a
+#: sweep can move them; they stay here because the tests pin
+#: `signals.HomePressure.duel_army` to `DUEL_ARMY` and that invariant is about
+#: the shipped program.
 DUEL_ARMY = 15
 
 #: Latest turn a fist at our door may *first* arrive and still mean "this is
@@ -66,6 +73,8 @@ EVIDENCE_TURN = 60
 ECONOMY_BASE = 0.60
 ECONOMY_GROWTH = 1 / 100.0
 
+_DEFAULTS = YankeeParams()
+
 #: Structures (general + castles) above which the opponent is running a
 #: castle programme. Validated against ground truth on the roster sweep:
 #: bots holding no castles estimate 0-1 and bots holding 2-3 estimate 2-3.
@@ -84,10 +93,12 @@ def classify(
     model: OpponentModel,
     turn: int,
     pressure: HomePressure | None = None,
+    params: YankeeParams | None = None,
 ) -> Classification:
     """Which of the two answers this opponent needs, and how sure we are."""
+    params = params or _DEFAULTS
     scores = {AGGRESSOR: 0.0, ECONOMY: 0.0}
-    if turn < EVIDENCE_TURN or not model.opp_land:
+    if turn < params.evidence_turn or not model.opp_land:
         return Classification(UNKNOWN, 0.0, scores)
 
     # --- aggressor: a real fist has stood at our door ----------------------
@@ -97,12 +108,12 @@ def classify(
     in_time = (
         pressure is not None
         and pressure.duel_turn is not None
-        and pressure.duel_turn <= DUEL_DEADLINE
+        and pressure.duel_turn <= params.duel_deadline
     )
-    if near >= DUEL_ARMY and in_time:
+    if near >= params.duel_army and in_time:
         # Confidence grows with how far past the bar the fist was: a
         # 15-stack is ambiguous, a 40-stack is not.
-        scores[AGGRESSOR] = min(1.0, 0.45 + (near - DUEL_ARMY) / 50.0)
+        scores[AGGRESSOR] = min(1.0, 0.45 + (near - params.duel_army) / 50.0)
 
     # Evidence of an attack outranks the absence of one, at any turn.
     if scores[AGGRESSOR] > 0.0:
@@ -122,11 +133,12 @@ def classify(
     # an economy. Waiting recovers the three matchups that cost
     # (boom 0.47->0.69, classic_duel 0.75->0.84, fog_scout 0.84->0.94) for
     # part of the gain elsewhere, and lifts the floor from 0.47 to 0.56.
-    if turn <= DUEL_DEADLINE:
+    if turn <= params.duel_deadline:
         return Classification(UNKNOWN, 0.0, scores)
 
     scores[ECONOMY] = min(
-        1.0, ECONOMY_BASE + (turn - DUEL_DEADLINE) * ECONOMY_GROWTH
+        1.0,
+        params.economy_base + (turn - params.duel_deadline) * params.economy_growth,
     )
     return Classification(ECONOMY, scores[ECONOMY], scores)
 

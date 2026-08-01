@@ -16,6 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from yankee.classifier import AGGRESSOR, ECONOMY, UNKNOWN, Classification
+from yankee.params import YankeeParams
 
 #: What we play against each classification.
 #:
@@ -77,6 +78,17 @@ class Switcher:
     _streak: int = field(default=0, init=False)
     _last_switch_turn: int = field(default=-(10 ** 9), init=False)
     history: list[tuple[int, str, str]] = field(default_factory=list, init=False)
+
+    @classmethod
+    def from_params(cls, params: YankeeParams, default: str) -> "Switcher":
+        """Build one from the tuned knobs rather than from the field defaults."""
+        return cls(
+            default=default,
+            min_confidence=params.min_confidence,
+            leave_spine_streak=params.leave_spine_streak,
+            return_spine_streak=params.return_spine_streak,
+            cooldown=params.cooldown,
+        )
 
     def __post_init__(self) -> None:
         self.current = self.default

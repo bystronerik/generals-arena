@@ -11,22 +11,24 @@ home-pressure latch, switches between strategy cores with hysteresis (see
 switcher.py), and delegates the move to the active core. The inactive core's
 memory is kept warm each turn so a mid-game switch starts informed.
 
-Everything yankee changes about the cores lives in yankee-local config objects
-(`BlitzConfig` / `BoomConfig` instances constructed here) or in yankee-owned
-modules. `bots/blitz`, `bots/boom` and `bots/_common` are never edited: they sit
-in proteus's source closure, so a change there would move the baseline under the
-comparison (docs/arena/decision-rule.md, "connectivity").
+The cores are **vendored, not imported**: `blitz_core.py` and `boom_core.py`
+are yankee's own copies of `bots/blitz/agent.py` and `bots/boom/agent.py`.
+Those two files sit in proteus's source closure, so editing them would move
+the baseline under every comparison here (docs/arena/decision-rule.md,
+"connectivity") — and the measured cm_hunter failure is in core *logic* that
+no `BlitzConfig` value reaches. After the fork yankee's closure holds nothing
+another bot depends on except `_common/`, which yankee also never edits, so
+nothing yankee does can move another entity's hash.
 
-Sibling-core imports (``from blitz.agent import BlitzCore`` etc.) resolve
-because ``bots/`` is on ``sys.path`` in both stdio mode (main.py) and
-in-process mode (arena.bot_api.load_strategy_class).
+Values live in `params.py`; behaviour lives in the vendored cores.
 """
 from __future__ import annotations
 
 from _common.oppmodel import OpponentModel
-from blitz.agent import BlitzCore
-from boom.agent import BoomCore
+from yankee.blitz_core import BlitzCore
+from yankee.boom_core import BoomCore
 from yankee.classifier import classify
+from yankee.params import YankeeParams, blitz_config, boom_params, load_params
 from yankee.signals import HomePressure
 from yankee.switcher import Switcher
 
@@ -41,23 +43,28 @@ class Agent:
     """Strategy-switching bot built from the migrated strategy cores."""
 
     def __init__(self, player_id: int, H: int, W: int,
-                 default: str = DEFAULT_STRATEGY) -> None:
+                 default: str = DEFAULT_STRATEGY,
+                 params: YankeeParams | None = None) -> None:
+        self.params = load_params(params)
         # One shared model: Agent.act updates it once per turn; each core's
         # observe() is idempotent per turn, so warming never double-counts.
         self.model = OpponentModel()
-        # Proteus-owned, because it joins two facts the shared model keeps
+        # Yankee-owned, because it joins two facts the shared model keeps
         # apart — stack size and distance from home, at the same instant.
-        self.pressure = HomePressure()
-        self.switcher = Switcher(default=default)
+        self.pressure = HomePressure(radius=self.params.pressure_radius,
+                                     duel_army=self.params.duel_army)
+        self.switcher = Switcher.from_params(self.params, default)
         self.cores = {
-            "blitz": BlitzCore(player_id, H, W, model=self.model),
-            "boom": BoomCore(player_id, H, W, model=self.model),
+            "blitz": BlitzCore(player_id, H, W, model=self.model,
+                               config=blitz_config(self.params)),
+            "boom": BoomCore(player_id, H, W, model=self.model,
+                             params=boom_params(self.params)),
         }
 
     def act(self, obs):
         self.model.update(obs)
         self.pressure.update(obs)
-        cls = classify(self.model, obs.turn, self.pressure)
+        cls = classify(self.model, obs.turn, self.pressure, self.params)
         active = self.switcher.update(cls, obs.turn)
 
         # Keep the inactive core's beliefs/latches current for a warm handover.
