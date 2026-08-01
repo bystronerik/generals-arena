@@ -1,0 +1,88 @@
+{
+  "bot_id": "yankee",
+  "steps": [
+    {
+      "at": "2026-08-01T07:07:02Z",
+      "content_hash": "9d0f1b7e224c",
+      "seq": 1
+    }
+  ],
+  "version": 1,
+  "versions": [
+    {
+      "closure_ref": "refs/bot-versions/9d0f1b7e224c",
+      "closure_tree": "0885b6a53dcc487eacc4c60dd18b67b7fe3f559e",
+      "content_hash": "9d0f1b7e224c",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "aa2a1e7ad3907e3a05929d073035c7a3499f272d",
+          "path": "bots/_common/oppmodel.py",
+          "sha256": "dcc368d4467d0ea9a75890e1b53bd56b8b395f0330b78de16c97c8074b8eb6ad"
+        },
+        {
+          "blob": "cb6c3a876ef807d9e727299cc02c2b37f0029ee9",
+          "path": "bots/_common/strategy_common.py",
+          "sha256": "b2e424533aebc44fac5f6edb7205f21cb8431fcd6e557a4d965445d6f1138590"
+        },
+        {
+          "blob": "f6f0039947e2af2a2f331a80a9bb99818cdf3552",
+          "path": "bots/_common/tactics.py",
+          "sha256": "24fc3bd20b5a5b4f5d8fa17a206d2ae9ae9f8e927d63e19673d90311150be9b6"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "b567243ea17c05f890d3263b17d67cd03321dcb3",
+          "path": "bots/blitz/agent.py",
+          "sha256": "5cea218fa5b93e4c384b7294f461232de070f00d93b5afb95c54b7a3a53c9473"
+        },
+        {
+          "blob": "0ef10b64987fd48899e369fa50e2ec73e683b7c4",
+          "path": "bots/boom/agent.py",
+          "sha256": "0ea50f87d3ac21bfddca5a638c0f4f72a4b5de43be47a92deda1a2c4c8e8f3c5"
+        },
+        {
+          "blob": "5e4a1a26663adcb85e1f1489435a22f3769d3460",
+          "path": "bots/yankee/agent.py",
+          "sha256": "0b2e99f23250272108df6a013d04513c13a2f07c7d0688be77e15661ab0cad9d"
+        },
+        {
+          "blob": "3b881a761d070854daa13fb1b972c33ce4795425",
+          "path": "bots/yankee/classifier.py",
+          "sha256": "d5a2d33cf40a8143f9e50b75a1a54e8727857cae1885aee8bab85010ba198514"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/yankee/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "e7d78ac169a30678efe60bdb108611f9d932e630",
+          "path": "bots/yankee/run.sh",
+          "sha256": "3a4eb8902a76a3bd1a8e9292feef29339976c72786d157da3a20edfcbf296f56"
+        },
+        {
+          "blob": "21cd37c3c0678e25e420b2b9b3e3b30ee133f9e8",
+          "path": "bots/yankee/signals.py",
+          "sha256": "918d6e67972e03195480cd1fd910b733ebf90c30d649650c1358f4ea46490fb7"
+        },
+        {
+          "blob": "b56a5b4d267c9f544981c4db12691bf618b1c8e0",
+          "path": "bots/yankee/switcher.py",
+          "sha256": "1b6e04b814833fd9d50c1acf095497e7b1a00ce32c006aafa208f25a5037d8be"
+        }
+      ],
+      "first_seen_at": "2026-08-01T07:07:02Z",
+      "git_commit": "41210ca3c92331e6e17dadccd308a27e92651092",
+      "git_dirty": true
+    }
+  ]
+}
