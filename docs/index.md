@@ -50,6 +50,7 @@ Small topic files for the Generals Arena research repo.
 - [proteus](bots/proteus.md) — adaptive switcher over blitz/boom/metro/aegis (migrated from generals-bot)
 - [macaria](bots/macaria.md) — vendored blitz core + a scoped tactical search
 - [yankee](bots/yankee.md) — proteus plus a scoped MCTS and a RULES.md §07 endgame core
+- [sosipolis](bots/sosipolis.md) — dual-mode MCTS general search with pocket skip and section priors
 
 ## Arena
 
@@ -70,6 +71,7 @@ Small topic files for the Generals Arena research repo.
 - [optimize the existing four bots](research/strategies/optimize-existing.md) — root causes and `Parameter revision 1`
 - [tournament plan](research/strategies/tournament-plan.md) — seed grid, staging, metrics, and the round 2 schedule
 - [diversity constraints](research/strategies/diversity-constraints.md) — hard rules that keep the roster from converging
+- [sosipolis strategy](research/strategies/sosipolis.md) — dual-mode MCTS find-and-strike research bot
 - [human 95/100 plan](research/strategies/human-95-plan.md) — remote goal: 95 wins in 100 logged games against humans on classic generals.io
 - `research/measurements/` — one result set per tournament round
 - [learned bot plan](research/learned-bot-plan.md) — not started; scaffold notes only

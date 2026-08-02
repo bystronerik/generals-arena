@@ -131,7 +131,28 @@ Local practice uses the classic-approximate harness in
 [`../../engine/classic-matchup.md`](../../engine/classic-matchup.md), not
 `matchup.py --mode competition`.
 
-### 3.3 The two pairs that need active separation
+### 3.3 Research carve-out: `sosipolis`
+
+`bots/sosipolis/` is a **research bot** (same class as `macaria` / `yankee`),
+not a competition-roster axis owner. Spec:
+[`sosipolis.md`](sosipolis.md).
+
+| Axis | Owner |
+| --- | --- |
+| Directed triple-MCTS general search + early castles | `sosipolis` |
+
+- **Does not replace** `fog_scout` (information / fog-bonus scoring),
+  `general_hunter` (kill by cheap split probes + deathtouch), or
+  `castle_builder` (conservative multi-castle economy).
+- **Differentiator:** SearchMCTS / ContactMCTS / StrikeMCTS, mountain-pocket
+  skip, geometric section priors, and a thin Kubic-seeded early castle
+  programme (research-only; not a roster castle axis).
+- **Must never copy** into roster bots the triple-MCTS + pocket-skip + section
+  prior cluster as a silent upgrade of `fog_scout` or `general_hunter`.
+- May enter measurement grids and ratings like other research bots. It does
+  not claim a §3.1 roster axis.
+
+### 3.4 The two pairs that need active separation
 
 Two pairs sit close enough that they need a stated gap, not a judgement call.
 

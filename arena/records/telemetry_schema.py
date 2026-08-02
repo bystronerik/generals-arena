@@ -160,6 +160,28 @@ _PROBE_KEYS = (
         MEAN,
         MAX,
     ),
+    _key(
+        "candidate_count",
+        Kind.INT,
+        "sosipolis: remaining enemy-general candidate cells in persistent memory",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "top_section",
+        Kind.INT,
+        "sosipolis: section index with the highest general prior mass",
+        F,
+    ),
+    _key(
+        "pocket_skips",
+        Kind.INT,
+        "sosipolis: cells marked as mountain-enclosed dead pockets",
+        F,
+        MEAN,
+        MAX,
+    ),
 )
 
 # Engine keys: ground truth, recorded per turn by the trajectory recorder.
