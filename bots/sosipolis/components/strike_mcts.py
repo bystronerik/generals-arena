@@ -1,4 +1,4 @@
-"""StrikeMCTS: tip path-gather, finish gate, then tip march to known general."""
+"""StrikeMCTS: mass tip, exclusive feed wave, then tip march to known general."""
 from __future__ import annotations
 
 import math
@@ -7,8 +7,6 @@ from dataclasses import dataclass, field
 
 from components.army import (
     Action,
-    bfs_dist,
-    gather_toward,
     is_wall,
     largest_owned_stack,
     move_action,
@@ -18,6 +16,13 @@ from components.army import (
 )
 from components.clock import Deadline
 from components.threat import defense_score_delta, home_threat, imminent_loss_move
+from components.tip import (
+    feed_tip_action,
+    path_feed_roots,
+    select_mass_tip,
+    tip_is_ready,
+    tip_mass_target,
+)
 from params import Params
 
 
@@ -61,13 +66,20 @@ class StrikeMCTS:
         if kill is not None:
             return kill
 
-        # Imminent home loss still overrides tip feed (same as brain hard path).
         imminent = imminent_loss_move(obs, state)
         if imminent is not None:
             return imminent
 
         tip = self._select_tip(obs, state, goal)
-        ready = self._tip_ready(obs, tip, goal)
+        ready = tip_is_ready(obs, tip, goal, self.params)
+
+        # Exclusive gather wave: do not MCTS-dilute while the tip cannot march.
+        if tip is not None and not ready:
+            feed = feed_tip_action(obs, tip)
+            if feed is not None:
+                self.stats.root_moves = 1
+                return feed
+
         root_moves = self._root_moves(obs, state, goal, tip, ready)
         self.stats.root_moves = len(root_moves)
         if not root_moves:
@@ -112,89 +124,22 @@ class StrikeMCTS:
             defender = obs.army_grid[gr][gc]
         return defender + self.params.FINISH_MARGIN
 
-    def _blocked(self, obs):
-        return lambda r, c: is_wall(obs.type_grid, r, c)
-
-    def _tip_need(self, obs, tip: Cell, goal: Cell) -> int:
-        """Army the tip must hold to finish: gen + margin + buffer per remaining hop."""
-        need = self._capture_need(obs, goal[0], goal[1])
-        blocked = self._blocked(obs)
-        dist = bfs_dist(obs.H, obs.W, [goal], blocked)
-        d = dist.get(tip, obs.H + obs.W)
-        return need + self.params.STRIKE_PATH_BUFFER * max(0, d)
-
-    def _tip_ready(self, obs, tip: Cell | None, goal: Cell) -> bool:
-        if tip is None:
-            return False
-        army = obs.army_grid[tip[0]][tip[1]]
-        if army <= 1:
-            return False
-        return army - 1 >= self._tip_need(obs, tip, goal)
-
     def _select_tip(self, obs, state, goal: Cell) -> Cell | None:
-        """Owned cell on a path to the general with best army/(1+dist)."""
-        blocked = self._blocked(obs)
-        dist = bfs_dist(obs.H, obs.W, [goal], blocked)
-        cached = getattr(state, "strike_tip", None)
-        cached_turn = getattr(state, "strike_tip_turn", -10_000)
-        if (
-            cached is not None
-            and obs.owner_grid[cached[0]][cached[1]] == 1
-            and obs.army_grid[cached[0]][cached[1]] > 1
-            and cached in dist
-            and obs.turn - cached_turn < self.params.STRIKE_TIP_HOLD
-        ):
-            return cached
-
-        best: Cell | None = None
-        best_key = None
-        for r in range(obs.H):
-            for c in range(obs.W):
-                if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
-                    continue
-                if (r, c) not in dist:
-                    continue
-                d = dist[(r, c)]
-                army = obs.army_grid[r][c]
-                # Prefer close + strong; break ties toward higher army then closer.
-                key = (army / (1.0 + d), -d, army, -r, -c)
-                if best_key is None or key > best_key:
-                    best_key, best = key, (r, c)
-
-        if best is not None:
-            state.strike_tip = best
+        tip = select_mass_tip(
+            obs,
+            goal,
+            self.params,
+            getattr(state, "strike_tip", None),
+            getattr(state, "strike_tip_turn", -10_000),
+        )
+        if tip is not None:
+            state.strike_tip = tip
             state.strike_tip_turn = obs.turn
-        return best
-
-    def _path_gather_roots(
-        self, obs, tip: Cell, blocked
-    ) -> list[tuple[Action, float]]:
-        """Feed surplus stacks onto the tip."""
-        out: list[tuple[Action, float]] = []
-        gact = gather_toward(obs, tip, blocked)
-        if gact is not None:
-            out.append((gact, self.params.STRIKE_TIP_FEED_BONUS))
-        # Also step secondary stacks toward the tip.
-        stacks: list[tuple[int, int, int]] = []
-        for r in range(obs.H):
-            for c in range(obs.W):
-                if (r, c) == tip:
-                    continue
-                if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
-                    continue
-                stacks.append((obs.army_grid[r][c], r, c))
-        stacks.sort(reverse=True)
-        for army, r, c in stacks[:6]:
-            act = step_toward(obs, (r, c), tip, blocked)
-            if act is None:
-                continue
-            out.append((act, self.params.STRIKE_TIP_FEED_BONUS * 0.85 + army * 0.3))
-        return out
+        return tip
 
     def _land_captures(
         self, obs, state, tip: Cell | None, ready: bool
     ) -> list[tuple[Action, float]]:
-        """Land roots only when the tip is finish-ready (Kubic still grows then)."""
         if not ready:
             return []
         slots = self.params.STRIKE_LAND_ROOT_SLOTS
@@ -205,7 +150,7 @@ class StrikeMCTS:
         for r in range(H):
             for c in range(W):
                 if tip is not None and (r, c) == tip:
-                    continue  # never peel the tip for land
+                    continue
                 if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
                     continue
                 for nr, nc in neighbors(H, W, r, c):
@@ -216,12 +161,9 @@ class StrikeMCTS:
                         continue
                     if obs.army_grid[r][c] - 1 <= obs.army_grid[nr][nc]:
                         continue
-                    # Prefer land next to the tip path (near tip).
                     score = 12.0 + obs.army_grid[r][c] * 0.1
                     if tip is not None:
-                        score += 20.0 / (
-                            1.0 + abs(nr - tip[0]) + abs(nc - tip[1])
-                        )
+                        score += 20.0 / (1.0 + abs(nr - tip[0]) + abs(nc - tip[1]))
                     if owner == 0:
                         score += 8.0
                     else:
@@ -236,7 +178,7 @@ class StrikeMCTS:
     def _root_moves(
         self, obs, state, goal: Cell, tip: Cell | None, ready: bool
     ) -> list[tuple[Action, float]]:
-        blocked = self._blocked(obs)
+        blocked = lambda r, c: is_wall(obs.type_grid, r, c)
         out: list[tuple[Action, float]] = []
 
         if tip is None:
@@ -247,21 +189,10 @@ class StrikeMCTS:
                     out.append((act, 1.0))
             return out
 
-        tip_army = obs.army_grid[tip[0]][tip[1]]
-        need = self._tip_need(obs, tip, goal)
-
-        # Always prioritize path-gather while the tip is under the finish bar.
         if not ready:
-            out.extend(self._path_gather_roots(obs, tip, blocked))
-            # Tip may still step onto free path cells that do not spend below need.
-            act = step_toward(obs, tip, goal, blocked)
-            if act is not None:
-                # Only allow tip advance if leaving enough for remaining path after step.
-                # Conservative: require tip army already at need (ready) — so skip while feeding.
-                pass
-            return out if out else self._path_gather_roots(obs, tip, blocked)
+            return path_feed_roots(obs, tip, self.params.STRIKE_TIP_FEED_BONUS)
 
-        # Tip ready: march the tip; keep feeding; dilute land only lightly.
+        tip_army = obs.army_grid[tip[0]][tip[1]]
         tip_step = step_toward(obs, tip, goal, blocked)
         if tip_step is not None:
             prior = (
@@ -270,9 +201,8 @@ class StrikeMCTS:
             )
             out.append((tip_step, prior))
 
-        out.extend(self._path_gather_roots(obs, tip, blocked))
+        out.extend(path_feed_roots(obs, tip, self.params.STRIKE_TIP_FEED_BONUS * 0.5))
 
-        # Imminent-only intercept: lethal adjacent threat (also handled above).
         threat = home_threat(obs, state, self.params)
         home = state.memory.own_general
         if (
@@ -283,15 +213,13 @@ class StrikeMCTS:
         ):
             intercept = step_toward(obs, tip, threat.nearest, blocked)
             if intercept is not None:
-                out.append((intercept, self.params.STRIKE_TIP_FEED_BONUS * 0.5))
+                out.append((intercept, self.params.STRIKE_TIP_FEED_BONUS * 0.4))
 
         out.extend(self._land_captures(obs, state, tip, ready))
 
-        if not out:
-            act = step_toward(obs, tip, goal, blocked)
-            if act is not None:
-                out.append((act, 1.0))
-        _ = need
+        if not out and tip_step is not None:
+            out.append((tip_step, 1.0))
+        _ = tip_mass_target(obs, tip, goal, self.params)
         return out
 
     def _evaluate(
@@ -316,7 +244,6 @@ class StrikeMCTS:
         value = 0.0
 
         if tip is not None and not ready:
-            # Reward feeding the tip / closing onto tip.
             before = abs(r - tip[0]) + abs(c - tip[1])
             after = abs(nr - tip[0]) + abs(nc - tip[1])
             if (nr, nc) == tip or after < before:
@@ -324,7 +251,7 @@ class StrikeMCTS:
             elif after > before:
                 value -= 1.0
             if (r, c) == tip:
-                value -= 1.5  # tip should not wander while underfed
+                value -= 1.5
         else:
             before = abs(r - gr) + abs(c - gc)
             after = abs(nr - gr) + abs(nc - gc)

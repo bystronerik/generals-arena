@@ -76,7 +76,7 @@ Verdict vs existing bots: **distinct** (research axis).
 | --- | --- | --- |
 | `search` | Soft bank `HOME_BANK_SEARCH`; avoid stripping the general under threat | Land + mild section prior |
 | `contact` | Perimeter in `DEFENSE_RADIUS`; bank `HOME_BANK_CONTACT`; staging gather if stack < `CONTACT_STAGE_STACK` | Sector hunt + contact pressure |
-| `strike` | Same perimeter at `DEFENSE_WEIGHT_STRIKE`; intercept only if imminent | Tip path-gather until finish gate; then tip march + light land |
+| `strike` | Same perimeter at `DEFENSE_WEIGHT_STRIKE`; intercept only if imminent | Mass tip + exclusive feed until path/`STRIKE_MIN_TIP` gate; then tip march + light land |
 
 ## State
 
@@ -144,8 +144,12 @@ Named constants (seeded from Kubic aggregates and RULES.md):
 - `SEARCH_HUNT_BONUS` = 90
 - `CONTACT_ASSAULT_STACK` = 55
 - `STRIKE_TIP_HOLD` = 8
-- `STRIKE_PATH_BUFFER` = 1
-- `STRIKE_TIP_FEED_BONUS` = 250
+- `STRIKE_PATH_BUFFER` = 2
+- `STRIKE_REGEN_SLACK` = 1
+- `STRIKE_MIN_TIP` = 50
+- `STRIKE_TIP_ARMY_FRAC` = 0.40
+- `STRIKE_TIP_MAX_DIST` = 14
+- `STRIKE_TIP_FEED_BONUS` = 400
 
 ## Threat or scoring model
 
@@ -165,14 +169,16 @@ the sector centroid + pressure captures − corridor penalty outside the sector.
 1. If adjacent to a known enemy general and capture is legal, take it.
 2. If an adjacent enemy can capture the own general this turn (imminent loss),
    capture or reinforce.
-3. Else if a funded castle site exists and castles `< CASTLE_MAX`, build or
+3. Else if strike/contact tip is under its mass gate: exclusive `feed_tip_action`
+   (strike: path + `STRIKE_MIN_TIP`; contact: until `CONTACT_ASSAULT_STACK`).
+4. Else if a funded castle site exists and castles `< CASTLE_MAX`, build or
    gather to the site (not in `strike` for new projects).
-4. Else if `enemy_general` is known: StrikeMCTS under `STRIKE_BUDGET_MS`
-   (toward + land slots + perimeter scores).
-5. Else if enemy land is known: ContactMCTS under `CONTACT_BUDGET_MS`
-   (sector hunt + staging + perimeter scores).
-6. Else: SearchMCTS under `SEARCH_BUDGET_MS` (land + soft bank).
-7. Fallback: PASS.
+5. Else if `enemy_general` is known: StrikeMCTS under `STRIKE_BUDGET_MS`
+   (mass tip march + land slots when ready).
+6. Else if enemy land is known: ContactMCTS under `CONTACT_BUDGET_MS`
+   (hunt after assault tip; sector + perimeter scores).
+7. Else: SearchMCTS under `SEARCH_BUDGET_MS` (land + soft bank).
+8. Fallback: PASS.
 
 ## Pseudocode for act()
 

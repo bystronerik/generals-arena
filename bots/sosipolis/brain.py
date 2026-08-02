@@ -4,6 +4,7 @@ from __future__ import annotations
 import time
 
 from components.army import (
+    largest_owned_stack,
     move_action,
     neighbors,
     pass_action,
@@ -14,6 +15,7 @@ from components.economy import Economy, count_owned_castles
 from components.search_mcts import SearchMCTS
 from components.strike_mcts import StrikeMCTS
 from components.threat import imminent_loss_move
+from components.tip import feed_tip_action, select_mass_tip, tip_is_ready
 from params import PARAMS, Params
 from state import GameState
 
@@ -87,6 +89,14 @@ class Agent:
             self.move_ms = ms_since(start)
             return defense
 
+        # Exclusive tip-feed wave (Kubic-style): skip MCTS while tip is underfed.
+        feed = self._tip_feed_wave(obs)
+        if feed is not None:
+            self.searched = False
+            self.search_iters = 0
+            self.move_ms = ms_since(start)
+            return feed
+
         castle_move = self.economy.decide(obs, self.state, hard)
         if castle_move is not None:
             self.searched = False
@@ -114,6 +124,46 @@ class Agent:
 
         self.move_ms = ms_since(start)
         return move
+
+    def _tip_feed_wave(self, obs):
+        """Hard exclusive gather onto the assault tip until mass bar is met."""
+        phase = self.state.phase
+        if phase == "strike":
+            goal = self.state.memory.enemy_general
+            if goal is None:
+                return None
+            tip = select_mass_tip(
+                obs,
+                goal,
+                self.params,
+                self.state.strike_tip,
+                self.state.strike_tip_turn,
+            )
+            if tip is None:
+                return None
+            self.state.strike_tip = tip
+            self.state.strike_tip_turn = obs.turn
+            # March gate is path + STRIKE_MIN_TIP (frac is aspirational in tip_feed_target).
+            if tip_is_ready(obs, tip, goal, self.params):
+                return None
+            return feed_tip_action(obs, tip)
+
+        if phase == "contact":
+            tip = largest_owned_stack(obs)
+            if tip is None:
+                return None
+            hunt = self.state.memory.hunt_cell or self.state.memory.hunt_target(
+                obs, self.params
+            )
+            stack_army = obs.army_grid[tip[0]][tip[1]]
+            # Contact assault unlocks at CONTACT_ASSAULT_STACK; do not wait on frac.
+            if stack_army >= self.params.CONTACT_ASSAULT_STACK:
+                return None
+            if hunt is not None and tip_is_ready(obs, tip, hunt, self.params):
+                return None
+            return feed_tip_action(obs, tip)
+
+        return None
 
     def _kill_shot(self, obs):
         goal = self.state.memory.enemy_general

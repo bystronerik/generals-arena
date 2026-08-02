@@ -1,4 +1,4 @@
-"""ContactMCTS: directed hunt after enemy land is known, general still unknown."""
+"""ContactMCTS: hunt after enemy land known; stage tip mass before assault."""
 from __future__ import annotations
 
 import math
@@ -17,6 +17,7 @@ from components.army import (
 )
 from components.clock import Deadline
 from components.threat import defense_score_delta
+from components.tip import feed_tip_action, path_feed_roots, tip_is_ready
 from params import Params
 
 
@@ -50,8 +51,26 @@ class ContactMCTS:
     def search(self, obs, state, deadline: Deadline) -> Action:
         self.stats = ContactStats()
         hunt = state.memory.hunt_target(obs, self.params)
+        tip = largest_owned_stack(obs)
+        stack_army = obs.army_grid[tip[0]][tip[1]] if tip else 0
+        # Pre-sight wave: unlock hunt march at assault stack (path bar optional).
+        assault_ready = stack_army >= self.params.CONTACT_ASSAULT_STACK
+        if (
+            not assault_ready
+            and tip is not None
+            and hunt is not None
+            and tip_is_ready(obs, tip, hunt, self.params)
+        ):
+            assault_ready = True
+
+        if tip is not None and not assault_ready:
+            feed = feed_tip_action(obs, tip)
+            if feed is not None:
+                self.stats.root_moves = 1
+                return feed
+
         self._sharpen_priors(state, hunt)
-        root_moves = self._root_moves(obs, state, hunt)
+        root_moves = self._root_moves(obs, state, hunt, tip, assault_ready)
         self.stats.root_moves = len(root_moves)
         if not root_moves:
             return pass_action()
@@ -68,7 +87,9 @@ class ContactMCTS:
             )
             if node.action is None:
                 break
-            value = self._rollout(obs, state, node.action, hunt, deadline)
+            value = self._rollout(
+                obs, state, node.action, hunt, assault_ready, deadline
+            )
             node.visits += 1
             node.value += value
             root.visits += 1
@@ -80,7 +101,6 @@ class ContactMCTS:
         return best.action if best.action is not None else pass_action()
 
     def _sharpen_priors(self, state, hunt) -> None:
-        """Focus section mass on the hunt cell, else the contact footprint."""
         focus = hunt
         if focus is None:
             footprint = state.enemy_footprint()
@@ -102,28 +122,17 @@ class ContactMCTS:
             or state.sections.score_cell(*cell) >= 0.08
         }
 
-    def _root_moves(self, obs, state, hunt) -> list[tuple[Action, float]]:
+    def _root_moves(self, obs, state, hunt, tip, assault_ready: bool):
         H, W = obs.H, obs.W
         dead = state.dead_pockets
         sector_cands = self._contact_sector_candidates(state)
         blocked = lambda rr, cc: is_wall(obs.type_grid, rr, cc)
         out: list[tuple[Action, float]] = []
-        stack = largest_owned_stack(obs)
-        stack_army = obs.army_grid[stack[0]][stack[1]] if stack else 0
-        assault_ready = stack_army >= self.params.CONTACT_ASSAULT_STACK
 
-        # Hard hunt roots: march / gather the main stacks onto the hunt cell.
-        if hunt is not None:
-            # Under assault stack: path-gather only — do not push the last fog hop thin.
-            gact = gather_toward(obs, hunt, blocked)
-            if gact is not None:
-                gather_prior = (
-                    self.params.HUNT_STEP_BONUS
-                    if not assault_ready
-                    else 80.0 + max(0, self.params.CONTACT_STAGE_STACK - stack_army)
-                )
-                out.append((gact, gather_prior))
+        if tip is not None and not assault_ready:
+            return path_feed_roots(obs, tip, self.params.STRIKE_TIP_FEED_BONUS)
 
+        if hunt is not None and assault_ready:
             stacks: list[tuple[int, int, int]] = []
             for r in range(H):
                 for c in range(W):
@@ -131,27 +140,17 @@ class ContactMCTS:
                         continue
                     stacks.append((obs.army_grid[r][c], r, c))
             stacks.sort(reverse=True)
-
-            if assault_ready:
-                for army, r, c in stacks[:6]:
-                    act = step_toward(obs, (r, c), hunt, blocked)
-                    if act is None:
-                        continue
-                    prior = self.params.HUNT_STEP_BONUS + army * 0.5
-                    if not state.memory.ever_seen[hunt[0]][hunt[1]]:
-                        prior += 40.0
-                    out.append((act, prior))
-            else:
-                # Feed the largest stack as tip toward the hunt without committing a thin march.
-                if stack is not None:
-                    for army, r, c in stacks[:6]:
-                        if (r, c) == stack:
-                            continue
-                        act = step_toward(obs, (r, c), stack, blocked)
-                        if act is not None:
-                            out.append(
-                                (act, self.params.HUNT_STEP_BONUS * 0.9 + army * 0.3)
-                            )
+            for army, r, c in stacks[:6]:
+                act = step_toward(obs, (r, c), hunt, blocked)
+                if act is None:
+                    continue
+                prior = self.params.HUNT_STEP_BONUS + army * 0.5
+                if not state.memory.ever_seen[hunt[0]][hunt[1]]:
+                    prior += 40.0
+                out.append((act, prior))
+            gact = gather_toward(obs, hunt, blocked)
+            if gact is not None:
+                out.append((gact, 80.0))
 
         for r in range(H):
             for c in range(W):
@@ -174,6 +173,10 @@ class ContactMCTS:
             act = gather_toward(obs, hunt, blocked)
             if act is not None:
                 out.append((act, 1.0))
+        if not out and tip is not None:
+            feed = feed_tip_action(obs, tip)
+            if feed is not None:
+                out.append((feed, 1.0))
         return out
 
     def _pocket_ok(self, state, r: int, c: int, sector_cands) -> bool:
@@ -194,9 +197,7 @@ class ContactMCTS:
 
         prior = state.sections.score_cell(nr, nc)
         score = float(army) + 40.0 * prior
-
-        # Fog toward the hunt outranks fighting the visible front — only when assault-ready.
-        hunt_scale = 1.0 if assault_ready else 0.25
+        hunt_scale = 1.0 if assault_ready else 0.15
         if hunt is not None:
             before = abs(r - hunt[0]) + abs(c - hunt[1])
             after = abs(nr - hunt[0]) + abs(nc - hunt[1])
@@ -225,7 +226,6 @@ class ContactMCTS:
         else:
             score += 1.0
 
-        # Penalize corridors away from the hunt / contact sector.
         if owner == 0 and not state.memory.ever_seen[nr][nc] and prior < 0.1:
             owned_adj = sum(
                 1
@@ -240,7 +240,9 @@ class ContactMCTS:
         score += defense_score_delta(obs, state, self.params, (r, c), (nr, nc))
         return score
 
-    def _rollout(self, obs, state, action: Action, hunt, deadline: Deadline) -> float:
+    def _rollout(
+        self, obs, state, action: Action, hunt, assault_ready: bool, deadline: Deadline
+    ) -> float:
         if deadline.expired() or action[0] != 0:
             return 0.0
         _, r, c, d, _ = action
@@ -249,9 +251,6 @@ class ContactMCTS:
         nr, nc = r + dr, c + dc
         if not (0 <= nr < obs.H and 0 <= nc < obs.W):
             return -1.0
-        stack = largest_owned_stack(obs)
-        stack_army = obs.army_grid[stack[0]][stack[1]] if stack else 0
-        assault_ready = stack_army >= self.params.CONTACT_ASSAULT_STACK
         value = self._score(obs, state, r, c, nr, nc, hunt, assault_ready) / 150.0
         if hunt is not None and assault_ready:
             before = abs(r - hunt[0]) + abs(c - hunt[1])

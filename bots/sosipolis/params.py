@@ -39,8 +39,12 @@ class Params:
     STRIKE_LAND_ROOT_SLOTS: int = 2
     STRIKE_GATHER_WAVES_HINT: int = 4
     STRIKE_TIP_HOLD: int = 8
-    STRIKE_PATH_BUFFER: int = 1
-    STRIKE_TIP_FEED_BONUS: float = 250.0
+    STRIKE_PATH_BUFFER: int = 2
+    STRIKE_REGEN_SLACK: int = 1
+    STRIKE_MIN_TIP: int = 50
+    STRIKE_TIP_ARMY_FRAC: float = 0.40
+    STRIKE_TIP_MAX_DIST: int = 14
+    STRIKE_TIP_FEED_BONUS: float = 400.0
     SEARCH_LAND_BONUS: float = 80.0
     SEARCH_FOG_BONUS: float = 50.0
     SEARCH_ENEMY_BONUS: float = 70.0
