@@ -77,6 +77,20 @@ class Params:
     HUNT_TRAVEL_DECAY: float = 0.04
     HUNT_CONTACT_RADIUS: int = 10
     HUNT_STEP_BONUS: float = 320.0
+    # ContactMCTS owns post-contact probe target (Phase 1 / Phase 2).
+    CONTACT_PATH_MODE: str = "shallow"  # "shallow" | "macro_mcts"
+    CONTACT_PREP_BUDGET_MS: int = 3
+    CONTACT_PATH_SCORE_BUDGET_MS: int = 8
+    CONTACT_COMMIT_MIN_TURNS: int = 12
+    CONTACT_SWITCH_RATIO: float = 1.35
+    CONTACT_SWITCH_MARGIN: float = 0.08
+    CONTACT_INVALIDATE_DISTANCE: int = 2
+    CONTACT_MAX_MACROS: int = 6
+    CONTACT_CLUSTER_RADIUS: int = 6
+    CONTACT_OPP_SIDE_BFS: int = 8
+    CONTACT_ENEMY_OBS_AGE: int = 40
+    CONTACT_MACRO_DEPTH: int = 3
+    CONTACT_MACRO_ROOTS: int = 9
     CASTLE_MAX: int = 4
     CASTLE_START_TURN: int = 116
     CASTLE_KEEP: int = 1

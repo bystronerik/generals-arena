@@ -37,6 +37,8 @@ class GameState:
         self.home_threat_dist: int | None = None
         self.land_at_50: int | None = None
         self.recall_fired: int = 0
+        # ContactMCTS sticky probe commitment (set by ContactMCTS.prepare_contact).
+        self.contact_commitment = None
 
     def enemy_land_known(self) -> bool:
         if self.memory.first_contact is not None:
@@ -59,12 +61,14 @@ class GameState:
         self.memory.update(obs)
         if self.memory.enemy_general is not None:
             self.phase = "strike"
+            self.contact_commitment = None
+        # Contact phase: keep the prior tip; brain re-aims after prepare_contact.
         elif self.enemy_land_known():
             self.phase = "contact"
-            self.strike_tip = None
         else:
             self.phase = "search"
             self.strike_tip = None
+            self.contact_commitment = None
 
         if (
             self.memory.first_contact is not None

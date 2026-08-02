@@ -321,6 +321,50 @@ _PROBE_KEYS = (
         MEAN,
         MAX,
     ),
+    _key(
+        "contact_waypoint",
+        Kind.TOKEN,
+        "sosipolis: ContactMCTS committed probe waypoint as r,c or none",
+        F,
+    ),
+    _key(
+        "contact_macro",
+        Kind.TOKEN,
+        "sosipolis: ContactMCTS probe macro kind (cluster/frontier/mid_edge/split/none)",
+        F,
+    ),
+    _key(
+        "contact_commit_turn",
+        Kind.INT,
+        "sosipolis: turn the current contact probe commitment started (-1 if none)",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "contact_switches",
+        Kind.INT,
+        "sosipolis: number of contact probe commitment switches so far",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "contact_macro_score",
+        Kind.INT,
+        "sosipolis: committed contact probe score * 1000 (normalized)",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "contact_candidate_mass",
+        Kind.INT,
+        "sosipolis: belief mass * 1000 covered by the committed contact probe",
+        F,
+        MEAN,
+        MAX,
+    ),
 )
 
 # Engine keys: ground truth, recorded per turn by the trajectory recorder.

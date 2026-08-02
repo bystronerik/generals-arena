@@ -73,6 +73,12 @@ class Agent:
         self.best_visits = 0
         self.prior0_visits = 0
         self._chain_head_before = None
+        self.contact_waypoint = None
+        self.contact_macro = "none"
+        self.contact_commit_turn = -1
+        self.contact_switches = 0
+        self.contact_macro_score = 0.0
+        self.contact_candidate_mass = 0.0
 
     def _clear_mcts_diag(self) -> None:
         self.overrode = 0
@@ -131,12 +137,17 @@ class Agent:
         self.recall_fired = self.state.recall_fired
         eg = self.state.memory.enemy_general
         self.enemy_gen = _cell_tok(eg)
-        if self.state.memory.enemy_general is None:
+
+        # Pre-contact: MapMemory hunt. Contact: ContactMCTS owns the probe.
+        if self.state.memory.enemy_general is None and self.state.phase == "search":
             self.state.memory.hunt_target(obs, self.params)
             self.state.objective = self.state.memory.hunt_cell or self.state.objective
 
         # Keep a hunt-facing tip so contact gather/wave share one stack.
-        goal_for_tip = self.state.memory.enemy_general or self.state.memory.hunt_cell
+        goal_for_tip = self.state.memory.enemy_general or self.state.objective
+        if goal_for_tip is None and self.state.phase == "search":
+            goal_for_tip = self.state.memory.hunt_cell
+        # Provisional tip before contact prepare (uses prior commitment/fog objective).
         if goal_for_tip is not None and self.state.phase in ("search", "contact"):
             tip = select_mass_tip(
                 obs,
@@ -150,7 +161,40 @@ class Agent:
                 self.state.strike_tip_turn = obs.turn
                 self.state.muster = tip
 
-        self.hunt = self.state.memory.hunt_cell
+        if self.state.phase == "contact" and self.state.memory.enemy_general is None:
+            prep_ms = min(
+                hard.remaining_ms(), float(self.params.CONTACT_PREP_BUDGET_MS)
+            )
+            self.contact.prepare_contact(obs, self.state, Deadline(prep_ms))
+            commit = self.state.contact_commitment
+            if commit is not None:
+                self.state.objective = commit.macro.waypoint
+                self.contact_waypoint = commit.macro.waypoint
+                self.contact_macro = commit.macro.kind
+                self.contact_commit_turn = commit.committed_turn
+                self.contact_switches = commit.switch_count
+                self.contact_macro_score = float(commit.last_score)
+                self.contact_candidate_mass = float(
+                    self.contact.stats.candidate_mass
+                )
+                # Re-aim tip at the committed probe waypoint.
+                tip = select_mass_tip(
+                    obs,
+                    commit.macro.waypoint,
+                    self.params,
+                    self.state.strike_tip,
+                    self.state.strike_tip_turn,
+                )
+                if tip is not None:
+                    self.state.strike_tip = tip
+                    self.state.strike_tip_turn = obs.turn
+                    self.state.muster = tip
+
+        self.hunt = (
+            self.state.objective
+            if self.state.phase == "contact"
+            else self.state.memory.hunt_cell
+        )
         self.muster = self.state.muster
         self.objective = self.state.objective
         self._clear_mcts_diag()
@@ -225,9 +269,20 @@ class Agent:
             self._pull_mcts_diag(self.strike.stats)
         elif self.state.phase == "contact":
             budget = min(budget, float(self.params.CONTACT_BUDGET_MS))
-            move = self.contact.search(obs, self.state, Deadline(budget))
+            if self.params.CONTACT_PATH_MODE == "macro_mcts":
+                score_cap = budget
+            else:
+                score_cap = min(budget, float(self.params.CONTACT_PATH_SCORE_BUDGET_MS))
+            move = self.contact.search(obs, self.state, Deadline(score_cap))
             self.search_iters = self.contact.stats.iterations
             self._pull_mcts_diag(self.contact.stats)
+            st = self.contact.stats
+            if st.waypoint is not None:
+                self.contact_waypoint = st.waypoint
+            if st.macro_kind != "none":
+                self.contact_macro = st.macro_kind
+            self.contact_switches = st.switch_count
+            self.contact_candidate_mass = float(st.candidate_mass)
         else:
             budget = min(budget, float(self.params.SEARCH_BUDGET_MS))
             move = self.search.search(obs, self.state, Deadline(budget))
@@ -279,7 +334,10 @@ class Agent:
                 self.tip_dist_goal = abs(tip[0] - goal[0]) + abs(tip[1] - goal[1])
                 self.tip_ready = 1 if tip_is_ready(obs, tip, goal, self.params) else 0
 
-        self.hunt = self.state.memory.hunt_cell
+        if self.state.phase == "contact" and self.state.objective is not None:
+            self.hunt = self.state.objective
+        else:
+            self.hunt = self.state.memory.hunt_cell
         self.muster = self.state.muster or tip
 
         update_chain(self.state, move)

@@ -205,9 +205,15 @@ def prune_opening(
 
 
 def resolve_objective(obs, state) -> Cell | None:
-    """Fog frontier pre-contact → hunt → remembered general."""
+    """Fog frontier pre-contact → ContactMCTS probe → hunt → remembered general."""
     if state.memory.enemy_general is not None:
         return state.memory.enemy_general
+    # Contact phase: ContactMCTS owns the probe waypoint via contact_commitment.
+    if getattr(state, "phase", None) == "contact":
+        commit = getattr(state, "contact_commitment", None)
+        if commit is not None:
+            return commit.macro.waypoint
+        return _fog_frontier(obs, state)
     hunt = state.memory.hunt_cell
     if hunt is not None:
         return hunt

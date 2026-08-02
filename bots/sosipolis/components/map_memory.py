@@ -17,6 +17,9 @@ class MapMemory:
         self.ever_seen = [[False] * W for _ in range(H)]
         self.known_type = [[T_FOG] * W for _ in range(H)]
         self.known_owner = [[0] * W for _ in range(H)]
+        self.last_seen_turn = [[-1] * W for _ in range(H)]
+        self.last_enemy_army = [[-1] * W for _ in range(H)]
+        self.enemy_army_delta = [[0] * W for _ in range(H)]
         self.own_general: Cell | None = None
         self.enemy_general: Cell | None = None
         self.candidates: set[Cell] = set()
@@ -24,9 +27,16 @@ class MapMemory:
         self.hunt_cell: Cell | None = None
         self.hunt_turn: int = -10_000
         self._seeded = False
+        # Epoch counters for ContactMCTS invalidate-on-change caches.
+        self.cand_epoch: int = 0
+        self.terrain_epoch: int = 0
+        self.enemy_obs_epoch: int = 0
 
     def update(self, obs) -> None:
         H, W = obs.H, obs.W
+        prev_cand = len(self.candidates)
+        terrain_changed = False
+        enemy_obs_changed = False
         for r in range(H):
             for c in range(W):
                 t = obs.type_grid[r][c]
@@ -35,24 +45,46 @@ class MapMemory:
                 if t == T_FOG:
                     continue
                 self.ever_seen[r][c] = True
-                self.known_type[r][c] = t
+                self.last_seen_turn[r][c] = obs.turn
+                if self.known_type[r][c] != t:
+                    if t in (T_MOUNTAIN, T_STRUCT_FOG) or self.known_type[r][c] in (
+                        T_MOUNTAIN,
+                        T_STRUCT_FOG,
+                    ):
+                        terrain_changed = True
+                    self.known_type[r][c] = t
                 if o != 0:
                     self.known_owner[r][c] = o
                 elif t in (T_PLAIN, T_GENERAL, 3):
                     self.known_owner[r][c] = 0
 
+                if o == 2:
+                    prior = self.last_enemy_army[r][c]
+                    current = int(obs.army_grid[r][c])
+                    delta = 0 if prior < 0 else current - prior
+                    if prior != current:
+                        enemy_obs_changed = True
+                    self.enemy_army_delta[r][c] = delta
+                    self.last_enemy_army[r][c] = current
                 if o == 1 and t == T_GENERAL:
                     self.own_general = (r, c)
                 if o == 2 and t == T_GENERAL:
                     self.enemy_general = (r, c)
                 if o == 2 and self.first_contact is None:
                     self.first_contact = (r, c)
+                    enemy_obs_changed = True
 
         if self.own_general is not None and not self._seeded:
             self._seed_candidates()
             self._seeded = True
 
         self._prune_candidates()
+        if len(self.candidates) != prev_cand:
+            self.cand_epoch += 1
+        if terrain_changed:
+            self.terrain_epoch += 1
+        if enemy_obs_changed:
+            self.enemy_obs_epoch += 1
         if self.enemy_general is not None:
             self.hunt_cell = self.enemy_general
             self.hunt_turn = obs.turn
@@ -66,15 +98,25 @@ class MapMemory:
                     cells.append((r, c))
         return cells
 
+    def recent_enemy_cells(self, turn: int, max_age: int) -> list[Cell]:
+        """Enemy-owned cells last seen within max_age turns."""
+        cells: list[Cell] = []
+        for r in range(self.H):
+            for c in range(self.W):
+                if self.known_owner[r][c] != 2:
+                    continue
+                seen = self.last_seen_turn[r][c]
+                if seen < 0:
+                    continue
+                if turn - seen <= max_age:
+                    cells.append((r, c))
+        return cells
+
     def hunt_target(self, obs, params: Params) -> Cell | None:
         """Best remaining general candidate to walk vision onto.
 
-        Scores each belief cell by how many candidates a visit would prune
-        (``HUNT_REVEAL_RADIUS`` box), discounted by travel from owned land and
-        by distance away from the enemy footprint (or the mirror of our
-        general before contact). After contact, the pool prefers candidates
-        within ``HUNT_CONTACT_RADIUS`` of remembered enemy land — fog behind
-        their front, not the near edge of the whole ≥17 ring.
+        Pre-contact SearchMCTS target only. ContactMCTS owns post-contact
+        probe waypoints and must not call this after first contact.
         """
         if self.enemy_general is not None:
             return self.enemy_general
@@ -158,6 +200,7 @@ class MapMemory:
             for cell, d in dist.items()
             if d >= self.min_general_distance and not self._is_known_mountain(cell)
         }
+        self.cand_epoch += 1
 
     def _prune_candidates(self) -> None:
         if self.enemy_general is not None:
@@ -171,6 +214,8 @@ class MapMemory:
             # Seen and not the enemy general → cannot be the general.
             if self.known_type[r][c] != T_GENERAL or self.known_owner[r][c] != 2:
                 drop.append(cell)
+        if drop:
+            self.cand_epoch += 1
         for cell in drop:
             self.candidates.discard(cell)
         if self.hunt_cell is not None and self.hunt_cell not in self.candidates:

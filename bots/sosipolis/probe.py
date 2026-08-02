@@ -48,4 +48,14 @@ def extras(agent) -> dict:
         "prior_rank": int(getattr(agent, "prior_rank", -1)),
         "best_visits": int(getattr(agent, "best_visits", 0)),
         "prior0_visits": int(getattr(agent, "prior0_visits", 0)),
+        "contact_waypoint": _tok(getattr(agent, "contact_waypoint", None)),
+        "contact_macro": getattr(agent, "contact_macro", "none"),
+        "contact_commit_turn": int(getattr(agent, "contact_commit_turn", -1)),
+        "contact_switches": int(getattr(agent, "contact_switches", 0)),
+        "contact_macro_score": int(
+            round(float(getattr(agent, "contact_macro_score", 0.0)) * 1000)
+        ),
+        "contact_candidate_mass": int(
+            round(float(getattr(agent, "contact_candidate_mass", 0.0)) * 1000)
+        ),
     }
