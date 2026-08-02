@@ -1,10 +1,10 @@
-"""Shared home-threat helpers for phase-adjusted defense scoring."""
+"""Rare tip recall and soft defense scoring (Kubic present-but-rare)."""
 from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
 
-from components.army import is_wall, neighbors
+from components.army import is_wall, largest_owned_stack, move_action, neighbors, step_toward
 from params import Params
 
 
@@ -36,6 +36,21 @@ def min_enemy_dist_to(obs, cell: Cell, max_dist: int = 20) -> tuple[int | None, 
             dist[(nr, nc)] = d + 1
             q.append((nr, nc))
     return None, None
+
+
+def manhattan_enemy_to_home(obs, home: Cell) -> tuple[int | None, Cell | None]:
+    """Manhattan distance from nearest visible enemy tile to own general."""
+    best_d = None
+    best_cell = None
+    for r in range(obs.H):
+        for c in range(obs.W):
+            if obs.owner_grid[r][c] != 2:
+                continue
+            d = abs(r - home[0]) + abs(c - home[1])
+            if best_d is None or d < best_d:
+                best_d = d
+                best_cell = (r, c)
+    return best_d, best_cell
 
 
 def home_threat(obs, state, params: Params) -> HomeThreat:
@@ -74,6 +89,51 @@ def defense_weight(phase: str, params: Params) -> float:
     return params.DEFENSE_WEIGHT_SEARCH
 
 
+def recall_armed(obs, state, params: Params) -> bool:
+    """True when a visible/known enemy tile is within RECALL_PROX_D of home."""
+    home = state.memory.own_general
+    if home is None:
+        return False
+    d, _ = manhattan_enemy_to_home(obs, home)
+    state.home_threat_dist = d
+    if d is None:
+        return False
+    return d <= params.RECALL_PROX_D
+
+
+def recall_move(obs, state, params: Params):
+    """Redirect tip home when enemy is near; else reinforce threatened cells."""
+    home = state.memory.own_general
+    if home is None or not recall_armed(obs, state, params):
+        return None
+    tip = state.strike_tip or state.chain_head or largest_owned_stack(obs)
+    if tip is None:
+        return None
+    tip_d = abs(tip[0] - home[0]) + abs(tip[1] - home[1])
+    blocked = lambda r, c: is_wall(obs.type_grid, r, c)
+    if tip_d > 2:
+        act = step_toward(obs, tip, home, blocked)
+        if act is not None:
+            return act
+    # Reinforce: capture or step onto threatened cells near home.
+    _, nearest = manhattan_enemy_to_home(obs, home)
+    if nearest is not None:
+        # Prefer capturing the nearby enemy if a win-margin stack is adjacent.
+        for r, c in neighbors(obs.H, obs.W, *nearest):
+            if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
+                continue
+            if obs.army_grid[r][c] - 1 > obs.army_grid[nearest[0]][nearest[1]]:
+                return move_action(r, c, nearest[0], nearest[1], 0)
+        act = step_toward(obs, tip, nearest, blocked)
+        if act is not None:
+            return act
+    # Last: reinforce home.
+    for r, c in neighbors(obs.H, obs.W, *home):
+        if obs.owner_grid[r][c] == 1 and obs.army_grid[r][c] > 1:
+            return move_action(r, c, home[0], home[1], 0)
+    return None
+
+
 def defense_score_delta(
     obs,
     state,
@@ -81,12 +141,14 @@ def defense_score_delta(
     src: Cell,
     dst: Cell,
 ) -> float:
-    """Score adjustment for a move from src to dst under home threat."""
+    """Score adjustment only when recall gate is armed (do not fight drain)."""
+    if not recall_armed(obs, state, params):
+        return 0.0
     home = state.memory.own_general
     if home is None:
         return 0.0
     threat = home_threat(obs, state, params)
-    if threat.dist is None or threat.dist > params.DEFENSE_RADIUS + 2:
+    if threat.dist is None:
         return 0.0
     w = defense_weight(state.phase, params)
     delta = 0.0
@@ -97,29 +159,16 @@ def defense_score_delta(
     home_d = abs(dst[0] - home[0]) + abs(dst[1] - home[1])
     if home_d <= params.DEFENSE_RADIUS and obs.owner_grid[dst[0]][dst[1]] == 2:
         delta += w * 1.2
-    elif home_d <= params.DEFENSE_RADIUS and obs.owner_grid[dst[0]][dst[1]] == 0:
-        delta += w * 0.4
-
-    if src == home:
-        remaining = 1
-        target = home_bank_target(state.phase, params)
-        if remaining < target and threat.dist <= params.DEFENSE_RADIUS:
-            delta -= w * (target - remaining) / max(target, 1)
 
     if dst == home:
-        deficit = home_bank_deficit(obs, state, params)
-        target = home_bank_target(state.phase, params)
-        if deficit > 0 and threat.dist <= params.DEFENSE_RADIUS + 1:
-            delivered = obs.army_grid[src[0]][src[1]] - 1
-            delta += w * 0.8 * min(deficit, delivered) / max(target, 1)
+        delivered = obs.army_grid[src[0]][src[1]] - 1
+        delta += w * 0.5 * min(delivered, 8)
 
     return delta
 
 
 def imminent_loss_move(obs, state):
     """Only when an adjacent enemy can capture the general this turn."""
-    from components.army import move_action
-
     home = state.memory.own_general
     if home is None:
         return None

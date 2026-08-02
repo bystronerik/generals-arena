@@ -1,4 +1,4 @@
-"""StrikeMCTS: mass tip, exclusive feed wave, then tip march to known general."""
+"""StrikeMCTS: tip march after floor; gather consolidates, wave advances tip."""
 from __future__ import annotations
 
 import math
@@ -15,13 +15,14 @@ from components.army import (
     step_toward,
 )
 from components.clock import Deadline
-from components.threat import defense_score_delta, home_threat, imminent_loss_move
+from components.conveyor import prefer_chain_roots, prune_by_clock
+from components.threat import defense_score_delta, imminent_loss_move, recall_armed
 from components.tip import (
     feed_tip_action,
     path_feed_roots,
     select_mass_tip,
+    tip_below_sight_floor,
     tip_is_ready,
-    tip_mass_target,
 )
 from params import Params
 
@@ -71,23 +72,24 @@ class StrikeMCTS:
             return imminent
 
         tip = self._select_tip(obs, state, goal)
-        ready = tip_is_ready(obs, tip, goal, self.params)
-
-        # Exclusive gather wave: do not MCTS-dilute while the tip cannot march.
-        if tip is not None and not ready:
+        # Brain already exclusive-feeds below TIP_AT_SIGHT_FLOOR; also gate here.
+        if tip is not None and tip_below_sight_floor(obs, tip, self.params):
             feed = feed_tip_action(obs, tip)
             if feed is not None:
                 self.stats.root_moves = 1
                 return feed
 
-        root_moves = self._root_moves(obs, state, goal, tip, ready)
+        ready = tip_is_ready(obs, tip, goal, self.params)
+        clock = state.clock_phase
+        root_moves = self._root_moves(obs, state, goal, tip, ready, clock)
         self.stats.root_moves = len(root_moves)
         if not root_moves:
             return pass_action()
 
+        max_root = self.params.MCTS_MAX_ROOT_STRIKE
         root_moves.sort(key=lambda item: -item[1])
         root = _Node(action=None, prior=1.0)
-        for action, prior in root_moves[: self.params.MCTS_MAX_ROOT]:
+        for action, prior in root_moves[:max_root]:
             root.children.append(_Node(action=action, prior=max(prior, 0.01)))
 
         c = self.params.MCTS_C
@@ -95,7 +97,9 @@ class StrikeMCTS:
             node = max(root.children, key=lambda n: n.uct(root.visits, c) + n.prior)
             if node.action is None:
                 break
-            value = self._evaluate(obs, state, goal, tip, ready, node.action, deadline)
+            value = self._evaluate(
+                obs, state, goal, tip, ready, node.action, deadline, clock
+            )
             node.visits += 1
             node.value += value
             root.visits += 1
@@ -135,51 +139,21 @@ class StrikeMCTS:
         if tip is not None:
             state.strike_tip = tip
             state.strike_tip_turn = obs.turn
+            state.muster = tip
         return tip
 
-    def _land_captures(
-        self, obs, state, tip: Cell | None, ready: bool
-    ) -> list[tuple[Action, float]]:
-        if not ready:
-            return []
-        slots = self.params.STRIKE_LAND_ROOT_SLOTS
-        if slots <= 0:
-            return []
-        out: list[tuple[Action, float]] = []
-        H, W = obs.H, obs.W
-        for r in range(H):
-            for c in range(W):
-                if tip is not None and (r, c) == tip:
-                    continue
-                if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
-                    continue
-                for nr, nc in neighbors(H, W, r, c):
-                    if is_wall(obs.type_grid, nr, nc):
-                        continue
-                    owner = obs.owner_grid[nr][nc]
-                    if owner == 1:
-                        continue
-                    if obs.army_grid[r][c] - 1 <= obs.army_grid[nr][nc]:
-                        continue
-                    score = 12.0 + obs.army_grid[r][c] * 0.1
-                    if tip is not None:
-                        score += 20.0 / (1.0 + abs(nr - tip[0]) + abs(nc - tip[1]))
-                    if owner == 0:
-                        score += 8.0
-                    else:
-                        score += 15.0
-                    score += defense_score_delta(
-                        obs, state, self.params, (r, c), (nr, nc)
-                    )
-                    out.append((move_action(r, c, nr, nc, 0), score))
-        out.sort(key=lambda item: -item[1])
-        return out[:slots]
-
     def _root_moves(
-        self, obs, state, goal: Cell, tip: Cell | None, ready: bool
+        self,
+        obs,
+        state,
+        goal: Cell,
+        tip: Cell | None,
+        ready: bool,
+        clock: str,
     ) -> list[tuple[Action, float]]:
         blocked = lambda r, c: is_wall(obs.type_grid, r, c)
         out: list[tuple[Action, float]] = []
+        muster = tip or state.muster
 
         if tip is None:
             src = largest_owned_stack(obs)
@@ -189,37 +163,51 @@ class StrikeMCTS:
                     out.append((act, 1.0))
             return out
 
-        if not ready:
-            return path_feed_roots(obs, tip, self.params.STRIKE_TIP_FEED_BONUS)
+        if clock == "gather" or not ready:
+            # Consolidate into tip even if tip is "ready" during gather residues.
+            out.extend(path_feed_roots(obs, tip, self.params.STRIKE_TIP_FEED_BONUS))
+        else:
+            tip_army = obs.army_grid[tip[0]][tip[1]]
+            tip_step = step_toward(obs, tip, goal, blocked)
+            if tip_step is not None:
+                prior = (
+                    self.params.STRIKE_TIP_FEED_BONUS
+                    + tip_army * self.params.STRIKE_TOWARD_BIAS
+                )
+                out.append((tip_step, prior))
+            # On-path captures from tip only.
+            for nr, nc in neighbors(obs.H, obs.W, *tip):
+                if is_wall(obs.type_grid, nr, nc):
+                    continue
+                owner = obs.owner_grid[nr][nc]
+                if owner == 1:
+                    continue
+                if tip_army - 1 <= obs.army_grid[nr][nc]:
+                    continue
+                before = abs(tip[0] - goal[0]) + abs(tip[1] - goal[1])
+                after = abs(nr - goal[0]) + abs(nc - goal[1])
+                if after > before and owner != 2:
+                    continue
+                out.append(
+                    (
+                        move_action(tip[0], tip[1], nr, nc, 0),
+                        self.params.STRIKE_TIP_FEED_BONUS * 0.7,
+                    )
+                )
 
-        tip_army = obs.army_grid[tip[0]][tip[1]]
-        tip_step = step_toward(obs, tip, goal, blocked)
-        if tip_step is not None:
-            prior = (
-                self.params.STRIKE_TIP_FEED_BONUS
-                + tip_army * self.params.STRIKE_TOWARD_BIAS
-            )
-            out.append((tip_step, prior))
+        out = prune_by_clock(obs, out, clock, goal, muster)
+        # Prefer tip as chain head.
+        head = tip if tip is not None else state.chain_head
+        out = prefer_chain_roots(obs, head, out, self.params)
 
-        out.extend(path_feed_roots(obs, tip, self.params.STRIKE_TIP_FEED_BONUS * 0.5))
-
-        threat = home_threat(obs, state, self.params)
-        home = state.memory.own_general
-        if (
-            threat.dist is not None
-            and threat.dist <= 1
-            and home is not None
-            and threat.nearest is not None
-        ):
-            intercept = step_toward(obs, tip, threat.nearest, blocked)
-            if intercept is not None:
-                out.append((intercept, self.params.STRIKE_TIP_FEED_BONUS * 0.4))
-
-        out.extend(self._land_captures(obs, state, tip, ready))
-
-        if not out and tip_step is not None:
-            out.append((tip_step, 1.0))
-        _ = tip_mass_target(obs, tip, goal, self.params)
+        if not out:
+            tip_step = step_toward(obs, tip, goal, blocked)
+            if tip_step is not None:
+                out.append((tip_step, 1.0))
+            else:
+                feed = feed_tip_action(obs, tip)
+                if feed is not None:
+                    out.append((feed, 1.0))
         return out
 
     def _evaluate(
@@ -231,6 +219,7 @@ class StrikeMCTS:
         ready: bool,
         action: Action,
         deadline: Deadline,
+        clock: str,
     ) -> float:
         if deadline.expired() or action[0] == 1:
             return 0.0
@@ -243,15 +232,16 @@ class StrikeMCTS:
         gr, gc = goal
         value = 0.0
 
-        if tip is not None and not ready:
-            before = abs(r - tip[0]) + abs(c - tip[1])
-            after = abs(nr - tip[0]) + abs(nc - tip[1])
-            if (nr, nc) == tip or after < before:
-                value += 2.5
-            elif after > before:
-                value -= 1.0
-            if (r, c) == tip:
-                value -= 1.5
+        if clock == "gather" or (tip is not None and not ready):
+            if tip is not None:
+                before = abs(r - tip[0]) + abs(c - tip[1])
+                after = abs(nr - tip[0]) + abs(nc - tip[1])
+                if (nr, nc) == tip or after < before:
+                    value += 2.5
+                elif after > before:
+                    value -= 1.0
+                if (r, c) == tip:
+                    value -= 1.5
         else:
             before = abs(r - gr) + abs(c - gc)
             after = abs(nr - gr) + abs(nc - gc)
@@ -261,10 +251,13 @@ class StrikeMCTS:
                 value -= 0.5
             if tip is not None and (r, c) == tip and after < before:
                 value += 2.0
+            elif tip is not None and (r, c) != tip:
+                value -= 2.0
             if (nr, nc) == goal:
                 value += 5.0
 
         value += min(obs.army_grid[r][c], 50) / 50.0
-        value += defense_score_delta(obs, state, self.params, (r, c), (nr, nc)) / 40.0
+        if recall_armed(obs, state, self.params):
+            value += defense_score_delta(obs, state, self.params, (r, c), (nr, nc)) / 40.0
         value += random.random() * 0.02
         return value

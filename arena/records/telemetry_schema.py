@@ -182,6 +182,31 @@ _PROBE_KEYS = (
         MEAN,
         MAX,
     ),
+    _key(
+        "clock_phase",
+        Kind.TOKEN,
+        "sosipolis: mod-50 gather|wave clock (or opening)",
+        F,
+    ),
+    _key(
+        "chain_head",
+        Kind.TOKEN,
+        "sosipolis: active chain head cell as r,c or none",
+        F,
+    ),
+    _key(
+        "recall_fired",
+        Kind.INT,
+        "sosipolis: rare-recall / imminent-defense firings so far",
+        F,
+        MAX,
+    ),
+    _key(
+        "land_at_50",
+        Kind.INT,
+        "sosipolis: owned land at turn 50 (-1 until then)",
+        F,
+    ),
 )
 
 # Engine keys: ground truth, recorded per turn by the trajectory recorder.

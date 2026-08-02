@@ -2,12 +2,10 @@
 
 ## Goal
 
-`sosipolis` finds the enemy general as early as possible, builds a small early
-castle economy, then captures that general. The bot keeps persistent fog
-memory, skips mountain-enclosed dead pockets, and biases exploration with
-board-section priors. After first enemy land contact it runs a directed
-ContactMCTS hunt. When the general is known, StrikeMCTS finds the cheapest
-path to kill.
+`sosipolis` finds the enemy general early, then captures it. The bot keeps
+persistent fog memory and runs purpose MCTS (Search / Contact / Strike) under a
+**hard Kubic priority shell** and a **mod-50 gather/wave clock**. MCTS only
+chooses UNKNOWN destinations and path steps inside chain and clock masks.
 
 The bot must use the competition observation and the five-integer stdio action.
 The bot must not use hidden engine state. The bot must finish each decision
@@ -20,27 +18,23 @@ not replace `fog_scout`, `general_hunter`, or `castle_builder`.
 
 | Axis | Value |
 | --- | --- |
-| Primary objective | general kill (early find-and-strike) |
-| Risk posture | aggressive |
-| Time profile | early castle, early contact, mid sight, immediate strike |
-| Information use | persistent fog memory + section priors + contact footprint |
-| Army handling | early castle funding, then gather for strike path |
+| Primary objective | general kill (find-and-strike on a Kubic conveyor) |
+| Risk posture | aggressive expand, rare recall only |
+| Time profile | opening ≤50, contact ~82 target, castles ≥116, strike after sight |
+| Information use | persistent fog memory + section priors + contact hunt |
+| Army handling | one chain; gather drain leave-1; wave toward objective |
 
-**Differentiator:** triple-mode MCTS (SearchMCTS / ContactMCTS / StrikeMCTS)
-with mountain-pocket skip, geometric section priors, and a Kubic-seeded early
-castle programme.
+**Differentiator:** clocked purpose MCTS (Search / Contact / Strike) with a
+Kubic §2 hard shell (opening, rare recall, castle earliest 116, tip floor).
 
-**Must always be true:** SearchMCTS runs before any enemy land is known.
-ContactMCTS runs after enemy land is remembered and before the general is
-sighted. StrikeMCTS runs after the first sighting. Dead pockets are skipped
-unless they hold enemy land or contact-sector candidates. Persistent memory
-retains ever-seen terrain and ownership under fog.
+**Must always be true:** SearchMCTS before enemy land; ContactMCTS after enemy
+land and before general sight; StrikeMCTS after first sighting. Chain head is
+the preferred source when army ≥ 2. Gather residues stay on own land; wave
+closes on the persistent objective.
 
-**Must never be true:** `fog_scout`-style fog bonus greater than opponent bonus
-as the expansion score. `general_hunter`-style split probes with
-deathtouch-only kill. Imports from `bots/_common` or other bots. Stealing the
-roster `castle_builder` differentiator (thick conservative multi-castle
-economy) — Sosipolis keeps a thin early programme only.
+**Must never be true:** Pure rule conveyor as the live policy. Standing home
+garrison that fights scheduled drain. Castles before turn 116. Averaged
+UNKNOWN scorers (center vs nearest-unseen). Imports from `bots/_common`.
 
 Verdict vs existing bots: **distinct** (research axis).
 
@@ -48,194 +42,76 @@ Verdict vs existing bots: **distinct** (research axis).
 
 1. Latch own general from `owner == 1` and `type == 4`.
 2. Merge every visible cell into persistent memory (terrain, ownership).
-3. Latch enemy general forever after first sight (`type == 4`, `owner == 2`).
-4. Maintain candidate cells at BFS distance ≥ `MIN_GENERAL_DISTANCE` from own
-   general; prune cells that were seen and are empty of a general.
+3. Latch enemy general forever after first sight.
+4. Maintain candidate cells at BFS distance ≥ `MIN_GENERAL_DISTANCE`.
 5. Mark mountain-enclosed regions of size ≤ `POCKET_MAX_CELLS` as dead pockets.
-6. Partition the board into `SECTION_ROWS` × `SECTION_COLS` sections and keep a
-   prior mass over sections that still hold candidates.
-7. Before enemy land is known: SearchMCTS expands on a wide front with mild
-   section prior and pocket skip.
-8. After enemy land is known and the general is unknown: `MapMemory.hunt_target`
-   picks a belief cell (prune value / footprint prior / travel), ContactMCTS
-   marches and gathers onto that cell, and fog toward the hunt outranks
-   fighting the visible front.
-9. After the enemy general is known: StrikeMCTS gathers and advances; no new
-   fog exploration and no new castle projects.
-10. From `CASTLE_START_TURN`, fund and build up to `CASTLE_MAX` castles on the
-    cheapest safe owned plain near the general.
-11. Use the first-move 10 s grace (up to `FIRST_MOVE_GRACE_MS`) to precompute
-    pockets, sections, and root priors.
-12. Defense is **not** a fourth MCTS. Each phase scores perimeter deny and a
-    soft home bank inside Search / Contact / Strike. Brain hard-overrides only
-    on kill shot or imminent loss (adjacent enemy that can capture the general).
-
-## Phase-adjusted defense
-
-| Phase | Defense inside that MCTS | Conversion |
-| --- | --- | --- |
-| `search` | Soft bank `HOME_BANK_SEARCH`; avoid stripping the general under threat | Land + mild section prior |
-| `contact` | Perimeter in `DEFENSE_RADIUS`; bank `HOME_BANK_CONTACT`; staging gather if stack < `CONTACT_STAGE_STACK` | Sector hunt + contact pressure |
-| `strike` | Same perimeter at `DEFENSE_WEIGHT_STRIKE`; intercept only if imminent | Mass tip + exclusive feed until path/`STRIKE_MIN_TIP` gate; then tip march + light land |
+6. Partition the board into sections and keep prior mass over candidates.
+7. Hard Kubic priority each tick (see Candidate move rules).
+8. Mod-50 clock masks every Search/Contact/Strike root set.
+9. One active chain; continue when prev destination still has army ≥ 2.
+10. Castles from `CASTLE_START_TURN` (116) on frontier sites, up to `CASTLE_MAX`.
+11. First-move grace precomputes pockets and section priors.
+12. Defense is rare tip recall (`RECALL_PROX_D`), not a fourth MCTS.
 
 ## State
 
-- `own_general`: fixed own general cell.
-- `enemy_general`: latched enemy general cell or null.
-- `ever_seen`: boolean grid of cells ever in vision.
-- `known_type`: last known type for each ever-seen cell.
-- `known_owner`: last known owner for each ever-seen cell (retained in fog).
-- `candidates`: set of remaining possible enemy-general cells.
-- `dead_pockets`: set of cells in skip-expand regions.
-- `section_prior`: mass per section index.
-- `first_contact_cell`: first enemy-owned cell ever seen.
-- `enemy_land_known`: true once any enemy ownership is remembered.
-- `build_site`: current castle funding cell or null.
-- `castles_owned`: count of owned castles.
-- `phase`: `search` | `contact` | `strike`.
+- `own_general` / `enemy_general` / fog memory / candidates / dead pockets /
+  section priors (unchanged MapMemory + sections).
+- `phase`: `search` | `contact` | `strike` (info axis).
+- `clock_phase`: `gather` | `wave` (mod-50).
+- `chain_head`, `last_out_dir`, `objective`, `muster`.
+- `strike_tip` / `strike_tip_turn`, `build_site`, `castles_owned`.
+- `home_threat_dist`, `land_at_50`, `recall_fired` (probes).
 
-## Phases and thresholds
-
-Named constants (seeded from Kubic aggregates and RULES.md):
+## Named thresholds
 
 - `LATENCY_CAP_MS` = 100
-- `SEARCH_BUDGET_MS` = 70
-- `CONTACT_BUDGET_MS` = 75
-- `STRIKE_BUDGET_MS` = 80
-- `FIRST_MOVE_GRACE_MS` = 9000
-- `MIN_GENERAL_DISTANCE` = 17
-- `SECTION_ROWS` = 3
-- `SECTION_COLS` = 3
-- `POCKET_MAX_CELLS` = 12
-- `CONTACT_REWEIGHT` = 0.80
-- `CONTACT_SECTOR_FOCUS` = 0.95
-- `TARGET_CONTACT_TURN` = 82
-- `TARGET_SIGHT_TURN` = 182
-- `STRIKE_TOWARD_BIAS` = 0.84
-- `GATHER_WAVE_HINT` = 4
-- `DEATHTOUCH_TURN` = 800
-- `FINISH_MARGIN` = 2
-- `MCTS_C` = 1.2
-- `MCTS_MAX_ROOT` = 12
-- `MCTS_ROLLOUT_DEPTH` = 8
-- `CASTLE_MAX` = 1
-- `CASTLE_START_TURN` = 10
-- `CASTLE_KEEP` = 3
-- `CASTLE_MIN_LAND` = 5
-- `CASTLE_ENEMY_CLEAR` = 5
-- `CASTLE_ABORT_TURN` = 100
-- `BUILD_BASE_COST` = 35
-- `DEFENSE_RADIUS` = 3
-- `HOME_BANK_SEARCH` = 4
-- `HOME_BANK_CONTACT` = 10
-- `HOME_BANK_STRIKE` = 8
-- `DEFENSE_WEIGHT_SEARCH` = 8.0
-- `DEFENSE_WEIGHT_CONTACT` = 15.0
-- `DEFENSE_WEIGHT_STRIKE` = 16.0
-- `CONTACT_STAGE_STACK` = 35
-- `STRIKE_LAND_ROOT_SLOTS` = 2
-- `STRIKE_GATHER_WAVES_HINT` = 2
-- `HUNT_INTERVAL` = 8
-- `HUNT_REVEAL_RADIUS` = 2
-- `HUNT_PRIOR_DECAY` = 0.35
-- `HUNT_TRAVEL_DECAY` = 0.05
-- `HUNT_CONTACT_RADIUS` = 6
-- `HUNT_STEP_BONUS` = 220
-- `SEARCH_HUNT_BONUS` = 90
-- `CONTACT_ASSAULT_STACK` = 15
-- `STRIKE_TIP_HOLD` = 8
-- `STRIKE_PATH_BUFFER` = 2
-- `STRIKE_REGEN_SLACK` = 1
-- `STRIKE_MIN_TIP` = 25
-- `STRIKE_TIP_ARMY_FRAC` = 0.40
-- `STRIKE_TIP_MAX_DIST` = 14
-- `STRIKE_TIP_FEED_BONUS` = 400
-
-## Threat or scoring model
-
-**Search reward:** land gained + mild section prior − dead-pocket / thin-corridor
-penalty.
-
-**Contact reward:** candidate prune expected in the contact sector + closing on
-the sector centroid + pressure captures − corridor penalty outside the sector.
-
-**Strike cost:** BFS distance to the latched general weighted by required army
-(`defender + FINISH_MARGIN`, or 2 after `DEATHTOUCH_TURN`) and gather turns.
-
-**Castle cost:** `35 + sum(max(0, 14 - 2 * Manhattan))` over own structures.
+- `GATHER_BUDGET_MS` = 40 / `WAVE_BUDGET_MS` = 80 / `STRIKE_MARCH_BUDGET_MS` = 55
+- `GATHER_PHASE_LO/HI` = 10 / 27
+- `OPEN_END` = 50 / `OPEN_FLOOD_START` = 27 / `OPEN_PULSE_TICKS` = {3,6,9}
+- `RECALL_PROX_D` = 3 (UNKNOWN candidate)
+- `TIP_AT_SIGHT_FLOOR` = 10 / `STRIKE_MIN_TIP` = 23 / `STRIKE_TOWARD_BIAS` = 0.93
+- `CASTLE_START_TURN` = 116 / `CASTLE_MAX` = 4 / `CASTLE_ABORT_TURN` = 900
+- `CASTLE_SPACING` = 7 / `HOME_BANK_*` = 1
+- `MIN_GENERAL_DISTANCE` = 17 / `TARGET_CONTACT_TURN` = 82 (probe only)
 
 ## Candidate move rules
 
 1. If adjacent to a known enemy general and capture is legal, take it.
-2. If an adjacent enemy can capture the own general this turn (imminent loss),
-   capture or reinforce.
-3. Else if strike tip is under its mass gate: exclusive `feed_tip_action`
-   (path + `STRIKE_MIN_TIP`). Contact does not hard-override; ContactMCTS soft-stages.
-4. Else if a funded castle site exists and castles `< CASTLE_MAX`, build or
-   gather to the site (not in `strike` for new projects).
-5. Else if `enemy_general` is known: StrikeMCTS under `STRIKE_BUDGET_MS`
-   (mass tip march + land slots when ready).
-6. Else if enemy land is known: ContactMCTS under `CONTACT_BUDGET_MS`
-   (hunt after assault tip; sector + perimeter scores).
-7. Else: SearchMCTS under `SEARCH_BUDGET_MS` (land + soft bank).
+2. If no owned cell has army ≥ 2 with a passable neighbour, PASS.
+3. Rare recall when `d_home ≤ RECALL_PROX_D` (imminent adjacent loss first).
+4. If `t ≤ OPEN_END`: opening tempo + SearchMCTS under opening mask.
+5. Else if castle conditions hold: build or gather to site (≥116, not strike).
+6. Else if strike and tip army < `TIP_AT_SIGHT_FLOOR`: exclusive tip feed.
+7. Else MOVE by `t%50` mask + info-phase MCTS (Search / Contact / Strike).
 8. Fallback: PASS.
 
 ## Pseudocode for act()
 
 ```text
 FUNCTION act(obs):
-    start = monotonic()
-    deadline = start + LATENCY_CAP_MS / 1000
-    IF first move:
-        deadline = start + FIRST_MOVE_GRACE_MS / 1000
-    state.update(obs)
-    IF first move:
-        state.precompute_pockets_and_sections(deadline)
-    IF kill_shot_available(obs, state):
-        RETURN kill_shot
-    IF home_under_immediate_threat(obs, state):
-        RETURN defense_move
-    castle_move = economy.decide(obs, state, deadline)
-    IF castle_move is not null:
-        RETURN castle_move
-    IF state.phase == strike:
-        move = StrikeMCTS.search(...)
-    ELSE IF state.phase == contact:
-        move = ContactMCTS.search(...)
-    ELSE:
-        move = SearchMCTS.search(...)
-    IF move is null:
-        move = PASS
-    RETURN move
+    state.update(obs)   # phase, clock, objective, muster
+    IF kill_shot: RETURN kill
+    IF NOT has_leave1_move: RETURN PASS
+    IF imminent_loss OR recall_move: RETURN defense
+    IF t <= OPEN_END: RETURN decide_opening (SearchMCTS + opening mask)
+    castle = economy.decide(...)
+    IF castle: RETURN castle
+    IF strike AND tip < TIP_AT_SIGHT_FLOOR: RETURN feed_tip
+    clock = gather|wave from t%50
+    RETURN MCTS[phase].search(..., clock masks, chain-first)
+    # after commit: update_chain(state, action)
 ```
-
-## Edge cases
-
-- Mountain pad cells beyond the true map stay impassable; sections use `H` and
-  `W` from the handshake.
-- Fog army is unknown; searches do not invent fog armies.
-- Mutual capture and chase-cancel draws follow RULES.md.
-- If all candidates are pruned without a sighting, rebuild candidates from
-  remaining never-seen passable cells at distance ≥ 17.
-- Invalid builds are a silent pass; the bot must only emit funded legal sites.
-
-## Expected behavior against existing bots
-
-- Versus `smoke`: win or early capture after the castle footing and search.
-- Versus `fog_scout`: ContactMCTS should close sight timing.
-- Versus `macaria`: castles plus directed contact hunt should raise survival
-  and conversion versus the dual-MCTS baseline.
 
 ## Experiment hypothesis
 
-On seeds 0–19 vs `macaria` (both seats), Sosipolis with ContactMCTS + early
-castles raises win rate versus the pre-change content hash, and median
-first-sight turn moves toward Kubic’s ~182 (or below the prior loss band),
-while per-move wall time stays ≤ 100 ms.
+Clocked shell + purpose MCTS raises land@50 into [20,25], keeps castles ≥116,
+raises chain-continue rate, and improves win rate vs the unclocked tip5 baseline
+against `macaria` on a fixed seed grid — without collapsing pass rate.
 
-Kubic calibration (observational): contact 82, sight 182, toward 84%, first
-castle tick median 10, median castles 1 (76% ≥1). Scraped games never enter
-`data/games/` or ratings.
+Kubic calibration (observational, spend-detector): contact 82, sight→kill ~20–24,
+first real castle ≥116 (operating 116–150), tip@sight floor 10 / operate ~23.
+Scraped games never enter `data/games/` or ratings.
 
 ## Layout
 
@@ -243,7 +119,7 @@ castle tick median 10, median castles 1 (76% ≥1). Scraped games never enter
 bots/sosipolis/
   run.sh, main.py, stdio.py, state.py, brain.py, params.py, probe.py
   components/{map_memory,pockets,sections,search_mcts,contact_mcts,
-              strike_mcts,economy,threat,army,clock}.py
+              strike_mcts,economy,threat,tip,army,clock,conveyor,opening}.py
 ```
 
 No `bots/_common` imports.

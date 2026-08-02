@@ -1,4 +1,4 @@
-"""Castle economy: RULES §03 build cost + Kubic-seeded early programme."""
+"""Castle economy: RULES §03 build cost + Kubic mid-game programme (≥116)."""
 from __future__ import annotations
 
 from collections import deque
@@ -70,6 +70,24 @@ def _enemy_bfs(obs, max_dist: int) -> dict[Cell, int]:
     return dist
 
 
+def _frontier_dist(obs, cell: Cell) -> int:
+    """Manhattan to nearest non-own passable neighbour (0 if cell borders non-own)."""
+    r, c = cell
+    best = 99
+    for nr, nc in neighbors(obs.H, obs.W, r, c):
+        if is_wall(obs.type_grid, nr, nc):
+            continue
+        if obs.owner_grid[nr][nc] != 1:
+            return 0
+    for nr, nc in neighbors(obs.H, obs.W, r, c):
+        for n2r, n2c in neighbors(obs.H, obs.W, nr, nc):
+            if is_wall(obs.type_grid, n2r, n2c):
+                continue
+            if obs.owner_grid[n2r][n2c] != 1:
+                best = min(best, 1)
+    return best
+
+
 class Economy:
     def __init__(self, params: Params):
         self.params = params
@@ -87,6 +105,19 @@ class Economy:
             return None
         if obs.my_land < self.params.CASTLE_MIN_LAND:
             return None
+        # Prefer gather-phase build ticks (Kubic median residue ~18).
+        residue = obs.turn % 50
+        if not (
+            self.params.GATHER_PHASE_LO <= residue <= self.params.GATHER_PHASE_HI
+        ):
+            # Still allow if site is already funded.
+            site = state.build_site
+            if site is None:
+                return None
+            cost = build_cost(obs, site[0], site[1], self.params)
+            need = cost + self.params.CASTLE_KEEP
+            if obs.army_grid[site[0]][site[1]] < need:
+                return None
 
         castles = count_owned_castles(obs)
         state.castles_owned = castles
@@ -114,8 +145,9 @@ class Economy:
         if home is None:
             return None
         structures = own_structures(obs)
-        enemy_dist = _enemy_bfs(obs, self.params.CASTLE_ENEMY_CLEAR)
+        enemy_dist = _enemy_bfs(obs, max(self.params.CASTLE_ENEMY_CLEAR, 6))
         clear = self.params.CASTLE_ENEMY_CLEAR
+        spacing = self.params.CASTLE_SPACING
 
         # Prefer an existing committed site if still legal.
         if state.build_site is not None:
@@ -137,12 +169,24 @@ class Economy:
                     continue
                 if enemy_dist.get((r, c), 999) <= clear:
                     continue
+                front = _frontier_dist(obs, (r, c))
+                if front > self.params.CASTLE_FRONTIER_MAX:
+                    continue
+                # Spacing to nearest own structure (mode ~7).
+                min_struct = min(
+                    (abs(r - sr) + abs(c - sc) for sr, sc in structures),
+                    default=99,
+                )
+                if min_struct < spacing - 2:
+                    continue
                 cost = build_cost(obs, r, c, self.params, structures)
+                if cost > 45:
+                    continue
                 need = cost + self.params.CASTLE_KEEP
                 funded = 0 if obs.army_grid[r][c] >= need else 1
-                home_d = abs(r - home[0]) + abs(c - home[1])
-                # Prefer funded sites, then cheap, then near general.
-                key = (funded, cost, home_d, -obs.army_grid[r][c])
+                space_err = abs(min_struct - spacing)
+                # Prefer funded, frontier, spacing near 7, then cheap.
+                key = (funded, front, space_err, cost, -obs.army_grid[r][c])
                 if best_key is None or key < best_key:
                     best_key = key
                     best = (r, c)

@@ -1,0 +1,282 @@
+{
+  "games": [
+    {
+      "bot_a": "macaria",
+      "bot_b": "sosipolis",
+      "castles_a": 0,
+      "castles_b": 3,
+      "game_id": "20260802T151821Z_macaria_vs_sosipolis_s0_18004f85",
+      "land_margin_a": null,
+      "land_margin_b": null,
+      "seed": 0,
+      "tag": "pair",
+      "terminated": true,
+      "truncated": false,
+      "turns": 234,
+      "winner": "a",
+      "winner_bot": "macaria"
+    },
+    {
+      "bot_a": "sosipolis",
+      "bot_b": "macaria",
+      "castles_a": 2,
+      "castles_b": 0,
+      "game_id": "20260802T151821Z_sosipolis_vs_macaria_s1_06791036",
+      "land_margin_a": null,
+      "land_margin_b": null,
+      "seed": 1,
+      "tag": "pair",
+      "terminated": true,
+      "truncated": false,
+      "turns": 189,
+      "winner": "b",
+      "winner_bot": "macaria"
+    },
+    {
+      "bot_a": "macaria",
+      "bot_b": "sosipolis",
+      "castles_a": 0,
+      "castles_b": 2,
+      "game_id": "20260802T151821Z_macaria_vs_sosipolis_s2_200dda6b",
+      "land_margin_a": null,
+      "land_margin_b": null,
+      "seed": 2,
+      "tag": "pair",
+      "terminated": true,
+      "truncated": false,
+      "turns": 224,
+      "winner": "a",
+      "winner_bot": "macaria"
+    },
+    {
+      "bot_a": "sosipolis",
+      "bot_b": "macaria",
+      "castles_a": 3,
+      "castles_b": 0,
+      "game_id": "20260802T151821Z_sosipolis_vs_macaria_s3_1ebe6dac",
+      "land_margin_a": null,
+      "land_margin_b": null,
+      "seed": 3,
+      "tag": "pair",
+      "terminated": true,
+      "truncated": false,
+      "turns": 340,
+      "winner": "b",
+      "winner_bot": "macaria"
+    },
+    {
+      "bot_a": "sosipolis",
+      "bot_b": "macaria",
+      "castles_a": 0,
+      "castles_b": 0,
+      "game_id": "20260802T151824Z_sosipolis_vs_macaria_s4_f573f85a",
+      "land_margin_a": null,
+      "land_margin_b": null,
+      "seed": 4,
+      "tag": "pair",
+      "terminated": true,
+      "truncated": false,
+      "turns": 130,
+      "winner": "b",
+      "winner_bot": "macaria"
+    },
+    {
+      "bot_a": "sosipolis",
+      "bot_b": "macaria",
+      "castles_a": 0,
+      "castles_b": 0,
+      "game_id": "20260802T151825Z_sosipolis_vs_macaria_s5_635b9d24",
+      "land_margin_a": null,
+      "land_margin_b": null,
+      "seed": 5,
+      "tag": "pair",
+      "terminated": true,
+      "truncated": false,
+      "turns": 177,
+      "winner": "b",
+      "winner_bot": "macaria"
+    },
+    {
+      "bot_a": "sosipolis",
+      "bot_b": "macaria",
+      "castles_a": 2,
+      "castles_b": 0,
+      "game_id": "20260802T151825Z_sosipolis_vs_macaria_s6_053bbf7f",
+      "land_margin_a": null,
+      "land_margin_b": null,
+      "seed": 6,
+      "tag": "pair",
+      "terminated": true,
+      "truncated": false,
+      "turns": 411,
+      "winner": "b",
+      "winner_bot": "macaria"
+    },
+    {
+      "bot_a": "sosipolis",
+      "bot_b": "macaria",
+      "castles_a": 0,
+      "castles_b": 0,
+      "game_id": "20260802T151825Z_sosipolis_vs_macaria_s7_ab34a56d",
+      "land_margin_a": null,
+      "land_margin_b": null,
+      "seed": 7,
+      "tag": "pair",
+      "terminated": true,
+      "truncated": false,
+      "turns": 83,
+      "winner": "b",
+      "winner_bot": "macaria"
+    },
+    {
+      "bot_a": "macaria",
+      "bot_b": "sosipolis",
+      "castles_a": 0,
+      "castles_b": 0,
+      "game_id": "20260802T151827Z_macaria_vs_sosipolis_s8_66a92b80",
+      "land_margin_a": null,
+      "land_margin_b": null,
+      "seed": 8,
+      "tag": "pair",
+      "terminated": true,
+      "truncated": false,
+      "turns": 321,
+      "winner": "a",
+      "winner_bot": "macaria"
+    },
+    {
+      "bot_a": "macaria",
+      "bot_b": "sosipolis",
+      "castles_a": 0,
+      "castles_b": 2,
+      "game_id": "20260802T151827Z_macaria_vs_sosipolis_s9_13f9d848",
+      "land_margin_a": null,
+      "land_margin_b": null,
+      "seed": 9,
+      "tag": "pair",
+      "terminated": true,
+      "truncated": false,
+      "turns": 271,
+      "winner": "a",
+      "winner_bot": "macaria"
+    }
+  ],
+  "generated_at": "2026-08-02T15:18:30Z",
+  "grid": {
+    "fixed_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "games_dir": "/Users/erikbystron/Work/learning/generals-arena/data/games/sosipolis-kubic-vs-macaria-10",
+    "games_per_pair": 10,
+    "jobs": 4,
+    "roster": [
+      "sosipolis",
+      "macaria"
+    ],
+    "round_seed": 0,
+    "rule": "C",
+    "seat_policy": "random"
+  },
+  "notable_matchups": [
+    {
+      "kind": "fast_win",
+      "matchup": "macaria vs sosipolis",
+      "seed": 0,
+      "turns": 234,
+      "winner": "macaria"
+    },
+    {
+      "kind": "fast_win",
+      "matchup": "sosipolis vs macaria",
+      "seed": 1,
+      "turns": 189,
+      "winner": "macaria"
+    },
+    {
+      "kind": "fast_win",
+      "matchup": "macaria vs sosipolis",
+      "seed": 2,
+      "turns": 224,
+      "winner": "macaria"
+    },
+    {
+      "kind": "fast_win",
+      "matchup": "sosipolis vs macaria",
+      "seed": 3,
+      "turns": 340,
+      "winner": "macaria"
+    },
+    {
+      "kind": "fast_win",
+      "matchup": "sosipolis vs macaria",
+      "seed": 4,
+      "turns": 130,
+      "winner": "macaria"
+    },
+    {
+      "kind": "fast_win",
+      "matchup": "sosipolis vs macaria",
+      "seed": 5,
+      "turns": 177,
+      "winner": "macaria"
+    },
+    {
+      "kind": "fast_win",
+      "matchup": "sosipolis vs macaria",
+      "seed": 7,
+      "turns": 83,
+      "winner": "macaria"
+    },
+    {
+      "kind": "fast_win",
+      "matchup": "macaria vs sosipolis",
+      "seed": 8,
+      "turns": 321,
+      "winner": "macaria"
+    },
+    {
+      "kind": "fast_win",
+      "matchup": "macaria vs sosipolis",
+      "seed": 9,
+      "turns": 271,
+      "winner": "macaria"
+    }
+  ],
+  "round": "sosipolis-kubic-vs-macaria-10",
+  "summary": {
+    "by_bot": [
+      {
+        "bot_id": "macaria",
+        "draw_rate": 0.0,
+        "draws": 0,
+        "games": 10,
+        "losses": 0,
+        "mean_turns": 238.0,
+        "winrate": 1.0,
+        "wins": 10
+      },
+      {
+        "bot_id": "sosipolis",
+        "draw_rate": 0.0,
+        "draws": 0,
+        "games": 10,
+        "losses": 10,
+        "mean_turns": 238.0,
+        "winrate": 0.0,
+        "wins": 0
+      }
+    ],
+    "draw_rate": 0.0,
+    "mean_turns": 238.0,
+    "total_games": 10
+  }
+}

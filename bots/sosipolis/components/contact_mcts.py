@@ -1,4 +1,4 @@
-"""ContactMCTS: hunt after enemy land known; stage tip mass before assault."""
+"""ContactMCTS: hunt after enemy land known; clocked gather/wave + chain."""
 from __future__ import annotations
 
 import math
@@ -16,7 +16,8 @@ from components.army import (
     step_toward,
 )
 from components.clock import Deadline
-from components.threat import defense_score_delta
+from components.conveyor import prefer_chain_roots, prune_by_clock
+from components.threat import defense_score_delta, recall_armed
 from components.tip import feed_tip_action, path_feed_roots, tip_is_ready
 from params import Params
 
@@ -50,11 +51,9 @@ class ContactMCTS:
 
     def search(self, obs, state, deadline: Deadline) -> Action:
         self.stats = ContactStats()
-        hunt = state.memory.hunt_target(obs, self.params)
+        hunt = state.objective or state.memory.hunt_target(obs, self.params)
         tip = largest_owned_stack(obs)
         stack_army = obs.army_grid[tip[0]][tip[1]] if tip else 0
-        # Soft staging only: never exclusive-feed. Hunt roots stay available so
-        # small stacks can still step into fog (multi-wave, Kubic-style).
         assault_ready = stack_army >= self.params.CONTACT_ASSAULT_STACK
         if (
             not assault_ready
@@ -65,14 +64,20 @@ class ContactMCTS:
             assault_ready = True
 
         self._sharpen_priors(state, hunt)
-        root_moves = self._root_moves(obs, state, hunt, tip, assault_ready)
+        clock = state.clock_phase
+        root_moves = self._root_moves(obs, state, hunt, tip, assault_ready, clock)
         self.stats.root_moves = len(root_moves)
         if not root_moves:
             return pass_action()
 
+        max_root = (
+            self.params.MCTS_MAX_ROOT_GATHER
+            if clock == "gather"
+            else self.params.MCTS_MAX_ROOT_WAVE
+        )
         root_moves.sort(key=lambda item: -item[1])
         root = _Node(action=None, prior=1.0)
-        for action, prior in root_moves[: self.params.MCTS_MAX_ROOT]:
+        for action, prior in root_moves[:max_root]:
             root.children.append(_Node(action=action, prior=max(prior, 0.01)))
 
         c = self.params.MCTS_C
@@ -117,41 +122,63 @@ class ContactMCTS:
             or state.sections.score_cell(*cell) >= 0.08
         }
 
-    def _root_moves(self, obs, state, hunt, tip, assault_ready: bool):
+    def _root_moves(self, obs, state, hunt, tip, assault_ready: bool, clock: str):
         H, W = obs.H, obs.W
         dead = state.dead_pockets
         sector_cands = self._contact_sector_candidates(state)
         blocked = lambda rr, cc: is_wall(obs.type_grid, rr, cc)
         out: list[tuple[Action, float]] = []
+        muster = state.muster or tip
 
-        # Soft feed roots when under assault mass — compete with hunt, do not replace it.
-        if tip is not None and not assault_ready:
-            out.extend(path_feed_roots(obs, tip, self.params.STRIKE_TIP_FEED_BONUS * 0.5))
+        if clock == "gather":
+            # Soft feed to muster/tip only; no hunt march.
+            rally = muster or tip
+            if rally is not None:
+                out.extend(
+                    path_feed_roots(
+                        obs, rally, self.params.STRIKE_TIP_FEED_BONUS * 0.5
+                    )
+                )
+                gact = gather_toward(obs, rally, blocked)
+                if gact is not None:
+                    out.append((gact, 70.0))
+        else:
+            # Wave: hunt march + on-route neutrals; soft feed diluted.
+            if tip is not None and not assault_ready:
+                feeds = path_feed_roots(
+                    obs, tip, self.params.STRIKE_TIP_FEED_BONUS * 0.5
+                )
+                out.extend((a, p * 0.3) for a, p in feeds)
 
-        if hunt is not None:
-            stacks: list[tuple[int, int, int]] = []
-            for r in range(H):
-                for c in range(W):
-                    if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
+            if hunt is not None:
+                stacks: list[tuple[int, int, int]] = []
+                for r in range(H):
+                    for c in range(W):
+                        if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
+                            continue
+                        stacks.append((obs.army_grid[r][c], r, c))
+                stacks.sort(reverse=True)
+                for army, r, c in stacks[:6]:
+                    act = step_toward(obs, (r, c), hunt, blocked)
+                    if act is None:
                         continue
-                    stacks.append((obs.army_grid[r][c], r, c))
-            stacks.sort(reverse=True)
-            for army, r, c in stacks[:6]:
-                act = step_toward(obs, (r, c), hunt, blocked)
-                if act is None:
-                    continue
-                prior = self.params.HUNT_STEP_BONUS + army * 0.5
-                if not assault_ready:
-                    prior *= 0.85
-                if not state.memory.ever_seen[hunt[0]][hunt[1]]:
-                    prior += 40.0
-                out.append((act, prior))
-            gact = gather_toward(obs, hunt, blocked)
-            if gact is not None:
-                out.append((gact, 80.0 if assault_ready else 60.0))
+                    prior = self.params.HUNT_STEP_BONUS + army * 0.5
+                    if not assault_ready:
+                        prior *= 0.85
+                    if not state.memory.ever_seen[hunt[0]][hunt[1]]:
+                        prior += 40.0
+                    out.append((act, prior))
+                gact = gather_toward(obs, hunt, blocked)
+                if gact is not None:
+                    out.append((gact, 80.0 if assault_ready else 60.0))
 
-        for r in range(H):
-            for c in range(W):
+            # Border captures toward hunt (post-contact expand ~63%).
+            seeds = []
+            if state.chain_head is not None:
+                seeds.append(state.chain_head)
+            if tip is not None:
+                seeds.append(tip)
+            for r, c in seeds:
                 if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
                     continue
                 for nr, nc in neighbors(H, W, r, c):
@@ -166,6 +193,9 @@ class ContactMCTS:
                     if prior < 0:
                         continue
                     out.append((move_action(r, c, nr, nc, 0), prior))
+
+        out = prune_by_clock(obs, out, clock, hunt, muster)
+        out = prefer_chain_roots(obs, state.chain_head, out, self.params)
 
         if not out and hunt is not None:
             act = gather_toward(obs, hunt, blocked)
@@ -235,7 +265,8 @@ class ContactMCTS:
                     r - hunt[0]
                 ) + abs(c - hunt[1]):
                     score *= 0.4
-        score += defense_score_delta(obs, state, self.params, (r, c), (nr, nc))
+        if recall_armed(obs, state, self.params):
+            score += defense_score_delta(obs, state, self.params, (r, c), (nr, nc))
         return score
 
     def _rollout(
@@ -250,7 +281,9 @@ class ContactMCTS:
         if not (0 <= nr < obs.H and 0 <= nc < obs.W):
             return -1.0
         value = self._score(obs, state, r, c, nr, nc, hunt, assault_ready) / 150.0
-        if hunt is not None and assault_ready:
+        if state.chain_head is not None and (r, c) == state.chain_head:
+            value += 1.0
+        if hunt is not None and (assault_ready or state.clock_phase == "wave"):
             before = abs(r - hunt[0]) + abs(c - hunt[1])
             after = abs(nr - hunt[0]) + abs(nc - hunt[1])
             if after < before:

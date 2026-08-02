@@ -102,7 +102,7 @@ def tip_feed_target(obs, tip: Cell, goal: Cell, params: Params) -> int:
 
 
 def tip_is_ready(obs, tip: Cell | None, goal: Cell, params: Params) -> bool:
-    """True when the tip can march (path + min tip). Frac is feed-only."""
+    """True when the tip can march (path + operating mass). Frac is feed-only."""
     if tip is None:
         return False
     army = obs.army_grid[tip[0]][tip[1]]
@@ -111,11 +111,20 @@ def tip_is_ready(obs, tip: Cell | None, goal: Cell, params: Params) -> bool:
     return army - 1 >= tip_mass_target(obs, tip, goal, params)
 
 
+def tip_below_sight_floor(obs, tip: Cell | None, params: Params) -> bool:
+    """Hard §2.6 gate: tip army below TIP_AT_SIGHT_FLOOR needs exclusive feed."""
+    if tip is None:
+        return True
+    return obs.army_grid[tip[0]][tip[1]] < params.TIP_AT_SIGHT_FLOOR
+
+
 def tip_needs_feed(obs, tip: Cell | None, goal: Cell, params: Params) -> bool:
     if tip is None:
         return False
     army = obs.army_grid[tip[0]][tip[1]]
     if army <= 1:
+        return True
+    if army < params.TIP_AT_SIGHT_FLOOR:
         return True
     return army - 1 < tip_feed_target(obs, tip, goal, params)
 

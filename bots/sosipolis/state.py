@@ -1,11 +1,15 @@
-"""Game state: persistent memory, pockets, section priors, economy tracking."""
+"""Game state: persistent memory, pockets, section priors, conveyor tracking."""
 from __future__ import annotations
 
 from components.clock import Deadline
+from components.conveyor import mod50_phase, resolve_muster, resolve_objective
 from components.map_memory import MapMemory
 from components.pockets import compute_dead_pockets
 from components.sections import SectionPrior
 from params import Params
+
+
+Cell = tuple[int, int]
 
 
 class GameState:
@@ -15,15 +19,24 @@ class GameState:
         self.params = params
         self.memory = MapMemory(H, W, params.MIN_GENERAL_DISTANCE)
         self.sections = SectionPrior(H, W, params.SECTION_ROWS, params.SECTION_COLS)
-        self.dead_pockets: set[tuple[int, int]] = set()
+        self.dead_pockets: set[Cell] = set()
         self.phase = "search"
         self.precomputed = False
         self.pocket_skip_count = 0
         self._contact_reweighted = False
-        self.build_site: tuple[int, int] | None = None
+        self.build_site: Cell | None = None
         self.castles_owned = 0
-        self.strike_tip: tuple[int, int] | None = None
+        self.strike_tip: Cell | None = None
         self.strike_tip_turn: int = -10_000
+        # Conveyor / Kubic shell state.
+        self.chain_head: Cell | None = None
+        self.last_out_dir: dict[Cell, tuple[int, int]] = {}
+        self.objective: Cell | None = None
+        self.muster: Cell | None = None
+        self.clock_phase: str = "wave"
+        self.home_threat_dist: int | None = None
+        self.land_at_50: int | None = None
+        self.recall_fired: int = 0
 
     def enemy_land_known(self) -> bool:
         if self.memory.first_contact is not None:
@@ -34,8 +47,8 @@ class GameState:
             for c in range(self.W)
         )
 
-    def enemy_footprint(self) -> list[tuple[int, int]]:
-        cells: list[tuple[int, int]] = []
+    def enemy_footprint(self) -> list[Cell]:
+        cells: list[Cell] = []
         for r in range(self.H):
             for c in range(self.W):
                 if self.memory.known_owner[r][c] == 2:
@@ -65,6 +78,19 @@ class GameState:
 
         if self.memory.candidates:
             self.sections.prune_to_candidates(self.memory.candidates)
+
+        self.clock_phase = mod50_phase(obs.turn, self.params)
+        self.objective = resolve_objective(obs, self)
+        self.muster = resolve_muster(obs, self, self.strike_tip)
+
+        if obs.turn == self.params.OPEN_END and self.land_at_50 is None:
+            self.land_at_50 = int(obs.my_land)
+
+        # Invalidate stale chain head.
+        if self.chain_head is not None:
+            r, c = self.chain_head
+            if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
+                self.chain_head = None
 
     def precompute(self, deadline: Deadline) -> None:
         """First-move grace work: pockets + section seed."""
