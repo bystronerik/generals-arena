@@ -1,0 +1,231 @@
+{
+  "filter": "Kubic vs erik.bystron (then-current macaria account)",
+  "n": 12,
+  "kubic_w_l": [
+    11,
+    1
+  ],
+  "note": "Small observational subset. Folder labels are not outcomes; winner is seat-resolved.",
+  "contact_median_all": 62.0,
+  "contact_median_wins": 51,
+  "sight_rate_wins": 1.0,
+  "c2s_median_all": 110,
+  "c2s_median_wins": 110,
+  "s2k_median_wins": 50,
+  "compare": {
+    "kubic_all_wins_docs": {
+      "contact": 82,
+      "sight": 180,
+      "c2s": 93,
+      "s2k": "20-24"
+    },
+    "sosipolis_macaria_c2s": {
+      "contact": 83,
+      "sight_rate": 0.3,
+      "c2s": 115,
+      "s2k": 77,
+      "wl": "2-8"
+    },
+    "macaria_sosipolis_c2s": {
+      "contact": 83,
+      "sight_rate": 0.8,
+      "c2s": 192.5,
+      "s2k": 1,
+      "wl": "8-2"
+    }
+  },
+  "games": [
+    {
+      "match_id": "24988",
+      "ticks": 88,
+      "kubic_won": false,
+      "outcome": "lose",
+      "contact": 82,
+      "sight": null,
+      "kill": null,
+      "c2s": null,
+      "s2k": null,
+      "players": [
+        "Kubic",
+        "erik.bystron"
+      ],
+      "kubic_seat": 0
+    },
+    {
+      "match_id": "24989",
+      "ticks": 250,
+      "kubic_won": true,
+      "outcome": "win",
+      "contact": 51,
+      "sight": 135,
+      "kill": 250,
+      "c2s": 84,
+      "s2k": 115,
+      "players": [
+        "erik.bystron",
+        "Kubic"
+      ],
+      "kubic_seat": 1
+    },
+    {
+      "match_id": "24990",
+      "ticks": 195,
+      "kubic_won": true,
+      "outcome": "win",
+      "contact": 78,
+      "sight": 194,
+      "kill": 195,
+      "c2s": 116,
+      "s2k": 1,
+      "players": [
+        "Kubic",
+        "erik.bystron"
+      ],
+      "kubic_seat": 0
+    },
+    {
+      "match_id": "24991",
+      "ticks": 134,
+      "kubic_won": true,
+      "outcome": "win",
+      "contact": 32,
+      "sight": 78,
+      "kill": 134,
+      "c2s": 46,
+      "s2k": 56,
+      "players": [
+        "erik.bystron",
+        "Kubic"
+      ],
+      "kubic_seat": 1
+    },
+    {
+      "match_id": "24992",
+      "ticks": 246,
+      "kubic_won": true,
+      "outcome": "win",
+      "contact": 79,
+      "sight": 185,
+      "kill": 246,
+      "c2s": 106,
+      "s2k": 61,
+      "players": [
+        "Kubic",
+        "erik.bystron"
+      ],
+      "kubic_seat": 0
+    },
+    {
+      "match_id": "24993",
+      "ticks": 395,
+      "kubic_won": true,
+      "outcome": "win",
+      "contact": 88,
+      "sight": 394,
+      "kill": 395,
+      "c2s": 306,
+      "s2k": 1,
+      "players": [
+        "erik.bystron",
+        "Kubic"
+      ],
+      "kubic_seat": 1
+    },
+    {
+      "match_id": "39664",
+      "ticks": 191,
+      "kubic_won": true,
+      "outcome": "win",
+      "contact": 36,
+      "sight": 139,
+      "kill": 191,
+      "c2s": 103,
+      "s2k": 52,
+      "players": [
+        "Kubic",
+        "erik.bystron"
+      ],
+      "kubic_seat": 0
+    },
+    {
+      "match_id": "39665",
+      "ticks": 229,
+      "kubic_won": true,
+      "outcome": "win",
+      "contact": 81,
+      "sight": 227,
+      "kill": 229,
+      "c2s": 146,
+      "s2k": 2,
+      "players": [
+        "erik.bystron",
+        "Kubic"
+      ],
+      "kubic_seat": 1
+    },
+    {
+      "match_id": "39666",
+      "ticks": 232,
+      "kubic_won": true,
+      "outcome": "win",
+      "contact": 39,
+      "sight": 149,
+      "kill": 232,
+      "c2s": 110,
+      "s2k": 83,
+      "players": [
+        "Kubic",
+        "erik.bystron"
+      ],
+      "kubic_seat": 0
+    },
+    {
+      "match_id": "39667",
+      "ticks": 182,
+      "kubic_won": true,
+      "outcome": "win",
+      "contact": 73,
+      "sight": 132,
+      "kill": 182,
+      "c2s": 59,
+      "s2k": 50,
+      "players": [
+        "erik.bystron",
+        "Kubic"
+      ],
+      "kubic_seat": 1
+    },
+    {
+      "match_id": "39668",
+      "ticks": 291,
+      "kubic_won": true,
+      "outcome": "win",
+      "contact": 36,
+      "sight": 256,
+      "kill": 291,
+      "c2s": 220,
+      "s2k": 35,
+      "players": [
+        "Kubic",
+        "erik.bystron"
+      ],
+      "kubic_seat": 0
+    },
+    {
+      "match_id": "39669",
+      "ticks": 217,
+      "kubic_won": true,
+      "outcome": "win",
+      "contact": 36,
+      "sight": 175,
+      "kill": 217,
+      "c2s": 139,
+      "s2k": 42,
+      "players": [
+        "erik.bystron",
+        "Kubic"
+      ],
+      "kubic_seat": 1
+    }
+  ]
+}

@@ -37,7 +37,7 @@ class Params:
     GATHER_PHASE_HI: int = 27
     # Opening tempo (Kubic MEASURED).
     OPEN_END: int = 50
-    OPEN_FLOOD_START: int = 24
+    OPEN_FLOOD_START: int = 12  # was 24 — flood earlier for land tempo
     OPEN_PULSE_TICKS: tuple = (3, 6, 9)
     OPEN_TILES_T50_LO: int = 20
     OPEN_TILES_T50_HI: int = 25
@@ -63,13 +63,14 @@ class Params:
     STRIKE_TIP_ARMY_FRAC: float = 0.40
     STRIKE_TIP_MAX_DIST: int = 14
     STRIKE_TIP_FEED_BONUS: float = 400.0
-    SEARCH_LAND_BONUS: float = 110.0
-    SEARCH_FOG_BONUS: float = 85.0
-    SEARCH_ENEMY_BONUS: float = 70.0
+    SEARCH_LAND_BONUS: float = 160.0  # was 110 — push land before contact
+    SEARCH_FOG_BONUS: float = 120.0  # was 85
+    SEARCH_ENEMY_BONUS: float = 95.0  # was 70
     SEARCH_HUNT_BONUS: float = 160.0
-    CONTACT_ENEMY_BONUS: float = 45.0
+    CONTACT_ENEMY_BONUS: float = 420.0  # was 45 — must beat HUNT_STEP fog march
     CONTACT_LAND_BONUS: float = 55.0
     CONTACT_CANDIDATE_BONUS: float = 100.0
+    CONTACT_CHASE_STEP_BONUS: float = 750.0  # tip step toward live army
     # Belief hunt (Macaria-style, local to map_memory + contact_mcts).
     HUNT_INTERVAL: int = 4
     HUNT_REVEAL_RADIUS: int = 2
@@ -77,6 +78,24 @@ class Params:
     HUNT_TRAVEL_DECAY: float = 0.04
     HUNT_CONTACT_RADIUS: int = 10
     HUNT_STEP_BONUS: float = 320.0
+    # Contact belief: promote near enemy_seen (toward / through their army).
+    # Replaces old boost of high d_foot. Form: 1 + NEAR / (1 + d_foot).
+    CONTACT_BELIEF_NEAR_FOOT: float = 2.0
+    # First-contact axis: late flanks must not yank the original hunt, but the
+    # tip must still fight visible enemy army on the approach.
+    CONTACT_PRIMARY_PATH_WINDOW: int = 40
+    CONTACT_AXIS_BONUS: float = 1.5
+    CONTACT_AXIS_MIN_T: float = 0.55
+    CONTACT_AXIS_OFF_PENALTY: float = 0.8
+    CONTACT_AXIS_LATERAL: float = 0.06
+    CONTACT_AXIS_RECOVER: bool = True
+    CONTACT_AXIS_RECOVER_LATERAL: float = 8.0  # only snap if this far off-axis
+    CONTACT_FLANK_DELTA_SCALE: float = 0.25
+    CONTACT_CHASE_VISIBLE: float = 2.0  # belief boost near live enemy tiles
+    CONTACT_CHASE_VISIBLE_RADIUS: int = 3
+    # Early contact → trust axis more; late contact → weaker axis lock.
+    CONTACT_AXIS_EARLY_TURN: int = 55
+    CONTACT_AXIS_LATE_TURN: int = 100
     # ContactMCTS owns post-contact probe target (Phase 1 / Phase 2).
     CONTACT_PATH_MODE: str = "shallow"  # "shallow" | "macro_mcts"
     CONTACT_PREP_BUDGET_MS: int = 3
@@ -88,9 +107,14 @@ class Params:
     CONTACT_MAX_MACROS: int = 6
     CONTACT_CLUSTER_RADIUS: int = 6
     CONTACT_OPP_SIDE_BFS: int = 8
+    CONTACT_FORCE_OPP_SWITCH: bool = False
     CONTACT_ENEMY_OBS_AGE: int = 40
     CONTACT_MACRO_DEPTH: int = 3
     CONTACT_MACRO_ROOTS: int = 9
+    # After a spent wave: continue past tip; do not free-pick a corner macro.
+    CONTACT_EXTEND_STEPS: int = 4
+    CONTACT_HOLD_GATHER: bool = True
+    CONTACT_REPLACE_JUMP_MAX: int = 8
     CASTLE_MAX: int = 4
     CASTLE_START_TURN: int = 116
     CASTLE_KEEP: int = 1

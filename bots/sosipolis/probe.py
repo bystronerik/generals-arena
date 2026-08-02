@@ -15,11 +15,22 @@ def _tok(cell) -> str:
     return f"{cell[0]},{cell[1]}"
 
 
+def _enemy_land_visible(agent) -> int:
+    """Sticky first enemy-land contact (aligns with MapMemory.first_contact)."""
+    memory = getattr(getattr(agent, "state", None), "memory", None)
+    if memory is not None and getattr(memory, "first_contact", None) is not None:
+        return 1
+    if getattr(agent, "phase", None) in ("contact", "strike"):
+        return 1
+    return 0
+
+
 def extras(agent) -> dict:
     land50 = getattr(agent, "land_at_50", None)
     return {
         "phase": agent.phase,
         "enemy_general_sighted": agent.enemy_general_sighted,
+        "enemy_land_visible": _enemy_land_visible(agent),
         "searched": 1 if agent.searched else 0,
         "search_iters": agent.search_iters,
         "move_ms": agent.move_ms,

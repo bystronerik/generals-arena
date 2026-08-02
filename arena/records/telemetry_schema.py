@@ -75,6 +75,15 @@ _PROBE_KEYS = (
         F,
         FIRST,  # replaces the bots' old self-reported first_sighting_turn
     ),
+    _key(
+        "enemy_land_visible",
+        Kind.BOOL01,
+        "the bot has ever seen an enemy-owned tile (sticky contact clock; "
+        "first_turn aligns with Kubic first_contact)",
+        F,
+        MEAN,
+        FIRST,
+    ),
     _key("phase", Kind.TOKEN, "the bot's current strategy phase", F),
     _key("active", Kind.TOKEN, "proteus: which sub-strategy is driving", F),
     _key("label", Kind.TOKEN, "proteus: the classifier's label for the opponent", F),

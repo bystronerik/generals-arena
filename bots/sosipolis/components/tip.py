@@ -58,7 +58,7 @@ def path_cells_to_goal(obs, tip: Cell, goal: Cell) -> list[Cell]:
 def path_finish_need(obs, tip: Cell, goal: Cell, params: Params) -> int:
     """Army the tip must spend to walk the path and capture the general."""
     if obs.turn >= params.DEATHTOUCH_TURN:
-        base = 2
+        base = 1  # one unit executes; leave-1 needs tip army >= 2
     else:
         base = params.FINISH_MARGIN
         if obs.owner_grid[goal[0]][goal[1]] == 2:

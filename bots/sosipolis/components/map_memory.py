@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import deque
 
-from params import T_FOG, T_GENERAL, T_MOUNTAIN, T_PLAIN, T_STRUCT_FOG, Params
+from params import T_FOG, T_GENERAL, T_MOUNTAIN, T_PLAIN, T_STRUCT_FOG, PARAMS, Params
 
 
 Cell = tuple[int, int]
@@ -24,6 +24,13 @@ class MapMemory:
         self.enemy_general: Cell | None = None
         self.candidates: set[Cell] = set()
         self.first_contact: Cell | None = None
+        self.first_contact_turn: int = -1
+        # Sticky: every cell ever seen as enemy-owned.
+        self.enemy_seen: set[Cell] = set()
+        # Original approach path only (first contact + early/on-axis cells).
+        # Late off-axis flanks stay in enemy_seen but not here — they must not
+        # yank the hunt away from the first signal.
+        self.primary_path: set[Cell] = set()
         self.hunt_cell: Cell | None = None
         self.hunt_turn: int = -10_000
         self._seeded = False
@@ -59,6 +66,42 @@ class MapMemory:
                     self.known_owner[r][c] = 0
 
                 if o == 2:
+                    cell = (r, c)
+                    if cell not in self.enemy_seen:
+                        self.enemy_seen.add(cell)
+                        enemy_obs_changed = True
+                    if self.first_contact is None:
+                        self.first_contact = cell
+                        self.first_contact_turn = obs.turn
+                        self.primary_path.add(cell)
+                        enemy_obs_changed = True
+                    elif cell not in self.primary_path:
+                        # Grow primary path only early, or along the first-contact axis.
+                        window = PARAMS.CONTACT_PRIMARY_PATH_WINDOW
+                        early = (
+                            self.first_contact_turn >= 0
+                            and obs.turn - self.first_contact_turn <= window
+                        )
+                        on_axis = False
+                        if self.own_general is not None and self.first_contact is not None:
+                            hx, hy = self.own_general
+                            ax, ay = self.first_contact
+                            vx, vy = ax - hx, ay - hy
+                            denom = vx * vx + vy * vy
+                            if denom > 0:
+                                # Do not reuse name `t` — that shadows type_grid
+                                # and blocks the enemy_general latch below.
+                                axis_t = ((r - hx) * vx + (c - hy) * vy) / denom
+                                cross = abs((r - hx) * vy - (c - hy) * vx) / (
+                                    denom ** 0.5
+                                )
+                                on_axis = (
+                                    axis_t >= PARAMS.CONTACT_AXIS_MIN_T * 0.8
+                                    and cross <= 4.0
+                                )
+                        if early or on_axis:
+                            self.primary_path.add(cell)
+                            enemy_obs_changed = True
                     prior = self.last_enemy_army[r][c]
                     current = int(obs.army_grid[r][c])
                     delta = 0 if prior < 0 else current - prior
@@ -70,9 +113,7 @@ class MapMemory:
                     self.own_general = (r, c)
                 if o == 2 and t == T_GENERAL:
                     self.enemy_general = (r, c)
-                if o == 2 and self.first_contact is None:
-                    self.first_contact = (r, c)
-                    enemy_obs_changed = True
+                # first_contact set above when o==2
 
         if self.own_general is not None and not self._seeded:
             self._seed_candidates()
@@ -97,6 +138,18 @@ class MapMemory:
                 if self.known_owner[r][c] == 2:
                     cells.append((r, c))
         return cells
+
+    def enemy_seen_cells(self) -> list[Cell]:
+        """Every cell ever observed as enemy-owned (sticky army path)."""
+        return list(self.enemy_seen)
+
+    def primary_path_cells(self) -> list[Cell]:
+        """Original approach path (first contact + early/on-axis only)."""
+        if self.primary_path:
+            return list(self.primary_path)
+        if self.first_contact is not None:
+            return [self.first_contact]
+        return self.enemy_seen_cells()
 
     def recent_enemy_cells(self, turn: int, max_age: int) -> list[Cell]:
         """Enemy-owned cells last seen within max_age turns."""

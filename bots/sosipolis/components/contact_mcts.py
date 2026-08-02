@@ -142,6 +142,11 @@ class ContactMCTS:
             hunt = state.contact_commitment.macro.waypoint
         elif state.objective is not None:
             hunt = state.objective
+        # Live army always owns the tip march while visible — do not walk
+        # away into abstract fog while enemy tiles are on the board.
+        chase = self._live_army_target(obs, state)
+        if chase is not None:
+            hunt = chase
         tip = state.strike_tip or largest_owned_stack(obs)
         stack_army = obs.army_grid[tip[0]][tip[1]] if tip else 0
         assault_ready = stack_army >= self.params.CONTACT_ASSAULT_STACK
@@ -167,6 +172,60 @@ class ContactMCTS:
             obs, state, hunt, tip, assault_ready, clock, deadline
         )
 
+    def _live_army_target(self, obs, state) -> Cell | None:
+        """Cell the tip should walk at while enemy land is visible.
+
+        Prefer fog just behind the visible front (macaria contact_target), else
+        the strongest visible enemy stack. Restrict fog to belief candidates
+        when possible so the chase still aims at a possible general.
+        """
+        enemies: list[Cell] = [
+            (r, c)
+            for r in range(obs.H)
+            for c in range(obs.W)
+            if obs.owner_grid[r][c] == 2
+        ]
+        if not enemies:
+            return None
+        home = state.memory.own_general
+        radius = self.params.CONTACT_CHASE_VISIBLE_RADIUS + 3
+        allowed = state.memory.candidates
+        # BFS distance from visible enemy footprint.
+        from_enemy = state.memory._bfs_multi(enemies)
+        fog: list[Cell] = []
+        for r in range(obs.H):
+            for c in range(obs.W):
+                if obs.type_grid[r][c] != 0:  # not fog
+                    continue
+                d = from_enemy.get((r, c), 99)
+                if d > radius:
+                    continue
+                if allowed and (r, c) not in allowed:
+                    continue
+                fog.append((r, c))
+        if fog and home is not None:
+            return max(
+                fog,
+                key=lambda cell: (
+                    abs(cell[0] - home[0]) + abs(cell[1] - home[1]),
+                    -from_enemy.get(cell, 99),
+                    cell,
+                ),
+            )
+        if fog:
+            return min(fog, key=lambda cell: (from_enemy.get(cell, 99), cell))
+        # No fog: walk onto the farthest/strongest enemy tile from home.
+        if home is not None:
+            return max(
+                enemies,
+                key=lambda cell: (
+                    abs(cell[0] - home[0]) + abs(cell[1] - home[1]),
+                    obs.army_grid[cell[0]][cell[1]],
+                    cell,
+                ),
+            )
+        return max(enemies, key=lambda cell: (obs.army_grid[cell[0]][cell[1]], cell))
+
     # --- belief / cache -------------------------------------------------
 
     def _refresh_cache(self, obs, state, tip: Cell | None, deadline: Deadline) -> None:
@@ -182,7 +241,14 @@ class ContactMCTS:
         need_tip = tip != cache.tip or cache.terrain_epoch != mem.terrain_epoch
 
         if need_foot and not deadline.expired():
-            enemies = mem.enemy_cells()
+            # Primary path + currently visible enemy (chase the live army).
+            enemies = list(mem.primary_path_cells())
+            for r in range(obs.H):
+                for c in range(obs.W):
+                    if obs.owner_grid[r][c] == 2 and (r, c) not in enemies:
+                        enemies.append((r, c))
+            if not enemies:
+                enemies = mem.enemy_seen_cells() or mem.enemy_cells()
             cache.footprint_bfs = mem._bfs_multi(enemies) if enemies else {}
         if need_tip and tip is not None and not deadline.expired():
             cache.tip_bfs = mem._bfs_multi([tip])
@@ -204,57 +270,152 @@ class ContactMCTS:
         cache.waypoint_bfs = state.memory._bfs_multi([waypoint])
         cache.waypoint = waypoint
 
+    def _axis_confidence(self, mem) -> float:
+        """Early first contact → trust the axis; late contact → weaker lock."""
+        fc_turn = getattr(mem, "first_contact_turn", -1)
+        if fc_turn < 0:
+            return 1.0
+        early = self.params.CONTACT_AXIS_EARLY_TURN
+        late = self.params.CONTACT_AXIS_LATE_TURN
+        if fc_turn <= early:
+            return 1.0
+        if fc_turn >= late:
+            return 0.25
+        return 1.0 - 0.75 * (fc_turn - early) / max(late - early, 1)
+
+    def _axis_t(self, home: Cell | None, anchor: Cell | None, cell: Cell) -> float | None:
+        """Projection of cell onto home→anchor. t>=1 is past first contact."""
+        if home is None or anchor is None:
+            return None
+        hx, hy = home
+        ax, ay = anchor
+        vx, vy = ax - hx, ay - hy
+        denom = vx * vx + vy * vy
+        if denom <= 0:
+            return None
+        return ((cell[0] - hx) * vx + (cell[1] - hy) * vy) / denom
+
+    def _axis_lateral(
+        self, home: Cell | None, anchor: Cell | None, cell: Cell
+    ) -> float:
+        if home is None or anchor is None:
+            return 0.0
+        hx, hy = home
+        ax, ay = anchor
+        vx, vy = ax - hx, ay - hy
+        denom = (vx * vx + vy * vy) ** 0.5
+        if denom <= 0:
+            return 0.0
+        return abs((cell[0] - hx) * vy - (cell[1] - hy) * vx) / denom
+
+    def _on_hunt_axis(self, state, cell: Cell) -> bool:
+        conf = self._axis_confidence(state.memory)
+        min_t = self.params.CONTACT_AXIS_MIN_T * (0.5 + 0.5 * conf)
+        t = self._axis_t(
+            state.memory.own_general, state.memory.first_contact, cell
+        )
+        if t is None:
+            return True
+        if t < min_t:
+            return False
+        return self._axis_lateral(
+            state.memory.own_general, state.memory.first_contact, cell
+        ) <= (5.0 + 4.0 * (1.0 - conf))
+
+    def _far_off_axis(self, state, cell: Cell) -> bool:
+        """True only when clearly off the original approach (late flank)."""
+        lat = self._axis_lateral(
+            state.memory.own_general, state.memory.first_contact, cell
+        )
+        return lat >= self.params.CONTACT_AXIS_RECOVER_LATERAL
+
+    def _near_visible_enemy(self, obs, cell: Cell) -> bool:
+        r0, c0 = cell
+        rad = self.params.CONTACT_CHASE_VISIBLE_RADIUS
+        for r in range(r0 - rad, r0 + rad + 1):
+            for c in range(c0 - rad, c0 + rad + 1):
+                if not (0 <= r < obs.H and 0 <= c < obs.W):
+                    continue
+                if obs.owner_grid[r][c] == 2:
+                    return True
+        return False
+
     def _compute_belief(self, obs, state) -> dict[Cell, float]:
         mem = state.memory
         params = self.params
         if not mem.candidates:
             return {}
         home = mem.own_general
+        fc = mem.first_contact
         far = mem.H + mem.W
         foot = self._cache.footprint_bfs
         tip_bfs = self._cache.tip_bfs
         recent = set(
             mem.recent_enemy_cells(obs.turn, params.CONTACT_ENEMY_OBS_AGE)
         )
+        conf = self._axis_confidence(mem)
+        visible_enemy: list[Cell] = [
+            (r, c)
+            for r in range(obs.H)
+            for c in range(obs.W)
+            if obs.owner_grid[r][c] == 2
+        ]
         belief: dict[Cell, float] = {}
         for cell in mem.candidates:
             r, c = cell
             w = 1.0
-            # Geometry: prefer away from own general (spawn / opposite-side prior).
             if home is not None:
                 d_home = abs(r - home[0]) + abs(c - home[1])
                 w *= 1.0 + 0.04 * min(d_home, far)
-            # Contact-backtrace: mass behind enemy footprint, not toward home.
+            # Toward primary path + live army footprint.
             if foot:
                 d_foot = foot.get(cell, far)
-                w *= 1.0 + 0.08 * max(0, min(d_foot, params.HUNT_CONTACT_RADIUS))
-                if home is not None:
-                    # Penalize candidates that sit between home and the front.
-                    mid_pen = 0.0
-                    for er, ec in recent or mem.enemy_cells()[:12]:
-                        if abs(er - home[0]) + abs(ec - home[1]) == 0:
-                            continue
-                        # Candidate closer to home than the contact → lower.
-                        if abs(r - home[0]) + abs(c - home[1]) < abs(er - home[0]) + abs(
-                            ec - home[1]
-                        ):
-                            mid_pen += 0.15
-                    w /= 1.0 + mid_pen
-            # Freshness / army-delta indicators near evidence.
+                w *= 1.0 + params.CONTACT_BELIEF_NEAR_FOOT / (1.0 + d_foot)
+            # Chase currently visible enemy army (must fight into them).
+            if visible_enemy and params.CONTACT_CHASE_VISIBLE > 0:
+                d_vis = min(abs(r - er) + abs(c - ec) for er, ec in visible_enemy)
+                if d_vis <= params.CONTACT_CHASE_VISIBLE_RADIUS:
+                    w *= 1.0 + params.CONTACT_CHASE_VISIBLE * (
+                        1.0 - d_vis / max(params.CONTACT_CHASE_VISIBLE_RADIUS, 1)
+                    )
+            # Axis lock scaled by contact earliness.
+            t = self._axis_t(home, fc, cell)
+            if t is not None and conf > 0:
+                bonus = params.CONTACT_AXIS_BONUS * conf
+                off = params.CONTACT_AXIS_OFF_PENALTY * conf
+                min_t = params.CONTACT_AXIS_MIN_T * (0.5 + 0.5 * conf)
+                if t >= min_t:
+                    w *= 1.0 + bonus * min(max(t - 0.3, 0.0), 3.0)
+                else:
+                    w /= 1.0 + off * (min_t - t)
+                lat = self._axis_lateral(home, fc, cell)
+                w /= 1.0 + params.CONTACT_AXIS_LATERAL * conf * lat
+            if home is not None and fc is not None:
+                if abs(r - home[0]) + abs(c - home[1]) < abs(fc[0] - home[0]) + abs(
+                    fc[1] - home[1]
+                ):
+                    w /= 1.0 + 0.35 * conf
             for er, ec in recent:
                 age = max(0, obs.turn - mem.last_seen_turn[er][ec])
                 freshness = 1.0 / (1.0 + 0.05 * age)
                 dist = abs(r - er) + abs(c - ec)
                 delta = mem.enemy_army_delta[er][ec]
-                # Positive delta: reinforce near observed growth.
-                # Negative delta: mass behind departure (away from tip if known).
+                # Live visible army: full pull. Far off-axis flanks: weak.
+                if self._near_visible_enemy(obs, (er, ec)):
+                    scale = 1.0
+                elif self._on_hunt_axis(state, (er, ec)):
+                    scale = 1.0
+                else:
+                    scale = params.CONTACT_FLANK_DELTA_SCALE
                 if delta > 0:
-                    w *= 1.0 + 0.04 * min(delta, 8) * freshness / (1.0 + dist)
+                    w *= 1.0 + 0.04 * scale * min(delta, 8) * freshness / (1.0 + dist)
                 elif delta < 0:
                     behind = dist
                     if tip_bfs:
                         behind = tip_bfs.get(cell, far)
-                    w *= 1.0 + 0.03 * min(-delta, 8) * freshness / (1.0 + behind * 0.5)
+                    w *= 1.0 + 0.03 * scale * min(-delta, 8) * freshness / (
+                        1.0 + behind * 0.5
+                    )
             belief[cell] = max(w, 1e-6)
         total = sum(belief.values())
         if total <= 0:
@@ -293,13 +454,53 @@ class ContactMCTS:
         tip_bfs = self._cache.tip_bfs
         foot = self._cache.footprint_bfs
         evidence = state.memory.first_contact or (
-            state.enemy_footprint()[0] if state.enemy_footprint() else None
+            state.memory.primary_path_cells()[0]
+            if state.memory.primary_path_cells()
+            else (
+                state.enemy_footprint()[0] if state.enemy_footprint() else None
+            )
         )
         if evidence is None:
             evidence = next(iter(belief))
 
         clusters = self._cluster_candidates(belief, params.CONTACT_CLUSTER_RADIUS)
         macros: list[ProbeMacro] = []
+
+        # Always seed the original first-contact direction (backup / recover).
+        path_wp = self._axis_path_waypoint(obs, state, belief)
+        if path_wp is not None:
+            mass = self._reveal_belief(path_wp)
+            dist = tip_bfs.get(path_wp, far) if tip_bfs else far
+            score = self._macro_score(path_wp, mass, dist, evidence, foot)
+            score += params.CONTACT_AXIS_BONUS
+            macros.append(
+                ProbeMacro(
+                    "path",
+                    path_wp,
+                    evidence,
+                    frozenset(c for c in belief if self._on_hunt_axis(state, c)),
+                    score,
+                )
+            )
+
+        # Chase: fog / tile behind currently visible enemy army.
+        chase_wp = self._live_army_target(obs, state)
+        if chase_wp is not None:
+            mass = self._reveal_belief(chase_wp)
+            dist = tip_bfs.get(chase_wp, far) if tip_bfs else far
+            score = self._macro_score(chase_wp, mass, dist, evidence, foot)
+            score += params.CONTACT_CHASE_VISIBLE * 2.0
+            if self._on_hunt_axis(state, chase_wp):
+                score += params.CONTACT_AXIS_BONUS
+            macros.append(
+                ProbeMacro(
+                    "chase",
+                    chase_wp,
+                    evidence,
+                    frozenset(c for c in belief if self._near_visible_enemy(obs, c)),
+                    score,
+                )
+            )
 
         for cells in clusters[:3]:
             medoid = self._weighted_medoid(cells, belief)
@@ -308,6 +509,10 @@ class ContactMCTS:
             mass = sum(belief[c] for c in cells)
             dist = tip_bfs.get(medoid, far) if tip_bfs else far
             score = self._macro_score(medoid, mass, dist, evidence, foot)
+            if self._on_hunt_axis(state, medoid):
+                score += params.CONTACT_AXIS_BONUS * 0.5
+            else:
+                score *= 0.35  # late flank clusters stay weak
             macros.append(
                 ProbeMacro(
                     "cluster",
@@ -323,6 +528,10 @@ class ContactMCTS:
                 fscore = self._macro_score(
                     frontier, mass * 0.85, fdist, evidence, foot
                 )
+                if self._on_hunt_axis(state, frontier):
+                    fscore += params.CONTACT_AXIS_BONUS * 0.5
+                else:
+                    fscore *= 0.35
                 macros.append(
                     ProbeMacro(
                         "frontier",
@@ -342,6 +551,8 @@ class ContactMCTS:
                 mass = self._reveal_belief(mid)
                 dist = tip_bfs.get(mid, far) if tip_bfs else far
                 score = self._macro_score(mid, mass, dist, evidence, foot) + 0.15
+                if not self._on_hunt_axis(state, mid):
+                    score *= 0.25
                 macros.append(
                     ProbeMacro(
                         "mid_edge",
@@ -361,6 +572,8 @@ class ContactMCTS:
                 mass = self._reveal_belief(split)
                 dist = tip_bfs.get(split, far) if tip_bfs else far
                 score = self._macro_score(split, mass, dist, evidence, foot) + 0.2
+                if not self._on_hunt_axis(state, split):
+                    score *= 0.25
                 macros.append(
                     ProbeMacro(
                         "split",
@@ -388,7 +601,21 @@ class ContactMCTS:
                 for m in macros
             ]
             macros.sort(key=lambda m: (-m.score, m.waypoint[0], m.waypoint[1]))
-        return macros[: params.CONTACT_MAX_MACROS]
+        # Drop dead waypoints (already seen, no candidate mass left).
+        useful = [m for m in macros if self._waypoint_useful(state, m.waypoint)]
+        return (useful or macros)[: params.CONTACT_MAX_MACROS]
+
+    def _waypoint_useful(self, state, waypoint: Cell) -> bool:
+        """False for scouted owned corners with nothing left to reveal."""
+        if self._reveal_belief(waypoint) > 1e-9:
+            return True
+        if waypoint in state.memory.candidates:
+            return True
+        r, c = waypoint
+        if not state.memory.ever_seen[r][c]:
+            return True
+        # Seen and empty of belief — do not march a wave into this cell.
+        return False
 
     def _macro_score(
         self,
@@ -570,6 +797,180 @@ class ContactMCTS:
 
     # --- sticky commitment ----------------------------------------------
 
+    def _axis_path_waypoint(
+        self, obs, state, belief: dict[Cell, float]
+    ) -> Cell | None:
+        """Waypoint past first_contact on the original hunt axis."""
+        home = state.memory.own_general
+        fc = state.memory.first_contact
+        if home is None or fc is None:
+            return None
+        best = None
+        best_key = None
+        for cell, mass in belief.items():
+            t = self._axis_t(home, fc, cell)
+            if t is None or t < self.params.CONTACT_AXIS_MIN_T:
+                continue
+            lat = self._axis_lateral(home, fc, cell)
+            key = (-t, lat, -mass, cell[0], cell[1])
+            if best_key is None or key < best_key:
+                best_key, best = key, cell
+        if best is not None:
+            return best
+        # Geometric step past first contact along home → fc.
+        hx, hy = home
+        ax, ay = fc
+        dr = 0 if ax == hx else (1 if ax > hx else -1)
+        dc = 0 if ay == hy else (1 if ay > hy else -1)
+        r, c = ax, ay
+        last = fc
+        for _ in range(self.params.CONTACT_EXTEND_STEPS):
+            nr, nc = r + dr, c + dc
+            if not (0 <= nr < obs.H and 0 <= nc < obs.W):
+                break
+            if not state.memory.is_passable_belief(nr, nc):
+                break
+            r, c = nr, nc
+            last = (r, c)
+        return last if last != fc else None
+
+    def _extend_past_waypoint(
+        self, obs, state, from_cell: Cell
+    ) -> ProbeMacro | None:
+        """Continue along the *first-contact* axis, not toward a late flank tip."""
+        home = state.memory.own_general
+        fc = state.memory.first_contact
+        if home is None or fc is None:
+            return None
+        hx, hy = home
+        # Always aim past first contact (original signal), not from an off-axis tip.
+        ax, ay = fc
+        dr = 0 if ax == hx else (1 if ax > hx else -1)
+        dc = 0 if ay == hy else (1 if ay > hy else -1)
+        if dr == 0 and dc == 0:
+            return None
+        # Start at tip when fighting live army or already on-axis; else snap to fc.
+        if self._near_visible_enemy(obs, from_cell) or self._on_hunt_axis(
+            state, from_cell
+        ):
+            r, c = from_cell
+        else:
+            r, c = fc
+        last = (r, c)
+        for _ in range(self.params.CONTACT_EXTEND_STEPS):
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < obs.H and 0 <= nc < obs.W and state.memory.is_passable_belief(
+                nr, nc
+            ):
+                r, c = nr, nc
+                last = (r, c)
+                continue
+            stepped = False
+            if dr != 0:
+                nr, nc = r + dr, c
+                if 0 <= nr < obs.H and state.memory.is_passable_belief(nr, nc):
+                    r, c = nr, nc
+                    last = (r, c)
+                    stepped = True
+            if not stepped and dc != 0:
+                nr, nc = r, c + dc
+                if 0 <= nc < obs.W and state.memory.is_passable_belief(nr, nc):
+                    r, c = nr, nc
+                    last = (r, c)
+                    stepped = True
+            if not stepped:
+                break
+        if last == from_cell or last == fc:
+            alt = self._axis_path_waypoint(obs, state, self._cache.belief)
+            if alt is not None and alt != from_cell:
+                last = alt
+            else:
+                return None
+        if (
+            not self._waypoint_useful(state, last)
+            and state.memory.ever_seen[last[0]][last[1]]
+            and self._reveal_belief(last) <= 1e-9
+            and last not in state.memory.candidates
+        ):
+            return None
+        cells = frozenset(
+            cell
+            for cell in state.memory.candidates
+            if abs(cell[0] - last[0]) + abs(cell[1] - last[1])
+            <= self.params.CONTACT_CLUSTER_RADIUS
+        )
+        return ProbeMacro(
+            "extend",
+            last,
+            fc,
+            cells,
+            max(0.25, self._reveal_belief(last) + 0.4),
+        )
+
+    def _replace_macro(
+        self,
+        obs,
+        state,
+        macros: list[ProbeMacro],
+        near: Cell,
+        cur: ContactCommitment,
+    ) -> ContactCommitment:
+        """Replace an exhausted waypoint; recover onto the first-contact axis."""
+        extended = self._extend_past_waypoint(obs, state, near)
+        if extended is not None and extended.waypoint != cur.macro.waypoint:
+            return ContactCommitment(
+                extended, obs.turn, extended.score, cur.switch_count + 1
+            )
+        # Prefer on-axis useful macros (original signal), then local.
+        jump = self.params.CONTACT_REPLACE_JUMP_MAX
+        ranked = sorted(
+            macros,
+            key=lambda m: (
+                0 if self._on_hunt_axis(state, m.waypoint) else 1,
+                0 if self._waypoint_useful(state, m.waypoint) else 1,
+                abs(m.waypoint[0] - near[0]) + abs(m.waypoint[1] - near[1]),
+                -m.score,
+                m.waypoint[0],
+                m.waypoint[1],
+            ),
+        )
+        for m in ranked:
+            if m.waypoint == cur.macro.waypoint:
+                continue
+            if not self._waypoint_useful(state, m.waypoint):
+                continue
+            if not self._on_hunt_axis(state, m.waypoint):
+                continue
+            return ContactCommitment(
+                m, obs.turn, m.score, cur.switch_count + 1
+            )
+        for m in ranked:
+            if m.waypoint == cur.macro.waypoint:
+                continue
+            if not self._waypoint_useful(state, m.waypoint):
+                continue
+            if abs(m.waypoint[0] - near[0]) + abs(m.waypoint[1] - near[1]) > jump:
+                continue
+            return ContactCommitment(
+                m, obs.turn, m.score, cur.switch_count + 1
+            )
+        cur.last_score = cur.macro.score
+        return cur
+
+    def _prefer_axis_macro(self, state, macros: list[ProbeMacro]) -> ProbeMacro:
+        """Prefer chasing live army; path fog is backup when none visible."""
+        chases = [m for m in macros if m.kind == "chase"]
+        if chases:
+            on_axis = [m for m in chases if self._on_hunt_axis(state, m.waypoint)]
+            pool = on_axis if on_axis else chases
+            return max(pool, key=lambda m: (m.score, -m.waypoint[0], -m.waypoint[1]))
+        on_axis = [m for m in macros if self._on_hunt_axis(state, m.waypoint)]
+        pool = on_axis if on_axis else macros
+        paths = [m for m in pool if m.kind == "path"]
+        if paths:
+            return max(paths, key=lambda m: (m.score, -m.waypoint[0], -m.waypoint[1]))
+        return max(pool, key=lambda m: (m.score, -m.waypoint[0], -m.waypoint[1]))
+
     def _commit_macro(
         self,
         obs,
@@ -579,34 +980,83 @@ class ContactMCTS:
     ) -> ContactCommitment | None:
         if not macros:
             return self.commitment
-        best = macros[0]
+        best = self._prefer_axis_macro(state, macros)
         cur = self.commitment
         params = self.params
 
         if cur is None:
             return ContactCommitment(best, obs.turn, best.score, 0)
 
-        # Invalidate current if broken.
+        # Backup: only snap if clearly far off-axis AND not fighting live army.
+        if params.CONTACT_AXIS_RECOVER:
+            tip_fighting = tip is not None and self._near_visible_enemy(obs, tip)
+            wp_far = self._far_off_axis(state, cur.macro.waypoint)
+            tip_far = tip is not None and self._far_off_axis(state, tip)
+            if (wp_far or tip_far) and not tip_fighting:
+                # Prefer chase recover when army still visible.
+                path = next((m for m in macros if m.kind == "chase"), None)
+                if path is None:
+                    path = next((m for m in macros if m.kind == "path"), None)
+                if path is None:
+                    path = self._prefer_axis_macro(state, macros)
+                if path.waypoint != cur.macro.waypoint:
+                    return ContactCommitment(
+                        path, obs.turn, path.score, cur.switch_count + 1
+                    )
+
+        tip_arrived = (
+            tip is not None
+            and tip == cur.macro.waypoint
+            and self._reveal_belief(tip) <= 1e-9
+        )
+        # Tip reached / wave spent on empty waypoint: continue same line.
+        if tip_arrived:
+            return self._replace_macro(obs, state, macros, tip, cur)
+
+        # Invalidate for other reasons — still prefer local continue, not macros[0].
         if self._commitment_invalid(obs, state, cur, tip):
-            return ContactCommitment(
-                best, obs.turn, best.score, cur.switch_count + 1
-            )
+            near = tip if tip is not None else cur.macro.waypoint
+            return self._replace_macro(obs, state, macros, near, cur)
 
         age = obs.turn - cur.committed_turn
-        # Strong opposite-side evidence can force an early switch.
-        opp = self._opposite_side_evidence(obs, state, cur)
-        can_switch = age >= params.CONTACT_COMMIT_MIN_TURNS or opp
+        # New flank must not yank the hunt off the path we were on.
+        opp = (
+            params.CONTACT_FORCE_OPP_SWITCH
+            and self._opposite_side_evidence(obs, state, cur)
+        )
+        # While rebuilding the next wave, hold the committed direction.
+        hold_gather = (
+            params.CONTACT_HOLD_GATHER
+            and getattr(state, "clock_phase", "") == "gather"
+        )
+        can_switch = (age >= params.CONTACT_COMMIT_MIN_TURNS or opp) and not hold_gather
         if not can_switch:
-            # Refresh score mirror only.
             cur.last_score = cur.macro.score
             return cur
 
-        threshold = cur.last_score * params.CONTACT_SWITCH_RATIO + params.CONTACT_SWITCH_MARGIN
-        # Prefer a macro whose score clearly beats the sticky one.
+        threshold = (
+            cur.last_score * params.CONTACT_SWITCH_RATIO + params.CONTACT_SWITCH_MARGIN
+        )
         challenger = best
         if best.waypoint == cur.macro.waypoint:
-            # Same waypoint: keep.
             cur.last_score = max(cur.last_score, best.score)
+            return cur
+        if not self._waypoint_useful(state, challenger.waypoint):
+            cur.last_score = max(cur.last_score * 0.98, challenger.score * 0.5)
+            return cur
+        # Never voluntarily switch onto a far off-axis flank (unless chasing live army).
+        if self._far_off_axis(state, challenger.waypoint) and not self._near_visible_enemy(
+            obs, challenger.waypoint
+        ):
+            cur.last_score = max(cur.last_score * 0.98, challenger.score * 0.5)
+            return cur
+        jump = params.CONTACT_REPLACE_JUMP_MAX
+        if (
+            abs(challenger.waypoint[0] - cur.macro.waypoint[0])
+            + abs(challenger.waypoint[1] - cur.macro.waypoint[1])
+            > jump
+        ):
+            cur.last_score = max(cur.last_score * 0.98, challenger.score * 0.5)
             return cur
         if challenger.score >= threshold:
             return ContactCommitment(
@@ -624,18 +1074,25 @@ class ContactMCTS:
             return True
         if not state.memory.is_passable_belief(r, c):
             return True
-        # Waypoint reached / visible and no longer covers candidates.
+        # Tip-arrival empty is handled in _commit_macro (extend / local replace).
+        if tip is not None and tip == wp and self._reveal_belief(wp) <= 1e-9:
+            return False
+        # Waypoint scouted and exhausted.
         if state.memory.ever_seen[r][c]:
             if self._reveal_belief(wp) <= 1e-9 and wp not in state.memory.candidates:
                 return True
-        if tip is not None and tip == wp:
-            if self._reveal_belief(wp) <= 1e-9:
-                return True
-        # No overlapping candidates left.
+        # Cluster members pruned by vision: do NOT invalidate while the tip is
+        # still marching this line — that free-picked mid_edge/split corners.
         if cur.macro.candidate_cells and not (
             cur.macro.candidate_cells & state.memory.candidates
         ):
-            return True
+            if self._reveal_belief(wp) > 1e-9 or wp in state.memory.candidates:
+                return False
+            if tip is not None and abs(tip[0] - r) + abs(tip[1] - c) <= 2:
+                return True
+            # Tip elsewhere after a spent fight: keep direction until tip arrives
+            # or reveal at wp dies.
+            return self._reveal_belief(wp) <= 1e-9 and state.memory.ever_seen[r][c]
         return False
 
     def _opposite_side_evidence(
@@ -644,17 +1101,11 @@ class ContactMCTS:
         """New enemy cell far from current evidence anchor."""
         mem = state.memory
         anchor = cur.macro.evidence_anchor
-        foot = self._cache.footprint_bfs
         recent = mem.recent_enemy_cells(obs.turn, 2)
         for cell in recent:
             if cell == anchor:
                 continue
-            if foot:
-                d = foot.get(cell, 0)
-                # Distance between new cell and anchor via BFS approx.
-                d_anchor = abs(cell[0] - anchor[0]) + abs(cell[1] - anchor[1])
-            else:
-                d_anchor = abs(cell[0] - anchor[0]) + abs(cell[1] - anchor[1])
+            d_anchor = abs(cell[0] - anchor[0]) + abs(cell[1] - anchor[1])
             if d_anchor >= self.params.CONTACT_OPP_SIDE_BFS:
                 return True
         return False
@@ -929,18 +1380,23 @@ class ContactMCTS:
                 if gact is not None:
                     out.append((gact, 70.0))
         else:
-            # Wave: single tip → committed waypoint.
+            # Wave: tip → live army when visible, else committed waypoint.
             if tip is None:
                 tip = largest_owned_stack(obs)
-            if hunt is not None and tip is not None:
-                tip_army = obs.army_grid[tip[0]][tip[1]]
-                act = step_toward(obs, tip, hunt, blocked)
+            chase = self._live_army_target(obs, state)
+            march = chase if chase is not None else hunt
+            tip_army = obs.army_grid[tip[0]][tip[1]] if tip is not None else 0
+            if march is not None and tip is not None:
+                act = step_toward(obs, tip, march, blocked)
                 if act is not None:
-                    prior = self.params.HUNT_STEP_BONUS * 2.0 + tip_army
-                    if not state.memory.ever_seen[hunt[0]][hunt[1]]:
-                        prior += 60.0
+                    if chase is not None:
+                        prior = self.params.CONTACT_CHASE_STEP_BONUS + tip_army
+                    else:
+                        prior = self.params.HUNT_STEP_BONUS * 2.0 + tip_army
+                        if not state.memory.ever_seen[march[0]][march[1]]:
+                            prior += 60.0
                     out.append((act, prior))
-                gact = gather_toward(obs, hunt, blocked)
+                gact = gather_toward(obs, march, blocked)
                 if gact is not None:
                     out.append((gact, 90.0 if assault_ready else 70.0))
 
@@ -960,10 +1416,16 @@ class ContactMCTS:
                         if not self._pocket_ok(state, nr, nc, sector_cands):
                             continue
                     prior = self._score(
-                        obs, state, r, c, nr, nc, hunt, assault_ready
+                        obs, state, r, c, nr, nc, march, assault_ready
                     )
                     if prior < 0:
                         continue
+                    if obs.owner_grid[nr][nc] == 2:
+                        prior = max(
+                            prior,
+                            self.params.CONTACT_ENEMY_BONUS
+                            + obs.army_grid[r][c],
+                        )
                     out.append((move_action(r, c, nr, nc, 0), prior))
 
         out = prune_by_clock(obs, out, clock, hunt, muster)

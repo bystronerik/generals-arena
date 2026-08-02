@@ -22,6 +22,8 @@ def extras(agent) -> dict:
         "phase": mem.phase,
         "strikes": mem.strikes,
         "enemy_general_sighted": 1 if mem.belief.enemy_general else 0,
+        # Sticky: any enemy-owned tile ever seen (Kubic-aligned contact clock).
+        "enemy_land_visible": 1 if mem.enemy_seen else 0,
         "searched": 1 if agent.searched else 0,
         "overrode": 1 if agent.overrode else 0,
         "search_iters": agent.search_iters,

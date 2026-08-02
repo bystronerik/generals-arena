@@ -117,18 +117,29 @@ class StrikeMCTS:
         return best.action if best.action is not None else pass_action()
 
     def _kill_shot(self, obs, goal) -> Action | None:
-        gr, gc = goal
-        need = self._capture_need(obs, gr, gc)
-        for r, c in neighbors(obs.H, obs.W, gr, gc):
-            if obs.owner_grid[r][c] != 1:
-                continue
-            if obs.army_grid[r][c] - 1 >= need:
-                return move_action(r, c, gr, gc, 0)
+        from params import T_GENERAL
+
+        goals = [goal] if goal is not None else []
+        for r in range(obs.H):
+            for c in range(obs.W):
+                if obs.owner_grid[r][c] == 2 and obs.type_grid[r][c] == T_GENERAL:
+                    cell = (r, c)
+                    if cell not in goals:
+                        goals.append(cell)
+        for g in goals:
+            gr, gc = g
+            need = self._capture_need(obs, gr, gc)
+            for r, c in neighbors(obs.H, obs.W, gr, gc):
+                if obs.owner_grid[r][c] != 1:
+                    continue
+                if obs.army_grid[r][c] - 1 >= need:
+                    return move_action(r, c, gr, gc, 0)
         return None
 
     def _capture_need(self, obs, gr: int, gc: int) -> int:
         if obs.turn >= self.params.DEATHTOUCH_TURN:
-            return 2
+            # RULES §07: one attacking unit wins; leave-1 needs army >= 2.
+            return 1
         defender = 0
         if obs.owner_grid[gr][gc] == 2:
             defender = obs.army_grid[gr][gc]

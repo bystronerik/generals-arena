@@ -386,19 +386,38 @@ class Agent:
         return feed_tip_action(obs, tip)
 
     def _kill_shot(self, obs):
-        goal = self.state.memory.enemy_general
-        if goal is None:
-            return None
-        gr, gc = goal
-        if obs.turn >= self.params.DEATHTOUCH_TURN:
-            need = 2
-        else:
-            need = obs.army_grid[gr][gc] + self.params.FINISH_MARGIN
-            if obs.owner_grid[gr][gc] != 2:
+        """Capture a visible or remembered enemy general if any stack can."""
+        from params import T_GENERAL
+
+        goals = []
+        remembered = self.state.memory.enemy_general
+        if remembered is not None:
+            goals.append(remembered)
+        for r in range(obs.H):
+            for c in range(obs.W):
+                if obs.owner_grid[r][c] != 2:
+                    continue
+                if obs.type_grid[r][c] != T_GENERAL:
+                    continue
+                cell = (r, c)
+                if cell not in goals:
+                    goals.append(cell)
+                    # Latch immediately so strike phase engages next lines.
+                    self.state.memory.enemy_general = cell
+                    self.state.phase = "strike"
+
+        for goal in goals:
+            gr, gc = goal
+            if obs.turn >= self.params.DEATHTOUCH_TURN:
+                # RULES §07: one attacking unit wins; leave-1 needs army >= 2.
+                need = 1
+            elif obs.owner_grid[gr][gc] == 2:
+                need = obs.army_grid[gr][gc] + self.params.FINISH_MARGIN
+            else:
                 need = self.params.FINISH_MARGIN
-        for r, c in neighbors(obs.H, obs.W, gr, gc):
-            if obs.owner_grid[r][c] != 1:
-                continue
-            if obs.army_grid[r][c] - 1 >= need:
-                return move_action(r, c, gr, gc, 0)
+            for r, c in neighbors(obs.H, obs.W, gr, gc):
+                if obs.owner_grid[r][c] != 1:
+                    continue
+                if obs.army_grid[r][c] - 1 >= need:
+                    return move_action(r, c, gr, gc, 0)
         return None
