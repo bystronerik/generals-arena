@@ -56,15 +56,27 @@ Verdict vs existing bots: **distinct** (research axis).
    prior mass over sections that still hold candidates.
 7. Before enemy land is known: SearchMCTS expands on a wide front with mild
    section prior and pocket skip.
-8. After enemy land is known and the general is unknown: ContactMCTS sharpens
-   priors with `CONTACT_SECTOR_FOCUS` toward the contact footprint and hunts
-   that sector.
+8. After enemy land is known and the general is unknown: `MapMemory.hunt_target`
+   picks a belief cell (prune value / footprint prior / travel), ContactMCTS
+   marches and gathers onto that cell, and fog toward the hunt outranks
+   fighting the visible front.
 9. After the enemy general is known: StrikeMCTS gathers and advances; no new
    fog exploration and no new castle projects.
 10. From `CASTLE_START_TURN`, fund and build up to `CASTLE_MAX` castles on the
     cheapest safe owned plain near the general.
 11. Use the first-move 10 s grace (up to `FIRST_MOVE_GRACE_MS`) to precompute
     pockets, sections, and root priors.
+12. Defense is **not** a fourth MCTS. Each phase scores perimeter deny and a
+    soft home bank inside Search / Contact / Strike. Brain hard-overrides only
+    on kill shot or imminent loss (adjacent enemy that can capture the general).
+
+## Phase-adjusted defense
+
+| Phase | Defense inside that MCTS | Conversion |
+| --- | --- | --- |
+| `search` | Soft bank `HOME_BANK_SEARCH`; avoid stripping the general under threat | Land + mild section prior |
+| `contact` | Perimeter in `DEFENSE_RADIUS`; bank `HOME_BANK_CONTACT`; staging gather if stack < `CONTACT_STAGE_STACK` | Sector hunt + contact pressure |
+| `strike` | Same perimeter at `DEFENSE_WEIGHT_STRIKE`; intercept if enemy closer to home than we are to goal | Toward bias + land root slots + multi-wave gather when path is long |
 
 ## State
 
@@ -113,6 +125,23 @@ Named constants (seeded from Kubic aggregates and RULES.md):
 - `CASTLE_ENEMY_CLEAR` = 5
 - `CASTLE_ABORT_TURN` = 100
 - `BUILD_BASE_COST` = 35
+- `DEFENSE_RADIUS` = 3
+- `HOME_BANK_SEARCH` = 4
+- `HOME_BANK_CONTACT` = 10
+- `HOME_BANK_STRIKE` = 8
+- `DEFENSE_WEIGHT_SEARCH` = 8.0
+- `DEFENSE_WEIGHT_CONTACT` = 15.0
+- `DEFENSE_WEIGHT_STRIKE` = 16.0
+- `CONTACT_STAGE_STACK` = 35
+- `STRIKE_LAND_ROOT_SLOTS` = 2
+- `STRIKE_GATHER_WAVES_HINT` = 2
+- `HUNT_INTERVAL` = 8
+- `HUNT_REVEAL_RADIUS` = 2
+- `HUNT_PRIOR_DECAY` = 0.35
+- `HUNT_TRAVEL_DECAY` = 0.05
+- `HUNT_CONTACT_RADIUS` = 6
+- `HUNT_STEP_BONUS` = 220
+- `SEARCH_HUNT_BONUS` = 90
 
 ## Threat or scoring model
 
@@ -130,12 +159,15 @@ the sector centroid + pressure captures − corridor penalty outside the sector.
 ## Candidate move rules
 
 1. If adjacent to a known enemy general and capture is legal, take it.
-2. If own general is under immediate visible threat, defend.
+2. If an adjacent enemy can capture the own general this turn (imminent loss),
+   capture or reinforce.
 3. Else if a funded castle site exists and castles `< CASTLE_MAX`, build or
    gather to the site (not in `strike` for new projects).
-4. Else if `enemy_general` is known: StrikeMCTS under `STRIKE_BUDGET_MS`.
-5. Else if enemy land is known: ContactMCTS under `CONTACT_BUDGET_MS`.
-6. Else: SearchMCTS under `SEARCH_BUDGET_MS`.
+4. Else if `enemy_general` is known: StrikeMCTS under `STRIKE_BUDGET_MS`
+   (toward + land slots + perimeter scores).
+5. Else if enemy land is known: ContactMCTS under `CONTACT_BUDGET_MS`
+   (sector hunt + staging + perimeter scores).
+6. Else: SearchMCTS under `SEARCH_BUDGET_MS` (land + soft bank).
 7. Fallback: PASS.
 
 ## Pseudocode for act()
@@ -201,7 +233,7 @@ castle tick median 10, median castles 1 (76% ≥1). Scraped games never enter
 bots/sosipolis/
   run.sh, main.py, stdio.py, state.py, brain.py, params.py, probe.py
   components/{map_memory,pockets,sections,search_mcts,contact_mcts,
-              strike_mcts,economy,army,clock}.py
+              strike_mcts,economy,threat,army,clock}.py
 ```
 
 No `bots/_common` imports.

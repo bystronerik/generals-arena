@@ -13,6 +13,7 @@ from components.contact_mcts import ContactMCTS
 from components.economy import Economy, count_owned_castles
 from components.search_mcts import SearchMCTS
 from components.strike_mcts import StrikeMCTS
+from components.threat import imminent_loss_move
 from params import PARAMS, Params
 from state import GameState
 
@@ -69,6 +70,8 @@ class Agent:
         self.enemy_general_sighted = 1 if self.state.memory.enemy_general else 0
         self.castles_built_probe = count_owned_castles(obs)
         self.state.castles_owned = self.castles_built_probe
+        if self.state.memory.enemy_general is None:
+            self.state.memory.hunt_target(obs, self.params)
 
         kill = self._kill_shot(obs)
         if kill is not None:
@@ -77,7 +80,7 @@ class Agent:
             self.move_ms = ms_since(start)
             return kill
 
-        defense = self._defense_move(obs)
+        defense = imminent_loss_move(obs, self.state)
         if defense is not None:
             self.searched = False
             self.search_iters = 0
@@ -128,28 +131,4 @@ class Agent:
                 continue
             if obs.army_grid[r][c] - 1 >= need:
                 return move_action(r, c, gr, gc, 0)
-        return None
-
-    def _defense_move(self, obs):
-        home = self.state.memory.own_general
-        if home is None:
-            return None
-        hr, hc = home
-        threat = None
-        threat_army = 0
-        for r, c in neighbors(obs.H, obs.W, hr, hc):
-            if obs.owner_grid[r][c] == 2 and obs.army_grid[r][c] > threat_army:
-                threat_army = obs.army_grid[r][c]
-                threat = (r, c)
-        if threat is None:
-            return None
-        tr, tc = threat
-        for r, c in neighbors(obs.H, obs.W, tr, tc):
-            if obs.owner_grid[r][c] != 1:
-                continue
-            if obs.army_grid[r][c] - 1 > obs.army_grid[tr][tc]:
-                return move_action(r, c, tr, tc, 0)
-        for r, c in neighbors(obs.H, obs.W, hr, hc):
-            if obs.owner_grid[r][c] == 1 and obs.army_grid[r][c] > 1:
-                return move_action(r, c, hr, hc, 0)
         return None

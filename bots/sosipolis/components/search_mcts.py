@@ -9,11 +9,14 @@ from components.army import (
     Action,
     gather_toward,
     is_wall,
+    largest_owned_stack,
     move_action,
     neighbors,
     pass_action,
+    step_toward,
 )
 from components.clock import Deadline
+from components.threat import defense_score_delta
 from params import Params
 
 
@@ -46,7 +49,8 @@ class SearchMCTS:
 
     def search(self, obs, state, deadline: Deadline) -> Action:
         self.stats = SearchStats()
-        root_moves = self._root_moves(obs, state)
+        hunt = state.memory.hunt_target(obs, self.params)
+        root_moves = self._root_moves(obs, state, hunt)
         self.stats.root_moves = len(root_moves)
         if not root_moves:
             return pass_action()
@@ -63,7 +67,7 @@ class SearchMCTS:
             node = self._select(root, c)
             if node.action is None:
                 break
-            value = self._rollout(obs, state, node.action, depth, deadline)
+            value = self._rollout(obs, state, node.action, depth, hunt, deadline)
             node.visits += 1
             node.value += value
             root.visits += 1
@@ -79,7 +83,9 @@ class SearchMCTS:
             return root
         return max(root.children, key=lambda n: n.uct(root.visits, c) + n.prior)
 
-    def _score_expand(self, obs, state, r: int, c: int, nr: int, nc: int) -> float:
+    def _score_expand(
+        self, obs, state, r: int, c: int, nr: int, nc: int, hunt
+    ) -> float:
         army = obs.army_grid[r][c]
         dest_army = obs.army_grid[nr][nc]
         owner = obs.owner_grid[nr][nc]
@@ -90,14 +96,14 @@ class SearchMCTS:
         score = float(army)
         # Land capture is mandatory tempo (Kubic contact ~82 needs map cover).
         if owner == 0:
-            score += 50.0
+            score += self.params.SEARCH_LAND_BONUS
             if not state.memory.ever_seen[nr][nc]:
                 # Section prior biases *which* fog frontier, not whether to take land.
-                score += 25.0 * (0.4 + state.sections.score_cell(nr, nc))
+                score += self.params.SEARCH_FOG_BONUS * (0.4 + state.sections.score_cell(nr, nc))
             else:
-                score += 12.0
+                score += self.params.SEARCH_LAND_BONUS * 0.24
         elif owner == 2:
-            score += 45.0 + min(dest_army, 20)
+            score += self.params.SEARCH_ENEMY_BONUS + min(dest_army, 20)
             score += 20.0 * state.sections.score_cell(nr, nc)
         else:
             # Reinforcing own cell — weak.
@@ -105,7 +111,18 @@ class SearchMCTS:
 
         score += 15.0 * state.sections.score_cell(nr, nc)
 
-        # Penalize thin corridor probes into low-prior fog.
+        # Bias expansion toward the belief hunt (mirror prior before contact).
+        if hunt is not None:
+            before = abs(r - hunt[0]) + abs(c - hunt[1])
+            after = abs(nr - hunt[0]) + abs(nc - hunt[1])
+            if after < before:
+                score += self.params.SEARCH_HUNT_BONUS
+                if not state.memory.ever_seen[nr][nc]:
+                    score += self.params.SEARCH_HUNT_BONUS * 0.4
+            elif after > before:
+                score -= self.params.SEARCH_HUNT_BONUS * 0.25
+
+        # Penalize thin corridor probes into low-prior fog (keep if closing hunt).
         if owner == 0 and not state.memory.ever_seen[nr][nc]:
             owned_adj = sum(
                 1
@@ -114,13 +131,38 @@ class SearchMCTS:
             )
             prior = state.sections.score_cell(nr, nc)
             if owned_adj <= self.params.CORRIDOR_WIDTH_MAX and prior < 0.12:
-                score *= 0.5
+                closing = (
+                    hunt is not None
+                    and abs(nr - hunt[0]) + abs(nc - hunt[1])
+                    < abs(r - hunt[0]) + abs(c - hunt[1])
+                )
+                if not closing:
+                    score *= 0.5
+        score += defense_score_delta(obs, state, self.params, (r, c), (nr, nc))
         return score
 
-    def _root_moves(self, obs, state) -> list[tuple[Action, float]]:
+    def _root_moves(self, obs, state, hunt) -> list[tuple[Action, float]]:
         H, W = obs.H, obs.W
         dead = state.dead_pockets
+        blocked = lambda rr, cc: is_wall(obs.type_grid, rr, cc)
         out: list[tuple[Action, float]] = []
+
+        if hunt is not None:
+            stack = largest_owned_stack(obs)
+            if stack is not None:
+                act = step_toward(obs, stack, hunt, blocked)
+                if act is not None:
+                    out.append(
+                        (
+                            act,
+                            self.params.SEARCH_HUNT_BONUS
+                            + obs.army_grid[stack[0]][stack[1]] * 0.3,
+                        )
+                    )
+            gact = gather_toward(obs, hunt, blocked)
+            if gact is not None:
+                out.append((gact, self.params.SEARCH_HUNT_BONUS * 0.6))
+
         for r in range(H):
             for c in range(W):
                 if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
@@ -131,17 +173,17 @@ class SearchMCTS:
                     if (nr, nc) in dead and obs.owner_grid[nr][nc] != 2:
                         if not self._pocket_has_candidates(state, nr, nc):
                             continue
-                    prior = self._score_expand(obs, state, r, c, nr, nc)
+                    prior = self._score_expand(obs, state, r, c, nr, nc, hunt)
                     if prior < 0:
                         continue
                     out.append((move_action(r, c, nr, nc, 0), prior))
         if not out:
-            rally = self._best_frontier(obs, state)
+            rally = hunt or self._best_frontier(obs, state)
             if rally is not None:
-                blocked = lambda rr, cc: is_wall(obs.type_grid, rr, cc) or (
+                blocked2 = lambda rr, cc: is_wall(obs.type_grid, rr, cc) or (
                     (rr, cc) in dead and obs.owner_grid[rr][cc] != 2
                 )
-                act = gather_toward(obs, rally, blocked)
+                act = gather_toward(obs, rally, blocked2)
                 if act is not None:
                     out.append((act, 1.0))
         return out
@@ -177,7 +219,7 @@ class SearchMCTS:
         return best
 
     def _rollout(
-        self, obs, state, action: Action, depth: int, deadline: Deadline
+        self, obs, state, action: Action, depth: int, hunt, deadline: Deadline
     ) -> float:
         # Lightweight value: score the immediate action features; no full sim.
         if deadline.expired():
@@ -190,13 +232,12 @@ class SearchMCTS:
         nr, nc = r + dr, c + dc
         if not (0 <= nr < obs.H and 0 <= nc < obs.W):
             return -1.0
-        value = self._score_expand(obs, state, r, c, nr, nc) / 100.0
-        # Candidate proximity bonus.
-        if state.memory.candidates:
-            mind = min(
-                abs(nr - cr) + abs(nc - cc) for cr, cc in state.memory.candidates
-            )
-            value += 2.0 / (1.0 + mind)
+        value = self._score_expand(obs, state, r, c, nr, nc, hunt) / 100.0
+        if hunt is not None:
+            before = abs(r - hunt[0]) + abs(c - hunt[1])
+            after = abs(nr - hunt[0]) + abs(nc - hunt[1])
+            if after < before:
+                value += 1.2
         # Noise keeps UCT exploring when scores tie.
         value += random.random() * 0.05
         # Depth unused in this cheap model but kept for API stability.

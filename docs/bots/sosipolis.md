@@ -7,7 +7,8 @@ memory, mountain-pocket skip, and section priors.
 Spec: [`../research/strategies/sosipolis.md`](../research/strategies/sosipolis.md).
 Experiments:
 [`../research/experiments/019-sosipolis-dual-mcts.md`](../research/experiments/019-sosipolis-dual-mcts.md),
-[`../research/experiments/020-sosipolis-contact-castle.md`](../research/experiments/020-sosipolis-contact-castle.md).
+[`../research/experiments/020-sosipolis-contact-castle.md`](../research/experiments/020-sosipolis-contact-castle.md),
+[`../research/experiments/021-sosipolis-phase-defense.md`](../research/experiments/021-sosipolis-phase-defense.md).
 
 ## Layout
 
@@ -19,7 +20,7 @@ Experiments:
 | `brain.py` | `Agent.act`: defense → economy → MCTS |
 | `params.py` | every named threshold |
 | `probe.py` | arena telemetry only |
-| `components/` | map_memory, pockets, sections, search_mcts, contact_mcts, strike_mcts, economy, army, clock |
+| `components/` | map_memory, pockets, sections, search_mcts, contact_mcts, strike_mcts, economy, threat, army, clock |
 
 ## Behaviour
 
@@ -27,7 +28,9 @@ Experiments:
 2. **contact** — enemy land remembered, general unknown: ContactMCTS, sector focus.
 3. **strike** — general sighted: StrikeMCTS, gather and advance; no new castles.
 4. From turn `CASTLE_START_TURN`, build up to `CASTLE_MAX` castles near the general.
-5. Move budget: 100 ms hard cap. First move may use up to 9 s grace for precompute.
+5. Defense is scored inside each MCTS (perimeter + home bank). Brain only
+   hard-overrides on kill shot or imminent loss.
+6. Move budget: 100 ms hard cap. First move may use up to 9 s grace for precompute.
 
 ## Diversity
 

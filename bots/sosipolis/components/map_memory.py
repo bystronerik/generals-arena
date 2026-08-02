@@ -1,9 +1,9 @@
-"""Persistent fog memory: ever-seen terrain and ownership latch."""
+"""Persistent fog memory: ever-seen terrain, ownership latch, general hunt."""
 from __future__ import annotations
 
 from collections import deque
 
-from params import T_FOG, T_GENERAL, T_MOUNTAIN, T_PLAIN, T_STRUCT_FOG
+from params import T_FOG, T_GENERAL, T_MOUNTAIN, T_PLAIN, T_STRUCT_FOG, Params
 
 
 Cell = tuple[int, int]
@@ -21,6 +21,8 @@ class MapMemory:
         self.enemy_general: Cell | None = None
         self.candidates: set[Cell] = set()
         self.first_contact: Cell | None = None
+        self.hunt_cell: Cell | None = None
+        self.hunt_turn: int = -10_000
         self._seeded = False
 
     def update(self, obs) -> None:
@@ -51,6 +53,102 @@ class MapMemory:
             self._seeded = True
 
         self._prune_candidates()
+        if self.enemy_general is not None:
+            self.hunt_cell = self.enemy_general
+            self.hunt_turn = obs.turn
+
+    def enemy_cells(self) -> list[Cell]:
+        """Remembered enemy ownership (visible now or latched in fog)."""
+        cells: list[Cell] = []
+        for r in range(self.H):
+            for c in range(self.W):
+                if self.known_owner[r][c] == 2:
+                    cells.append((r, c))
+        return cells
+
+    def hunt_target(self, obs, params: Params) -> Cell | None:
+        """Best remaining general candidate to walk vision onto.
+
+        Scores each belief cell by how many candidates a visit would prune
+        (``HUNT_REVEAL_RADIUS`` box), discounted by travel from owned land and
+        by distance away from the enemy footprint (or the mirror of our
+        general before contact). After contact, the pool prefers candidates
+        within ``HUNT_CONTACT_RADIUS`` of remembered enemy land — fog behind
+        their front, not the near edge of the whole ≥17 ring.
+        """
+        if self.enemy_general is not None:
+            return self.enemy_general
+        if not self.candidates:
+            return None
+
+        cached = self.hunt_cell
+        if (
+            cached is not None
+            and cached in self.candidates
+            and obs.turn - self.hunt_turn < params.HUNT_INTERVAL
+        ):
+            return cached
+
+        pool = self._hunt_pool(params)
+        if not pool:
+            return None
+
+        owned = [
+            (r, c)
+            for r in range(obs.H)
+            for c in range(obs.W)
+            if obs.owner_grid[r][c] == 1
+        ]
+        from_home = self._bfs_multi(owned) if owned else {}
+
+        enemies = self.enemy_cells()
+        from_prior: dict[Cell, int] | None = None
+        if enemies:
+            from_prior = self._bfs_multi(enemies)
+        elif self.own_general is not None:
+            mr, mc = self.own_general
+            mirror = (self.H - 1 - mr, self.W - 1 - mc)
+            from_prior = self._bfs_multi([mirror])
+
+        far = self.H + self.W
+        radius = params.HUNT_REVEAL_RADIUS
+        best: Cell | None = None
+        best_key = None
+        for cell in pool:
+            cost = from_home.get(cell, far)
+            penalty = 1.0 + params.HUNT_TRAVEL_DECAY * cost
+            if from_prior is not None:
+                away = from_prior.get(cell, far)
+                penalty *= 1.0 + params.HUNT_PRIOR_DECAY * min(away, far)
+            prune = 0
+            r, c = cell
+            for rr in range(r - radius, r + radius + 1):
+                for cc in range(c - radius, c + radius + 1):
+                    if (rr, cc) in self.candidates:
+                        prune += 1
+            key = (prune / penalty, -cost, (-r, -c))
+            if best_key is None or key > best_key:
+                best_key, best = key, cell
+
+        if best is None:
+            return None
+        self.hunt_cell = best
+        self.hunt_turn = obs.turn
+        return best
+
+    def _hunt_pool(self, params: Params) -> set[Cell]:
+        """Candidates behind the enemy front when a footprint exists."""
+        pool = set(self.candidates)
+        enemies = self.enemy_cells()
+        if not enemies:
+            return pool
+        from_enemy = self._bfs_multi(enemies)
+        near = {
+            cell
+            for cell in pool
+            if from_enemy.get(cell, 10_000) <= params.HUNT_CONTACT_RADIUS
+        }
+        return near if near else pool
 
     def _seed_candidates(self) -> None:
         assert self.own_general is not None
@@ -75,10 +173,11 @@ class MapMemory:
                 drop.append(cell)
         for cell in drop:
             self.candidates.discard(cell)
+        if self.hunt_cell is not None and self.hunt_cell not in self.candidates:
+            self.hunt_cell = None
         if not self.candidates and self.own_general is not None:
             # Rebuild from never-seen passable cells at distance ≥ min.
             self._seed_candidates()
-            # Keep only never-seen among rebuild.
             self.candidates = {
                 cell for cell in self.candidates if not self.ever_seen[cell[0]][cell[1]]
             }
@@ -95,9 +194,19 @@ class MapMemory:
         return True
 
     def _bfs_passable_from(self, start: Cell) -> dict[Cell, int]:
+        return self._bfs_multi([start])
+
+    def _bfs_multi(self, starts: list[Cell]) -> dict[Cell, int]:
         H, W = self.H, self.W
-        dist: dict[Cell, int] = {start: 0}
-        q: deque[Cell] = deque([start])
+        dist: dict[Cell, int] = {}
+        q: deque[Cell] = deque()
+        for s in starts:
+            if not (0 <= s[0] < H and 0 <= s[1] < W):
+                continue
+            if self._is_known_mountain(s) and self.known_owner[s[0]][s[1]] == 0:
+                continue
+            dist[s] = 0
+            q.append(s)
         while q:
             r, c = q.popleft()
             d = dist[(r, c)]

@@ -17,6 +17,7 @@ from components.army import (
     step_toward,
 )
 from components.clock import Deadline
+from components.threat import defense_score_delta, home_threat
 from params import Params
 
 
@@ -53,7 +54,6 @@ class StrikeMCTS:
         if goal is None:
             return pass_action()
 
-        # Immediate kill.
         kill = self._kill_shot(obs, goal)
         if kill is not None:
             return kill
@@ -105,6 +105,34 @@ class StrikeMCTS:
     def _blocked(self, obs):
         return lambda r, c: is_wall(obs.type_grid, r, c)
 
+    def _land_captures(self, obs, state) -> list[tuple[Action, float]]:
+        """Free / cheap land captures reserved in the strike root set."""
+        out: list[tuple[Action, float]] = []
+        H, W = obs.H, obs.W
+        for r in range(H):
+            for c in range(W):
+                if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
+                    continue
+                for nr, nc in neighbors(H, W, r, c):
+                    if is_wall(obs.type_grid, nr, nc):
+                        continue
+                    owner = obs.owner_grid[nr][nc]
+                    if owner == 1:
+                        continue
+                    if obs.army_grid[r][c] - 1 <= obs.army_grid[nr][nc]:
+                        continue
+                    score = 12.0 + obs.army_grid[r][c] * 0.1
+                    if owner == 0:
+                        score += 8.0
+                    else:
+                        score += 15.0
+                    score += defense_score_delta(
+                        obs, state, self.params, (r, c), (nr, nc)
+                    )
+                    out.append((move_action(r, c, nr, nc, 0), score))
+        out.sort(key=lambda item: -item[1])
+        return out[: self.params.STRIKE_LAND_ROOT_SLOTS]
+
     def _root_moves(self, obs, state, goal) -> list[tuple[Action, float]]:
         blocked = self._blocked(obs)
         gr, gc = goal
@@ -112,7 +140,6 @@ class StrikeMCTS:
         dist = bfs_dist(obs.H, obs.W, [goal], blocked)
         out: list[tuple[Action, float]] = []
 
-        # Advance closest strong stacks toward the general.
         stacks: list[tuple[int, int, int, int]] = []
         for r in range(obs.H):
             for c in range(obs.W):
@@ -123,31 +150,61 @@ class StrikeMCTS:
                 stacks.append((obs.army_grid[r][c], -dist[(r, c)], r, c))
         stacks.sort(reverse=True)
 
+        path_long = False
+        if stacks:
+            army0, neg_d0, _, _ = stacks[0]
+            d0 = -neg_d0
+            if d0 * need > army0:
+                path_long = True
+
         for army, neg_d, r, c in stacks[:8]:
             act = step_toward(obs, (r, c), goal, blocked)
             if act is None:
                 continue
             d = -neg_d
-            # Toward bias from Kubic toward-move share.
             prior = army * self.params.STRIKE_TOWARD_BIAS / (1.0 + d)
             if army - 1 >= need and d <= 1:
                 prior += 100.0
+            # Defense delta on the step destination.
+            _, sr, sc, di, _ = act
+            dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+            dr, dc = dirs[di]
+            prior += defense_score_delta(
+                obs, state, self.params, (sr, sc), (sr + dr, sc + dc)
+            )
+            # Prefer intercept if enemy is closer to home than we are to goal.
+            threat = home_threat(obs, state, self.params)
+            home = state.memory.own_general
+            if (
+                threat.dist is not None
+                and home is not None
+                and threat.dist < d
+                and threat.nearest is not None
+            ):
+                intercept = step_toward(obs, (r, c), threat.nearest, blocked)
+                if intercept is not None:
+                    out.append((intercept, prior + self.params.DEFENSE_WEIGHT_STRIKE))
             out.append((act, prior))
 
-        # Gather toward the largest stack nearest the goal (staging).
+        # Multi-wave gather when the path is longer than the stack can afford.
+        gather_hint = self.params.GATHER_WAVE_HINT
+        if path_long:
+            gather_hint = max(gather_hint, self.params.STRIKE_GATHER_WAVES_HINT)
         if stacks:
             _, _, rr, cc = stacks[0]
             gact = gather_toward(obs, (rr, cc), blocked)
             if gact is not None:
-                out.append((gact, 15.0 * self.params.GATHER_WAVE_HINT))
+                out.append((gact, 15.0 * gather_hint))
 
-        # Also gather toward a cell adjacent to the general if we own one.
         for r, c in neighbors(obs.H, obs.W, gr, gc):
             if obs.owner_grid[r][c] == 1:
                 gact = gather_toward(obs, (r, c), blocked)
                 if gact is not None:
-                    out.append((gact, 20.0))
+                    out.append((gact, 20.0 * (1.5 if path_long else 1.0)))
                 break
+
+        # Keep land tempo (Kubic still grows tiles during conversion).
+        out.extend(self._land_captures(obs, state))
 
         if not out:
             src = largest_owned_stack(obs)
@@ -166,6 +223,8 @@ class StrikeMCTS:
         dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         dr, dc = dirs[d]
         nr, nc = r + dr, c + dc
+        if not (0 <= nr < obs.H and 0 <= nc < obs.W):
+            return -1.0
         gr, gc = goal
         before = abs(r - gr) + abs(c - gc)
         after = abs(nr - gr) + abs(nc - gc)
@@ -174,9 +233,9 @@ class StrikeMCTS:
             value += self.params.STRIKE_TOWARD_BIAS
         elif after > before:
             value -= 0.5
-        # Prefer moving larger stacks.
         value += min(obs.army_grid[r][c], 50) / 50.0
         if (nr, nc) == goal:
             value += 5.0
+        value += defense_score_delta(obs, state, self.params, (r, c), (nr, nc)) / 20.0
         value += random.random() * 0.02
         return value
