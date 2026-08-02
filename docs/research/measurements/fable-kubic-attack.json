@@ -1,0 +1,3835 @@
+{
+ "meta": {
+  "fit_games": 351,
+  "unresolved_ticks_total": 4,
+  "definitions": {
+   "first_contact": "first state tick with any enemy-owned cell inside Kubic's 8-neighbourhood vision",
+   "first_sight": "first state tick with the enemy general cell inside vision",
+   "situation": "state with a Kubic stack>=2 orthogonally adjacent to a visible enemy cell",
+   "full_send_margin": "stack-1 - enemy_cell_army (split=0 send)",
+   "attack_margin": "moved - dst_army at decision time",
+   "raid_chain": "moves linked by src == previous dst within 30 ticks (split=0 links)",
+   "tick_semantics": "action at tick t reads state t-1"
+  },
+  "fog_legality": {
+   "engage/target min_dst_army/max_margin/castles": "fog-legal (adjacent cells are visible)",
+   "dist_gen pre-sight (hunt)": "NOT fog-legal - belief-level analysis vs true general",
+   "dist_gen post-sight": "fog-legal position memory; true-map BFS assumes known terrain (caveat)"
+  }
+ },
+ "A_contact": {
+  "army_ratio": {
+   "name": "kubic/enemy total army at contact",
+   "n": 350,
+   "mean": 1.172,
+   "min": 0.37119113573407203,
+   "p10": 1.0,
+   "p25": 1.0153846153846153,
+   "median": 1.0495901639344263,
+   "p75": 1.1655982905982907,
+   "p90": 1.4785454545454548,
+   "max": 3.4225352112676055
+  },
+  "max_stack": {
+   "name": "max Kubic stack at contact",
+   "n": 350,
+   "mean": 18.146,
+   "min": 3.0,
+   "p10": 5.0,
+   "p25": 10.0,
+   "median": 14.0,
+   "p75": 20.0,
+   "p90": 28.100000000000023,
+   "max": 175.0
+  },
+  "vis_enemy_army": {
+   "name": "visible enemy army at contact",
+   "n": 350,
+   "mean": 6.909,
+   "min": 1.0,
+   "p10": 1.0,
+   "p25": 1.0,
+   "median": 3.0,
+   "p75": 8.0,
+   "p90": 16.0,
+   "max": 142.0
+  },
+  "contact_to_first_attack": {
+   "name": "ticks contact->first enemy-target move",
+   "n": 350,
+   "mean": 13.14,
+   "min": 1.0,
+   "p10": 1.0,
+   "p25": 1.0,
+   "median": 3.5,
+   "p75": 22.0,
+   "p90": 38.0,
+   "max": 117.0
+  },
+  "first_attack_moved": {
+   "name": "army sent on first attack",
+   "n": 350,
+   "mean": 20.254,
+   "min": 1.0,
+   "p10": 5.0,
+   "p25": 10.0,
+   "median": 16.0,
+   "p75": 22.0,
+   "p90": 36.0,
+   "max": 173.0
+  },
+  "first_attack_margin": {
+   "name": "moved-dst_army on first attack",
+   "n": 350,
+   "mean": 16.26,
+   "min": -23.0,
+   "p10": 3.0,
+   "p25": 7.0,
+   "median": 13.5,
+   "p75": 20.0,
+   "p90": 31.100000000000023,
+   "max": 140.0
+  },
+  "games_with_no_attack": []
+ },
+ "B_engagement": {
+  "curve_by_best_margin": {
+   "<=-10": {
+    "situations": 312,
+    "attacked": 4,
+    "rate": 0.0128,
+    "instead_top": {
+     "move_own": 232,
+     "move_neutral": 74,
+     "build": 2
+    }
+   },
+   "-9..-1": {
+    "situations": 5976,
+    "attacked": 45,
+    "rate": 0.0075,
+    "instead_top": {
+     "move_own": 4878,
+     "move_neutral": 1020,
+     "build": 32,
+     "pass": 1
+    }
+   },
+   "0": {
+    "situations": 14340,
+    "attacked": 284,
+    "rate": 0.0198,
+    "instead_top": {
+     "move_own": 11626,
+     "move_neutral": 2266,
+     "build": 106,
+     "pass": 58
+    }
+   },
+   "1..2": {
+    "situations": 6081,
+    "attacked": 712,
+    "rate": 0.1171,
+    "instead_top": {
+     "move_own": 4837,
+     "move_neutral": 492,
+     "build": 33,
+     "pass": 7
+    }
+   },
+   "3..5": {
+    "situations": 2439,
+    "attacked": 981,
+    "rate": 0.4022,
+    "instead_top": {
+     "move_own": 1202,
+     "move_neutral": 222,
+     "pass": 27,
+     "build": 6
+    }
+   },
+   "6..10": {
+    "situations": 2907,
+    "attacked": 1523,
+    "rate": 0.5239,
+    "instead_top": {
+     "move_own": 1186,
+     "move_neutral": 194,
+     "pass": 4
+    }
+   },
+   "11..20": {
+    "situations": 3791,
+    "attacked": 2361,
+    "rate": 0.6228,
+    "instead_top": {
+     "move_own": 1202,
+     "move_neutral": 209,
+     "pass": 13,
+     "unresolved": 3
+    }
+   },
+   ">20": {
+    "situations": 10459,
+    "attacked": 6003,
+    "rate": 0.574,
+    "instead_top": {
+     "move_own": 3519,
+     "pass": 591,
+     "move_neutral": 340,
+     "build": 6
+    }
+   }
+  },
+  "attack_margin": {
+   "name": "moved-dst_army over all attacks in situations",
+   "n": 11913,
+   "mean": 25.519,
+   "min": -194.0,
+   "p10": 2.0,
+   "p25": 7.0,
+   "median": 19.0,
+   "p75": 36.0,
+   "p90": 56.0,
+   "max": 227.0
+  },
+  "attack_margin_le0_count": 625,
+  "attack_margin_hist_low": {
+   "10": 276,
+   "8": 312,
+   "6": 307,
+   "4": 322,
+   "2": 341,
+   "9": 307,
+   "7": 319,
+   "5": 348,
+   "3": 353,
+   "1": 386,
+   "-1": 131,
+   "-2": 28,
+   "0": 353,
+   "-5": 6,
+   "-3": 13,
+   "-4": 3
+  },
+  "split_usage": {
+   "0": 11887,
+   "1": 26
+  },
+  "onset_to_attack": {
+   "name": "ticks from positive-margin onset to attack",
+   "n": 11598,
+   "mean": 1.082,
+   "min": 0.0,
+   "p10": 0.0,
+   "p25": 0.0,
+   "median": 0.0,
+   "p75": 0.0,
+   "p90": 2.0,
+   "max": 89.0
+  },
+  "action_mix": {
+   "pass": 2448,
+   "move_neutral": 22138,
+   "move_own": 46187,
+   "move_enemy": 11498,
+   "move_enemy_general": 415,
+   "build": 203,
+   "unresolved": 4
+  },
+  "nonwinning_attacks_n": 625,
+  "nonwinning_by_target": {
+   "enemy": 558,
+   "enemy_general": 67
+  },
+  "nonwinning_moved1_n": 373,
+  "nonwinning_ties_n": 353,
+  "nonwinning_captured_within_3": 42,
+  "nonwinning_attacks_sample": [
+   {
+    "match_id": "20527",
+    "t": 106,
+    "moved": 4,
+    "dst_army": 5,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20527",
+    "t": 141,
+    "moved": 6,
+    "dst_army": 7,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20528",
+    "t": 157,
+    "moved": 5,
+    "dst_army": 11,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20529",
+    "t": 82,
+    "moved": 7,
+    "dst_army": 9,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20529",
+    "t": 97,
+    "moved": 1,
+    "dst_army": 1,
+    "target": "enemy",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20529",
+    "t": 102,
+    "moved": 1,
+    "dst_army": 2,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20536",
+    "t": 78,
+    "moved": 10,
+    "dst_army": 12,
+    "target": "enemy_general",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20541",
+    "t": 200,
+    "moved": 1,
+    "dst_army": 1,
+    "target": "enemy",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20542",
+    "t": 149,
+    "moved": 3,
+    "dst_army": 69,
+    "target": "enemy_general",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20542",
+    "t": 194,
+    "moved": 85,
+    "dst_army": 85,
+    "target": "enemy_general",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20544",
+    "t": 99,
+    "moved": 1,
+    "dst_army": 1,
+    "target": "enemy",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20544",
+    "t": 140,
+    "moved": 1,
+    "dst_army": 1,
+    "target": "enemy",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20545",
+    "t": 172,
+    "moved": 41,
+    "dst_army": 76,
+    "target": "enemy_general",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20545",
+    "t": 210,
+    "moved": 38,
+    "dst_army": 55,
+    "target": "enemy_general",
+    "tie": false,
+    "captured_within_3": true,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20546",
+    "t": 201,
+    "moved": 68,
+    "dst_army": 95,
+    "target": "enemy_general",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20548",
+    "t": 151,
+    "moved": 4,
+    "dst_army": 9,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20549",
+    "t": 84,
+    "moved": 8,
+    "dst_army": 11,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20550",
+    "t": 96,
+    "moved": 5,
+    "dst_army": 7,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20551",
+    "t": 151,
+    "moved": 6,
+    "dst_army": 9,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20552",
+    "t": 150,
+    "moved": 1,
+    "dst_army": 1,
+    "target": "enemy",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20554",
+    "t": 96,
+    "moved": 6,
+    "dst_army": 8,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20554",
+    "t": 133,
+    "moved": 1,
+    "dst_army": 1,
+    "target": "enemy",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20555",
+    "t": 152,
+    "moved": 14,
+    "dst_army": 15,
+    "target": "enemy_general",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20555",
+    "t": 220,
+    "moved": 3,
+    "dst_army": 3,
+    "target": "enemy",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20555",
+    "t": 250,
+    "moved": 2,
+    "dst_army": 2,
+    "target": "enemy_general",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20559",
+    "t": 136,
+    "moved": 4,
+    "dst_army": 4,
+    "target": "enemy_general",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20560",
+    "t": 122,
+    "moved": 30,
+    "dst_army": 38,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20560",
+    "t": 146,
+    "moved": 1,
+    "dst_army": 1,
+    "target": "enemy",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20564",
+    "t": 92,
+    "moved": 1,
+    "dst_army": 1,
+    "target": "enemy",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20565",
+    "t": 102,
+    "moved": 1,
+    "dst_army": 2,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20565",
+    "t": 150,
+    "moved": 1,
+    "dst_army": 2,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20569",
+    "t": 101,
+    "moved": 2,
+    "dst_army": 2,
+    "target": "enemy",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20578",
+    "t": 154,
+    "moved": 2,
+    "dst_army": 2,
+    "target": "enemy",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20580",
+    "t": 120,
+    "moved": 1,
+    "dst_army": 2,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20580",
+    "t": 186,
+    "moved": 21,
+    "dst_army": 24,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20580",
+    "t": 222,
+    "moved": 2,
+    "dst_army": 3,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": true,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20580",
+    "t": 246,
+    "moved": 1,
+    "dst_army": 3,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20580",
+    "t": 247,
+    "moved": 1,
+    "dst_army": 2,
+    "target": "enemy",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20580",
+    "t": 250,
+    "moved": 3,
+    "dst_army": 5,
+    "target": "enemy_general",
+    "tie": false,
+    "captured_within_3": false,
+    "deathtouch": false
+   },
+   {
+    "match_id": "20580",
+    "t": 251,
+    "moved": 3,
+    "dst_army": 3,
+    "target": "enemy",
+    "tie": true,
+    "captured_within_3": false,
+    "deathtouch": false
+   }
+  ],
+  "maxstack_front": {
+   "n": 13462,
+   "attacked_from_maxstack": 8621,
+   "attacked_from_other": 247,
+   "rate": 0.6404,
+   "instead_top": {
+    "move_own": 3610,
+    "move_neutral": 606,
+    "pass": 373,
+    "build": 3,
+    "unresolved": 2
+   },
+   "decline_moves_from_maxstack": 2864,
+   "decline_toward_gen": 2426,
+   "decline_toward_gen_rate": 0.8471
+  }
+ },
+ "C_target_selection": {
+  "pre": {
+   "n": 7563,
+   "min_dist_gen": {
+    "agree": 4514,
+    "rate": 0.5969
+   },
+   "min_dst_army": {
+    "agree": 5118,
+    "rate": 0.6767
+   },
+   "max_margin": {
+    "agree": 6327,
+    "rate": 0.8366
+   },
+   "max_src_stack": {
+    "agree": 7270,
+    "rate": 0.9613
+   },
+   "dst_choice": {
+    "n": 4908,
+    "min_dist_gen": 4250,
+    "min_dist_gen_rate": 0.8659,
+    "min_army": 3943,
+    "min_army_rate": 0.8034
+   },
+   "chain_continuation": {
+    "n": 7563,
+    "continued": 6974,
+    "rate": 0.9221
+   }
+  },
+  "post": {
+   "n": 2869,
+   "min_dist_gen": {
+    "agree": 1651,
+    "rate": 0.5755
+   },
+   "min_dst_army": {
+    "agree": 1581,
+    "rate": 0.5511
+   },
+   "max_margin": {
+    "agree": 2023,
+    "rate": 0.7051
+   },
+   "max_src_stack": {
+    "agree": 2676,
+    "rate": 0.9327
+   },
+   "dst_choice": {
+    "n": 1930,
+    "min_dist_gen": 1796,
+    "min_dist_gen_rate": 0.9306,
+    "min_army": 1254,
+    "min_army_rate": 0.6497
+   },
+   "chain_continuation": {
+    "n": 2869,
+    "continued": 2601,
+    "rate": 0.9066
+   }
+  }
+ },
+ "D_commit": {
+  "entry_moved": {
+   "name": "army moved on first enemy-target move of a raid chain",
+   "n": 2467,
+   "mean": 25.948,
+   "min": 1.0,
+   "p10": 1.0,
+   "p25": 4.0,
+   "median": 19.0,
+   "p75": 39.0,
+   "p90": 59.0,
+   "max": 248.0
+  },
+  "entry_moved_hist": {
+   "49": 18,
+   "15": 43,
+   "25": 26,
+   "21": 33,
+   "34": 26,
+   "32": 38,
+   "60": 239,
+   "20": 42,
+   "12": 51,
+   "37": 20,
+   "8": 40,
+   "7": 31,
+   "11": 43,
+   "3": 70,
+   "4": 57,
+   "14": 32,
+   "28": 27,
+   "10": 54,
+   "22": 27,
+   "9": 38,
+   "2": 177,
+   "1": 342,
+   "31": 38,
+   "40": 21,
+   "26": 27,
+   "36": 29,
+   "18": 33,
+   "44": 26,
+   "13": 49,
+   "41": 33,
+   "19": 42,
+   "39": 34,
+   "42": 32,
+   "6": 39,
+   "50": 13,
+   "48": 22,
+   "16": 40,
+   "35": 30,
+   "5": 53,
+   "46": 24,
+   "56": 14,
+   "38": 33,
+   "59": 18,
+   "47": 20,
+   "17": 39,
+   "29": 27,
+   "43": 26,
+   "23": 30,
+   "27": 29,
+   "33": 27,
+   "51": 23,
+   "57": 10,
+   "45": 18,
+   "30": 20,
+   "24": 15,
+   "52": 8,
+   "53": 13,
+   "55": 12,
+   "58": 14,
+   "54": 12
+  },
+  "raid_len_enemy_moves": {
+   "name": "enemy-target moves per raid",
+   "n": 2467,
+   "mean": 4.829,
+   "min": 1.0,
+   "p10": 1.0,
+   "p25": 1.0,
+   "median": 4.0,
+   "p75": 7.0,
+   "p90": 11.0,
+   "max": 50.0
+  },
+  "big_commits_n": 1194,
+  "big_commit_general_seen_rate": 0.3007,
+  "big_commit_army_ratio": {
+   "name": "army ratio at big commit",
+   "n": 1194,
+   "mean": 1.348,
+   "min": 0.038,
+   "p10": 0.8879,
+   "p25": 1.019,
+   "median": 1.151,
+   "p75": 1.419,
+   "p90": 1.9440000000000006,
+   "max": 9.133
+  },
+  "big_commit_gather_frac": {
+   "name": "own-target move frac in prev 10 actions",
+   "n": 1194,
+   "mean": 0.866,
+   "min": 0.0,
+   "p10": 0.5,
+   "p25": 0.8,
+   "median": 1.0,
+   "p75": 1.0,
+   "p90": 1.0,
+   "max": 1.0
+  },
+  "big_commit_toward_frac": {
+   "name": "post-commit chain moves closing BFS dist to general",
+   "n": 1194,
+   "mean": 0.896,
+   "min": 0.0,
+   "p10": 0.6162000000000001,
+   "p25": 0.857,
+   "median": 1.0,
+   "p75": 1.0,
+   "p90": 1.0,
+   "max": 1.0
+  },
+  "big_commit_ended_at_general_rate": 0.2806,
+  "big_commit_sample": [
+   {
+    "match_id": "20524",
+    "t": 129,
+    "entry": 49,
+    "general_seen": false,
+    "army_ratio": 1.45,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 7
+   },
+   {
+    "match_id": "20525",
+    "t": 141,
+    "entry": 49,
+    "general_seen": false,
+    "army_ratio": 1.406,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 0.56,
+    "ended_at_general": false,
+    "enemy_moves": 24
+   },
+   {
+    "match_id": "20525",
+    "t": 178,
+    "entry": 25,
+    "general_seen": false,
+    "army_ratio": 1.279,
+    "gather_frac_prev10": 0.8,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 8
+   },
+   {
+    "match_id": "20525",
+    "t": 195,
+    "entry": 21,
+    "general_seen": false,
+    "army_ratio": 1.391,
+    "gather_frac_prev10": 0.6,
+    "toward_frac": 0.5,
+    "ended_at_general": false,
+    "enemy_moves": 6
+   },
+   {
+    "match_id": "20525",
+    "t": 243,
+    "entry": 34,
+    "general_seen": false,
+    "army_ratio": 1.66,
+    "gather_frac_prev10": 0.9,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 7
+   },
+   {
+    "match_id": "20525",
+    "t": 303,
+    "entry": 32,
+    "general_seen": false,
+    "army_ratio": 2.333,
+    "gather_frac_prev10": 0.0,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 4
+   },
+   {
+    "match_id": "20525",
+    "t": 322,
+    "entry": 108,
+    "general_seen": false,
+    "army_ratio": 2.566,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 12
+   },
+   {
+    "match_id": "20526",
+    "t": 71,
+    "entry": 20,
+    "general_seen": false,
+    "army_ratio": 1.167,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 0.286,
+    "ended_at_general": false,
+    "enemy_moves": 9
+   },
+   {
+    "match_id": "20526",
+    "t": 132,
+    "entry": 37,
+    "general_seen": false,
+    "army_ratio": 1.375,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 7
+   },
+   {
+    "match_id": "20527",
+    "t": 116,
+    "entry": 21,
+    "general_seen": false,
+    "army_ratio": 1.824,
+    "gather_frac_prev10": 0.8,
+    "toward_frac": 0.769,
+    "ended_at_general": false,
+    "enemy_moves": 3
+   },
+   {
+    "match_id": "20527",
+    "t": 182,
+    "entry": 37,
+    "general_seen": false,
+    "army_ratio": 2.714,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 6
+   },
+   {
+    "match_id": "20528",
+    "t": 129,
+    "entry": 28,
+    "general_seen": false,
+    "army_ratio": 1.615,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 0.909,
+    "ended_at_general": false,
+    "enemy_moves": 10
+   },
+   {
+    "match_id": "20528",
+    "t": 195,
+    "entry": 65,
+    "general_seen": false,
+    "army_ratio": 1.913,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 11
+   },
+   {
+    "match_id": "20529",
+    "t": 70,
+    "entry": 22,
+    "general_seen": false,
+    "army_ratio": 1.289,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 0.5,
+    "ended_at_general": false,
+    "enemy_moves": 1
+   },
+   {
+    "match_id": "20529",
+    "t": 121,
+    "entry": 31,
+    "general_seen": false,
+    "army_ratio": 2.0,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 8
+   },
+   {
+    "match_id": "20530",
+    "t": 121,
+    "entry": 34,
+    "general_seen": false,
+    "army_ratio": 1.616,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 3
+   },
+   {
+    "match_id": "20531",
+    "t": 135,
+    "entry": 37,
+    "general_seen": false,
+    "army_ratio": 1.8,
+    "gather_frac_prev10": 0.0,
+    "toward_frac": 0.583,
+    "ended_at_general": true,
+    "enemy_moves": 5
+   },
+   {
+    "match_id": "20532",
+    "t": 218,
+    "entry": 99,
+    "general_seen": false,
+    "army_ratio": 2.891,
+    "gather_frac_prev10": 0.9,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 1
+   },
+   {
+    "match_id": "20532",
+    "t": 236,
+    "entry": 74,
+    "general_seen": true,
+    "army_ratio": 9.133,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 5
+   },
+   {
+    "match_id": "20534",
+    "t": 215,
+    "entry": 108,
+    "general_seen": false,
+    "army_ratio": 1.343,
+    "gather_frac_prev10": 0.4,
+    "toward_frac": 0.824,
+    "ended_at_general": false,
+    "enemy_moves": 17
+   },
+   {
+    "match_id": "20534",
+    "t": 261,
+    "entry": 65,
+    "general_seen": false,
+    "army_ratio": 1.606,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 0.857,
+    "ended_at_general": false,
+    "enemy_moves": 7
+   },
+   {
+    "match_id": "20534",
+    "t": 323,
+    "entry": 123,
+    "general_seen": false,
+    "army_ratio": 1.777,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 0.64,
+    "ended_at_general": false,
+    "enemy_moves": 13
+   },
+   {
+    "match_id": "20534",
+    "t": 299,
+    "entry": 40,
+    "general_seen": false,
+    "army_ratio": 1.603,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 2
+   },
+   {
+    "match_id": "20534",
+    "t": 377,
+    "entry": 127,
+    "general_seen": false,
+    "army_ratio": 2.596,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 0.44,
+    "ended_at_general": true,
+    "enemy_moves": 30
+   },
+   {
+    "match_id": "20535",
+    "t": 187,
+    "entry": 64,
+    "general_seen": false,
+    "army_ratio": 2.121,
+    "gather_frac_prev10": 0.5,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 2
+   },
+   {
+    "match_id": "20535",
+    "t": 239,
+    "entry": 120,
+    "general_seen": false,
+    "army_ratio": 3.351,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 6
+   },
+   {
+    "match_id": "20536",
+    "t": 76,
+    "entry": 26,
+    "general_seen": false,
+    "army_ratio": 1.033,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 3
+   },
+   {
+    "match_id": "20536",
+    "t": 126,
+    "entry": 28,
+    "general_seen": true,
+    "army_ratio": 1.18,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 0.714,
+    "ended_at_general": false,
+    "enemy_moves": 8
+   },
+   {
+    "match_id": "20536",
+    "t": 165,
+    "entry": 36,
+    "general_seen": true,
+    "army_ratio": 1.481,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 6
+   },
+   {
+    "match_id": "20537",
+    "t": 130,
+    "entry": 37,
+    "general_seen": true,
+    "army_ratio": 1.074,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 0.75,
+    "ended_at_general": false,
+    "enemy_moves": 7
+   },
+   {
+    "match_id": "20537",
+    "t": 178,
+    "entry": 44,
+    "general_seen": true,
+    "army_ratio": 1.248,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 6
+   },
+   {
+    "match_id": "20538",
+    "t": 130,
+    "entry": 41,
+    "general_seen": false,
+    "army_ratio": 1.105,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 5
+   },
+   {
+    "match_id": "20539",
+    "t": 132,
+    "entry": 39,
+    "general_seen": false,
+    "army_ratio": 1.206,
+    "gather_frac_prev10": 0.9,
+    "toward_frac": 0.778,
+    "ended_at_general": false,
+    "enemy_moves": 9
+   },
+   {
+    "match_id": "20539",
+    "t": 170,
+    "entry": 42,
+    "general_seen": true,
+    "army_ratio": 1.286,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 8
+   },
+   {
+    "match_id": "20540",
+    "t": 135,
+    "entry": 50,
+    "general_seen": false,
+    "army_ratio": 1.149,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 0.833,
+    "ended_at_general": false,
+    "enemy_moves": 15
+   },
+   {
+    "match_id": "20540",
+    "t": 167,
+    "entry": 48,
+    "general_seen": false,
+    "army_ratio": 1.285,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 6
+   },
+   {
+    "match_id": "20540",
+    "t": 191,
+    "entry": 22,
+    "general_seen": true,
+    "army_ratio": 1.448,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 5
+   },
+   {
+    "match_id": "20541",
+    "t": 122,
+    "entry": 36,
+    "general_seen": false,
+    "army_ratio": 1.121,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 7
+   },
+   {
+    "match_id": "20541",
+    "t": 186,
+    "entry": 35,
+    "general_seen": true,
+    "army_ratio": 0.962,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 0.875,
+    "ended_at_general": false,
+    "enemy_moves": 8
+   },
+   {
+    "match_id": "20541",
+    "t": 215,
+    "entry": 40,
+    "general_seen": true,
+    "army_ratio": 1.132,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 6
+   },
+   {
+    "match_id": "20541",
+    "t": 241,
+    "entry": 46,
+    "general_seen": true,
+    "army_ratio": 1.25,
+    "gather_frac_prev10": 0.9,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 6
+   },
+   {
+    "match_id": "20542",
+    "t": 125,
+    "entry": 36,
+    "general_seen": false,
+    "army_ratio": 1.51,
+    "gather_frac_prev10": 0.6,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 5
+   },
+   {
+    "match_id": "20542",
+    "t": 193,
+    "entry": 87,
+    "general_seen": true,
+    "army_ratio": 1.671,
+    "gather_frac_prev10": 0.9,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 2
+   },
+   {
+    "match_id": "20542",
+    "t": 221,
+    "entry": 56,
+    "general_seen": true,
+    "army_ratio": 2.16,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 1
+   },
+   {
+    "match_id": "20544",
+    "t": 127,
+    "entry": 38,
+    "general_seen": false,
+    "army_ratio": 1.575,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 2
+   },
+   {
+    "match_id": "20544",
+    "t": 182,
+    "entry": 66,
+    "general_seen": true,
+    "army_ratio": 2.155,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 5
+   },
+   {
+    "match_id": "20545",
+    "t": 116,
+    "entry": 36,
+    "general_seen": false,
+    "army_ratio": 1.926,
+    "gather_frac_prev10": 0.9,
+    "toward_frac": 0.75,
+    "ended_at_general": false,
+    "enemy_moves": 8
+   },
+   {
+    "match_id": "20545",
+    "t": 172,
+    "entry": 41,
+    "general_seen": true,
+    "army_ratio": 2.5,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 1
+   },
+   {
+    "match_id": "20545",
+    "t": 210,
+    "entry": 38,
+    "general_seen": true,
+    "army_ratio": 3.873,
+    "gather_frac_prev10": 1.0,
+    "toward_frac": 1.0,
+    "ended_at_general": false,
+    "enemy_moves": 1
+   },
+   {
+    "match_id": "20545",
+    "t": 213,
+    "entry": 25,
+    "general_seen": true,
+    "army_ratio": 7.375,
+    "gather_frac_prev10": 0.9,
+    "toward_frac": 1.0,
+    "ended_at_general": true,
+    "enemy_moves": 1
+   }
+  ]
+ },
+ "E_castles": {
+  "enemy_castles_built_n": 75,
+  "ever_visible_n": 56,
+  "captured_n": 28,
+  "visible_never_captured": 28,
+  "vis_to_capture": {
+   "name": "ticks castle visible->captured",
+   "n": 28,
+   "mean": 14.5,
+   "min": 1.0,
+   "p10": 1.0,
+   "p25": 1.0,
+   "median": 2.0,
+   "p75": 10.5,
+   "p90": 28.3,
+   "max": 151.0
+  },
+  "capture_margin": {
+   "name": "moved-garrison at castle capture",
+   "n": 28,
+   "mean": 36.286,
+   "min": 3.0,
+   "p10": 6.4,
+   "p25": 9.75,
+   "median": 23.5,
+   "p75": 45.75,
+   "p90": 88.00000000000001,
+   "max": 143.0
+  },
+  "castle_vs_plain_choice": {
+   "n": 67,
+   "chose_castle": 49,
+   "rate": 0.7313,
+   "chose_plain_examples": [
+    {
+     "match_id": "21870",
+     "t": 361,
+     "castle": [
+      11,
+      1
+     ],
+     "castle_army": 11,
+     "dst_army": 2,
+     "moved": 50
+    },
+    {
+     "match_id": "21935",
+     "t": 378,
+     "castle": [
+      7,
+      4
+     ],
+     "castle_army": 5,
+     "dst_army": 2,
+     "moved": 136
+    },
+    {
+     "match_id": "21935",
+     "t": 404,
+     "castle": [
+      7,
+      4
+     ],
+     "castle_army": 10,
+     "dst_army": 2,
+     "moved": 61
+    },
+    {
+     "match_id": "22023",
+     "t": 144,
+     "castle": [
+      14,
+      6
+     ],
+     "castle_army": 1,
+     "dst_army": 2,
+     "moved": 16
+    },
+    {
+     "match_id": "22023",
+     "t": 146,
+     "castle": [
+      14,
+      6
+     ],
+     "castle_army": 1,
+     "dst_army": 1,
+     "moved": 11
+    },
+    {
+     "match_id": "22023",
+     "t": 235,
+     "castle": [
+      14,
+      6
+     ],
+     "castle_army": 35,
+     "dst_army": 2,
+     "moved": 48
+    },
+    {
+     "match_id": "22054",
+     "t": 126,
+     "castle": [
+      5,
+      5
+     ],
+     "castle_army": 2,
+     "dst_army": 2,
+     "moved": 34
+    },
+    {
+     "match_id": "23074",
+     "t": 245,
+     "castle": [
+      16,
+      1
+     ],
+     "castle_army": 2,
+     "dst_army": 1,
+     "moved": 71
+    },
+    {
+     "match_id": "24184",
+     "t": 352,
+     "castle": [
+      4,
+      12
+     ],
+     "castle_army": 1,
+     "dst_army": 2,
+     "moved": 38
+    },
+    {
+     "match_id": "24184",
+     "t": 373,
+     "castle": [
+      4,
+      11
+     ],
+     "castle_army": 7,
+     "dst_army": 2,
+     "moved": 36
+    },
+    {
+     "match_id": "24184",
+     "t": 509,
+     "castle": [
+      9,
+      8
+     ],
+     "castle_army": 3,
+     "dst_army": 2,
+     "moved": 54
+    },
+    {
+     "match_id": "24184",
+     "t": 516,
+     "castle": [
+      11,
+      7
+     ],
+     "castle_army": 11,
+     "dst_army": 4,
+     "moved": 51
+    },
+    {
+     "match_id": "24184",
+     "t": 570,
+     "castle": [
+      4,
+      12
+     ],
+     "castle_army": 56,
+     "dst_army": 4,
+     "moved": 3
+    },
+    {
+     "match_id": "24184",
+     "t": 591,
+     "castle": [
+      4,
+      11
+     ],
+     "castle_army": 5,
+     "dst_army": 1,
+     "moved": 228
+    },
+    {
+     "match_id": "24184",
+     "t": 595,
+     "castle": [
+      4,
+      12
+     ],
+     "castle_army": 2,
+     "dst_army": 4,
+     "moved": 226
+    },
+    {
+     "match_id": "24185",
+     "t": 423,
+     "castle": [
+      4,
+      15
+     ],
+     "castle_army": 44,
+     "dst_army": 1,
+     "moved": 40
+    },
+    {
+     "match_id": "24185",
+     "t": 467,
+     "castle": [
+      4,
+      15
+     ],
+     "castle_army": 79,
+     "dst_army": 1,
+     "moved": 53
+    },
+    {
+     "match_id": "25164",
+     "t": 276,
+     "castle": [
+      13,
+      7
+     ],
+     "castle_army": 12,
+     "dst_army": 2,
+     "moved": 72
+    }
+   ]
+  },
+  "castles_detail_sample": [
+   {
+    "match_id": "20602",
+    "cell": [
+     4,
+     13
+    ],
+    "built_t": 162,
+    "first_visible_t": 180,
+    "captured_t": 331,
+    "garrison": 6,
+    "moved": 11
+   },
+   {
+    "match_id": "20602",
+    "cell": [
+     3,
+     7
+    ],
+    "built_t": 213,
+    "first_visible_t": 298,
+    "captured_t": 300,
+    "garrison": 12,
+    "moved": 20
+   },
+   {
+    "match_id": "20603",
+    "cell": [
+     12,
+     7
+    ],
+    "built_t": 163,
+    "first_visible_t": 194,
+    "captured_t": 195,
+    "garrison": 6,
+    "moved": 50
+   },
+   {
+    "match_id": "20605",
+    "cell": [
+     1,
+     8
+    ],
+    "built_t": 213,
+    "first_visible_t": 556,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "20605",
+    "cell": [
+     4,
+     10
+    ],
+    "built_t": 314,
+    "first_visible_t": 556,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "21244",
+    "cell": [
+     5,
+     5
+    ],
+    "built_t": 120,
+    "first_visible_t": 202,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "21244",
+    "cell": [
+     1,
+     0
+    ],
+    "built_t": 166,
+    "first_visible_t": 251,
+    "captured_t": 252,
+    "garrison": 5,
+    "moved": 32
+   },
+   {
+    "match_id": "21244",
+    "cell": [
+     9,
+     0
+    ],
+    "built_t": 198,
+    "first_visible_t": 273,
+    "captured_t": 274,
+    "garrison": 8,
+    "moved": 66
+   },
+   {
+    "match_id": "21244",
+    "cell": [
+     0,
+     0
+    ],
+    "built_t": 246,
+    "first_visible_t": 251,
+    "captured_t": 253,
+    "garrison": 17,
+    "moved": 27
+   },
+   {
+    "match_id": "21245",
+    "cell": [
+     14,
+     7
+    ],
+    "built_t": 122,
+    "first_visible_t": 148,
+    "captured_t": 176,
+    "garrison": 12,
+    "moved": 15
+   },
+   {
+    "match_id": "21249",
+    "cell": [
+     8,
+     18
+    ],
+    "built_t": 179,
+    "first_visible_t": 357,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "21249",
+    "cell": [
+     5,
+     13
+    ],
+    "built_t": 342,
+    "first_visible_t": 357,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "21483",
+    "cell": [
+     18,
+     5
+    ],
+    "built_t": 152,
+    "first_visible_t": 174,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "21815",
+    "cell": [
+     15,
+     7
+    ],
+    "built_t": 360,
+    "first_visible_t": 378,
+    "captured_t": 379,
+    "garrison": 5,
+    "moved": 148
+   },
+   {
+    "match_id": "21868",
+    "cell": [
+     14,
+     0
+    ],
+    "built_t": 235,
+    "first_visible_t": 297,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "21868",
+    "cell": [
+     17,
+     0
+    ],
+    "built_t": 284,
+    "first_visible_t": 297,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "21870",
+    "cell": [
+     0,
+     4
+    ],
+    "built_t": 151,
+    "first_visible_t": 196,
+    "captured_t": 197,
+    "garrison": 12,
+    "moved": 27
+   },
+   {
+    "match_id": "21870",
+    "cell": [
+     11,
+     1
+    ],
+    "built_t": 344,
+    "first_visible_t": 344,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "21871",
+    "cell": [
+     3,
+     7
+    ],
+    "built_t": 157,
+    "first_visible_t": 176,
+    "captured_t": 177,
+    "garrison": 21,
+    "moved": 66
+   },
+   {
+    "match_id": "21871",
+    "cell": [
+     15,
+     6
+    ],
+    "built_t": 294,
+    "first_visible_t": 294,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "21932",
+    "cell": [
+     5,
+     14
+    ],
+    "built_t": 181,
+    "first_visible_t": 223,
+    "captured_t": 224,
+    "garrison": 12,
+    "moved": 49
+   },
+   {
+    "match_id": "21935",
+    "cell": [
+     7,
+     4
+    ],
+    "built_t": 274,
+    "first_visible_t": 274,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "22018",
+    "cell": [
+     9,
+     14
+    ],
+    "built_t": 264,
+    "first_visible_t": 264,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "22020",
+    "cell": [
+     18,
+     4
+    ],
+    "built_t": 240,
+    "first_visible_t": 268,
+    "captured_t": 269,
+    "garrison": 4,
+    "moved": 22
+   },
+   {
+    "match_id": "22022",
+    "cell": [
+     14,
+     14
+    ],
+    "built_t": 182,
+    "first_visible_t": 197,
+    "captured_t": 199,
+    "garrison": 9,
+    "moved": 17
+   },
+   {
+    "match_id": "22023",
+    "cell": [
+     14,
+     6
+    ],
+    "built_t": 235,
+    "first_visible_t": 235,
+    "captured_t": 264,
+    "garrison": 5,
+    "moved": 53
+   },
+   {
+    "match_id": "22054",
+    "cell": [
+     5,
+     5
+    ],
+    "built_t": 167,
+    "first_visible_t": 167,
+    "captured_t": 194,
+    "garrison": 1,
+    "moved": 33
+   },
+   {
+    "match_id": "22056",
+    "cell": [
+     15,
+     18
+    ],
+    "built_t": 177,
+    "first_visible_t": 272,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "22056",
+    "cell": [
+     14,
+     17
+    ],
+    "built_t": 260,
+    "first_visible_t": 260,
+    "captured_t": 272,
+    "garrison": 8,
+    "moved": 90
+   },
+   {
+    "match_id": "22058",
+    "cell": [
+     0,
+     1
+    ],
+    "built_t": 162,
+    "first_visible_t": 200,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "23074",
+    "cell": [
+     16,
+     1
+    ],
+    "built_t": 239,
+    "first_visible_t": 239,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "23769",
+    "cell": [
+     0,
+     2
+    ],
+    "built_t": 106,
+    "first_visible_t": 218,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     8,
+     14
+    ],
+    "built_t": 227,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     9,
+     8
+    ],
+    "built_t": 242,
+    "first_visible_t": 250,
+    "captured_t": 254,
+    "garrison": 5,
+    "moved": 107
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     3,
+     17
+    ],
+    "built_t": 280,
+    "first_visible_t": 460,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     4,
+     11
+    ],
+    "built_t": 297,
+    "first_visible_t": 309,
+    "captured_t": 317,
+    "garrison": 11,
+    "moved": 67
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     4,
+     12
+    ],
+    "built_t": 351,
+    "first_visible_t": 351,
+    "captured_t": 360,
+    "garrison": 5,
+    "moved": 34
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     12,
+     13
+    ],
+    "built_t": 389,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     15,
+     11
+    ],
+    "built_t": 395,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     0,
+     19
+    ],
+    "built_t": 431,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     11,
+     19
+    ],
+    "built_t": 448,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     15,
+     17
+    ],
+    "built_t": 459,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     20,
+     17
+    ],
+    "built_t": 465,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     20,
+     10
+    ],
+    "built_t": 473,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     11,
+     7
+    ],
+    "built_t": 497,
+    "first_visible_t": 497,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24184",
+    "cell": [
+     5,
+     0
+    ],
+    "built_t": 551,
+    "first_visible_t": 559,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24185",
+    "cell": [
+     5,
+     8
+    ],
+    "built_t": 230,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24185",
+    "cell": [
+     9,
+     7
+    ],
+    "built_t": 286,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24185",
+    "cell": [
+     1,
+     5
+    ],
+    "built_t": 327,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24185",
+    "cell": [
+     3,
+     11
+    ],
+    "built_t": 340,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24185",
+    "cell": [
+     4,
+     15
+    ],
+    "built_t": 374,
+    "first_visible_t": 422,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24185",
+    "cell": [
+     6,
+     3
+    ],
+    "built_t": 384,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24185",
+    "cell": [
+     11,
+     2
+    ],
+    "built_t": 397,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24185",
+    "cell": [
+     14,
+     7
+    ],
+    "built_t": 412,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24185",
+    "cell": [
+     17,
+     13
+    ],
+    "built_t": 492,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24188",
+    "cell": [
+     6,
+     16
+    ],
+    "built_t": 183,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24188",
+    "cell": [
+     4,
+     12
+    ],
+    "built_t": 244,
+    "first_visible_t": 328,
+    "captured_t": 338,
+    "garrison": 30,
+    "moved": 37
+   },
+   {
+    "match_id": "24188",
+    "cell": [
+     9,
+     12
+    ],
+    "built_t": 273,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24188",
+    "cell": [
+     0,
+     11
+    ],
+    "built_t": 286,
+    "first_visible_t": null,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24188",
+    "cell": [
+     11,
+     5
+    ],
+    "built_t": 343,
+    "first_visible_t": 343,
+    "captured_t": 352,
+    "garrison": 7,
+    "moved": 49
+   },
+   {
+    "match_id": "24810",
+    "cell": [
+     5,
+     3
+    ],
+    "built_t": 235,
+    "first_visible_t": 267,
+    "captured_t": 268,
+    "garrison": 19,
+    "moved": 31
+   },
+   {
+    "match_id": "24928",
+    "cell": [
+     2,
+     18
+    ],
+    "built_t": 162,
+    "first_visible_t": 202,
+    "captured_t": 204,
+    "garrison": 7,
+    "moved": 27
+   },
+   {
+    "match_id": "24929",
+    "cell": [
+     2,
+     2
+    ],
+    "built_t": 177,
+    "first_visible_t": 329,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24929",
+    "cell": [
+     2,
+     4
+    ],
+    "built_t": 301,
+    "first_visible_t": 301,
+    "captured_t": 328,
+    "garrison": 12,
+    "moved": 132
+   },
+   {
+    "match_id": "24930",
+    "cell": [
+     6,
+     17
+    ],
+    "built_t": 186,
+    "first_visible_t": 204,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "24932",
+    "cell": [
+     0,
+     7
+    ],
+    "built_t": 190,
+    "first_visible_t": 276,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "25162",
+    "cell": [
+     10,
+     0
+    ],
+    "built_t": 125,
+    "first_visible_t": 329,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "25162",
+    "cell": [
+     7,
+     6
+    ],
+    "built_t": 164,
+    "first_visible_t": 188,
+    "captured_t": 189,
+    "garrison": 5,
+    "moved": 8
+   },
+   {
+    "match_id": "25162",
+    "cell": [
+     0,
+     1
+    ],
+    "built_t": 210,
+    "first_visible_t": 329,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "25163",
+    "cell": [
+     9,
+     12
+    ],
+    "built_t": 152,
+    "first_visible_t": 256,
+    "captured_t": 258,
+    "garrison": 4,
+    "moved": 20
+   },
+   {
+    "match_id": "25163",
+    "cell": [
+     17,
+     17
+    ],
+    "built_t": 166,
+    "first_visible_t": 384,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "25164",
+    "cell": [
+     13,
+     7
+    ],
+    "built_t": 125,
+    "first_visible_t": 150,
+    "captured_t": 221,
+    "garrison": 16,
+    "moved": 25
+   },
+   {
+    "match_id": "25164",
+    "cell": [
+     14,
+     17
+    ],
+    "built_t": 176,
+    "first_visible_t": 282,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   },
+   {
+    "match_id": "25165",
+    "cell": [
+     5,
+     6
+    ],
+    "built_t": 121,
+    "first_visible_t": 131,
+    "captured_t": 132,
+    "garrison": 5,
+    "moved": 22
+   },
+   {
+    "match_id": "25166",
+    "cell": [
+     4,
+     12
+    ],
+    "built_t": 123,
+    "first_visible_t": 180,
+    "captured_t": null,
+    "garrison": null,
+    "moved": null
+   }
+  ]
+ },
+ "F_strike": {
+  "sight_to_kill": {
+   "name": "ticks first sight->kill",
+   "n": 336,
+   "mean": 37.393,
+   "min": 1.0,
+   "p10": 1.0,
+   "p25": 2.0,
+   "median": 20.0,
+   "p75": 57.0,
+   "p90": 98.0,
+   "max": 305.0
+  },
+  "sight_to_first_general_hit": {
+   "name": "ticks sight->first move onto general tile (negative = poked before sight tick? n/a)",
+   "n": 336,
+   "mean": 29.685,
+   "min": 1.0,
+   "p10": 1.0,
+   "p25": 1.75,
+   "median": 2.0,
+   "p75": 49.0,
+   "p90": 73.0,
+   "max": 305.0
+  },
+  "kill_moved": {
+   "name": "army moved on the killing move",
+   "n": 336,
+   "mean": 37.071,
+   "min": 2.0,
+   "p10": 11.0,
+   "p25": 18.0,
+   "median": 29.0,
+   "p75": 48.0,
+   "p90": 67.5,
+   "max": 188.0
+  },
+  "kill_dst_army": {
+   "name": "defender army at the kill",
+   "n": 336,
+   "mean": 18.339,
+   "min": 1.0,
+   "p10": 2.0,
+   "p25": 5.0,
+   "median": 11.0,
+   "p75": 23.25,
+   "p90": 42.0,
+   "max": 143.0
+  },
+  "stack_at_sight": {
+   "name": "max Kubic stack at sight",
+   "n": 336,
+   "mean": 28.792,
+   "min": 5.0,
+   "p10": 12.0,
+   "p25": 15.75,
+   "median": 23.0,
+   "p75": 34.0,
+   "p90": 51.0,
+   "max": 175.0
+  },
+  "defender_at_sight": {
+   "name": "army on enemy general at sight",
+   "n": 336,
+   "mean": 20.283,
+   "min": 1.0,
+   "p10": 3.0,
+   "p25": 7.0,
+   "median": 13.0,
+   "p75": 25.0,
+   "p90": 47.0,
+   "max": 142.0
+  },
+  "departure_army": {
+   "name": "src army when kill chain departs",
+   "n": 336,
+   "mean": 13.69,
+   "min": 2.0,
+   "p10": 2.0,
+   "p25": 3.0,
+   "median": 11.0,
+   "p75": 22.0,
+   "p90": 30.5,
+   "max": 74.0
+  },
+  "departure_after_sight": {
+   "name": "ticks sight->kill-chain departure (negative = already moving)",
+   "n": 336,
+   "mean": 6.402,
+   "min": -107.0,
+   "p10": -41.0,
+   "p25": -28.0,
+   "median": -10.5,
+   "p75": 26.25,
+   "p90": 73.0,
+   "max": 286.0
+  },
+  "path_over_bfs": {
+   "name": "kill-chain moves / BFS dist from departure",
+   "n": 336,
+   "mean": 1.405,
+   "min": 1.0,
+   "p10": 1.0,
+   "p25": 1.0,
+   "median": 1.1952380952380952,
+   "p75": 1.4761904761904763,
+   "p90": 1.9814814814814814,
+   "max": 6.111111111111111
+  },
+  "memory": {
+   "visible": {
+    "n": 2328,
+    "toward": 2066,
+    "toward_rate": 0.8875
+   },
+   "fogged": {
+    "n": 2395,
+    "toward": 2115,
+    "toward_rate": 0.8831
+   }
+  },
+  "failed_general_hits": {
+   "name": "failed hits on general before kill",
+   "n": 336,
+   "mean": 0.182,
+   "min": 0.0,
+   "p10": 0.0,
+   "p25": 0.0,
+   "median": 0.0,
+   "p75": 0.0,
+   "p90": 1.0,
+   "max": 5.0
+  },
+  "first_wave_success_rate": 0.8542,
+  "multi_wave_games": [
+   {
+    "match_id": "20536",
+    "fails": 1,
+    "first_fail_t": 78,
+    "kill_t": 170
+   },
+   {
+    "match_id": "20542",
+    "fails": 2,
+    "first_fail_t": 149,
+    "kill_t": 221
+   },
+   {
+    "match_id": "20545",
+    "fails": 2,
+    "first_fail_t": 172,
+    "kill_t": 213
+   },
+   {
+    "match_id": "20546",
+    "fails": 1,
+    "first_fail_t": 201,
+    "kill_t": 238
+   },
+   {
+    "match_id": "20555",
+    "fails": 2,
+    "first_fail_t": 152,
+    "kill_t": 278
+   },
+   {
+    "match_id": "20559",
+    "fails": 1,
+    "first_fail_t": 136,
+    "kill_t": 175
+   },
+   {
+    "match_id": "20581",
+    "fails": 1,
+    "first_fail_t": 275,
+    "kill_t": 298
+   },
+   {
+    "match_id": "20591",
+    "fails": 1,
+    "first_fail_t": 333,
+    "kill_t": 374
+   },
+   {
+    "match_id": "20593",
+    "fails": 1,
+    "first_fail_t": 327,
+    "kill_t": 346
+   },
+   {
+    "match_id": "20597",
+    "fails": 1,
+    "first_fail_t": 357,
+    "kill_t": 427
+   },
+   {
+    "match_id": "20598",
+    "fails": 2,
+    "first_fail_t": 299,
+    "kill_t": 359
+   },
+   {
+    "match_id": "20605",
+    "fails": 1,
+    "first_fail_t": 533,
+    "kill_t": 556
+   },
+   {
+    "match_id": "20607",
+    "fails": 1,
+    "first_fail_t": 239,
+    "kill_t": 291
+   },
+   {
+    "match_id": "21063",
+    "fails": 1,
+    "first_fail_t": 88,
+    "kill_t": 147
+   },
+   {
+    "match_id": "21214",
+    "fails": 1,
+    "first_fail_t": 191,
+    "kill_t": 308
+   },
+   {
+    "match_id": "21217",
+    "fails": 1,
+    "first_fail_t": 147,
+    "kill_t": 230
+   },
+   {
+    "match_id": "21482",
+    "fails": 1,
+    "first_fail_t": 175,
+    "kill_t": 199
+   },
+   {
+    "match_id": "21696",
+    "fails": 1,
+    "first_fail_t": 205,
+    "kill_t": 240
+   },
+   {
+    "match_id": "21714",
+    "fails": 1,
+    "first_fail_t": 152,
+    "kill_t": 183
+   },
+   {
+    "match_id": "21739",
+    "fails": 1,
+    "first_fail_t": 151,
+    "kill_t": 183
+   },
+   {
+    "match_id": "21740",
+    "fails": 1,
+    "first_fail_t": 195,
+    "kill_t": 237
+   },
+   {
+    "match_id": "21741",
+    "fails": 1,
+    "first_fail_t": 197,
+    "kill_t": 199
+   },
+   {
+    "match_id": "21762",
+    "fails": 1,
+    "first_fail_t": 252,
+    "kill_t": 284
+   },
+   {
+    "match_id": "21778",
+    "fails": 1,
+    "first_fail_t": 135,
+    "kill_t": 175
+   },
+   {
+    "match_id": "21780",
+    "fails": 1,
+    "first_fail_t": 128,
+    "kill_t": 227
+   },
+   {
+    "match_id": "21803",
+    "fails": 1,
+    "first_fail_t": 136,
+    "kill_t": 282
+   },
+   {
+    "match_id": "21844",
+    "fails": 1,
+    "first_fail_t": 152,
+    "kill_t": 181
+   },
+   {
+    "match_id": "21845",
+    "fails": 1,
+    "first_fail_t": 188,
+    "kill_t": 221
+   },
+   {
+    "match_id": "21872",
+    "fails": 1,
+    "first_fail_t": 322,
+    "kill_t": 340
+   },
+   {
+    "match_id": "21892",
+    "fails": 1,
+    "first_fail_t": 192,
+    "kill_t": 243
+   },
+   {
+    "match_id": "21894",
+    "fails": 1,
+    "first_fail_t": 150,
+    "kill_t": 182
+   },
+   {
+    "match_id": "21930",
+    "fails": 1,
+    "first_fail_t": 283,
+    "kill_t": 348
+   },
+   {
+    "match_id": "21931",
+    "fails": 1,
+    "first_fail_t": 295,
+    "kill_t": 325
+   },
+   {
+    "match_id": "21932",
+    "fails": 1,
+    "first_fail_t": 296,
+    "kill_t": 344
+   },
+   {
+    "match_id": "22021",
+    "fails": 1,
+    "first_fail_t": 304,
+    "kill_t": 334
+   },
+   {
+    "match_id": "22023",
+    "fails": 1,
+    "first_fail_t": 245,
+    "kill_t": 302
+   },
+   {
+    "match_id": "22045",
+    "fails": 1,
+    "first_fail_t": 230,
+    "kill_t": 254
+   },
+   {
+    "match_id": "22046",
+    "fails": 1,
+    "first_fail_t": 153,
+    "kill_t": 176
+   },
+   {
+    "match_id": "22055",
+    "fails": 1,
+    "first_fail_t": 125,
+    "kill_t": 188
+   },
+   {
+    "match_id": "22058",
+    "fails": 1,
+    "first_fail_t": 201,
+    "kill_t": 224
+   },
+   {
+    "match_id": "22163",
+    "fails": 1,
+    "first_fail_t": 200,
+    "kill_t": 236
+   },
+   {
+    "match_id": "22164",
+    "fails": 2,
+    "first_fail_t": 116,
+    "kill_t": 207
+   },
+   {
+    "match_id": "22216",
+    "fails": 1,
+    "first_fail_t": 145,
+    "kill_t": 181
+   },
+   {
+    "match_id": "23074",
+    "fails": 1,
+    "first_fail_t": 214,
+    "kill_t": 246
+   },
+   {
+    "match_id": "23076",
+    "fails": 2,
+    "first_fail_t": 135,
+    "kill_t": 234
+   },
+   {
+    "match_id": "23078",
+    "fails": 2,
+    "first_fail_t": 76,
+    "kill_t": 176
+   },
+   {
+    "match_id": "23079",
+    "fails": 5,
+    "first_fail_t": 100,
+    "kill_t": 203
+   },
+   {
+    "match_id": "24928",
+    "fails": 1,
+    "first_fail_t": 237,
+    "kill_t": 302
+   },
+   {
+    "match_id": "24932",
+    "fails": 2,
+    "first_fail_t": 211,
+    "kill_t": 276
+   }
+  ],
+  "win_without_kill": [
+   {
+    "match_id": "20580",
+    "unresolved": [
+     300
+    ],
+    "T": 300
+   },
+   {
+    "match_id": "21537",
+    "unresolved": [
+     350
+    ],
+    "T": 350
+   },
+   {
+    "match_id": "21760",
+    "unresolved": [
+     200
+    ],
+    "T": 200
+   },
+   {
+    "match_id": "21855",
+    "unresolved": [
+     200
+    ],
+    "T": 200
+   }
+  ],
+  "kill_without_prior_sight": []
+ },
+ "G_hunt": {
+  "toward_rate": {
+   "name": "per-game rate of pre-sight captures closing dist to true general",
+   "n": 342,
+   "mean": 0.889,
+   "min": 0.4,
+   "p10": 0.714498933901919,
+   "p25": 0.8333333333333334,
+   "median": 0.9203174603174603,
+   "p75": 1.0,
+   "p90": 1.0,
+   "max": 1.0
+  },
+  "baseline": {
+   "name": "per-game rate available options would close dist",
+   "n": 342,
+   "mean": 0.663,
+   "min": 0.20634920634920634,
+   "p10": 0.4566079504127004,
+   "p25": 0.5555555555555556,
+   "median": 0.6407885304659497,
+   "p75": 0.7708791208791209,
+   "p90": 0.8992307692307695,
+   "max": 1.0
+  },
+  "games_sample": [
+   {
+    "match_id": "20524",
+    "captures": 5,
+    "toward_rate": 1.0,
+    "baseline": 0.909
+   },
+   {
+    "match_id": "20525",
+    "captures": 67,
+    "toward_rate": 0.716,
+    "baseline": 0.596
+   },
+   {
+    "match_id": "20526",
+    "captures": 19,
+    "toward_rate": 0.684,
+    "baseline": 0.565
+   },
+   {
+    "match_id": "20527",
+    "captures": 18,
+    "toward_rate": 0.944,
+    "baseline": 0.862
+   },
+   {
+    "match_id": "20528",
+    "captures": 29,
+    "toward_rate": 0.966,
+    "baseline": 0.6
+   },
+   {
+    "match_id": "20529",
+    "captures": 13,
+    "toward_rate": 1.0,
+    "baseline": 0.694
+   },
+   {
+    "match_id": "20530",
+    "captures": 2,
+    "toward_rate": 1.0,
+    "baseline": 1.0
+   },
+   {
+    "match_id": "20531",
+    "captures": 1,
+    "toward_rate": 1.0,
+    "baseline": 1.0
+   },
+   {
+    "match_id": "20532",
+    "captures": 1,
+    "toward_rate": 1.0,
+    "baseline": 1.0
+   },
+   {
+    "match_id": "20534",
+    "captures": 68,
+    "toward_rate": 0.706,
+    "baseline": 0.42
+   },
+   {
+    "match_id": "20535",
+    "captures": 7,
+    "toward_rate": 1.0,
+    "baseline": 1.0
+   },
+   {
+    "match_id": "20536",
+    "captures": 1,
+    "toward_rate": 1.0,
+    "baseline": 1.0
+   },
+   {
+    "match_id": "20537",
+    "captures": 5,
+    "toward_rate": 0.8,
+    "baseline": 0.636
+   },
+   {
+    "match_id": "20538",
+    "captures": 9,
+    "toward_rate": 0.778,
+    "baseline": 0.81
+   },
+   {
+    "match_id": "20539",
+    "captures": 11,
+    "toward_rate": 0.818,
+    "baseline": 0.625
+   },
+   {
+    "match_id": "20540",
+    "captures": 22,
+    "toward_rate": 0.864,
+    "baseline": 0.565
+   },
+   {
+    "match_id": "20541",
+    "captures": 13,
+    "toward_rate": 0.923,
+    "baseline": 0.63
+   },
+   {
+    "match_id": "20542",
+    "captures": 5,
+    "toward_rate": 1.0,
+    "baseline": 0.75
+   },
+   {
+    "match_id": "20544",
+    "captures": 7,
+    "toward_rate": 0.857,
+    "baseline": 0.423
+   },
+   {
+    "match_id": "20545",
+    "captures": 8,
+    "toward_rate": 0.75,
+    "baseline": 0.562
+   },
+   {
+    "match_id": "20546",
+    "captures": 13,
+    "toward_rate": 0.846,
+    "baseline": 0.692
+   },
+   {
+    "match_id": "20547",
+    "captures": 7,
+    "toward_rate": 1.0,
+    "baseline": 0.733
+   },
+   {
+    "match_id": "20548",
+    "captures": 31,
+    "toward_rate": 0.871,
+    "baseline": 0.831
+   },
+   {
+    "match_id": "20549",
+    "captures": 43,
+    "toward_rate": 0.674,
+    "baseline": 0.637
+   },
+   {
+    "match_id": "20550",
+    "captures": 25,
+    "toward_rate": 0.8,
+    "baseline": 0.529
+   },
+   {
+    "match_id": "20551",
+    "captures": 28,
+    "toward_rate": 0.821,
+    "baseline": 0.648
+   },
+   {
+    "match_id": "20552",
+    "captures": 60,
+    "toward_rate": 0.767,
+    "baseline": 0.769
+   },
+   {
+    "match_id": "20554",
+    "captures": 10,
+    "toward_rate": 1.0,
+    "baseline": 0.614
+   },
+   {
+    "match_id": "20555",
+    "captures": 12,
+    "toward_rate": 0.833,
+    "baseline": 0.769
+   },
+   {
+    "match_id": "20556",
+    "captures": 9,
+    "toward_rate": 0.889,
+    "baseline": 0.575
+   },
+   {
+    "match_id": "20557",
+    "captures": 24,
+    "toward_rate": 0.875,
+    "baseline": 0.569
+   },
+   {
+    "match_id": "20558",
+    "captures": 7,
+    "toward_rate": 1.0,
+    "baseline": 0.615
+   },
+   {
+    "match_id": "20559",
+    "captures": 19,
+    "toward_rate": 1.0,
+    "baseline": 0.794
+   },
+   {
+    "match_id": "20560",
+    "captures": 22,
+    "toward_rate": 0.682,
+    "baseline": 0.59
+   },
+   {
+    "match_id": "20561",
+    "captures": 1,
+    "toward_rate": 1.0,
+    "baseline": 1.0
+   },
+   {
+    "match_id": "20562",
+    "captures": 6,
+    "toward_rate": 1.0,
+    "baseline": 0.857
+   },
+   {
+    "match_id": "20564",
+    "captures": 25,
+    "toward_rate": 0.96,
+    "baseline": 0.556
+   },
+   {
+    "match_id": "20565",
+    "captures": 18,
+    "toward_rate": 0.889,
+    "baseline": 0.786
+   },
+   {
+    "match_id": "20566",
+    "captures": 1,
+    "toward_rate": 1.0,
+    "baseline": 1.0
+   },
+   {
+    "match_id": "20567",
+    "captures": 1,
+    "toward_rate": 1.0,
+    "baseline": 0.5
+   }
+  ]
+ },
+ "H_deathtouch": {
+  "games": [
+   {
+    "match_id": "22221",
+    "T": 1200,
+    "outcome": "draw",
+    "sight": null,
+    "kill_t": null,
+    "general_moves_after_800": [],
+    "attacks_700_800": 0,
+    "attacks_800_900": 0
+   }
+  ]
+ },
+ "I_losses": [
+  {
+   "match_id": "20583",
+   "contact": 56,
+   "sight": null,
+   "won": false,
+   "kill_t": null,
+   "T": 192,
+   "outcome": "lose",
+   "army_ratio_contact": 1.0189,
+   "vis_enemy_army_contact": 1,
+   "max_stack_contact": 6,
+   "contact_to_first_attack": 28,
+   "loss_detail": {
+    "enemy_kill_t": 192,
+    "kubic_attacks_total": 40,
+    "max_stack_end": 31,
+    "big_stack_dist_from_own_general": 21,
+    "big_stack_dist_from_enemy_general": 2,
+    "last20_actions": {
+     "move_own": 12,
+     "move_enemy": 8
+    },
+    "general_hits_by_kubic": 0
+   }
+  },
+  {
+   "match_id": "20595",
+   "contact": 31,
+   "sight": 350,
+   "won": false,
+   "kill_t": 378,
+   "T": 427,
+   "outcome": "lose",
+   "army_ratio_contact": 1.0,
+   "vis_enemy_army_contact": 3,
+   "max_stack_contact": 6,
+   "contact_to_first_attack": 27,
+   "loss_detail": {
+    "enemy_kill_t": 427,
+    "kubic_attacks_total": 69,
+    "max_stack_end": 55,
+    "big_stack_dist_from_own_general": 9,
+    "big_stack_dist_from_enemy_general": 5,
+    "last20_actions": {
+     "move_own": 19,
+     "move_enemy": 1
+    },
+    "general_hits_by_kubic": 2
+   }
+  },
+  {
+   "match_id": "20603",
+   "contact": 86,
+   "sight": null,
+   "won": false,
+   "kill_t": null,
+   "T": 201,
+   "outcome": "lose",
+   "army_ratio_contact": 1.0,
+   "vis_enemy_army_contact": 1,
+   "max_stack_contact": 15,
+   "contact_to_first_attack": 2,
+   "loss_detail": {
+    "enemy_kill_t": 201,
+    "kubic_attacks_total": 19,
+    "max_stack_end": 33,
+    "big_stack_dist_from_own_general": 22,
+    "big_stack_dist_from_enemy_general": 7,
+    "last20_actions": {
+     "move_own": 8,
+     "move_neutral": 1,
+     "move_enemy": 11
+    },
+    "general_hits_by_kubic": 0
+   }
+  },
+  {
+   "match_id": "20923",
+   "contact": 34,
+   "sight": 73,
+   "won": false,
+   "kill_t": null,
+   "T": 132,
+   "outcome": "lose",
+   "army_ratio_contact": 1.0,
+   "vis_enemy_army_contact": 2,
+   "max_stack_contact": 6,
+   "contact_to_first_attack": 1,
+   "loss_detail": {
+    "enemy_kill_t": 132,
+    "kubic_attacks_total": 11,
+    "max_stack_end": 26,
+    "big_stack_dist_from_own_general": 16,
+    "big_stack_dist_from_enemy_general": 2,
+    "last20_actions": {
+     "move_own": 13,
+     "move_neutral": 3,
+     "move_enemy": 4
+    },
+    "general_hits_by_kubic": 0
+   }
+  },
+  {
+   "match_id": "22221",
+   "contact": null,
+   "sight": null,
+   "won": false,
+   "kill_t": null,
+   "T": 1200,
+   "outcome": "draw",
+   "loss_detail": {
+    "enemy_kill_t": null,
+    "kubic_attacks_total": 0,
+    "max_stack_end": 1188,
+    "big_stack_dist_from_own_general": 6,
+    "big_stack_dist_from_enemy_general": 10,
+    "last20_actions": {
+     "move_own": 16,
+     "move_neutral": 3,
+     "build": 1
+    },
+    "general_hits_by_kubic": 0
+   }
+  },
+  {
+   "match_id": "24184",
+   "contact": 206,
+   "sight": null,
+   "won": false,
+   "kill_t": null,
+   "T": 619,
+   "outcome": "lose",
+   "army_ratio_contact": 0.4821,
+   "vis_enemy_army_contact": 1,
+   "max_stack_contact": 106,
+   "contact_to_first_attack": 44,
+   "loss_detail": {
+    "enemy_kill_t": 619,
+    "kubic_attacks_total": 60,
+    "max_stack_end": 194,
+    "big_stack_dist_from_own_general": 20,
+    "big_stack_dist_from_enemy_general": 12,
+    "last20_actions": {
+     "pass": 9,
+     "move_enemy": 6,
+     "move_own": 3,
+     "move_neutral": 2
+    },
+    "general_hits_by_kubic": 0
+   }
+  },
+  {
+   "match_id": "24185",
+   "contact": 202,
+   "sight": null,
+   "won": false,
+   "kill_t": null,
+   "T": 535,
+   "outcome": "lose",
+   "army_ratio_contact": 0.3712,
+   "vis_enemy_army_contact": 2,
+   "max_stack_contact": 55,
+   "contact_to_first_attack": 64,
+   "loss_detail": {
+    "enemy_kill_t": 535,
+    "kubic_attacks_total": 25,
+    "max_stack_end": 43,
+    "big_stack_dist_from_own_general": 0,
+    "big_stack_dist_from_enemy_general": 22,
+    "last20_actions": {
+     "pass": 14,
+     "move_enemy": 6
+    },
+    "general_hits_by_kubic": 0
+   }
+  },
+  {
+   "match_id": "24186",
+   "contact": 123,
+   "sight": null,
+   "won": false,
+   "kill_t": null,
+   "T": 170,
+   "outcome": "lose",
+   "army_ratio_contact": 0.6043,
+   "vis_enemy_army_contact": 11,
+   "max_stack_contact": 28,
+   "contact_to_first_attack": 1,
+   "loss_detail": {
+    "enemy_kill_t": 170,
+    "kubic_attacks_total": 1,
+    "max_stack_end": 57,
+    "big_stack_dist_from_own_general": 12,
+    "big_stack_dist_from_enemy_general": 15,
+    "last20_actions": {
+     "move_own": 3,
+     "pass": 14,
+     "move_neutral": 3
+    },
+    "general_hits_by_kubic": 0
+   }
+  },
+  {
+   "match_id": "24187",
+   "contact": 145,
+   "sight": null,
+   "won": false,
+   "kill_t": null,
+   "T": 241,
+   "outcome": "lose",
+   "army_ratio_contact": 0.5878,
+   "vis_enemy_army_contact": 9,
+   "max_stack_contact": 54,
+   "contact_to_first_attack": 1,
+   "loss_detail": {
+    "enemy_kill_t": 241,
+    "kubic_attacks_total": 17,
+    "max_stack_end": 66,
+    "big_stack_dist_from_own_general": 7,
+    "big_stack_dist_from_enemy_general": 16,
+    "last20_actions": {
+     "pass": 10,
+     "move_enemy": 4,
+     "move_own": 6
+    },
+    "general_hits_by_kubic": 0
+   }
+  },
+  {
+   "match_id": "24188",
+   "contact": 232,
+   "sight": null,
+   "won": false,
+   "kill_t": null,
+   "T": 366,
+   "outcome": "lose",
+   "army_ratio_contact": 0.403,
+   "vis_enemy_army_contact": 28,
+   "max_stack_contact": 60,
+   "contact_to_first_attack": 6,
+   "loss_detail": {
+    "enemy_kill_t": 366,
+    "kubic_attacks_total": 16,
+    "max_stack_end": 62,
+    "big_stack_dist_from_own_general": 10,
+    "big_stack_dist_from_enemy_general": 14,
+    "last20_actions": {
+     "pass": 13,
+     "move_enemy": 5,
+     "move_own": 2
+    },
+    "general_hits_by_kubic": 0
+   }
+  },
+  {
+   "match_id": "24988",
+   "contact": 82,
+   "sight": null,
+   "won": false,
+   "kill_t": null,
+   "T": 88,
+   "outcome": "lose",
+   "army_ratio_contact": 1.0,
+   "vis_enemy_army_contact": 21,
+   "max_stack_contact": 16,
+   "contact_to_first_attack": 6,
+   "loss_detail": {
+    "enemy_kill_t": 88,
+    "kubic_attacks_total": 1,
+    "max_stack_end": 12,
+    "big_stack_dist_from_own_general": 13,
+    "big_stack_dist_from_enemy_general": 14,
+    "last20_actions": {
+     "move_own": 6,
+     "move_neutral": 13,
+     "move_enemy": 1
+    },
+    "general_hits_by_kubic": 0
+   }
+  }
+ ],
+ "per_game_wins_sample": [
+  {
+   "match_id": "20524",
+   "contact": 110,
+   "sight": 135,
+   "won": true,
+   "kill_t": 137,
+   "T": 137,
+   "outcome": "win",
+   "army_ratio_contact": 1.4639,
+   "vis_enemy_army_contact": 9,
+   "max_stack_contact": 17,
+   "contact_to_first_attack": 19
+  },
+  {
+   "match_id": "20525",
+   "contact": 83,
+   "sight": 334,
+   "won": true,
+   "kill_t": 335,
+   "T": 335,
+   "outcome": "win",
+   "army_ratio_contact": 1.2642,
+   "vis_enemy_army_contact": 1,
+   "max_stack_contact": 17,
+   "contact_to_first_attack": 2
+  },
+  {
+   "match_id": "20526",
+   "contact": 52,
+   "sight": 138,
+   "won": true,
+   "kill_t": 139,
+   "T": 139,
+   "outcome": "win",
+   "army_ratio_contact": 1.2051,
+   "vis_enemy_army_contact": 6,
+   "max_stack_contact": 7,
+   "contact_to_first_attack": 19
+  },
+  {
+   "match_id": "20527",
+   "contact": 57,
+   "sight": 185,
+   "won": true,
+   "kill_t": 187,
+   "T": 187,
+   "outcome": "win",
+   "army_ratio_contact": 1.2564,
+   "vis_enemy_army_contact": 17,
+   "max_stack_contact": 8,
+   "contact_to_first_attack": 6
+  },
+  {
+   "match_id": "20528",
+   "contact": 89,
+   "sight": 205,
+   "won": true,
+   "kill_t": 206,
+   "T": 206,
+   "outcome": "win",
+   "army_ratio_contact": 1.2143,
+   "vis_enemy_army_contact": 3,
+   "max_stack_contact": 15,
+   "contact_to_first_attack": 1
+  },
+  {
+   "match_id": "20529",
+   "contact": 33,
+   "sight": 135,
+   "won": true,
+   "kill_t": 137,
+   "T": 137,
+   "outcome": "win",
+   "army_ratio_contact": 1.0,
+   "vis_enemy_army_contact": 1,
+   "max_stack_contact": 5,
+   "contact_to_first_attack": 37
+  },
+  {
+   "match_id": "20530",
+   "contact": 95,
+   "sight": 122,
+   "won": true,
+   "kill_t": 123,
+   "T": 123,
+   "outcome": "win",
+   "army_ratio_contact": 1.2414,
+   "vis_enemy_army_contact": 1,
+   "max_stack_contact": 16,
+   "contact_to_first_attack": 26
+  },
+  {
+   "match_id": "20531",
+   "contact": 134,
+   "sight": 135,
+   "won": true,
+   "kill_t": 146,
+   "T": 146,
+   "outcome": "win",
+   "army_ratio_contact": 1.8,
+   "vis_enemy_army_contact": 3,
+   "max_stack_contact": 38,
+   "contact_to_first_attack": 1
+  },
+  {
+   "match_id": "20532",
+   "contact": 217,
+   "sight": 218,
+   "won": true,
+   "kill_t": 240,
+   "T": 240,
+   "outcome": "win",
+   "army_ratio_contact": 2.8915,
+   "vis_enemy_army_contact": 10,
+   "max_stack_contact": 100,
+   "contact_to_first_attack": 1
+  },
+  {
+   "match_id": "20534",
+   "contact": 98,
+   "sight": 442,
+   "won": true,
+   "kill_t": 443,
+   "T": 443,
+   "outcome": "win",
+   "army_ratio_contact": 1.1194,
+   "vis_enemy_army_contact": 1,
+   "max_stack_contact": 15,
+   "contact_to_first_attack": 117
+  },
+  {
+   "match_id": "20535",
+   "contact": 186,
+   "sight": 243,
+   "won": true,
+   "kill_t": 244,
+   "T": 244,
+   "outcome": "win",
+   "army_ratio_contact": 2.121,
+   "vis_enemy_army_contact": 3,
+   "max_stack_contact": 65,
+   "contact_to_first_attack": 1
+  },
+  {
+   "match_id": "20536",
+   "contact": 39,
+   "sight": 76,
+   "won": true,
+   "kill_t": 170,
+   "T": 170,
+   "outcome": "win",
+   "army_ratio_contact": 1.0,
+   "vis_enemy_army_contact": 1,
+   "max_stack_contact": 4,
+   "contact_to_first_attack": 37
+  },
+  {
+   "match_id": "20537",
+   "contact": 52,
+   "sight": 86,
+   "won": true,
+   "kill_t": 183,
+   "T": 183,
+   "outcome": "win",
+   "army_ratio_contact": 1.0408,
+   "vis_enemy_army_contact": 1,
+   "max_stack_contact": 5,
+   "contact_to_first_attack": 30
+  },
+  {
+   "match_id": "20538",
+   "contact": 83,
+   "sight": 132,
+   "won": true,
+   "kill_t": 134,
+   "T": 134,
+   "outcome": "win",
+   "army_ratio_contact": 1.0635,
+   "vis_enemy_army_contact": 7,
+   "max_stack_contact": 18,
+   "contact_to_first_attack": 5
+  },
+  {
+   "match_id": "20539",
+   "contact": 80,
+   "sight": 140,
+   "won": true,
+   "kill_t": 179,
+   "T": 179,
+   "outcome": "win",
+   "army_ratio_contact": 1.0645,
+   "vis_enemy_army_contact": 2,
+   "max_stack_contact": 20,
+   "contact_to_first_attack": 1
+  },
+  {
+   "match_id": "20540",
+   "contact": 93,
+   "sight": 171,
+   "won": true,
+   "kill_t": 195,
+   "T": 195,
+   "outcome": "win",
+   "army_ratio_contact": 1.0758,
+   "vis_enemy_army_contact": 1,
+   "max_stack_contact": 13,
+   "contact_to_first_attack": 2
+  },
+  {
+   "match_id": "20541",
+   "contact": 86,
+   "sight": 128,
+   "won": true,
+   "kill_t": 247,
+   "T": 247,
+   "outcome": "win",
+   "army_ratio_contact": 1.0308,
+   "vis_enemy_army_contact": 3,
+   "max_stack_contact": 17,
+   "contact_to_first_attack": 1
+  },
+  {
+   "match_id": "20542",
+   "contact": 124,
+   "sight": 130,
+   "won": true,
+   "kill_t": 221,
+   "T": 221,
+   "outcome": "win",
+   "army_ratio_contact": 1.5102,
+   "vis_enemy_army_contact": 3,
+   "max_stack_contact": 37,
+   "contact_to_first_attack": 1
+  },
+  {
+   "match_id": "20544",
+   "contact": 83,
+   "sight": 134,
+   "won": true,
+   "kill_t": 192,
+   "T": 192,
+   "outcome": "win",
+   "army_ratio_contact": 1.2182,
+   "vis_enemy_army_contact": 1,
+   "max_stack_contact": 15,
+   "contact_to_first_attack": 4
+  },
+  {
+   "match_id": "20545",
+   "contact": 115,
+   "sight": 123,
+   "won": true,
+   "kill_t": 213,
+   "T": 213,
+   "outcome": "win",
+   "army_ratio_contact": 1.9265,
+   "vis_enemy_army_contact": 3,
+   "max_stack_contact": 37,
+   "contact_to_first_attack": 1
+  }
+ ]
+}

@@ -1,0 +1,3893 @@
+{
+  "games": 39,
+  "outcomes": {
+    "win": 38,
+    "lose": 1
+  },
+  "lag_games": [
+    "24189"
+  ],
+  "rules": {
+    "R1_pass_legality": {
+      "fit": 0.9833,
+      "clean_fit": 1.0,
+      "holdout": {
+        "n": 8877,
+        "hits": 233,
+        "rate": 0.02624760617325673,
+        "note": "violations counted"
+      },
+      "holdout_clean": {
+        "n": 8543,
+        "hits": 0,
+        "rate": 0.0
+      }
+    },
+    "R2_first_move_t3_canonical": {
+      "fit": 0.972,
+      "holdout_ticks": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        8,
+        3,
+        3,
+        3
+      ],
+      "canonical": 38,
+      "of": 39
+    },
+    "R3_full_send_army3plus": {
+      "fit": 0.9881,
+      "holdout": {
+        "n": 7032,
+        "hits": 6957,
+        "rate": 0.9893344709897611
+      }
+    },
+    "R4_general_pull_leave1": {
+      "fit": 0.9535,
+      "holdout": {
+        "n": 789,
+        "hits": 760,
+        "rate": 0.9632446134347274
+      }
+    },
+    "R5_general_pull_odd_tick": {
+      "fit": 0.7551,
+      "holdout": {
+        "n": 789,
+        "hits": 599,
+        "rate": 0.7591888466413181
+      }
+    },
+    "R6_snake_src_eq_prev_dst": {
+      "fit": 0.7778,
+      "holdout": {
+        "n": 8714,
+        "hits": 6790,
+        "rate": 0.7792058756024788
+      }
+    },
+    "R7_relay_direction_repeat_t50": {
+      "fit": 0.961,
+      "holdout": {
+        "n": 897,
+        "hits": 884,
+        "rate": 0.9855072463768116
+      }
+    },
+    "R8_attack_src_largest_adjacent": {
+      "fit": 0.945,
+      "holdout": {
+        "n": 1056,
+        "hits": 1010,
+        "rate": 0.9564393939393939
+      }
+    },
+    "R9_attack_full_send": {
+      "fit": 0.998,
+      "holdout": {
+        "n": 1428,
+        "hits": 1427,
+        "rate": 0.9992997198879552
+      }
+    },
+    "R10_attack_winning_margin": {
+      "fit": 0.948,
+      "holdout": {
+        "n": 1428,
+        "hits": 1387,
+        "rate": 0.9712885154061625
+      }
+    },
+    "R11_attack_dst_min_bfs_to_general_post_sight": {
+      "fit": 0.931,
+      "holdout": {
+        "n": 203,
+        "hits": 186,
+        "rate": 0.916256157635468
+      }
+    },
+    "R12_mod50_wave_capture_ratio": {
+      "fit_ratio": 2.631578947368421,
+      "holdout": {
+        "wave_rate": 0.4261109929832022,
+        "gather_rate": 0.13019197207678884,
+        "ratio": 3.272943686050601
+      }
+    },
+    "R13_castles": {
+      "fit": {
+        "cost35": 0.817,
+        "first_build_min": 116,
+        "mod50_gather_band": "p50 18"
+      },
+      "holdout": {
+        "n_builds": 23,
+        "cost_hist": {
+          "35": 19,
+          "37": 3,
+          "39": 1
+        },
+        "struct_dist_hist": {
+          "7": 13,
+          "6": 3,
+          "10": 3,
+          "9": 1,
+          "8": 2,
+          "5": 1
+        },
+        "first_build_ticks": [
+          116,
+          118,
+          118,
+          120,
+          120,
+          120,
+          121,
+          124,
+          124,
+          136,
+          142,
+          150,
+          168,
+          178,
+          234
+        ],
+        "mod50_hist": [
+          0,
+          2,
+          9,
+          14,
+          14,
+          16,
+          16,
+          18,
+          18,
+          18,
+          18,
+          19,
+          20,
+          20,
+          20,
+          21,
+          24,
+          24,
+          24,
+          28,
+          34,
+          36,
+          42
+        ],
+        "builds_per_game_max": 3
+      }
+    },
+    "R14_build_trigger_ratio110": {
+      "fit_acc": 0.776,
+      "holdout": {
+        "n": 37,
+        "acc": 0.8108108108108109,
+        "behind_no_build": 1
+      }
+    },
+    "R15_drain_threat_independent": {
+      "fit_gap_pp": 0.4,
+      "holdout": {
+        "threat_rate": 0.06198723792160438,
+        "clear_rate": 0.05776045357902197,
+        "threat_n": 1097,
+        "clear_n": 2822
+      }
+    },
+    "R16_kill_phase": {
+      "fit": {
+        "no_pass_last15": 1.0,
+        "sight_before_kill": 1.0
+      },
+      "holdout": {
+        "wins": 38,
+        "zero_pass_last15": 38,
+        "sight_before_end": 38,
+        "unresolved_final": 0
+      }
+    },
+    "R17_land_at_t50": {
+      "fit": {
+        "median": 24,
+        "iqr": [
+          23,
+          25
+        ]
+      },
+      "holdout_values": [
+        6,
+        20,
+        23,
+        23,
+        23,
+        23,
+        23,
+        23,
+        23,
+        24,
+        24,
+        24,
+        24,
+        24,
+        24,
+        24,
+        24,
+        24,
+        24,
+        24,
+        24,
+        24,
+        24,
+        24,
+        24,
+        25,
+        25,
+        25,
+        25,
+        25,
+        25,
+        25,
+        25,
+        25,
+        25,
+        25,
+        25,
+        25,
+        25
+      ]
+    },
+    "R18_presight_belief_march": {
+      "fit": {
+        "chosen": 0.92,
+        "baseline": 0.64
+      },
+      "holdout": {
+        "n": 1072,
+        "chosen_rate": 0.9076492537313433,
+        "baseline_rate": 0.7548973880597015
+      }
+    },
+    "R19_opening_src_prevdst_else_general": {
+      "fit": 0.862,
+      "holdout": {
+        "n": 1799,
+        "hits": 1535,
+        "rate": 0.8532518065591995
+      }
+    }
+  },
+  "per_game": [
+    {
+      "match_id": "20533",
+      "outcome": "win",
+      "total_ticks": 148,
+      "r1": {
+        "n": 138,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 115,
+        "full": 115
+      },
+      "r4": {
+        "n": 17,
+        "leave1": 17
+      },
+      "r5": {
+        "n": 17,
+        "odd": 12
+      },
+      "r6": {
+        "n": 143,
+        "hit": 121
+      },
+      "r7": {
+        "n": 24,
+        "hit": 23
+      },
+      "r9": {
+        "n": 4,
+        "full": 4
+      },
+      "r10": {
+        "n": 4,
+        "winning": 4
+      },
+      "r8": {
+        "n": 3,
+        "hit": 3
+      },
+      "r11": {
+        "n": 2,
+        "hit": 2
+      },
+      "r18": {
+        "n": 1,
+        "chosen_reduce": 1,
+        "baseline_sum": 1.0
+      },
+      "r12": {
+        "wave_caps": 58,
+        "wave_ticks": 89,
+        "gather_caps": 9,
+        "gather_ticks": 54
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.903225806451613,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 52,
+        "clear_drains": 3
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 96,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 40
+      }
+    },
+    {
+      "match_id": "20543",
+      "outcome": "win",
+      "total_ticks": 201,
+      "r1": {
+        "n": 191,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 152,
+        "full": 151
+      },
+      "r4": {
+        "n": 22,
+        "leave1": 21
+      },
+      "r5": {
+        "n": 22,
+        "odd": 20
+      },
+      "r6": {
+        "n": 196,
+        "hit": 159
+      },
+      "r7": {
+        "n": 23,
+        "hit": 23
+      },
+      "r9": {
+        "n": 20,
+        "full": 20
+      },
+      "r10": {
+        "n": 20,
+        "winning": 20
+      },
+      "r8": {
+        "n": 5,
+        "hit": 5
+      },
+      "r11": {
+        "n": 4,
+        "hit": 4
+      },
+      "r18": {
+        "n": 15,
+        "chosen_reduce": 11,
+        "baseline_sum": 10.833333333333334
+      },
+      "r12": {
+        "wave_caps": 51,
+        "wave_ticks": 84,
+        "gather_caps": 11,
+        "gather_ticks": 54
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.6588235294117648,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 68,
+        "clear_drains": 6
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 138,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 47,
+        "hit": 38
+      }
+    },
+    {
+      "match_id": "20553",
+      "outcome": "win",
+      "total_ticks": 288,
+      "r1": {
+        "n": 278,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 248,
+        "full": 245
+      },
+      "r4": {
+        "n": 22,
+        "leave1": 22
+      },
+      "r5": {
+        "n": 22,
+        "odd": 14
+      },
+      "r6": {
+        "n": 279,
+        "hit": 243
+      },
+      "r7": {
+        "n": 24,
+        "hit": 24
+      },
+      "r9": {
+        "n": 47,
+        "full": 47
+      },
+      "r10": {
+        "n": 47,
+        "winning": 47
+      },
+      "r8": {
+        "n": 30,
+        "hit": 30
+      },
+      "r11": {
+        "n": 1,
+        "hit": 1
+      },
+      "r18": {
+        "n": 46,
+        "chosen_reduce": 35,
+        "baseline_sum": 32.666666666666664
+      },
+      "r12": {
+        "wave_caps": 56,
+        "wave_ticks": 176,
+        "gather_caps": 8,
+        "gather_ticks": 108
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 124,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 24
+          },
+          {
+            "t": 259,
+            "cost": 37,
+            "struct_dist": 6,
+            "mod50": 9
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 1.5512820512820513,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 124,
+        "clear_drains": 9
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 287,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 41
+      }
+    },
+    {
+      "match_id": "20563",
+      "outcome": "win",
+      "total_ticks": 232,
+      "r1": {
+        "n": 222,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 169,
+        "full": 165
+      },
+      "r4": {
+        "n": 19,
+        "leave1": 17
+      },
+      "r5": {
+        "n": 19,
+        "odd": 14
+      },
+      "r6": {
+        "n": 225,
+        "hit": 160
+      },
+      "r7": {
+        "n": 22,
+        "hit": 22
+      },
+      "r9": {
+        "n": 43,
+        "full": 43
+      },
+      "r10": {
+        "n": 43,
+        "winning": 41
+      },
+      "r8": {
+        "n": 36,
+        "hit": 35
+      },
+      "r11": {
+        "n": 2,
+        "hit": 2
+      },
+      "r18": {
+        "n": 39,
+        "chosen_reduce": 37,
+        "baseline_sum": 32.333333333333336
+      },
+      "r12": {
+        "wave_caps": 55,
+        "wave_ticks": 108,
+        "gather_caps": 12,
+        "gather_ticks": 72
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.2613636363636365,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 46,
+        "threat_drains": 3,
+        "clear_ticks": 36,
+        "clear_drains": 4
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 230,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 46,
+        "hit": 41
+      }
+    },
+    {
+      "match_id": "20579",
+      "outcome": "win",
+      "total_ticks": 323,
+      "r1": {
+        "n": 313,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 253,
+        "full": 249
+      },
+      "r4": {
+        "n": 23,
+        "leave1": 22
+      },
+      "r5": {
+        "n": 23,
+        "odd": 19
+      },
+      "r6": {
+        "n": 316,
+        "hit": 231
+      },
+      "r7": {
+        "n": 23,
+        "hit": 23
+      },
+      "r9": {
+        "n": 73,
+        "full": 73
+      },
+      "r10": {
+        "n": 73,
+        "winning": 68
+      },
+      "r8": {
+        "n": 66,
+        "hit": 61
+      },
+      "r11": {
+        "n": 1,
+        "hit": 1
+      },
+      "r18": {
+        "n": 67,
+        "chosen_reduce": 54,
+        "baseline_sum": 46.666666666666664
+      },
+      "r12": {
+        "wave_caps": 52,
+        "wave_ticks": 189,
+        "gather_caps": 11,
+        "gather_ticks": 108
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 168,
+            "cost": 37,
+            "struct_dist": 6,
+            "mod50": 18
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 1.028301886792453,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 104,
+        "threat_drains": 7,
+        "clear_ticks": 28,
+        "clear_drains": 3
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 322,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 41
+      }
+    },
+    {
+      "match_id": "20589",
+      "outcome": "win",
+      "total_ticks": 388,
+      "r1": {
+        "n": 378,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 324,
+        "full": 323
+      },
+      "r4": {
+        "n": 24,
+        "leave1": 24
+      },
+      "r5": {
+        "n": 24,
+        "odd": 20
+      },
+      "r6": {
+        "n": 379,
+        "hit": 314
+      },
+      "r7": {
+        "n": 24,
+        "hit": 24
+      },
+      "r9": {
+        "n": 75,
+        "full": 75
+      },
+      "r10": {
+        "n": 75,
+        "winning": 73
+      },
+      "r8": {
+        "n": 63,
+        "hit": 62
+      },
+      "r11": {
+        "n": 1,
+        "hit": 1
+      },
+      "r18": {
+        "n": 72,
+        "chosen_reduce": 63,
+        "baseline_sum": 56.666666666666664
+      },
+      "r12": {
+        "wave_caps": 57,
+        "wave_ticks": 205,
+        "gather_caps": 18,
+        "gather_ticks": 126
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 118,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 18
+          },
+          {
+            "t": 164,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 14
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 0.7619047619047619,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 216,
+        "clear_drains": 9
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 387,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 38
+      }
+    },
+    {
+      "match_id": "20599",
+      "outcome": "win",
+      "total_ticks": 471,
+      "r1": {
+        "n": 461,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 384,
+        "full": 382
+      },
+      "r4": {
+        "n": 25,
+        "leave1": 24
+      },
+      "r5": {
+        "n": 25,
+        "odd": 15
+      },
+      "r6": {
+        "n": 462,
+        "hit": 354
+      },
+      "r7": {
+        "n": 23,
+        "hit": 21
+      },
+      "r9": {
+        "n": 117,
+        "full": 117
+      },
+      "r10": {
+        "n": 117,
+        "winning": 111
+      },
+      "r8": {
+        "n": 101,
+        "hit": 85
+      },
+      "r11": {
+        "n": 14,
+        "hit": 14
+      },
+      "r18": {
+        "n": 93,
+        "chosen_reduce": 85,
+        "baseline_sum": 71.16666666666667
+      },
+      "r12": {
+        "wave_caps": 70,
+        "wave_ticks": 282,
+        "gather_caps": 9,
+        "gather_ticks": 162
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 178,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 28
+          },
+          {
+            "t": 214,
+            "cost": 37,
+            "struct_dist": 6,
+            "mod50": 14
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 1.0,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 229,
+        "threat_drains": 9,
+        "clear_ticks": 27,
+        "clear_drains": 3
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 420,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 47,
+        "hit": 43
+      }
+    },
+    {
+      "match_id": "20897",
+      "outcome": "win",
+      "total_ticks": 189,
+      "r1": {
+        "n": 179,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 141,
+        "full": 136
+      },
+      "r4": {
+        "n": 22,
+        "leave1": 19
+      },
+      "r5": {
+        "n": 22,
+        "odd": 17
+      },
+      "r6": {
+        "n": 182,
+        "hit": 142
+      },
+      "r7": {
+        "n": 23,
+        "hit": 23
+      },
+      "r9": {
+        "n": 28,
+        "full": 28
+      },
+      "r10": {
+        "n": 28,
+        "winning": 28
+      },
+      "r8": {
+        "n": 10,
+        "hit": 10
+      },
+      "r11": {
+        "n": 0,
+        "hit": 0
+      },
+      "r18": {
+        "n": 27,
+        "chosen_reduce": 25,
+        "baseline_sum": 22.166666666666668
+      },
+      "r12": {
+        "wave_caps": 39,
+        "wave_ticks": 94,
+        "gather_caps": 7,
+        "gather_ticks": 54
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.5227272727272727,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 19,
+        "threat_drains": 4,
+        "clear_ticks": 8,
+        "clear_drains": 3
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 188,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 20
+      },
+      "r19": {
+        "n": 46,
+        "hit": 42
+      }
+    },
+    {
+      "match_id": "20925",
+      "outcome": "win",
+      "total_ticks": 186,
+      "r1": {
+        "n": 176,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 137,
+        "full": 133
+      },
+      "r4": {
+        "n": 21,
+        "leave1": 21
+      },
+      "r5": {
+        "n": 21,
+        "odd": 17
+      },
+      "r6": {
+        "n": 181,
+        "hit": 128
+      },
+      "r7": {
+        "n": 23,
+        "hit": 23
+      },
+      "r9": {
+        "n": 32,
+        "full": 32
+      },
+      "r10": {
+        "n": 32,
+        "winning": 32
+      },
+      "r8": {
+        "n": 25,
+        "hit": 20
+      },
+      "r11": {
+        "n": 1,
+        "hit": 1
+      },
+      "r18": {
+        "n": 31,
+        "chosen_reduce": 30,
+        "baseline_sum": 23.333333333333332
+      },
+      "r12": {
+        "wave_caps": 47,
+        "wave_ticks": 104,
+        "gather_caps": 8,
+        "gather_ticks": 72
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.1919191919191918,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 62,
+        "clear_drains": 5
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 185,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 47,
+        "hit": 37
+      }
+    },
+    {
+      "match_id": "21061",
+      "outcome": "win",
+      "total_ticks": 138,
+      "r1": {
+        "n": 128,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 98,
+        "full": 97
+      },
+      "r4": {
+        "n": 17,
+        "leave1": 17
+      },
+      "r5": {
+        "n": 17,
+        "odd": 14
+      },
+      "r6": {
+        "n": 133,
+        "hit": 104
+      },
+      "r7": {
+        "n": 23,
+        "hit": 23
+      },
+      "r9": {
+        "n": 7,
+        "full": 7
+      },
+      "r10": {
+        "n": 7,
+        "winning": 7
+      },
+      "r8": {
+        "n": 0,
+        "hit": 0
+      },
+      "r11": {
+        "n": 2,
+        "hit": 2
+      },
+      "r18": {
+        "n": 4,
+        "chosen_reduce": 4,
+        "baseline_sum": 3.5
+      },
+      "r12": {
+        "wave_caps": 41,
+        "wave_ticks": 71,
+        "gather_caps": 15,
+        "gather_ticks": 49
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.7714285714285714,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 43,
+        "clear_drains": 3
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 85,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 39
+      }
+    },
+    {
+      "match_id": "21215",
+      "outcome": "win",
+      "total_ticks": 244,
+      "r1": {
+        "n": 234,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 197,
+        "full": 194
+      },
+      "r4": {
+        "n": 18,
+        "leave1": 15
+      },
+      "r5": {
+        "n": 18,
+        "odd": 17
+      },
+      "r6": {
+        "n": 235,
+        "hit": 189
+      },
+      "r7": {
+        "n": 24,
+        "hit": 24
+      },
+      "r9": {
+        "n": 42,
+        "full": 42
+      },
+      "r10": {
+        "n": 42,
+        "winning": 42
+      },
+      "r8": {
+        "n": 39,
+        "hit": 39
+      },
+      "r11": {
+        "n": 2,
+        "hit": 2
+      },
+      "r18": {
+        "n": 40,
+        "chosen_reduce": 38,
+        "baseline_sum": 30.833333333333332
+      },
+      "r12": {
+        "wave_caps": 65,
+        "wave_ticks": 125,
+        "gather_caps": 7,
+        "gather_ticks": 72
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 120,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 20
+          },
+          {
+            "t": 166,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 16
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 0.7478991596638656,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 16,
+        "threat_drains": 0,
+        "clear_ticks": 109,
+        "clear_drains": 5
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 242,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 23
+      },
+      "r19": {
+        "n": 47,
+        "hit": 40
+      }
+    },
+    {
+      "match_id": "21225",
+      "outcome": "win",
+      "total_ticks": 85,
+      "r1": {
+        "n": 75,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 55,
+        "full": 52
+      },
+      "r4": {
+        "n": 13,
+        "leave1": 11
+      },
+      "r5": {
+        "n": 13,
+        "odd": 10
+      },
+      "r6": {
+        "n": 80,
+        "hit": 61
+      },
+      "r7": {
+        "n": 23,
+        "hit": 23
+      },
+      "r9": {
+        "n": 3,
+        "full": 3
+      },
+      "r10": {
+        "n": 3,
+        "winning": 3
+      },
+      "r8": {
+        "n": 0,
+        "hit": 0
+      },
+      "r11": {
+        "n": 0,
+        "hit": 0
+      },
+      "r18": {
+        "n": 2,
+        "chosen_reduce": 2,
+        "baseline_sum": 2.0
+      },
+      "r12": {
+        "wave_caps": 29,
+        "wave_ticks": 44,
+        "gather_caps": 3,
+        "gather_ticks": 36
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": null,
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 12,
+        "clear_drains": 1
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 84,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 47,
+        "hit": 42
+      }
+    },
+    {
+      "match_id": "21481",
+      "outcome": "win",
+      "total_ticks": 240,
+      "r1": {
+        "n": 230,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 188,
+        "full": 187
+      },
+      "r4": {
+        "n": 18,
+        "leave1": 18
+      },
+      "r5": {
+        "n": 18,
+        "odd": 13
+      },
+      "r6": {
+        "n": 235,
+        "hit": 184
+      },
+      "r7": {
+        "n": 24,
+        "hit": 24
+      },
+      "r9": {
+        "n": 43,
+        "full": 43
+      },
+      "r10": {
+        "n": 43,
+        "winning": 43
+      },
+      "r8": {
+        "n": 30,
+        "hit": 30
+      },
+      "r11": {
+        "n": 22,
+        "hit": 22
+      },
+      "r18": {
+        "n": 13,
+        "chosen_reduce": 13,
+        "baseline_sum": 12.166666666666666
+      },
+      "r12": {
+        "wave_caps": 59,
+        "wave_ticks": 104,
+        "gather_caps": 11,
+        "gather_ticks": 72
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.287037037037037,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 130,
+        "clear_drains": 4
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 144,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 40
+      }
+    },
+    {
+      "match_id": "21533",
+      "outcome": "win",
+      "total_ticks": 355,
+      "r1": {
+        "n": 345,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 288,
+        "full": 287
+      },
+      "r4": {
+        "n": 25,
+        "leave1": 25
+      },
+      "r5": {
+        "n": 25,
+        "odd": 17
+      },
+      "r6": {
+        "n": 346,
+        "hit": 275
+      },
+      "r7": {
+        "n": 23,
+        "hit": 23
+      },
+      "r9": {
+        "n": 84,
+        "full": 84
+      },
+      "r10": {
+        "n": 84,
+        "winning": 80
+      },
+      "r8": {
+        "n": 59,
+        "hit": 57
+      },
+      "r11": {
+        "n": 7,
+        "hit": 7
+      },
+      "r18": {
+        "n": 68,
+        "chosen_reduce": 63,
+        "baseline_sum": 50.333333333333336
+      },
+      "r12": {
+        "wave_caps": 50,
+        "wave_ticks": 185,
+        "gather_caps": 9,
+        "gather_ticks": 108
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 121,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 21
+          },
+          {
+            "t": 268,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 18
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 1.0423728813559323,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 172,
+        "clear_drains": 10
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 290,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 39
+      }
+    },
+    {
+      "match_id": "21549",
+      "outcome": "win",
+      "total_ticks": 134,
+      "r1": {
+        "n": 124,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 107,
+        "full": 107
+      },
+      "r4": {
+        "n": 17,
+        "leave1": 17
+      },
+      "r5": {
+        "n": 17,
+        "odd": 14
+      },
+      "r6": {
+        "n": 129,
+        "hit": 100
+      },
+      "r7": {
+        "n": 23,
+        "hit": 22
+      },
+      "r9": {
+        "n": 6,
+        "full": 6
+      },
+      "r10": {
+        "n": 6,
+        "winning": 6
+      },
+      "r8": {
+        "n": 0,
+        "hit": 0
+      },
+      "r11": {
+        "n": 0,
+        "hit": 0
+      },
+      "r18": {
+        "n": 2,
+        "chosen_reduce": 2,
+        "baseline_sum": 2.0
+      },
+      "r12": {
+        "wave_caps": 44,
+        "wave_ticks": 62,
+        "gather_caps": 6,
+        "gather_ticks": 36
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.5238095238095237,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 40,
+        "clear_drains": 4
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 91,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 38
+      }
+    },
+    {
+      "match_id": "21709",
+      "outcome": "win",
+      "total_ticks": 130,
+      "r1": {
+        "n": 120,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 95,
+        "full": 94
+      },
+      "r4": {
+        "n": 15,
+        "leave1": 14
+      },
+      "r5": {
+        "n": 15,
+        "odd": 10
+      },
+      "r6": {
+        "n": 125,
+        "hit": 102
+      },
+      "r7": {
+        "n": 23,
+        "hit": 23
+      },
+      "r9": {
+        "n": 11,
+        "full": 11
+      },
+      "r10": {
+        "n": 11,
+        "winning": 11
+      },
+      "r8": {
+        "n": 7,
+        "hit": 7
+      },
+      "r11": {
+        "n": 0,
+        "hit": 0
+      },
+      "r18": {
+        "n": 10,
+        "chosen_reduce": 10,
+        "baseline_sum": 9.0
+      },
+      "r12": {
+        "wave_caps": 40,
+        "wave_ticks": 71,
+        "gather_caps": 10,
+        "gather_ticks": 50
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.4430379746835442,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 35,
+        "clear_drains": 3
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 129,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 47,
+        "hit": 43
+      }
+    },
+    {
+      "match_id": "21725",
+      "outcome": "win",
+      "total_ticks": 141,
+      "r1": {
+        "n": 131,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 95,
+        "full": 95
+      },
+      "r4": {
+        "n": 20,
+        "leave1": 20
+      },
+      "r5": {
+        "n": 20,
+        "odd": 18
+      },
+      "r6": {
+        "n": 134,
+        "hit": 100
+      },
+      "r7": {
+        "n": 24,
+        "hit": 24
+      },
+      "r9": {
+        "n": 18,
+        "full": 18
+      },
+      "r10": {
+        "n": 18,
+        "winning": 18
+      },
+      "r8": {
+        "n": 12,
+        "hit": 11
+      },
+      "r11": {
+        "n": 2,
+        "hit": 2
+      },
+      "r18": {
+        "n": 16,
+        "chosen_reduce": 14,
+        "baseline_sum": 10.333333333333334
+      },
+      "r12": {
+        "wave_caps": 36,
+        "wave_ticks": 71,
+        "gather_caps": 11,
+        "gather_ticks": 45
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.1333333333333333,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 25,
+        "clear_drains": 2
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 139,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 23
+      },
+      "r19": {
+        "n": 46,
+        "hit": 36
+      }
+    },
+    {
+      "match_id": "21735",
+      "outcome": "win",
+      "total_ticks": 133,
+      "r1": {
+        "n": 123,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 74,
+        "full": 74
+      },
+      "r4": {
+        "n": 18,
+        "leave1": 18
+      },
+      "r5": {
+        "n": 18,
+        "odd": 14
+      },
+      "r6": {
+        "n": 128,
+        "hit": 85
+      },
+      "r7": {
+        "n": 23,
+        "hit": 23
+      },
+      "r9": {
+        "n": 12,
+        "full": 12
+      },
+      "r10": {
+        "n": 12,
+        "winning": 12
+      },
+      "r8": {
+        "n": 6,
+        "hit": 6
+      },
+      "r11": {
+        "n": 2,
+        "hit": 2
+      },
+      "r18": {
+        "n": 10,
+        "chosen_reduce": 10,
+        "baseline_sum": 9.333333333333334
+      },
+      "r12": {
+        "wave_caps": 46,
+        "wave_ticks": 71,
+        "gather_caps": 13,
+        "gather_ticks": 43
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.1090909090909091,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 36,
+        "clear_drains": 3
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 131,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 47,
+        "hit": 41
+      }
+    },
+    {
+      "match_id": "21763",
+      "outcome": "win",
+      "total_ticks": 198,
+      "r1": {
+        "n": 188,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 159,
+        "full": 159
+      },
+      "r4": {
+        "n": 21,
+        "leave1": 21
+      },
+      "r5": {
+        "n": 21,
+        "odd": 19
+      },
+      "r6": {
+        "n": 193,
+        "hit": 155
+      },
+      "r7": {
+        "n": 24,
+        "hit": 24
+      },
+      "r9": {
+        "n": 39,
+        "full": 39
+      },
+      "r10": {
+        "n": 39,
+        "winning": 38
+      },
+      "r8": {
+        "n": 9,
+        "hit": 9
+      },
+      "r11": {
+        "n": 7,
+        "hit": 7
+      },
+      "r18": {
+        "n": 18,
+        "chosen_reduce": 18,
+        "baseline_sum": 11.833333333333334
+      },
+      "r12": {
+        "wave_caps": 38,
+        "wave_ticks": 108,
+        "gather_caps": 2,
+        "gather_ticks": 72
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.6222222222222222,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 44,
+        "threat_drains": 7,
+        "clear_ticks": 0,
+        "clear_drains": 0
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 126,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 23
+      },
+      "r19": {
+        "n": 47,
+        "hit": 39
+      }
+    },
+    {
+      "match_id": "21779",
+      "outcome": "win",
+      "total_ticks": 82,
+      "r1": {
+        "n": 72,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 48,
+        "full": 46
+      },
+      "r4": {
+        "n": 12,
+        "leave1": 12
+      },
+      "r5": {
+        "n": 12,
+        "odd": 10
+      },
+      "r6": {
+        "n": 77,
+        "hit": 56
+      },
+      "r7": {
+        "n": 22,
+        "hit": 22
+      },
+      "r9": {
+        "n": 10,
+        "full": 10
+      },
+      "r10": {
+        "n": 10,
+        "winning": 10
+      },
+      "r8": {
+        "n": 0,
+        "hit": 0
+      },
+      "r11": {
+        "n": 3,
+        "hit": 1
+      },
+      "r18": {
+        "n": 5,
+        "chosen_reduce": 5,
+        "baseline_sum": 3.333333333333333
+      },
+      "r12": {
+        "wave_caps": 28,
+        "wave_ticks": 35,
+        "gather_caps": 1,
+        "gather_ticks": 18
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": null,
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 9,
+        "clear_drains": 1
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 77,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 43
+      }
+    },
+    {
+      "match_id": "21807",
+      "outcome": "win",
+      "total_ticks": 230,
+      "r1": {
+        "n": 220,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 175,
+        "full": 170
+      },
+      "r4": {
+        "n": 21,
+        "leave1": 21
+      },
+      "r5": {
+        "n": 21,
+        "odd": 18
+      },
+      "r6": {
+        "n": 223,
+        "hit": 166
+      },
+      "r7": {
+        "n": 24,
+        "hit": 24
+      },
+      "r9": {
+        "n": 25,
+        "full": 25
+      },
+      "r10": {
+        "n": 25,
+        "winning": 24
+      },
+      "r8": {
+        "n": 21,
+        "hit": 21
+      },
+      "r11": {
+        "n": 9,
+        "hit": 7
+      },
+      "r18": {
+        "n": 2,
+        "chosen_reduce": 2,
+        "baseline_sum": 1.6666666666666665
+      },
+      "r12": {
+        "wave_caps": 57,
+        "wave_ticks": 135,
+        "gather_caps": 14,
+        "gather_ticks": 79
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 120,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 20
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 0.7521367521367521,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 56,
+        "threat_drains": 3,
+        "clear_ticks": 42,
+        "clear_drains": 3
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 89,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 38
+      }
+    },
+    {
+      "match_id": "21823",
+      "outcome": "win",
+      "total_ticks": 135,
+      "r1": {
+        "n": 125,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 90,
+        "full": 88
+      },
+      "r4": {
+        "n": 15,
+        "leave1": 15
+      },
+      "r5": {
+        "n": 15,
+        "odd": 10
+      },
+      "r6": {
+        "n": 130,
+        "hit": 93
+      },
+      "r7": {
+        "n": 23,
+        "hit": 21
+      },
+      "r9": {
+        "n": 15,
+        "full": 15
+      },
+      "r10": {
+        "n": 15,
+        "winning": 15
+      },
+      "r8": {
+        "n": 0,
+        "hit": 0
+      },
+      "r11": {
+        "n": 1,
+        "hit": 1
+      },
+      "r18": {
+        "n": 14,
+        "chosen_reduce": 12,
+        "baseline_sum": 7.333333333333333
+      },
+      "r12": {
+        "wave_caps": 43,
+        "wave_ticks": 71,
+        "gather_caps": 10,
+        "gather_ticks": 41
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.2708333333333333,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 40,
+        "clear_drains": 3
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 134,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 47,
+        "hit": 43
+      }
+    },
+    {
+      "match_id": "21851",
+      "outcome": "win",
+      "total_ticks": 244,
+      "r1": {
+        "n": 234,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 190,
+        "full": 189
+      },
+      "r4": {
+        "n": 19,
+        "leave1": 19
+      },
+      "r5": {
+        "n": 19,
+        "odd": 16
+      },
+      "r6": {
+        "n": 237,
+        "hit": 181
+      },
+      "r7": {
+        "n": 22,
+        "hit": 22
+      },
+      "r9": {
+        "n": 52,
+        "full": 51
+      },
+      "r10": {
+        "n": 52,
+        "winning": 49
+      },
+      "r8": {
+        "n": 29,
+        "hit": 27
+      },
+      "r11": {
+        "n": 25,
+        "hit": 25
+      },
+      "r18": {
+        "n": 19,
+        "chosen_reduce": 18,
+        "baseline_sum": 15.5
+      },
+      "r12": {
+        "wave_caps": 48,
+        "wave_ticks": 71,
+        "gather_caps": 5,
+        "gather_ticks": 52
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 118,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 18
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 0.7058823529411765,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 39,
+        "threat_drains": 5,
+        "clear_ticks": 58,
+        "clear_drains": 2
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 153,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 40
+      }
+    },
+    {
+      "match_id": "21861",
+      "outcome": "win",
+      "total_ticks": 227,
+      "r1": {
+        "n": 217,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 170,
+        "full": 170
+      },
+      "r4": {
+        "n": 18,
+        "leave1": 18
+      },
+      "r5": {
+        "n": 18,
+        "odd": 15
+      },
+      "r6": {
+        "n": 220,
+        "hit": 167
+      },
+      "r7": {
+        "n": 25,
+        "hit": 25
+      },
+      "r9": {
+        "n": 30,
+        "full": 30
+      },
+      "r10": {
+        "n": 30,
+        "winning": 30
+      },
+      "r8": {
+        "n": 30,
+        "hit": 30
+      },
+      "r11": {
+        "n": 1,
+        "hit": 1
+      },
+      "r18": {
+        "n": 29,
+        "chosen_reduce": 29,
+        "baseline_sum": 18.166666666666668
+      },
+      "r12": {
+        "wave_caps": 68,
+        "wave_ticks": 113,
+        "gather_caps": 12,
+        "gather_ticks": 72
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 142,
+            "cost": 35,
+            "struct_dist": 10,
+            "mod50": 42
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 1.1085271317829457,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 122,
+        "clear_drains": 4
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 226,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 23
+      },
+      "r19": {
+        "n": 47,
+        "hit": 38
+      }
+    },
+    {
+      "match_id": "21895",
+      "outcome": "win",
+      "total_ticks": 291,
+      "r1": {
+        "n": 281,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 238,
+        "full": 235
+      },
+      "r4": {
+        "n": 22,
+        "leave1": 21
+      },
+      "r5": {
+        "n": 22,
+        "odd": 12
+      },
+      "r6": {
+        "n": 286,
+        "hit": 223
+      },
+      "r7": {
+        "n": 24,
+        "hit": 23
+      },
+      "r9": {
+        "n": 46,
+        "full": 46
+      },
+      "r10": {
+        "n": 46,
+        "winning": 46
+      },
+      "r8": {
+        "n": 41,
+        "hit": 41
+      },
+      "r11": {
+        "n": 6,
+        "hit": 6
+      },
+      "r18": {
+        "n": 35,
+        "chosen_reduce": 28,
+        "baseline_sum": 24.666666666666668
+      },
+      "r12": {
+        "wave_caps": 80,
+        "wave_ticks": 167,
+        "gather_caps": 21,
+        "gather_ticks": 105
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.2702702702702702,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 6,
+        "threat_drains": 1,
+        "clear_ticks": 157,
+        "clear_drains": 5
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 255,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 39
+      }
+    },
+    {
+      "match_id": "21929",
+      "outcome": "win",
+      "total_ticks": 240,
+      "r1": {
+        "n": 230,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 179,
+        "full": 179
+      },
+      "r4": {
+        "n": 20,
+        "leave1": 20
+      },
+      "r5": {
+        "n": 20,
+        "odd": 19
+      },
+      "r6": {
+        "n": 231,
+        "hit": 175
+      },
+      "r7": {
+        "n": 25,
+        "hit": 25
+      },
+      "r9": {
+        "n": 31,
+        "full": 31
+      },
+      "r10": {
+        "n": 31,
+        "winning": 31
+      },
+      "r8": {
+        "n": 22,
+        "hit": 22
+      },
+      "r11": {
+        "n": 1,
+        "hit": 1
+      },
+      "r18": {
+        "n": 30,
+        "chosen_reduce": 29,
+        "baseline_sum": 23.333333333333332
+      },
+      "r12": {
+        "wave_caps": 53,
+        "wave_ticks": 126,
+        "gather_caps": 13,
+        "gather_ticks": 72
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 136,
+            "cost": 35,
+            "struct_dist": 10,
+            "mod50": 36
+          },
+          {
+            "t": 169,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 19
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 1.0,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 88,
+        "threat_drains": 4,
+        "clear_ticks": 18,
+        "clear_drains": 2
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 239,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 23
+      },
+      "r19": {
+        "n": 47,
+        "hit": 38
+      }
+    },
+    {
+      "match_id": "21939",
+      "outcome": "win",
+      "total_ticks": 136,
+      "r1": {
+        "n": 126,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 80,
+        "full": 80
+      },
+      "r4": {
+        "n": 20,
+        "leave1": 20
+      },
+      "r5": {
+        "n": 20,
+        "odd": 19
+      },
+      "r6": {
+        "n": 131,
+        "hit": 87
+      },
+      "r7": {
+        "n": 23,
+        "hit": 23
+      },
+      "r9": {
+        "n": 17,
+        "full": 17
+      },
+      "r10": {
+        "n": 17,
+        "winning": 16
+      },
+      "r8": {
+        "n": 11,
+        "hit": 11
+      },
+      "r11": {
+        "n": 10,
+        "hit": 7
+      },
+      "r18": {
+        "n": 4,
+        "chosen_reduce": 4,
+        "baseline_sum": 4.0
+      },
+      "r12": {
+        "wave_caps": 46,
+        "wave_ticks": 71,
+        "gather_caps": 8,
+        "gather_ticks": 44
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.0947368421052632,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 23,
+        "clear_drains": 3
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 80,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 47,
+        "hit": 38
+      }
+    },
+    {
+      "match_id": "21979",
+      "outcome": "win",
+      "total_ticks": 329,
+      "r1": {
+        "n": 319,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 256,
+        "full": 254
+      },
+      "r4": {
+        "n": 29,
+        "leave1": 27
+      },
+      "r5": {
+        "n": 29,
+        "odd": 19
+      },
+      "r6": {
+        "n": 324,
+        "hit": 245
+      },
+      "r7": {
+        "n": 23,
+        "hit": 20
+      },
+      "r9": {
+        "n": 40,
+        "full": 40
+      },
+      "r10": {
+        "n": 40,
+        "winning": 38
+      },
+      "r8": {
+        "n": 30,
+        "hit": 29
+      },
+      "r11": {
+        "n": 8,
+        "hit": 7
+      },
+      "r18": {
+        "n": 26,
+        "chosen_reduce": 26,
+        "baseline_sum": 22.0
+      },
+      "r12": {
+        "wave_caps": 63,
+        "wave_ticks": 188,
+        "gather_caps": 17,
+        "gather_ticks": 108
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.2,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 103,
+        "threat_drains": 9,
+        "clear_ticks": 5,
+        "clear_drains": 1
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 268,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 47,
+        "hit": 45
+      }
+    },
+    {
+      "match_id": "22019",
+      "outcome": "win",
+      "total_ticks": 229,
+      "r1": {
+        "n": 219,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 167,
+        "full": 167
+      },
+      "r4": {
+        "n": 19,
+        "leave1": 19
+      },
+      "r5": {
+        "n": 19,
+        "odd": 16
+      },
+      "r6": {
+        "n": 224,
+        "hit": 170
+      },
+      "r7": {
+        "n": 22,
+        "hit": 22
+      },
+      "r9": {
+        "n": 31,
+        "full": 31
+      },
+      "r10": {
+        "n": 31,
+        "winning": 30
+      },
+      "r8": {
+        "n": 5,
+        "hit": 5
+      },
+      "r11": {
+        "n": 6,
+        "hit": 6
+      },
+      "r18": {
+        "n": 24,
+        "chosen_reduce": 21,
+        "baseline_sum": 20.5
+      },
+      "r12": {
+        "wave_caps": 55,
+        "wave_ticks": 135,
+        "gather_caps": 8,
+        "gather_ticks": 84
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.1686746987951808,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 66,
+        "clear_drains": 7
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 189,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 47,
+        "hit": 44
+      }
+    },
+    {
+      "match_id": "22047",
+      "outcome": "win",
+      "total_ticks": 179,
+      "r1": {
+        "n": 169,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 126,
+        "full": 123
+      },
+      "r4": {
+        "n": 21,
+        "leave1": 21
+      },
+      "r5": {
+        "n": 21,
+        "odd": 16
+      },
+      "r6": {
+        "n": 174,
+        "hit": 124
+      },
+      "r7": {
+        "n": 23,
+        "hit": 23
+      },
+      "r9": {
+        "n": 27,
+        "full": 27
+      },
+      "r10": {
+        "n": 27,
+        "winning": 27
+      },
+      "r8": {
+        "n": 23,
+        "hit": 23
+      },
+      "r11": {
+        "n": 10,
+        "hit": 10
+      },
+      "r18": {
+        "n": 13,
+        "chosen_reduce": 12,
+        "baseline_sum": 8.5
+      },
+      "r12": {
+        "wave_caps": 53,
+        "wave_ticks": 93,
+        "gather_caps": 12,
+        "gather_ticks": 54
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.2211538461538463,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 29,
+        "threat_drains": 2,
+        "clear_ticks": 19,
+        "clear_drains": 3
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 128,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 37
+      }
+    },
+    {
+      "match_id": "22099",
+      "outcome": "win",
+      "total_ticks": 295,
+      "r1": {
+        "n": 285,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 254,
+        "full": 251
+      },
+      "r4": {
+        "n": 17,
+        "leave1": 15
+      },
+      "r5": {
+        "n": 17,
+        "odd": 11
+      },
+      "r6": {
+        "n": 288,
+        "hit": 256
+      },
+      "r7": {
+        "n": 23,
+        "hit": 21
+      },
+      "r9": {
+        "n": 47,
+        "full": 47
+      },
+      "r10": {
+        "n": 47,
+        "winning": 46
+      },
+      "r8": {
+        "n": 39,
+        "hit": 39
+      },
+      "r11": {
+        "n": 10,
+        "hit": 10
+      },
+      "r18": {
+        "n": 33,
+        "chosen_reduce": 33,
+        "baseline_sum": 28.666666666666668
+      },
+      "r12": {
+        "wave_caps": 58,
+        "wave_ticks": 127,
+        "gather_caps": 15,
+        "gather_ticks": 72
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 150,
+            "cost": 35,
+            "struct_dist": 9,
+            "mod50": 0
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 1.358695652173913,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 160,
+        "clear_drains": 6
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 259,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 47,
+        "hit": 43
+      }
+    },
+    {
+      "match_id": "22217",
+      "outcome": "win",
+      "total_ticks": 233,
+      "r1": {
+        "n": 223,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 196,
+        "full": 191
+      },
+      "r4": {
+        "n": 17,
+        "leave1": 13
+      },
+      "r5": {
+        "n": 17,
+        "odd": 11
+      },
+      "r6": {
+        "n": 228,
+        "hit": 195
+      },
+      "r7": {
+        "n": 23,
+        "hit": 23
+      },
+      "r9": {
+        "n": 2,
+        "full": 2
+      },
+      "r10": {
+        "n": 2,
+        "winning": 1
+      },
+      "r8": {
+        "n": 2,
+        "hit": 2
+      },
+      "r11": {
+        "n": 0,
+        "hit": 0
+      },
+      "r18": {
+        "n": 0,
+        "chosen_reduce": 0,
+        "baseline_sum": 0
+      },
+      "r12": {
+        "wave_caps": 80,
+        "wave_ticks": 125,
+        "gather_caps": 13,
+        "gather_ticks": 72
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 2.2857142857142856,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 123,
+        "clear_drains": 4
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 156,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 47,
+        "hit": 41
+      }
+    },
+    {
+      "match_id": "22365",
+      "outcome": "win",
+      "total_ticks": 518,
+      "r1": {
+        "n": 508,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 447,
+        "full": 447
+      },
+      "r4": {
+        "n": 32,
+        "leave1": 32
+      },
+      "r5": {
+        "n": 32,
+        "odd": 29
+      },
+      "r6": {
+        "n": 511,
+        "hit": 401
+      },
+      "r7": {
+        "n": 24,
+        "hit": 24
+      },
+      "r9": {
+        "n": 126,
+        "full": 126
+      },
+      "r10": {
+        "n": 126,
+        "winning": 123
+      },
+      "r8": {
+        "n": 115,
+        "hit": 112
+      },
+      "r11": {
+        "n": 16,
+        "hit": 12
+      },
+      "r18": {
+        "n": 84,
+        "chosen_reduce": 71,
+        "baseline_sum": 61.666666666666664
+      },
+      "r12": {
+        "wave_caps": 64,
+        "wave_ticks": 155,
+        "gather_caps": 2,
+        "gather_ticks": 90
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 234,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 34
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 0.9484536082474226,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 50,
+        "threat_drains": 5,
+        "clear_ticks": 197,
+        "clear_drains": 11
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 376,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 23
+      },
+      "r19": {
+        "n": 47,
+        "hit": 37
+      }
+    },
+    {
+      "match_id": "23077",
+      "outcome": "win",
+      "total_ticks": 261,
+      "r1": {
+        "n": 251,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 198,
+        "full": 193
+      },
+      "r4": {
+        "n": 19,
+        "leave1": 15
+      },
+      "r5": {
+        "n": 19,
+        "odd": 12
+      },
+      "r6": {
+        "n": 254,
+        "hit": 193
+      },
+      "r7": {
+        "n": 22,
+        "hit": 22
+      },
+      "r9": {
+        "n": 37,
+        "full": 37
+      },
+      "r10": {
+        "n": 37,
+        "winning": 36
+      },
+      "r8": {
+        "n": 32,
+        "hit": 32
+      },
+      "r11": {
+        "n": 7,
+        "hit": 6
+      },
+      "r18": {
+        "n": 24,
+        "chosen_reduce": 21,
+        "baseline_sum": 16.0
+      },
+      "r12": {
+        "wave_caps": 52,
+        "wave_ticks": 135,
+        "gather_caps": 14,
+        "gather_ticks": 77
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 120,
+            "cost": 35,
+            "struct_dist": 10,
+            "mod50": 20
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 0.8062015503875969,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 102,
+        "threat_drains": 4,
+        "clear_ticks": 26,
+        "clear_drains": 2
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 203,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 42
+      }
+    },
+    {
+      "match_id": "24011",
+      "outcome": "win",
+      "total_ticks": 179,
+      "r1": {
+        "n": 169,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 121,
+        "full": 116
+      },
+      "r4": {
+        "n": 22,
+        "leave1": 22
+      },
+      "r5": {
+        "n": 22,
+        "odd": 18
+      },
+      "r6": {
+        "n": 172,
+        "hit": 116
+      },
+      "r7": {
+        "n": 24,
+        "hit": 23
+      },
+      "r9": {
+        "n": 20,
+        "full": 20
+      },
+      "r10": {
+        "n": 20,
+        "winning": 20
+      },
+      "r8": {
+        "n": 13,
+        "hit": 13
+      },
+      "r11": {
+        "n": 1,
+        "hit": 1
+      },
+      "r18": {
+        "n": 19,
+        "chosen_reduce": 19,
+        "baseline_sum": 14.666666666666666
+      },
+      "r12": {
+        "wave_caps": 51,
+        "wave_ticks": 94,
+        "gather_caps": 9,
+        "gather_ticks": 54
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 124,
+            "cost": 35,
+            "struct_dist": 8,
+            "mod50": 24
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 1.1192660550458715,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 44,
+        "threat_drains": 2,
+        "clear_ticks": 12,
+        "clear_drains": 2
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 178,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 38
+      }
+    },
+    {
+      "match_id": "24189",
+      "outcome": "lose",
+      "total_ticks": 344,
+      "r1": {
+        "n": 334,
+        "violations": 233
+      },
+      "lag_game": true,
+      "unforced_passes": 233,
+      "r2": {
+        "tick": 8,
+        "canonical": false
+      },
+      "r3": {
+        "n": 70,
+        "full": 70
+      },
+      "r4": {
+        "n": 27,
+        "leave1": 27
+      },
+      "r5": {
+        "n": 27,
+        "odd": 11
+      },
+      "r6": {
+        "n": 35,
+        "hit": 5
+      },
+      "r7": {
+        "n": 12,
+        "hit": 12
+      },
+      "r9": {
+        "n": 21,
+        "full": 21
+      },
+      "r10": {
+        "n": 21,
+        "winning": 18
+      },
+      "r8": {
+        "n": 21,
+        "hit": 13
+      },
+      "r11": {
+        "n": 0,
+        "hit": 0
+      },
+      "r18": {
+        "n": 18,
+        "chosen_reduce": 17,
+        "baseline_sum": 12.416666666666666
+      },
+      "r12": {
+        "wave_caps": 17,
+        "wave_ticks": 211,
+        "gather_caps": 3,
+        "gather_ticks": 126
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 0.5460992907801419,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 92,
+        "threat_drains": 2,
+        "clear_ticks": 128,
+        "clear_drains": 3
+      },
+      "r16": null,
+      "r17": {
+        "land50": 6
+      },
+      "r19": {
+        "n": 17,
+        "hit": 8
+      }
+    },
+    {
+      "match_id": "24931",
+      "outcome": "win",
+      "total_ticks": 282,
+      "r1": {
+        "n": 272,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 233,
+        "full": 232
+      },
+      "r4": {
+        "n": 21,
+        "leave1": 20
+      },
+      "r5": {
+        "n": 21,
+        "odd": 14
+      },
+      "r6": {
+        "n": 275,
+        "hit": 231
+      },
+      "r7": {
+        "n": 21,
+        "hit": 21
+      },
+      "r9": {
+        "n": 34,
+        "full": 34
+      },
+      "r10": {
+        "n": 34,
+        "winning": 30
+      },
+      "r8": {
+        "n": 23,
+        "hit": 22
+      },
+      "r11": {
+        "n": 17,
+        "hit": 13
+      },
+      "r18": {
+        "n": 9,
+        "chosen_reduce": 9,
+        "baseline_sum": 7.833333333333333
+      },
+      "r12": {
+        "wave_caps": 51,
+        "wave_ticks": 148,
+        "gather_caps": 1,
+        "gather_ticks": 90
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.24,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 116,
+        "clear_drains": 8
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 83,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 25
+      },
+      "r19": {
+        "n": 46,
+        "hit": 43
+      }
+    },
+    {
+      "match_id": "25157",
+      "outcome": "win",
+      "total_ticks": 449,
+      "r1": {
+        "n": 439,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 397,
+        "full": 397
+      },
+      "r4": {
+        "n": 21,
+        "leave1": 21
+      },
+      "r5": {
+        "n": 21,
+        "odd": 15
+      },
+      "r6": {
+        "n": 438,
+        "hit": 381
+      },
+      "r7": {
+        "n": 25,
+        "hit": 25
+      },
+      "r9": {
+        "n": 95,
+        "full": 95
+      },
+      "r10": {
+        "n": 95,
+        "winning": 95
+      },
+      "r8": {
+        "n": 90,
+        "hit": 90
+      },
+      "r11": {
+        "n": 0,
+        "hit": 0
+      },
+      "r18": {
+        "n": 94,
+        "chosen_reduce": 87,
+        "baseline_sum": 67.5
+      },
+      "r12": {
+        "wave_caps": 56,
+        "wave_ticks": 178,
+        "gather_caps": 10,
+        "gather_ticks": 108
+      },
+      "r13": {
+        "builds": [
+          {
+            "t": 116,
+            "cost": 35,
+            "struct_dist": 7,
+            "mod50": 16
+          },
+          {
+            "t": 174,
+            "cost": 39,
+            "struct_dist": 5,
+            "mod50": 24
+          },
+          {
+            "t": 252,
+            "cost": 35,
+            "struct_dist": 8,
+            "mod50": 2
+          }
+        ]
+      },
+      "r14": {
+        "ratio": 0.7622950819672131,
+        "built_after": true
+      },
+      "r15": {
+        "threat_ticks": 30,
+        "threat_drains": 1,
+        "clear_ticks": 238,
+        "clear_drains": 9
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 448,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 23
+      },
+      "r19": {
+        "n": 47,
+        "hit": 43
+      }
+    },
+    {
+      "match_id": "25167",
+      "outcome": "win",
+      "total_ticks": 160,
+      "r1": {
+        "n": 150,
+        "violations": 0
+      },
+      "lag_game": false,
+      "unforced_passes": 0,
+      "r2": {
+        "tick": 3,
+        "canonical": true
+      },
+      "r3": {
+        "n": 118,
+        "full": 114
+      },
+      "r4": {
+        "n": 20,
+        "leave1": 19
+      },
+      "r5": {
+        "n": 20,
+        "odd": 14
+      },
+      "r6": {
+        "n": 155,
+        "hit": 118
+      },
+      "r7": {
+        "n": 24,
+        "hit": 24
+      },
+      "r9": {
+        "n": 18,
+        "full": 18
+      },
+      "r10": {
+        "n": 18,
+        "winning": 18
+      },
+      "r8": {
+        "n": 8,
+        "hit": 8
+      },
+      "r11": {
+        "n": 2,
+        "hit": 2
+      },
+      "r18": {
+        "n": 16,
+        "chosen_reduce": 15,
+        "baseline_sum": 13.333333333333334
+      },
+      "r12": {
+        "wave_caps": 48,
+        "wave_ticks": 82,
+        "gather_caps": 5,
+        "gather_ticks": 54
+      },
+      "r13": {
+        "builds": []
+      },
+      "r14": {
+        "ratio": 1.074766355140187,
+        "built_after": false
+      },
+      "r15": {
+        "threat_ticks": 0,
+        "threat_drains": 0,
+        "clear_ticks": 40,
+        "clear_drains": 4
+      },
+      "r16": {
+        "passes_last15": 0,
+        "sight_tick": 149,
+        "sight_before_end": true,
+        "unresolved_final": false
+      },
+      "r17": {
+        "land50": 24
+      },
+      "r19": {
+        "n": 47,
+        "hit": 39
+      }
+    }
+  ]
+}

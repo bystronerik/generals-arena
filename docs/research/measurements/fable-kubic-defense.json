@@ -1,0 +1,8654 @@
+{
+ "meta": {
+  "games": 351,
+  "outcomes": {
+   "win": 340,
+   "lose": 10,
+   "draw": 1
+  },
+  "unresolved_ticks": 4,
+  "total_ticks": 82893,
+  "D_REF": 6,
+  "EP_GAP": 10,
+  "RESP_WINDOW": 25,
+  "BIG_MOVE": 8,
+  "CHAIN_MIN_DROP": 3
+ },
+ "proximity_games": {
+  "visible": {
+   "1": 24,
+   "2": 38,
+   "3": 53,
+   "4": 69,
+   "5": 89,
+   "6": 115,
+   "8": 174
+  },
+  "true": {
+   "1": 24,
+   "2": 38,
+   "3": 53,
+   "4": 69,
+   "5": 89,
+   "6": 115,
+   "8": 174
+  }
+ },
+ "episodes": {
+  "total": {
+   "n": 176,
+   "responded": {
+    "num": 160,
+    "den": 176,
+    "rate": 0.9090909090909091
+   },
+   "latency": {
+    "p10": 0.0,
+    "p25": 0.0,
+    "p50": 2.0,
+    "p75": 5.0,
+    "p90": 9.099999999999994,
+    "n": 160,
+    "mean": 3.41875,
+    "min": 0.0,
+    "max": 24.0
+   },
+   "latency_hist": {
+    "0": 57,
+    "1": 17,
+    "2": 19,
+    "3": 13,
+    "4": 9,
+    "5": 8,
+    "6": 5,
+    "7": 6,
+    "8": 4,
+    "9": 6,
+    "10": 4,
+    "11": 2,
+    "12": 3,
+    "13": 1,
+    "14": 2,
+    "16": 1,
+    "17": 1,
+    "23": 1,
+    "24": 1
+   },
+   "first_class": {
+    "recall_homeward": 48,
+    "block_path": 39,
+    "attack_near_home": 29,
+    "attack_intruder": 25,
+    "chase_intruder": 16,
+    "reinforce_general": 3
+   },
+   "pre_expand": {
+    "p10": 0.0,
+    "p25": 0.0,
+    "p50": 0.0,
+    "p75": 2.0,
+    "p90": 6.5,
+    "n": 176,
+    "mean": 1.9943181818181819,
+    "min": 0.0,
+    "max": 20.0
+   },
+   "pre_expand_hist": {
+    "0": 94,
+    "1": 23,
+    "2": 16,
+    "3": 9,
+    "4": 5,
+    "5": 7,
+    "6": 4,
+    "7": 4,
+    "8": 3,
+    "9": 3,
+    "10": 1,
+    "11": 1,
+    "12": 2,
+    "13": 1,
+    "15": 1,
+    "18": 1,
+    "20": 1
+   },
+   "tiles_lost": {
+    "p10": 0.0,
+    "p25": 1.0,
+    "p50": 5.0,
+    "p75": 16.0,
+    "p90": 28.5,
+    "n": 176,
+    "mean": 11.818181818181818,
+    "min": 0.0,
+    "max": 108.0
+   },
+   "outcomes": {
+    "intruder_lost_cell": 75,
+    "threat_left_radius": 50,
+    "game_end": 41,
+    "general_captured": 10
+   },
+   "src_general_moves": {
+    "num": 117,
+    "den": 176,
+    "rate": 0.6647727272727273
+   }
+  },
+  "wins_only": {
+   "n": 165,
+   "responded": {
+    "num": 151,
+    "den": 165,
+    "rate": 0.9151515151515152
+   },
+   "latency": {
+    "p10": 0.0,
+    "p25": 0.0,
+    "p50": 2.0,
+    "p75": 5.0,
+    "p90": 9.0,
+    "n": 151,
+    "mean": 3.3509933774834435,
+    "min": 0.0,
+    "max": 23.0
+   },
+   "latency_hist": {
+    "0": 54,
+    "1": 16,
+    "2": 18,
+    "3": 12,
+    "4": 9,
+    "5": 7,
+    "6": 4,
+    "7": 6,
+    "8": 4,
+    "9": 6,
+    "10": 4,
+    "11": 2,
+    "12": 3,
+    "13": 1,
+    "14": 2,
+    "16": 1,
+    "17": 1,
+    "23": 1
+   },
+   "first_class": {
+    "recall_homeward": 45,
+    "block_path": 37,
+    "attack_near_home": 27,
+    "attack_intruder": 24,
+    "chase_intruder": 15,
+    "reinforce_general": 3
+   },
+   "pre_expand": {
+    "p10": 0.0,
+    "p25": 0.0,
+    "p50": 0.0,
+    "p75": 2.0,
+    "p90": 6.599999999999994,
+    "n": 165,
+    "mean": 1.9636363636363636,
+    "min": 0.0,
+    "max": 18.0
+   },
+   "pre_expand_hist": {
+    "0": 86,
+    "1": 22,
+    "2": 16,
+    "3": 9,
+    "4": 5,
+    "5": 7,
+    "6": 3,
+    "7": 4,
+    "8": 3,
+    "9": 3,
+    "10": 1,
+    "11": 1,
+    "12": 2,
+    "13": 1,
+    "15": 1,
+    "18": 1
+   },
+   "tiles_lost": {
+    "p10": 0.0,
+    "p25": 1.0,
+    "p50": 5.0,
+    "p75": 14.0,
+    "p90": 27.599999999999994,
+    "n": 165,
+    "mean": 11.303030303030303,
+    "min": 0.0,
+    "max": 108.0
+   },
+   "outcomes": {
+    "intruder_lost_cell": 75,
+    "threat_left_radius": 49,
+    "game_end": 41
+   },
+   "src_general_moves": {
+    "num": 110,
+    "den": 165,
+    "rate": 0.6666666666666666
+   }
+  },
+  "losses_only": {
+   "n": 11,
+   "responded": {
+    "num": 9,
+    "den": 11,
+    "rate": 0.8181818181818182
+   },
+   "latency": {
+    "p10": 0.0,
+    "p25": 0.0,
+    "p50": 2.0,
+    "p75": 5.0,
+    "p90": 9.600000000000003,
+    "n": 9,
+    "mean": 4.555555555555555,
+    "min": 0.0,
+    "max": 24.0
+   },
+   "latency_hist": {
+    "0": 3,
+    "1": 1,
+    "2": 1,
+    "3": 1,
+    "5": 1,
+    "6": 1,
+    "24": 1
+   },
+   "first_class": {
+    "recall_homeward": 3,
+    "block_path": 2,
+    "attack_near_home": 2,
+    "chase_intruder": 1,
+    "attack_intruder": 1
+   },
+   "pre_expand": {
+    "p10": 0.0,
+    "p25": 0.0,
+    "p50": 0.0,
+    "p75": 0.5,
+    "p90": 6.0,
+    "n": 11,
+    "mean": 2.4545454545454546,
+    "min": 0.0,
+    "max": 20.0
+   },
+   "pre_expand_hist": {
+    "0": 8,
+    "1": 1,
+    "6": 1,
+    "20": 1
+   },
+   "tiles_lost": {
+    "p10": 0.0,
+    "p25": 4.5,
+    "p50": 14.0,
+    "p75": 24.0,
+    "p90": 57.0,
+    "n": 11,
+    "mean": 19.545454545454547,
+    "min": 0.0,
+    "max": 58.0
+   },
+   "outcomes": {
+    "general_captured": 10,
+    "threat_left_radius": 1
+   },
+   "src_general_moves": {
+    "num": 7,
+    "den": 11,
+    "rate": 0.6363636363636364
+   }
+  },
+  "by_onset_dist": {
+   "d0-2": {
+    "n": 1,
+    "responded": {
+     "num": 0,
+     "den": 1,
+     "rate": 0.0
+    },
+    "latency": null,
+    "latency_hist": {},
+    "first_class": {},
+    "pre_expand": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 0.0,
+     "p75": 0.0,
+     "p90": 0.0,
+     "n": 1,
+     "mean": 0.0,
+     "min": 0.0,
+     "max": 0.0
+    },
+    "pre_expand_hist": {
+     "0": 1
+    },
+    "tiles_lost": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 0.0,
+     "p75": 0.0,
+     "p90": 0.0,
+     "n": 1,
+     "mean": 0.0,
+     "min": 0.0,
+     "max": 0.0
+    },
+    "outcomes": {
+     "general_captured": 1
+    },
+    "src_general_moves": {
+     "num": 0,
+     "den": 1,
+     "rate": 0.0
+    }
+   },
+   "d3-4": {
+    "n": 4,
+    "responded": {
+     "num": 4,
+     "den": 4,
+     "rate": 1.0
+    },
+    "latency": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 4.5,
+     "p75": 9.0,
+     "p90": 9.0,
+     "n": 4,
+     "mean": 4.5,
+     "min": 0.0,
+     "max": 9.0
+    },
+    "latency_hist": {
+     "0": 2,
+     "9": 2
+    },
+    "first_class": {
+     "attack_intruder": 3,
+     "block_path": 1
+    },
+    "pre_expand": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 0.0,
+     "p75": 1.25,
+     "p90": 3.500000000000001,
+     "n": 4,
+     "mean": 1.25,
+     "min": 0.0,
+     "max": 5.0
+    },
+    "pre_expand_hist": {
+     "0": 3,
+     "5": 1
+    },
+    "tiles_lost": {
+     "p10": 15.5,
+     "p25": 17.75,
+     "p50": 36.0,
+     "p75": 66.75,
+     "p90": 91.50000000000001,
+     "n": 4,
+     "mean": 48.5,
+     "min": 14.0,
+     "max": 108.0
+    },
+    "outcomes": {
+     "intruder_lost_cell": 4
+    },
+    "src_general_moves": {
+     "num": 4,
+     "den": 4,
+     "rate": 1.0
+    }
+   },
+   "d5-6": {
+    "n": 171,
+    "responded": {
+     "num": 156,
+     "den": 171,
+     "rate": 0.9122807017543859
+    },
+    "latency": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 2.0,
+     "p75": 5.0,
+     "p90": 9.5,
+     "n": 156,
+     "mean": 3.391025641025641,
+     "min": 0.0,
+     "max": 24.0
+    },
+    "latency_hist": {
+     "0": 55,
+     "1": 17,
+     "2": 19,
+     "3": 13,
+     "4": 9,
+     "5": 8,
+     "6": 5,
+     "7": 6,
+     "8": 4,
+     "9": 4,
+     "10": 4,
+     "11": 2,
+     "12": 3,
+     "13": 1,
+     "14": 2,
+     "16": 1,
+     "17": 1,
+     "23": 1,
+     "24": 1
+    },
+    "first_class": {
+     "recall_homeward": 48,
+     "block_path": 38,
+     "attack_near_home": 29,
+     "attack_intruder": 22,
+     "chase_intruder": 16,
+     "reinforce_general": 3
+    },
+    "pre_expand": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 0.0,
+     "p75": 2.0,
+     "p90": 7.0,
+     "n": 171,
+     "mean": 2.0233918128654973,
+     "min": 0.0,
+     "max": 20.0
+    },
+    "pre_expand_hist": {
+     "0": 90,
+     "1": 23,
+     "2": 16,
+     "3": 9,
+     "4": 5,
+     "5": 6,
+     "6": 4,
+     "7": 4,
+     "8": 3,
+     "9": 3,
+     "10": 1,
+     "11": 1,
+     "12": 2,
+     "13": 1,
+     "15": 1,
+     "18": 1,
+     "20": 1
+    },
+    "tiles_lost": {
+     "p10": 0.0,
+     "p25": 1.0,
+     "p50": 5.0,
+     "p75": 14.5,
+     "p90": 27.0,
+     "n": 171,
+     "mean": 11.029239766081872,
+     "min": 0.0,
+     "max": 104.0
+    },
+    "outcomes": {
+     "intruder_lost_cell": 71,
+     "threat_left_radius": 50,
+     "game_end": 41,
+     "general_captured": 9
+    },
+    "src_general_moves": {
+     "num": 113,
+     "den": 171,
+     "rate": 0.6608187134502924
+    }
+   }
+  },
+  "by_onset_army": {
+   "threat_lt_gen": {
+    "n": 89,
+    "responded": {
+     "num": 83,
+     "den": 89,
+     "rate": 0.9325842696629213
+    },
+    "latency": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 2.0,
+     "p75": 5.5,
+     "p90": 11.799999999999997,
+     "n": 83,
+     "mean": 3.819277108433735,
+     "min": 0.0,
+     "max": 24.0
+    },
+    "latency_hist": {
+     "0": 34,
+     "1": 7,
+     "2": 9,
+     "3": 3,
+     "4": 3,
+     "5": 6,
+     "6": 2,
+     "7": 3,
+     "8": 3,
+     "9": 2,
+     "10": 1,
+     "11": 1,
+     "12": 2,
+     "13": 1,
+     "14": 2,
+     "16": 1,
+     "17": 1,
+     "23": 1,
+     "24": 1
+    },
+    "first_class": {
+     "recall_homeward": 27,
+     "attack_intruder": 19,
+     "block_path": 18,
+     "attack_near_home": 15,
+     "reinforce_general": 2,
+     "chase_intruder": 2
+    },
+    "pre_expand": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 0.0,
+     "p75": 3.0,
+     "p90": 8.0,
+     "n": 89,
+     "mean": 2.3258426966292136,
+     "min": 0.0,
+     "max": 20.0
+    },
+    "pre_expand_hist": {
+     "0": 45,
+     "1": 10,
+     "2": 11,
+     "3": 6,
+     "4": 2,
+     "5": 4,
+     "6": 1,
+     "8": 2,
+     "9": 2,
+     "11": 1,
+     "12": 1,
+     "13": 1,
+     "15": 1,
+     "18": 1,
+     "20": 1
+    },
+    "tiles_lost": {
+     "p10": 0.0,
+     "p25": 1.0,
+     "p50": 4.0,
+     "p75": 18.0,
+     "p90": 38.40000000000005,
+     "n": 89,
+     "mean": 14.314606741573034,
+     "min": 0.0,
+     "max": 108.0
+    },
+    "outcomes": {
+     "threat_left_radius": 35,
+     "intruder_lost_cell": 27,
+     "game_end": 23,
+     "general_captured": 4
+    },
+    "src_general_moves": {
+     "num": 65,
+     "den": 89,
+     "rate": 0.7303370786516854
+    }
+   },
+   "threat_ge_gen": {
+    "n": 87,
+    "responded": {
+     "num": 77,
+     "den": 87,
+     "rate": 0.8850574712643678
+    },
+    "latency": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 2.0,
+     "p75": 4.0,
+     "p90": 9.0,
+     "n": 77,
+     "mean": 2.987012987012987,
+     "min": 0.0,
+     "max": 12.0
+    },
+    "latency_hist": {
+     "0": 23,
+     "1": 10,
+     "2": 10,
+     "3": 10,
+     "4": 6,
+     "5": 2,
+     "6": 3,
+     "7": 3,
+     "8": 1,
+     "9": 4,
+     "10": 3,
+     "11": 1,
+     "12": 1
+    },
+    "first_class": {
+     "block_path": 21,
+     "recall_homeward": 21,
+     "chase_intruder": 14,
+     "attack_near_home": 14,
+     "attack_intruder": 6,
+     "reinforce_general": 1
+    },
+    "pre_expand": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 0.0,
+     "p75": 2.0,
+     "p90": 6.0,
+     "n": 87,
+     "mean": 1.6551724137931034,
+     "min": 0.0,
+     "max": 12.0
+    },
+    "pre_expand_hist": {
+     "0": 49,
+     "1": 13,
+     "2": 5,
+     "3": 3,
+     "4": 3,
+     "5": 3,
+     "6": 3,
+     "7": 4,
+     "8": 1,
+     "9": 1,
+     "10": 1,
+     "12": 1
+    },
+    "tiles_lost": {
+     "p10": 0.0,
+     "p25": 2.0,
+     "p50": 5.0,
+     "p75": 14.5,
+     "p90": 23.0,
+     "n": 87,
+     "mean": 9.264367816091953,
+     "min": 0.0,
+     "max": 43.0
+    },
+    "outcomes": {
+     "intruder_lost_cell": 48,
+     "game_end": 18,
+     "threat_left_radius": 15,
+     "general_captured": 6
+    },
+    "src_general_moves": {
+     "num": 52,
+     "den": 87,
+     "rate": 0.5977011494252874
+    }
+   },
+   "threat_ge_8": {
+    "n": 84,
+    "responded": {
+     "num": 71,
+     "den": 84,
+     "rate": 0.8452380952380952
+    },
+    "latency": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 2.0,
+     "p75": 4.5,
+     "p90": 9.0,
+     "n": 71,
+     "mean": 2.859154929577465,
+     "min": 0.0,
+     "max": 12.0
+    },
+    "latency_hist": {
+     "0": 26,
+     "1": 9,
+     "2": 7,
+     "3": 7,
+     "4": 4,
+     "5": 4,
+     "6": 2,
+     "7": 3,
+     "8": 1,
+     "9": 3,
+     "10": 2,
+     "11": 1,
+     "12": 2
+    },
+    "first_class": {
+     "recall_homeward": 20,
+     "block_path": 18,
+     "attack_near_home": 14,
+     "chase_intruder": 13,
+     "attack_intruder": 5,
+     "reinforce_general": 1
+    },
+    "pre_expand": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 0.0,
+     "p75": 3.0,
+     "p90": 6.0,
+     "n": 84,
+     "mean": 1.8214285714285714,
+     "min": 0.0,
+     "max": 12.0
+    },
+    "pre_expand_hist": {
+     "0": 44,
+     "1": 11,
+     "2": 7,
+     "3": 5,
+     "4": 1,
+     "5": 6,
+     "6": 3,
+     "7": 4,
+     "9": 1,
+     "12": 2
+    },
+    "tiles_lost": {
+     "p10": 1.0,
+     "p25": 2.0,
+     "p50": 5.0,
+     "p75": 14.0,
+     "p90": 23.0,
+     "n": 84,
+     "mean": 9.357142857142858,
+     "min": 0.0,
+     "max": 43.0
+    },
+    "outcomes": {
+     "intruder_lost_cell": 43,
+     "game_end": 22,
+     "threat_left_radius": 13,
+     "general_captured": 6
+    },
+    "src_general_moves": {
+     "num": 51,
+     "den": 84,
+     "rate": 0.6071428571428571
+    }
+   },
+   "threat_lt_8": {
+    "n": 92,
+    "responded": {
+     "num": 89,
+     "den": 92,
+     "rate": 0.967391304347826
+    },
+    "latency": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 2.0,
+     "p75": 6.0,
+     "p90": 10.200000000000003,
+     "n": 89,
+     "mean": 3.865168539325843,
+     "min": 0.0,
+     "max": 24.0
+    },
+    "latency_hist": {
+     "0": 31,
+     "1": 8,
+     "2": 12,
+     "3": 6,
+     "4": 5,
+     "5": 4,
+     "6": 3,
+     "7": 3,
+     "8": 3,
+     "9": 3,
+     "10": 2,
+     "11": 1,
+     "12": 1,
+     "13": 1,
+     "14": 2,
+     "16": 1,
+     "17": 1,
+     "23": 1,
+     "24": 1
+    },
+    "first_class": {
+     "recall_homeward": 28,
+     "block_path": 21,
+     "attack_intruder": 20,
+     "attack_near_home": 15,
+     "chase_intruder": 3,
+     "reinforce_general": 2
+    },
+    "pre_expand": {
+     "p10": 0.0,
+     "p25": 0.0,
+     "p50": 0.0,
+     "p75": 2.0,
+     "p90": 8.0,
+     "n": 92,
+     "mean": 2.152173913043478,
+     "min": 0.0,
+     "max": 20.0
+    },
+    "pre_expand_hist": {
+     "0": 50,
+     "1": 12,
+     "2": 9,
+     "3": 4,
+     "4": 4,
+     "5": 1,
+     "6": 1,
+     "8": 3,
+     "9": 2,
+     "10": 1,
+     "11": 1,
+     "13": 1,
+     "15": 1,
+     "18": 1,
+     "20": 1
+    },
+    "tiles_lost": {
+     "p10": 0.0,
+     "p25": 1.0,
+     "p50": 4.0,
+     "p75": 18.0,
+     "p90": 37.50000000000003,
+     "n": 92,
+     "mean": 14.065217391304348,
+     "min": 0.0,
+     "max": 108.0
+    },
+    "outcomes": {
+     "threat_left_radius": 37,
+     "intruder_lost_cell": 32,
+     "game_end": 19,
+     "general_captured": 4
+    },
+    "src_general_moves": {
+     "num": 66,
+     "den": 92,
+     "rate": 0.717391304347826
+    }
+   }
+  },
+  "per_game_count": {
+   "p10": 1.0,
+   "p25": 1.0,
+   "p50": 1.0,
+   "p75": 2.0,
+   "p90": 3.0,
+   "n": 115,
+   "mean": 1.5304347826086957,
+   "min": 1.0,
+   "max": 5.0
+  },
+  "sample_no_response": [
+   {
+    "match_id": "20581",
+    "t0": 290,
+    "onset_dist": 6,
+    "onset_threat_army": 8,
+    "onset_gen_army": 6,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "20584",
+    "t0": 336,
+    "onset_dist": 6,
+    "onset_threat_army": 13,
+    "onset_gen_army": 9,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "20585",
+    "t0": 177,
+    "onset_dist": 6,
+    "onset_threat_army": 17,
+    "onset_gen_army": 6,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "20586",
+    "t0": 186,
+    "onset_dist": 6,
+    "onset_threat_army": 38,
+    "onset_gen_army": 14,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "20588",
+    "t0": 343,
+    "onset_dist": 6,
+    "onset_threat_army": 29,
+    "onset_gen_army": 17,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "20593",
+    "t0": 336,
+    "onset_dist": 6,
+    "onset_threat_army": 15,
+    "onset_gen_army": 17,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "20600",
+    "t0": 332,
+    "onset_dist": 6,
+    "onset_threat_army": 8,
+    "onset_gen_army": 14,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "20603",
+    "t0": 195,
+    "onset_dist": 6,
+    "onset_threat_army": 38,
+    "onset_gen_army": 12,
+    "outcome": "general_captured"
+   },
+   {
+    "match_id": "21532",
+    "t0": 373,
+    "onset_dist": 6,
+    "onset_threat_army": 8,
+    "onset_gen_army": 16,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "21778",
+    "t0": 169,
+    "onset_dist": 6,
+    "onset_threat_army": 3,
+    "onset_gen_army": 5,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "21803",
+    "t0": 278,
+    "onset_dist": 6,
+    "onset_threat_army": 1,
+    "onset_gen_army": 12,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "21931",
+    "t0": 311,
+    "onset_dist": 6,
+    "onset_threat_army": 1,
+    "onset_gen_army": 6,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "22361",
+    "t0": 494,
+    "onset_dist": 6,
+    "onset_threat_army": 14,
+    "onset_gen_army": 7,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "24186",
+    "t0": 168,
+    "onset_dist": 2,
+    "onset_threat_army": 18,
+    "onset_gen_army": 3,
+    "outcome": "general_captured"
+   },
+   {
+    "match_id": "24813",
+    "t0": 169,
+    "onset_dist": 6,
+    "onset_threat_army": 12,
+    "onset_gen_army": 9,
+    "outcome": "game_end"
+   },
+   {
+    "match_id": "25166",
+    "t0": 175,
+    "onset_dist": 6,
+    "onset_threat_army": 40,
+    "onset_gen_army": 10,
+    "outcome": "game_end"
+   }
+  ]
+ },
+ "response_class_latency": {
+  "attack_intruder": {
+   "p10": 0.0,
+   "p25": 4.0,
+   "p50": 8.0,
+   "p75": 15.25,
+   "p90": 20.9,
+   "n": 72,
+   "mean": 9.416666666666666,
+   "min": 0.0,
+   "max": 24.0
+  },
+  "attack_near_home": {
+   "p10": 1.0,
+   "p25": 2.0,
+   "p50": 7.0,
+   "p75": 12.0,
+   "p90": 17.0,
+   "n": 118,
+   "mean": 7.906779661016949,
+   "min": 0.0,
+   "max": 24.0
+  },
+  "block_path": {
+   "p10": 0.0,
+   "p25": 2.0,
+   "p50": 8.0,
+   "p75": 15.0,
+   "p90": 21.60000000000001,
+   "n": 105,
+   "mean": 9.17142857142857,
+   "min": 0.0,
+   "max": 24.0
+  },
+  "chase_intruder": {
+   "p10": 0.0,
+   "p25": 1.0,
+   "p50": 2.0,
+   "p75": 3.0,
+   "p90": 5.0,
+   "n": 23,
+   "mean": 2.5652173913043477,
+   "min": 0.0,
+   "max": 17.0
+  },
+  "recall_homeward": {
+   "p10": 0.0,
+   "p25": 2.0,
+   "p50": 6.0,
+   "p75": 12.25,
+   "p90": 18.599999999999994,
+   "n": 88,
+   "mean": 7.659090909090909,
+   "min": 0.0,
+   "max": 24.0
+  },
+  "reinforce_general": {
+   "p10": 3.2,
+   "p25": 8.0,
+   "p50": 12.0,
+   "p75": 18.0,
+   "p90": 21.0,
+   "n": 53,
+   "mean": 12.735849056603774,
+   "min": 0.0,
+   "max": 24.0
+  }
+ },
+ "conditional_policy": {
+  "d0-2": {
+   "n": 681,
+   "dist": {
+    "own_outward": 0.27312775330396477,
+    "attack_far": 0.2643171806167401,
+    "attack_near_home": 0.09251101321585903,
+    "pass": 0.08663729809104258,
+    "attack_threat_cell": 0.0763582966226138,
+    "own_homeward_big": 0.07342143906020558,
+    "own_homeward_small": 0.06901615271659324,
+    "expand_neutral": 0.04552129221732746,
+    "onto_general": 0.01908957415565345
+   }
+  },
+  "d13+/none": {
+   "n": 45754,
+   "dist": {
+    "own_outward": 0.38560563010884297,
+    "expand_neutral": 0.3769069370983958,
+    "own_homeward_small": 0.06849674345412422,
+    "own_homeward_big": 0.053875071032040915,
+    "attack_far": 0.052017309961970536,
+    "pass": 0.03785461380425755,
+    "onto_general": 0.014359400271014556,
+    "attack_threat_cell": 0.008917253136337807,
+    "build": 0.0019451851204266293,
+    "unresolved": 2.185601258906325e-05
+   }
+  },
+  "d3-4": {
+   "n": 3489,
+   "dist": {
+    "own_outward": 0.3296073373459444,
+    "attack_far": 0.1711092003439381,
+    "own_homeward_small": 0.11951848667239896,
+    "own_homeward_big": 0.10547434795070221,
+    "pass": 0.07738607050730868,
+    "expand_neutral": 0.07709945543135568,
+    "attack_near_home": 0.06248208655775294,
+    "attack_threat_cell": 0.037546574949842364,
+    "onto_general": 0.01834336486099169,
+    "build": 0.0014330753797649756
+   }
+  },
+  "d5-6": {
+   "n": 6399,
+   "dist": {
+    "own_outward": 0.38740428191904985,
+    "attack_far": 0.1878418502891077,
+    "own_homeward_small": 0.10861072042506642,
+    "expand_neutral": 0.10064072511329895,
+    "own_homeward_big": 0.10001562744178778,
+    "attack_near_home": 0.04438193467729333,
+    "attack_threat_cell": 0.03187998124706985,
+    "pass": 0.020940771995624316,
+    "onto_general": 0.015002344116268168,
+    "build": 0.0029692139396780746,
+    "unresolved": 0.0003125488357555868
+   }
+  },
+  "d7-8": {
+   "n": 10074,
+   "dist": {
+    "own_outward": 0.4155251141552511,
+    "attack_far": 0.20270001985308717,
+    "expand_neutral": 0.12308914036132619,
+    "own_homeward_small": 0.0953940837800278,
+    "own_homeward_big": 0.08914036132618622,
+    "attack_threat_cell": 0.029184038117927337,
+    "onto_general": 0.015187611673615247,
+    "pass": 0.014691284494738933,
+    "attack_near_home": 0.013103037522334724,
+    "build": 0.0019853087155052612
+   }
+  },
+  "d9-12": {
+   "n": 16496,
+   "dist": {
+    "own_outward": 0.4004607177497575,
+    "attack_far": 0.1969568380213385,
+    "expand_neutral": 0.164221629485936,
+    "own_homeward_small": 0.09832686711930165,
+    "own_homeward_big": 0.0837172647914646,
+    "attack_threat_cell": 0.028916100872938895,
+    "onto_general": 0.01673132880698351,
+    "pass": 0.006365179437439379,
+    "build": 0.00424345295829292,
+    "unresolved": 6.062075654704171e-05
+   }
+  }
+ },
+ "engagement": {
+  "ge_2x_d0-2": {
+   "num": 146,
+   "den": 594,
+   "rate": 0.24579124579124578
+  },
+  "ge_2x_d3-4": {
+   "num": 316,
+   "den": 2366,
+   "rate": 0.13355874894336434
+  },
+  "ge_2x_d5-6": {
+   "num": 455,
+   "den": 2807,
+   "rate": 0.16209476309226933
+  },
+  "gt_1x_d0-2": {
+   "num": 13,
+   "den": 30,
+   "rate": 0.43333333333333335
+  },
+  "gt_1x_d3-4": {
+   "num": 22,
+   "den": 203,
+   "rate": 0.10837438423645321
+  },
+  "gt_1x_d5-6": {
+   "num": 15,
+   "den": 563,
+   "rate": 0.02664298401420959
+  },
+  "le_1x_d0-2": {
+   "num": 9,
+   "den": 54,
+   "rate": 0.16666666666666666
+  },
+  "le_1x_d3-4": {
+   "num": 57,
+   "den": 866,
+   "rate": 0.06581986143187067
+  },
+  "le_1x_d5-6": {
+   "num": 138,
+   "den": 2634,
+   "rate": 0.05239179954441914
+  },
+  "no_stack_d0-2": {
+   "num": 0,
+   "den": 3,
+   "rate": 0.0
+  },
+  "no_stack_d3-4": {
+   "num": 6,
+   "den": 54,
+   "rate": 0.1111111111111111
+  },
+  "no_stack_d5-6": {
+   "num": 36,
+   "den": 395,
+   "rate": 0.09113924050632911
+  }
+ },
+ "chase": {
+  "enemy_target_moves": 11913,
+  "chase_moves": {
+   "num": 431,
+   "den": 11913,
+   "rate": 0.036178964156803495
+  },
+  "chase_under_threat": {
+   "num": 83,
+   "den": 1902,
+   "rate": 0.04363827549947424
+  },
+  "opportunities": {
+   "num": 16,
+   "den": 42,
+   "rate": 0.38095238095238093
+  },
+  "missed_examples": [
+   {
+    "match_id": "20537",
+    "t": 145,
+    "src": [
+     2,
+     8
+    ],
+    "src_army": 2
+   },
+   {
+    "match_id": "20585",
+    "t": 71,
+    "src": [
+     12,
+     6
+    ],
+    "src_army": 7
+   },
+   {
+    "match_id": "20592",
+    "t": 465,
+    "src": [
+     16,
+     2
+    ],
+    "src_army": 6
+   },
+   {
+    "match_id": "20593",
+    "t": 228,
+    "src": [
+     9,
+     15
+    ],
+    "src_army": 4
+   },
+   {
+    "match_id": "20594",
+    "t": 241,
+    "src": [
+     9,
+     11
+    ],
+    "src_army": 16
+   },
+   {
+    "match_id": "20595",
+    "t": 85,
+    "src": [
+     11,
+     8
+    ],
+    "src_army": 2
+   },
+   {
+    "match_id": "20604",
+    "t": 338,
+    "src": [
+     3,
+     16
+    ],
+    "src_army": 3
+   },
+   {
+    "match_id": "20604",
+    "t": 339,
+    "src": [
+     4,
+     14
+    ],
+    "src_army": 4
+   },
+   {
+    "match_id": "20896",
+    "t": 76,
+    "src": [
+     5,
+     12
+    ],
+    "src_army": 7
+   },
+   {
+    "match_id": "21535",
+    "t": 117,
+    "src": [
+     12,
+     9
+    ],
+    "src_army": 10
+   },
+   {
+    "match_id": "21803",
+    "t": 215,
+    "src": [
+     8,
+     6
+    ],
+    "src_army": 2
+   },
+   {
+    "match_id": "21804",
+    "t": 267,
+    "src": [
+     11,
+     12
+    ],
+    "src_army": 3
+   },
+   {
+    "match_id": "21853",
+    "t": 321,
+    "src": [
+     14,
+     2
+    ],
+    "src_army": 3
+   },
+   {
+    "match_id": "21892",
+    "t": 118,
+    "src": [
+     5,
+     11
+    ],
+    "src_army": 3
+   },
+   {
+    "match_id": "21907",
+    "t": 226,
+    "src": [
+     5,
+     11
+    ],
+    "src_army": 3
+   },
+   {
+    "match_id": "21909",
+    "t": 176,
+    "src": [
+     2,
+     18
+    ],
+    "src_army": 3
+   },
+   {
+    "match_id": "21993",
+    "t": 356,
+    "src": [
+     3,
+     4
+    ],
+    "src_army": 14
+   },
+   {
+    "match_id": "22022",
+    "t": 256,
+    "src": [
+     17,
+     6
+    ],
+    "src_army": 3
+   },
+   {
+    "match_id": "23767",
+    "t": 175,
+    "src": [
+     5,
+     12
+    ],
+    "src_army": 3
+   },
+   {
+    "match_id": "24184",
+    "t": 352,
+    "src": [
+     3,
+     7
+    ],
+    "src_army": 2
+   }
+  ]
+ },
+ "general_as_source": {
+  "moves_from_general": {
+   "num": 6928,
+   "den": 80238,
+   "rate": 0.0863431291906578
+  },
+  "under_visible_threat_le6": 451,
+  "army_left_behind": {
+   "p10": 1.0,
+   "p25": 1.0,
+   "p50": 1.0,
+   "p75": 1.0,
+   "p90": 1.0,
+   "n": 6928,
+   "mean": 1.0786662817551964,
+   "min": 1.0,
+   "max": 11.0
+  },
+  "drain_rate_by_threat": {
+   "clear_g20-39": {
+    "num": 515,
+    "den": 5113,
+    "rate": 0.10072364560923137
+   },
+   "clear_g40+": {
+    "num": 107,
+    "den": 853,
+    "rate": 0.1254396248534584
+   },
+   "clear_g8-19": {
+    "num": 1073,
+    "den": 24094,
+    "rate": 0.04453390885697684
+   },
+   "threat_g20-39": {
+    "num": 110,
+    "den": 1115,
+    "rate": 0.09865470852017937
+   },
+   "threat_g40+": {
+    "num": 22,
+    "den": 138,
+    "rate": 0.15942028985507245
+   },
+   "threat_g8-19": {
+    "num": 217,
+    "den": 4507,
+    "rate": 0.048147326381184824
+   }
+  }
+ },
+ "homeward_big_rate": {
+  "in_episode": {
+   "num": 1456,
+   "den": 10616,
+   "rate": 0.13715146948003015
+  },
+  "out_episode": {
+   "num": 6704,
+   "den": 72277,
+   "rate": 0.0927542648422043
+  }
+ },
+ "recall": {
+  "chains_total": 292,
+  "chain_len": {
+   "p10": 1.0,
+   "p25": 3.0,
+   "p50": 4.0,
+   "p75": 7.25,
+   "p90": 14.900000000000034,
+   "n": 292,
+   "mean": 10.599315068493151,
+   "min": 1.0,
+   "max": 1045.0
+  },
+  "chain_start_army": {
+   "p10": 9.0,
+   "p25": 9.0,
+   "p50": 12.0,
+   "p75": 21.0,
+   "p90": 38.0,
+   "n": 292,
+   "mean": 18.695205479452056,
+   "min": 9.0,
+   "max": 161.0
+  },
+  "chain_d0": {
+   "p10": 1.0,
+   "p25": 4.0,
+   "p50": 8.0,
+   "p75": 13.0,
+   "p90": 22.900000000000034,
+   "n": 292,
+   "mean": 10.143835616438356,
+   "min": 1.0,
+   "max": 33.0
+  },
+  "reached_general": {
+   "num": 52,
+   "den": 292,
+   "rate": 0.1780821917808219
+  },
+  "no_visible_threat_at_start": {
+   "num": 192,
+   "den": 292,
+   "rate": 0.6575342465753424
+  },
+  "start_rate_by_vis_dist": {
+   "1": {
+    "num": 2,
+    "den": 134,
+    "rate": 0.014925373134328358
+   },
+   "10": {
+    "num": 12,
+    "den": 3074,
+    "rate": 0.003903708523096942
+   },
+   "2": {
+    "num": 4,
+    "den": 314,
+    "rate": 0.012738853503184714
+   },
+   "3": {
+    "num": 5,
+    "den": 1098,
+    "rate": 0.004553734061930784
+   },
+   "4": {
+    "num": 11,
+    "den": 1052,
+    "rate": 0.010456273764258554
+   },
+   "5": {
+    "num": 7,
+    "den": 1400,
+    "rate": 0.005
+   },
+   "6": {
+    "num": 11,
+    "den": 2618,
+    "rate": 0.004201680672268907
+   },
+   "7": {
+    "num": 13,
+    "den": 3048,
+    "rate": 0.00426509186351706
+   },
+   "8": {
+    "num": 13,
+    "den": 3573,
+    "rate": 0.003638399104394067
+   },
+   "9": {
+    "num": 14,
+    "den": 2458,
+    "rate": 0.005695687550854353
+   },
+   "none": {
+    "num": 92,
+    "den": 20626,
+    "rate": 0.004460389799282459
+   }
+  },
+  "start_rate_by_vis_dist_and_army": {
+   "1_small": {
+    "num": 2,
+    "den": 118,
+    "rate": 0.01694915254237288
+   },
+   "1_big": {
+    "num": 0,
+    "den": 16,
+    "rate": 0.0
+   },
+   "10_small": {
+    "num": 11,
+    "den": 2838,
+    "rate": 0.003875968992248062
+   },
+   "10_big": {
+    "num": 1,
+    "den": 236,
+    "rate": 0.00423728813559322
+   },
+   "2_small": {
+    "num": 2,
+    "den": 278,
+    "rate": 0.007194244604316547
+   },
+   "2_big": {
+    "num": 2,
+    "den": 36,
+    "rate": 0.05555555555555555
+   },
+   "3_small": {
+    "num": 3,
+    "den": 1038,
+    "rate": 0.002890173410404624
+   },
+   "3_big": {
+    "num": 2,
+    "den": 60,
+    "rate": 0.03333333333333333
+   },
+   "4_small": {
+    "num": 11,
+    "den": 981,
+    "rate": 0.011213047910295617
+   },
+   "4_big": {
+    "num": 0,
+    "den": 71,
+    "rate": 0.0
+   },
+   "5_small": {
+    "num": 7,
+    "den": 1281,
+    "rate": 0.00546448087431694
+   },
+   "5_big": {
+    "num": 0,
+    "den": 119,
+    "rate": 0.0
+   },
+   "6_small": {
+    "num": 10,
+    "den": 2424,
+    "rate": 0.004125412541254125
+   },
+   "6_big": {
+    "num": 1,
+    "den": 194,
+    "rate": 0.005154639175257732
+   },
+   "7_small": {
+    "num": 12,
+    "den": 2777,
+    "rate": 0.004321209938782859
+   },
+   "7_big": {
+    "num": 1,
+    "den": 271,
+    "rate": 0.0036900369003690036
+   },
+   "8_small": {
+    "num": 11,
+    "den": 3268,
+    "rate": 0.0033659730722154224
+   },
+   "8_big": {
+    "num": 2,
+    "den": 305,
+    "rate": 0.006557377049180328
+   },
+   "9_small": {
+    "num": 11,
+    "den": 2235,
+    "rate": 0.004921700223713647
+   },
+   "9_big": {
+    "num": 3,
+    "den": 223,
+    "rate": 0.013452914798206279
+   },
+   "none_small": {
+    "num": 84,
+    "den": 19316,
+    "rate": 0.004348726444398426
+   },
+   "none_big": {
+    "num": 8,
+    "den": 1310,
+    "rate": 0.0061068702290076335
+   }
+  },
+  "predicate_grid": {
+   "D1_K0.0": {
+    "onsets": 27,
+    "onset_hits": 1,
+    "chains": 292,
+    "chain_covered": 2,
+    "onset_precision": 0.037037037037037035,
+    "chain_coverage": 0.00684931506849315
+   },
+   "D1_K0.5": {
+    "onsets": 23,
+    "onset_hits": 1,
+    "chains": 292,
+    "chain_covered": 1,
+    "onset_precision": 0.043478260869565216,
+    "chain_coverage": 0.003424657534246575
+   },
+   "D1_K1.0": {
+    "onsets": 21,
+    "onset_hits": 1,
+    "chains": 292,
+    "chain_covered": 1,
+    "onset_precision": 0.047619047619047616,
+    "chain_coverage": 0.003424657534246575
+   },
+   "D2_K0.0": {
+    "onsets": 53,
+    "onset_hits": 3,
+    "chains": 292,
+    "chain_covered": 9,
+    "onset_precision": 0.05660377358490566,
+    "chain_coverage": 0.030821917808219176
+   },
+   "D2_K0.5": {
+    "onsets": 68,
+    "onset_hits": 3,
+    "chains": 292,
+    "chain_covered": 5,
+    "onset_precision": 0.04411764705882353,
+    "chain_coverage": 0.017123287671232876
+   },
+   "D2_K1.0": {
+    "onsets": 61,
+    "onset_hits": 3,
+    "chains": 292,
+    "chain_covered": 4,
+    "onset_precision": 0.04918032786885246,
+    "chain_coverage": 0.0136986301369863
+   },
+   "D3_K0.0": {
+    "onsets": 79,
+    "onset_hits": 7,
+    "chains": 292,
+    "chain_covered": 19,
+    "onset_precision": 0.08860759493670886,
+    "chain_coverage": 0.06506849315068493
+   },
+   "D3_K0.5": {
+    "onsets": 154,
+    "onset_hits": 7,
+    "chains": 292,
+    "chain_covered": 11,
+    "onset_precision": 0.045454545454545456,
+    "chain_coverage": 0.03767123287671233
+   },
+   "D3_K1.0": {
+    "onsets": 128,
+    "onset_hits": 6,
+    "chains": 292,
+    "chain_covered": 7,
+    "onset_precision": 0.046875,
+    "chain_coverage": 0.023972602739726026
+   },
+   "D4_K0.0": {
+    "onsets": 106,
+    "onset_hits": 8,
+    "chains": 292,
+    "chain_covered": 35,
+    "onset_precision": 0.07547169811320754,
+    "chain_coverage": 0.11986301369863013
+   },
+   "D4_K0.5": {
+    "onsets": 249,
+    "onset_hits": 14,
+    "chains": 292,
+    "chain_covered": 19,
+    "onset_precision": 0.05622489959839357,
+    "chain_coverage": 0.06506849315068493
+   },
+   "D4_K1.0": {
+    "onsets": 214,
+    "onset_hits": 12,
+    "chains": 292,
+    "chain_covered": 13,
+    "onset_precision": 0.056074766355140186,
+    "chain_coverage": 0.04452054794520548
+   },
+   "D5_K0.0": {
+    "onsets": 134,
+    "onset_hits": 7,
+    "chains": 292,
+    "chain_covered": 49,
+    "onset_precision": 0.05223880597014925,
+    "chain_coverage": 0.1678082191780822
+   },
+   "D5_K0.5": {
+    "onsets": 355,
+    "onset_hits": 18,
+    "chains": 292,
+    "chain_covered": 25,
+    "onset_precision": 0.05070422535211268,
+    "chain_coverage": 0.08561643835616438
+   },
+   "D5_K1.0": {
+    "onsets": 316,
+    "onset_hits": 16,
+    "chains": 292,
+    "chain_covered": 17,
+    "onset_precision": 0.05063291139240506,
+    "chain_coverage": 0.05821917808219178
+   },
+   "D6_K0.0": {
+    "onsets": 188,
+    "onset_hits": 4,
+    "chains": 292,
+    "chain_covered": 62,
+    "onset_precision": 0.02127659574468085,
+    "chain_coverage": 0.21232876712328766
+   },
+   "D6_K0.5": {
+    "onsets": 569,
+    "onset_hits": 18,
+    "chains": 292,
+    "chain_covered": 30,
+    "onset_precision": 0.03163444639718805,
+    "chain_coverage": 0.10273972602739725
+   },
+   "D6_K1.0": {
+    "onsets": 503,
+    "onset_hits": 16,
+    "chains": 292,
+    "chain_covered": 18,
+    "onset_precision": 0.03180914512922465,
+    "chain_coverage": 0.06164383561643835
+   },
+   "D8_K0.0": {
+    "onsets": 255,
+    "onset_hits": 11,
+    "chains": 292,
+    "chain_covered": 105,
+    "onset_precision": 0.043137254901960784,
+    "chain_coverage": 0.3595890410958904
+   },
+   "D8_K0.5": {
+    "onsets": 1082,
+    "onset_hits": 30,
+    "chains": 292,
+    "chain_covered": 45,
+    "onset_precision": 0.027726432532347505,
+    "chain_coverage": 0.1541095890410959
+   },
+   "D8_K1.0": {
+    "onsets": 956,
+    "onset_hits": 24,
+    "chains": 292,
+    "chain_covered": 27,
+    "onset_precision": 0.02510460251046025,
+    "chain_coverage": 0.09246575342465753
+   }
+  }
+ },
+ "territory_captures": {
+  "n": 8813,
+  "by_dist": {
+   "d0-2": {
+    "n": 74,
+    "contested": {
+     "num": 41,
+     "den": 74,
+     "rate": 0.5540540540540541
+    },
+    "contest_latency": {
+     "p10": 1.0,
+     "p25": 1.0,
+     "p50": 2.0,
+     "p75": 6.0,
+     "p90": 9.0,
+     "n": 41,
+     "mean": 3.7560975609756095,
+     "min": 1.0,
+     "max": 14.0
+    },
+    "retaken": {
+     "num": 39,
+     "den": 74,
+     "rate": 0.527027027027027
+    },
+    "visible_before": {
+     "num": 74,
+     "den": 74,
+     "rate": 1.0
+    }
+   },
+   "d3-5": {
+    "n": 372,
+    "contested": {
+     "num": 207,
+     "den": 372,
+     "rate": 0.5564516129032258
+    },
+    "contest_latency": {
+     "p10": 1.0,
+     "p25": 2.0,
+     "p50": 4.0,
+     "p75": 8.0,
+     "p90": 12.0,
+     "n": 207,
+     "mean": 5.381642512077295,
+     "min": 1.0,
+     "max": 15.0
+    },
+    "retaken": {
+     "num": 184,
+     "den": 372,
+     "rate": 0.4946236559139785
+    },
+    "visible_before": {
+     "num": 372,
+     "den": 372,
+     "rate": 1.0
+    }
+   },
+   "d6-9": {
+    "n": 1490,
+    "contested": {
+     "num": 783,
+     "den": 1490,
+     "rate": 0.525503355704698
+    },
+    "contest_latency": {
+     "p10": 1.0,
+     "p25": 2.0,
+     "p50": 6.0,
+     "p75": 10.0,
+     "p90": 13.0,
+     "n": 783,
+     "mean": 6.358876117496807,
+     "min": 1.0,
+     "max": 15.0
+    },
+    "retaken": {
+     "num": 568,
+     "den": 1490,
+     "rate": 0.3812080536912752
+    },
+    "visible_before": {
+     "num": 1490,
+     "den": 1490,
+     "rate": 1.0
+    }
+   },
+   "d10-99": {
+    "n": 6877,
+    "contested": {
+     "num": 2242,
+     "den": 6877,
+     "rate": 0.3260142503998837
+    },
+    "contest_latency": {
+     "p10": 2.0,
+     "p25": 3.0,
+     "p50": 7.0,
+     "p75": 11.0,
+     "p90": 14.0,
+     "n": 2242,
+     "mean": 7.085637823371989,
+     "min": 1.0,
+     "max": 15.0
+    },
+    "retaken": {
+     "num": 1735,
+     "den": 6877,
+     "rate": 0.252290242838447
+    },
+    "visible_before": {
+     "num": 6877,
+     "den": 6877,
+     "rate": 1.0
+    }
+   }
+  }
+ },
+ "castles": {
+  "builds": 203,
+  "build_dist": {
+   "p10": 6.0,
+   "p25": 7.0,
+   "p50": 7.0,
+   "p75": 8.0,
+   "p90": 9.0,
+   "n": 203,
+   "mean": 7.689655172413793,
+   "min": 2.0,
+   "max": 15.0
+  },
+  "garrison_by_dt": {
+   "10": {
+    "p10": 5.0,
+    "p25": 6.0,
+    "p50": 7.0,
+    "p75": 8.75,
+    "p90": 12.900000000000006,
+    "n": 202,
+    "mean": 7.564356435643564,
+    "min": 1.0,
+    "max": 28.0
+   },
+   "25": {
+    "p10": 3.0,
+    "p25": 5.0,
+    "p50": 7.0,
+    "p75": 13.0,
+    "p90": 15.0,
+    "n": 200,
+    "mean": 8.885,
+    "min": 1.0,
+    "max": 32.0
+   },
+   "50": {
+    "p10": 3.0,
+    "p25": 6.0,
+    "p50": 10.0,
+    "p75": 18.0,
+    "p90": 23.0,
+    "n": 182,
+    "mean": 12.576923076923077,
+    "min": 1.0,
+    "max": 76.0
+   }
+  },
+  "captures": 13,
+  "recapture_attempted": {
+   "num": 9,
+   "den": 13,
+   "rate": 0.6923076923076923
+  },
+  "recaptured": {
+   "num": 11,
+   "den": 13,
+   "rate": 0.8461538461538461
+  },
+  "capture_details": [
+   {
+    "t": 329,
+    "cell": [
+     4,
+     6
+    ],
+    "dist": 7,
+    "attempt_latency": null,
+    "recaptured": true,
+    "match_id": "20600"
+   },
+   {
+    "t": 296,
+    "cell": [
+     12,
+     0
+    ],
+    "dist": 7,
+    "attempt_latency": 16,
+    "recaptured": true,
+    "match_id": "20602"
+   },
+   {
+    "t": 223,
+    "cell": [
+     11,
+     6
+    ],
+    "dist": 4,
+    "attempt_latency": 2,
+    "recaptured": true,
+    "match_id": "20602"
+   },
+   {
+    "t": 130,
+    "cell": [
+     6,
+     11
+    ],
+    "dist": 7,
+    "attempt_latency": 13,
+    "recaptured": false,
+    "match_id": "20603"
+   },
+   {
+    "t": 477,
+    "cell": [
+     6,
+     15
+    ],
+    "dist": 8,
+    "attempt_latency": 4,
+    "recaptured": true,
+    "match_id": "20605"
+   },
+   {
+    "t": 372,
+    "cell": [
+     4,
+     8
+    ],
+    "dist": 7,
+    "attempt_latency": null,
+    "recaptured": true,
+    "match_id": "21532"
+   },
+   {
+    "t": 228,
+    "cell": [
+     16,
+     4
+    ],
+    "dist": 6,
+    "attempt_latency": 20,
+    "recaptured": true,
+    "match_id": "21853"
+   },
+   {
+    "t": 196,
+    "cell": [
+     9,
+     14
+    ],
+    "dist": 10,
+    "attempt_latency": 18,
+    "recaptured": true,
+    "match_id": "21870"
+   },
+   {
+    "t": 200,
+    "cell": [
+     10,
+     3
+    ],
+    "dist": 8,
+    "attempt_latency": 3,
+    "recaptured": true,
+    "match_id": "21871"
+   },
+   {
+    "t": 441,
+    "cell": [
+     9,
+     16
+    ],
+    "dist": 4,
+    "attempt_latency": null,
+    "recaptured": false,
+    "match_id": "24185"
+   },
+   {
+    "t": 263,
+    "cell": [
+     6,
+     13
+    ],
+    "dist": 8,
+    "attempt_latency": 10,
+    "recaptured": true,
+    "match_id": "24811"
+   },
+   {
+    "t": 396,
+    "cell": [
+     16,
+     9
+    ],
+    "dist": 13,
+    "attempt_latency": null,
+    "recaptured": true,
+    "match_id": "25156"
+   },
+   {
+    "t": 396,
+    "cell": [
+     14,
+     13
+    ],
+    "dist": 7,
+    "attempt_latency": 1,
+    "recaptured": true,
+    "match_id": "25158"
+   }
+  ]
+ },
+ "passes": {
+  "total_actions": 82893,
+  "total_passes": 2448,
+  "passes_under_pressure": 398,
+  "rate_under_pressure": {
+   "num": 398,
+   "den": 2448,
+   "rate": 0.16258169934640523
+  },
+  "pass_tick_frac": {
+   "p10": 0.005310705842620737,
+   "p25": 0.010810810810810811,
+   "p50": 0.1130841121495327,
+   "p75": 0.5363738619721287,
+   "p90": 0.8056899395272128,
+   "n": 2448,
+   "mean": 0.2820797451676616,
+   "min": 0.0008333333333333334,
+   "max": 0.995850622406639
+  },
+  "pressure_pass_tick_frac": {
+   "p10": 0.6802682804099685,
+   "p25": 0.7488744405307344,
+   "p50": 0.8344314767562997,
+   "p75": 0.9127139666481281,
+   "p90": 0.9633279483037157,
+   "n": 398,
+   "mean": 0.8244751540238583,
+   "min": 0.08149405772495756,
+   "max": 0.995850622406639
+  },
+  "run_lengths": {
+   "clear": {
+    "1": 447,
+    "2": 367,
+    "3": 79,
+    "4": 28,
+    "5": 7,
+    "6": 7,
+    "7": 4,
+    "8": 7,
+    "9": 15,
+    "10": 17
+   },
+   "pressure": {
+    "1": 27,
+    "2": 11,
+    "3": 41,
+    "4": 3,
+    "5": 7,
+    "6": 2,
+    "7": 2,
+    "8": 2,
+    "9": 9,
+    "10": 5
+   }
+  },
+  "stall_games": [
+   {
+    "match_id": "24184",
+    "outcome": "lose",
+    "opponent": "bist",
+    "long_pass_runs": 103
+   },
+   {
+    "match_id": "24185",
+    "outcome": "lose",
+    "opponent": "bist",
+    "long_pass_runs": 44
+   },
+   {
+    "match_id": "24188",
+    "outcome": "lose",
+    "opponent": "bist",
+    "long_pass_runs": 35
+   },
+   {
+    "match_id": "24186",
+    "outcome": "lose",
+    "opponent": "bist",
+    "long_pass_runs": 21
+   },
+   {
+    "match_id": "24187",
+    "outcome": "lose",
+    "opponent": "bist",
+    "long_pass_runs": 17
+   }
+  ],
+  "stall_rate_by_outcome": {
+   "win": {
+    "num": 0,
+    "den": 340,
+    "rate": 0.0
+   },
+   "lose": {
+    "num": 5,
+    "den": 10,
+    "rate": 0.5
+   },
+   "draw": {
+    "num": 0,
+    "den": 1,
+    "rate": 0.0
+   }
+  },
+  "examples": [
+   {
+    "match_id": "22360",
+    "t": 48,
+    "T": 589,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 1
+   },
+   {
+    "match_id": "24184",
+    "t": 402,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 42
+   },
+   {
+    "match_id": "24184",
+    "t": 403,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 43
+   },
+   {
+    "match_id": "24184",
+    "t": 405,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 44
+   },
+   {
+    "match_id": "24184",
+    "t": 406,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 44
+   },
+   {
+    "match_id": "24184",
+    "t": 407,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 45
+   },
+   {
+    "match_id": "24184",
+    "t": 410,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 46
+   },
+   {
+    "match_id": "24184",
+    "t": 413,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 48
+   },
+   {
+    "match_id": "24184",
+    "t": 414,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 48
+   },
+   {
+    "match_id": "24184",
+    "t": 415,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 49
+   },
+   {
+    "match_id": "24184",
+    "t": 417,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 50
+   },
+   {
+    "match_id": "24184",
+    "t": 418,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 50
+   },
+   {
+    "match_id": "24184",
+    "t": 419,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 51
+   },
+   {
+    "match_id": "24184",
+    "t": 421,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 52
+   },
+   {
+    "match_id": "24184",
+    "t": 422,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 52
+   },
+   {
+    "match_id": "24184",
+    "t": 423,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 53
+   },
+   {
+    "match_id": "24184",
+    "t": 425,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 54
+   },
+   {
+    "match_id": "24184",
+    "t": 426,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 54
+   },
+   {
+    "match_id": "24184",
+    "t": 427,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 55
+   },
+   {
+    "match_id": "24184",
+    "t": 429,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 56
+   },
+   {
+    "match_id": "24184",
+    "t": 430,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 56
+   },
+   {
+    "match_id": "24184",
+    "t": 431,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 57
+   },
+   {
+    "match_id": "24184",
+    "t": 433,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 58
+   },
+   {
+    "match_id": "24184",
+    "t": 434,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 58
+   },
+   {
+    "match_id": "24184",
+    "t": 435,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 59
+   },
+   {
+    "match_id": "24184",
+    "t": 437,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 60
+   },
+   {
+    "match_id": "24184",
+    "t": 438,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 60
+   },
+   {
+    "match_id": "24184",
+    "t": 439,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 61
+   },
+   {
+    "match_id": "24184",
+    "t": 442,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 62
+   },
+   {
+    "match_id": "24184",
+    "t": 449,
+    "T": 619,
+    "vis_d": 5,
+    "threat_army": 1,
+    "gen_army": 2
+   }
+  ]
+ },
+ "general_feed_oscillation": {
+  "n": 362,
+  "games": 350,
+  "under_visible_threat_le3": 2,
+  "reps": {
+   "p10": 6.0,
+   "p25": 7.0,
+   "p50": 10.0,
+   "p75": 12.0,
+   "p90": 12.0,
+   "n": 362,
+   "mean": 9.400552486187845,
+   "min": 3.0,
+   "max": 14.0
+  },
+  "examples": [
+   {
+    "match_id": "20524",
+    "t0": 3,
+    "t1": 25,
+    "reps": 8,
+    "vis_d": null
+   },
+   {
+    "match_id": "20525",
+    "t0": 3,
+    "t1": 25,
+    "reps": 12,
+    "vis_d": null
+   },
+   {
+    "match_id": "20526",
+    "t0": 3,
+    "t1": 23,
+    "reps": 9,
+    "vis_d": null
+   },
+   {
+    "match_id": "20527",
+    "t0": 3,
+    "t1": 25,
+    "reps": 12,
+    "vis_d": null
+   },
+   {
+    "match_id": "20528",
+    "t0": 3,
+    "t1": 21,
+    "reps": 6,
+    "vis_d": null
+   },
+   {
+    "match_id": "20529",
+    "t0": 3,
+    "t1": 25,
+    "reps": 8,
+    "vis_d": null
+   },
+   {
+    "match_id": "20530",
+    "t0": 3,
+    "t1": 25,
+    "reps": 11,
+    "vis_d": null
+   },
+   {
+    "match_id": "20531",
+    "t0": 3,
+    "t1": 25,
+    "reps": 10,
+    "vis_d": null
+   },
+   {
+    "match_id": "20532",
+    "t0": 3,
+    "t1": 25,
+    "reps": 12,
+    "vis_d": null
+   },
+   {
+    "match_id": "20534",
+    "t0": 3,
+    "t1": 25,
+    "reps": 8,
+    "vis_d": null
+   },
+   {
+    "match_id": "20535",
+    "t0": 3,
+    "t1": 25,
+    "reps": 6,
+    "vis_d": null
+   },
+   {
+    "match_id": "20536",
+    "t0": 3,
+    "t1": 25,
+    "reps": 10,
+    "vis_d": null
+   },
+   {
+    "match_id": "20537",
+    "t0": 3,
+    "t1": 27,
+    "reps": 13,
+    "vis_d": null
+   },
+   {
+    "match_id": "20538",
+    "t0": 3,
+    "t1": 19,
+    "reps": 6,
+    "vis_d": null
+   },
+   {
+    "match_id": "20539",
+    "t0": 3,
+    "t1": 25,
+    "reps": 9,
+    "vis_d": null
+   },
+   {
+    "match_id": "20540",
+    "t0": 3,
+    "t1": 25,
+    "reps": 10,
+    "vis_d": null
+   },
+   {
+    "match_id": "20541",
+    "t0": 3,
+    "t1": 25,
+    "reps": 8,
+    "vis_d": null
+   },
+   {
+    "match_id": "20542",
+    "t0": 3,
+    "t1": 27,
+    "reps": 9,
+    "vis_d": null
+   },
+   {
+    "match_id": "20544",
+    "t0": 3,
+    "t1": 25,
+    "reps": 11,
+    "vis_d": null
+   },
+   {
+    "match_id": "20545",
+    "t0": 3,
+    "t1": 27,
+    "reps": 12,
+    "vis_d": null
+   },
+   {
+    "match_id": "20546",
+    "t0": 3,
+    "t1": 25,
+    "reps": 12,
+    "vis_d": null
+   },
+   {
+    "match_id": "20547",
+    "t0": 3,
+    "t1": 25,
+    "reps": 11,
+    "vis_d": null
+   },
+   {
+    "match_id": "20548",
+    "t0": 3,
+    "t1": 25,
+    "reps": 8,
+    "vis_d": null
+   },
+   {
+    "match_id": "20549",
+    "t0": 3,
+    "t1": 25,
+    "reps": 11,
+    "vis_d": null
+   },
+   {
+    "match_id": "20550",
+    "t0": 3,
+    "t1": 25,
+    "reps": 8,
+    "vis_d": null
+   },
+   {
+    "match_id": "20551",
+    "t0": 3,
+    "t1": 25,
+    "reps": 8,
+    "vis_d": null
+   },
+   {
+    "match_id": "20552",
+    "t0": 3,
+    "t1": 25,
+    "reps": 10,
+    "vis_d": null
+   },
+   {
+    "match_id": "20554",
+    "t0": 3,
+    "t1": 27,
+    "reps": 13,
+    "vis_d": null
+   },
+   {
+    "match_id": "20555",
+    "t0": 3,
+    "t1": 25,
+    "reps": 6,
+    "vis_d": null
+   },
+   {
+    "match_id": "20556",
+    "t0": 3,
+    "t1": 25,
+    "reps": 10,
+    "vis_d": null
+   }
+  ]
+ },
+ "wins_near_death": {
+  "n": 28,
+  "recall_chain_near": {
+   "num": 3,
+   "den": 28,
+   "rate": 0.10714285714285714
+  },
+  "details": [
+   {
+    "match_id": "20527",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 186,
+    "gen_army_at_closest": 14,
+    "threat_army_at_closest": 6,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "20581",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 79,
+    "gen_army_at_closest": 9,
+    "threat_army_at_closest": 1,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "20585",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 181,
+    "gen_army_at_closest": 8,
+    "threat_army_at_closest": 8,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "20592",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 464,
+    "gen_army_at_closest": 21,
+    "threat_army_at_closest": 6,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "20594",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 79,
+    "gen_army_at_closest": 9,
+    "threat_army_at_closest": 9,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "20602",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 138,
+    "gen_army_at_closest": 12,
+    "threat_army_at_closest": 12,
+    "recall_chain_near": true
+   },
+   {
+    "match_id": "20605",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 246,
+    "gen_army_at_closest": 13,
+    "threat_army_at_closest": 8,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "20606",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 142,
+    "gen_army_at_closest": 16,
+    "threat_army_at_closest": 19,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "20896",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 67,
+    "gen_army_at_closest": 11,
+    "threat_army_at_closest": 1,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "21502",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 198,
+    "gen_army_at_closest": 36,
+    "threat_army_at_closest": 37,
+    "recall_chain_near": true
+   },
+   {
+    "match_id": "21504",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 141,
+    "gen_army_at_closest": 1,
+    "threat_army_at_closest": 4,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "21853",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 235,
+    "gen_army_at_closest": 17,
+    "threat_army_at_closest": 8,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "21869",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 97,
+    "gen_army_at_closest": 3,
+    "threat_army_at_closest": 9,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "21872",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 184,
+    "gen_army_at_closest": 8,
+    "threat_army_at_closest": 3,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "21905",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 183,
+    "gen_army_at_closest": 9,
+    "threat_army_at_closest": 4,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "21907",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 169,
+    "gen_army_at_closest": 9,
+    "threat_army_at_closest": 3,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "21909",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 175,
+    "gen_army_at_closest": 8,
+    "threat_army_at_closest": 3,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "21933",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 83,
+    "gen_army_at_closest": 10,
+    "threat_army_at_closest": 2,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "21976",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 140,
+    "gen_army_at_closest": 2,
+    "threat_army_at_closest": 9,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "21990",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 222,
+    "gen_army_at_closest": 12,
+    "threat_army_at_closest": 1,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "22360",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 84,
+    "gen_army_at_closest": 10,
+    "threat_army_at_closest": 2,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "22361",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 196,
+    "gen_army_at_closest": 8,
+    "threat_army_at_closest": 8,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "22362",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 291,
+    "gen_army_at_closest": 3,
+    "threat_army_at_closest": 3,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "22364",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 248,
+    "gen_army_at_closest": 30,
+    "threat_army_at_closest": 25,
+    "recall_chain_near": true
+   },
+   {
+    "match_id": "22906",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 206,
+    "gen_army_at_closest": 12,
+    "threat_army_at_closest": 1,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "22911",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 207,
+    "gen_army_at_closest": 12,
+    "threat_army_at_closest": 4,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "24813",
+    "min_vis_dist": 1,
+    "min_true_dist": 1,
+    "t_closest": 174,
+    "gen_army_at_closest": 12,
+    "threat_army_at_closest": 1,
+    "recall_chain_near": false
+   },
+   {
+    "match_id": "25159",
+    "min_vis_dist": 2,
+    "min_true_dist": 2,
+    "t_closest": 292,
+    "gen_army_at_closest": 2,
+    "threat_army_at_closest": 9,
+    "recall_chain_near": false
+   }
+  ]
+ },
+ "losses": [
+  {
+   "match_id": "20583",
+   "outcome": "lose",
+   "opponent": "Non-Linear Slob",
+   "total_ticks": 192,
+   "killer": {
+    "end_kind": "general_capture",
+    "final_moved": 45,
+    "final_def_army": 12,
+    "traj_len": 23,
+    "traj_start_dist": 21,
+    "first_visible": {
+     "t": 176,
+     "cell": [
+      9,
+      15
+     ],
+     "army": 36,
+     "dist": 17
+    },
+    "warning_ticks": 16
+   },
+   "first_vis_dist5_frame": 79,
+   "episodes": [
+    {
+     "t0": 78,
+     "t1": 191,
+     "onset_dist": 6,
+     "onset_manh": 6,
+     "onset_threat_army": 10,
+     "onset_gen_army": 5,
+     "onset_main_dist": 7,
+     "onset_main_army": 21,
+     "min_dist_reached": 1,
+     "first_def": {
+      "tick": 80,
+      "latency": 1,
+      "class": "recall_homeward",
+      "moved": 19,
+      "dst": [
+       6,
+       8
+      ]
+     },
+     "classes_hit": {
+      "recall_homeward": 1,
+      "attack_near_home": 15
+     },
+     "pre_expand": 1,
+     "pre_pass": 0,
+     "pre_build": 0,
+     "outcome": "general_captured",
+     "tiles_lost": 23,
+     "src_general_moves": 5,
+     "match_id": "20583",
+     "outcome_game": "lose"
+    }
+   ],
+   "chains": [
+    {
+     "start": 154,
+     "end": 155,
+     "len": 2,
+     "d0": 2,
+     "d1": 0,
+     "start_army": 9,
+     "reached_general": true,
+     "vis_dist": 2,
+     "true_dist": 2,
+     "threat_army": 2,
+     "gen_army": 7,
+     "match_id": "20583"
+    }
+   ],
+   "final_log": [
+    {
+     "t": 163,
+     "kubic": "(11, 2)->(11, 3) n=2 own dG=5 HOME",
+     "opp": "(9, 17)->(9, 18) n=13 own dG=20",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 2,
+     "gen_army": 22,
+     "main_d": 5,
+     "main_army": 11
+    },
+    {
+     "t": 164,
+     "kubic": "(11, 3)->(10, 3) n=12 own dG=4 HOME",
+     "opp": "(11, 17)->(11, 18) n=2 own dG=20",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 2,
+     "gen_army": 22,
+     "main_d": 5,
+     "main_army": 13
+    },
+    {
+     "t": 165,
+     "kubic": "(10, 3)->(9, 3) n=13 enem dG=3 HOME",
+     "opp": "(11, 19)->(11, 18) n=1 own dG=20 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 2,
+     "gen_army": 23,
+     "main_d": 4,
+     "main_army": 14
+    },
+    {
+     "t": 166,
+     "kubic": "(9, 3)->(8, 3) n=10 enem dG=2 HOME",
+     "opp": "(10, 19)->(10, 18) n=1 own dG=21 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 2,
+     "gen_army": 23,
+     "main_d": 3,
+     "main_army": 11
+    },
+    {
+     "t": 167,
+     "kubic": "(8, 3)->(7, 3) n=7 own dG=1 HOME",
+     "opp": "(8, 18)->(9, 18) n=1 own dG=20 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 24,
+     "main_d": 2,
+     "main_army": 8
+    },
+    {
+     "t": 168,
+     "kubic": "(7, 3)->(6, 3) n=8 own dG=0 HOME",
+     "opp": "(6, 17)->(6, 16) n=1 own dG=19 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 24,
+     "main_d": 1,
+     "main_army": 9
+    },
+    {
+     "t": 169,
+     "kubic": "(6, 3)->(5, 3) n=32 own dG=1",
+     "opp": "(6, 16)->(6, 15) n=1 neut dG=18 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 33,
+     "main_d": 8,
+     "main_army": 3
+    },
+    {
+     "t": 170,
+     "kubic": "(5, 3)->(5, 4) n=33 own dG=2",
+     "opp": "(6, 12)->(6, 13) n=2 enem dG=14",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 1,
+     "main_d": 1,
+     "main_army": 34
+    },
+    {
+     "t": 171,
+     "kubic": "(5, 4)->(5, 5) n=34 own dG=3",
+     "opp": "(11, 18)->(10, 18) n=4 own dG=21",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 2,
+     "main_d": 2,
+     "main_army": 35
+    },
+    {
+     "t": 172,
+     "kubic": "(5, 5)->(5, 6) n=35 own dG=4",
+     "opp": "(10, 18)->(9, 18) n=20 own dG=20 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 2,
+     "main_d": 3,
+     "main_army": 36
+    },
+    {
+     "t": 173,
+     "kubic": "(5, 6)->(4, 6) n=36 own dG=5",
+     "opp": "(9, 18)->(9, 17) n=35 own dG=19 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 3,
+     "main_d": 4,
+     "main_army": 37
+    },
+    {
+     "t": 174,
+     "kubic": "(4, 6)->(4, 7) n=37 own dG=6",
+     "opp": "(9, 17)->(9, 16) n=35 own dG=18 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 3,
+     "main_d": 5,
+     "main_army": 38
+    },
+    {
+     "t": 175,
+     "kubic": "(4, 7)->(4, 8) n=38 own dG=7",
+     "opp": "(9, 16)->(9, 15) n=35 own dG=17 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 4,
+     "main_d": 6,
+     "main_army": 39
+    },
+    {
+     "t": 176,
+     "kubic": "(4, 8)->(5, 8) n=39 own dG=8",
+     "opp": "(9, 15)->(9, 14) n=35 own dG=16 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 4,
+     "main_d": 7,
+     "main_army": 40
+    },
+    {
+     "t": 177,
+     "kubic": "(5, 8)->(5, 9) n=40 own dG=9",
+     "opp": "(9, 14)->(9, 13) n=36 own dG=15 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 5,
+     "main_d": 8,
+     "main_army": 41
+    },
+    {
+     "t": 178,
+     "kubic": "(5, 9)->(5, 10) n=41 own dG=10",
+     "opp": "(9, 13)->(9, 12) n=38 own dG=14 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 5,
+     "main_d": 9,
+     "main_army": 42
+    },
+    {
+     "t": 179,
+     "kubic": "(5, 10)->(5, 11) n=42 own dG=11",
+     "opp": "(9, 12)->(9, 11) n=40 own dG=13 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 6,
+     "main_d": 10,
+     "main_army": 43
+    },
+    {
+     "t": 180,
+     "kubic": "(5, 11)->(5, 12) n=43 own dG=12",
+     "opp": "(9, 11)->(9, 10) n=41 own dG=12 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 6,
+     "main_d": 11,
+     "main_army": 44
+    },
+    {
+     "t": 181,
+     "kubic": "(5, 12)->(5, 13) n=44 own dG=13",
+     "opp": "(9, 10)->(9, 9) n=43 own dG=11 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 7,
+     "main_d": 12,
+     "main_army": 45
+    },
+    {
+     "t": 182,
+     "kubic": "(5, 13)->(6, 13) n=45 own dG=14",
+     "opp": "(9, 9)->(10, 9) n=45 own dG=10 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 7,
+     "main_d": 13,
+     "main_army": 46
+    },
+    {
+     "t": 183,
+     "kubic": "(6, 13)->(7, 13) n=44 own dG=15",
+     "opp": "(10, 9)->(10, 8) n=46 own dG=9 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 8,
+     "main_d": 14,
+     "main_army": 45
+    },
+    {
+     "t": 184,
+     "kubic": "(7, 13)->(7, 14) n=45 own dG=16",
+     "opp": "(10, 8)->(10, 7) n=47 own dG=8 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 8,
+     "main_d": 15,
+     "main_army": 46
+    },
+    {
+     "t": 185,
+     "kubic": "(7, 14)->(7, 15) n=46 enem dG=17",
+     "opp": "(10, 7)->(10, 6) n=48 own dG=7 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 9,
+     "main_d": 16,
+     "main_army": 47
+    },
+    {
+     "t": 186,
+     "kubic": "(7, 15)->(7, 16) n=44 enem dG=18",
+     "opp": "(10, 6)->(10, 5) n=49 own dG=6 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 9,
+     "main_d": 17,
+     "main_army": 45
+    },
+    {
+     "t": 187,
+     "kubic": "(7, 16)->(6, 16) n=42 enem dG=19",
+     "opp": "(10, 5)->(10, 4) n=50 own dG=5 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 10,
+     "main_d": 18,
+     "main_army": 43
+    },
+    {
+     "t": 188,
+     "kubic": "(6, 16)->(6, 17) n=40 enem dG=20",
+     "opp": "(10, 4)->(9, 4) n=51 own dG=4 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 10,
+     "main_d": 19,
+     "main_army": 41
+    },
+    {
+     "t": 189,
+     "kubic": "(6, 17)->(6, 18) n=38 enem dG=21",
+     "opp": "(9, 4)->(8, 4) n=52 enem dG=3 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 53,
+     "gen_army": 11,
+     "main_d": 20,
+     "main_army": 39
+    },
+    {
+     "t": 190,
+     "kubic": "(6, 18)->(7, 18) n=35 enem dG=22",
+     "opp": "(8, 4)->(8, 3) n=49 enem dG=2 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 50,
+     "gen_army": 11,
+     "main_d": 21,
+     "main_army": 36
+    },
+    {
+     "t": 191,
+     "kubic": "(7, 18)->(8, 18) n=32 enem dG=21 HOME",
+     "opp": "(8, 3)->(7, 3) n=47 enem dG=1 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 48,
+     "gen_army": 12,
+     "main_d": 22,
+     "main_army": 33
+    },
+    {
+     "t": 192,
+     "kubic": "(8, 18)->(9, 18) n=30 enem dG=20 HOME",
+     "opp": "(7, 3)->(6, 3) n=45 enem dG=0 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 46,
+     "gen_army": 12,
+     "main_d": 21,
+     "main_army": 31
+    }
+   ],
+   "gen_army_last30": [
+    22,
+    22,
+    23,
+    23,
+    24,
+    24,
+    33,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    8,
+    8,
+    9,
+    9,
+    10,
+    10,
+    11,
+    11,
+    12,
+    12,
+    0
+   ],
+   "my_total_last30": [
+    138,
+    138,
+    139,
+    137,
+    136,
+    136,
+    137,
+    137,
+    136,
+    136,
+    137,
+    137,
+    138,
+    138,
+    139,
+    139,
+    140,
+    140,
+    141,
+    141,
+    142,
+    142,
+    143,
+    142,
+    142,
+    141,
+    141,
+    137,
+    135,
+    133,
+    0
+   ],
+   "opp_total_last30": [
+    129,
+    129,
+    130,
+    128,
+    127,
+    127,
+    128,
+    128,
+    127,
+    127,
+    128,
+    128,
+    129,
+    129,
+    130,
+    130,
+    131,
+    131,
+    132,
+    132,
+    133,
+    133,
+    134,
+    133,
+    133,
+    132,
+    132,
+    128,
+    126,
+    124,
+    231
+   ]
+  },
+  {
+   "match_id": "20595",
+   "outcome": "lose",
+   "opponent": "Nicholas",
+   "total_ticks": 427,
+   "killer": {
+    "end_kind": "general_capture",
+    "final_moved": 30,
+    "final_def_army": 29,
+    "traj_len": 23,
+    "traj_start_dist": 13,
+    "first_visible": {
+     "t": 417,
+     "cell": [
+      13,
+      6
+     ],
+     "army": 34,
+     "dist": 9
+    },
+    "warning_ticks": 10
+   },
+   "first_vis_dist5_frame": 31,
+   "episodes": [
+    {
+     "t0": 31,
+     "t1": 426,
+     "onset_dist": 5,
+     "onset_manh": 5,
+     "onset_threat_army": 3,
+     "onset_gen_army": 4,
+     "onset_main_dist": 7,
+     "onset_main_army": 6,
+     "min_dist_reached": 1,
+     "first_def": {
+      "tick": 56,
+      "latency": 24,
+      "class": "block_path",
+      "moved": 3,
+      "dst": [
+       12,
+       9
+      ]
+     },
+     "classes_hit": {
+      "block_path": 24
+     },
+     "pre_expand": 20,
+     "pre_pass": 0,
+     "pre_build": 0,
+     "outcome": "general_captured",
+     "tiles_lost": 58,
+     "src_general_moves": 22,
+     "match_id": "20595",
+     "outcome_game": "lose"
+    }
+   ],
+   "chains": [
+    {
+     "start": 166,
+     "end": 166,
+     "len": 1,
+     "d0": 1,
+     "d1": 0,
+     "start_army": 14,
+     "reached_general": true,
+     "vis_dist": 5,
+     "true_dist": 5,
+     "threat_army": 3,
+     "gen_army": 10,
+     "match_id": "20595"
+    },
+    {
+     "start": 175,
+     "end": 175,
+     "len": 1,
+     "d0": 1,
+     "d1": 0,
+     "start_army": 9,
+     "reached_general": true,
+     "vis_dist": 5,
+     "true_dist": 5,
+     "threat_army": 3,
+     "gen_army": 28,
+     "match_id": "20595"
+    },
+    {
+     "start": 353,
+     "end": 353,
+     "len": 1,
+     "d0": 1,
+     "d1": 0,
+     "start_army": 11,
+     "reached_general": true,
+     "vis_dist": 4,
+     "true_dist": 4,
+     "threat_army": 3,
+     "gen_army": 12,
+     "match_id": "20595"
+    },
+    {
+     "start": 420,
+     "end": 424,
+     "len": 5,
+     "d0": 5,
+     "d1": 0,
+     "start_army": 13,
+     "reached_general": true,
+     "vis_dist": 4,
+     "true_dist": 4,
+     "threat_army": 2,
+     "gen_army": 6,
+     "match_id": "20595"
+    },
+    {
+     "start": 426,
+     "end": 427,
+     "len": 2,
+     "d0": 3,
+     "d1": 1,
+     "start_army": 9,
+     "reached_general": false,
+     "vis_dist": 2,
+     "true_dist": 2,
+     "threat_army": 33,
+     "gen_army": 28,
+     "match_id": "20595"
+    }
+   ],
+   "final_log": [
+    {
+     "t": 398,
+     "kubic": "(12, 11)->(11, 11) n=22 enem dG=4",
+     "opp": "(11, 11)->(10, 11) n=22 enem dG=5",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 23,
+     "gen_army": 2,
+     "main_d": 3,
+     "main_army": 23
+    },
+    {
+     "t": 399,
+     "kubic": "(13, 17)->(12, 17) n=2 neut dG=9",
+     "opp": "(4, 8)->(4, 7) n=15 enem dG=15",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 1,
+     "gen_army": 3,
+     "main_d": 7,
+     "main_army": 23
+    },
+    {
+     "t": 400,
+     "kubic": "(8, 11)->(7, 11) n=1 enem dG=8",
+     "opp": "(4, 7)->(4, 8) n=13 own dG=14 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 1,
+     "gen_army": 3,
+     "main_d": 7,
+     "main_army": 23
+    },
+    {
+     "t": 401,
+     "kubic": "(17, 16)->(17, 15) n=24 own dG=6 HOME",
+     "opp": "(12, 0)->(12, 1) n=2 own dG=15 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 5,
+     "main_d": 7,
+     "main_army": 25
+    },
+    {
+     "t": 402,
+     "kubic": "(17, 15)->(17, 14) n=26 own dG=5 HOME",
+     "opp": "(12, 1)->(13, 1) n=4 own dG=16",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 5,
+     "main_d": 6,
+     "main_army": 27
+    },
+    {
+     "t": 403,
+     "kubic": "(17, 14)->(17, 13) n=28 own dG=4 HOME",
+     "opp": "(13, 1)->(14, 1) n=6 own dG=15 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 6,
+     "main_d": 5,
+     "main_army": 29
+    },
+    {
+     "t": 404,
+     "kubic": "(18, 13)->(17, 13) n=3 own dG=4 HOME",
+     "opp": "(14, 1)->(15, 1) n=8 own dG=14 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 6,
+     "main_d": 4,
+     "main_army": 32
+    },
+    {
+     "t": 405,
+     "kubic": "(17, 13)->(17, 12) n=34 own dG=3 HOME",
+     "opp": "(17, 4)->(17, 3) n=3 own dG=14",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 7,
+     "main_d": 4,
+     "main_army": 35
+    },
+    {
+     "t": 406,
+     "kubic": "(17, 12)->(16, 12) n=37 own dG=2 HOME",
+     "opp": "(17, 3)->(17, 2) n=6 own dG=15",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 7,
+     "main_d": 3,
+     "main_army": 38
+    },
+    {
+     "t": 407,
+     "kubic": "(16, 12)->(15, 12) n=39 own dG=1 HOME",
+     "opp": "(17, 2)->(17, 1) n=9 own dG=16",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 8,
+     "main_d": 2,
+     "main_army": 40
+    },
+    {
+     "t": 408,
+     "kubic": "(15, 12)->(14, 12) n=41 own dG=0 HOME",
+     "opp": "(17, 1)->(16, 1) n=11 own dG=15 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 8,
+     "main_d": 1,
+     "main_army": 42
+    },
+    {
+     "t": 409,
+     "kubic": "(14, 12)->(13, 12) n=49 own dG=1",
+     "opp": "(16, 1)->(15, 1) n=13 own dG=14 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 50,
+     "main_d": 5,
+     "main_army": 5
+    },
+    {
+     "t": 410,
+     "kubic": "(13, 12)->(12, 12) n=50 own dG=2",
+     "opp": "(15, 1)->(15, 2) n=22 own dG=13 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 1,
+     "main_d": 1,
+     "main_army": 51
+    },
+    {
+     "t": 411,
+     "kubic": "(12, 12)->(12, 11) n=51 own dG=3",
+     "opp": "(15, 2)->(15, 3) n=23 own dG=12 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 2,
+     "main_d": 2,
+     "main_army": 52
+    },
+    {
+     "t": 412,
+     "kubic": "(12, 11)->(12, 10) n=52 own dG=4",
+     "opp": "(15, 3)->(15, 4) n=25 own dG=11 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 2,
+     "main_d": 3,
+     "main_army": 53
+    },
+    {
+     "t": 413,
+     "kubic": "(12, 10)->(11, 10) n=53 enem dG=5",
+     "opp": "(15, 4)->(14, 4) n=26 own dG=10 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 3,
+     "main_d": 4,
+     "main_army": 54
+    },
+    {
+     "t": 414,
+     "kubic": "(11, 10)->(10, 10) n=50 own dG=6",
+     "opp": "(14, 4)->(14, 5) n=27 own dG=9 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 3,
+     "main_d": 5,
+     "main_army": 51
+    },
+    {
+     "t": 415,
+     "kubic": "(10, 10)->(9, 10) n=51 own dG=7",
+     "opp": "(14, 5)->(13, 5) n=29 own dG=10",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 4,
+     "main_d": 6,
+     "main_army": 52
+    },
+    {
+     "t": 416,
+     "kubic": "(9, 10)->(9, 9) n=52 own dG=8",
+     "opp": "(13, 5)->(13, 6) n=31 own dG=9 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 4,
+     "main_d": 7,
+     "main_army": 53
+    },
+    {
+     "t": 417,
+     "kubic": "(17, 16)->(16, 16) n=8 own dG=6 HOME",
+     "opp": "(13, 6)->(12, 6) n=33 own dG=8 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 5,
+     "main_d": 8,
+     "main_army": 54
+    },
+    {
+     "t": 418,
+     "kubic": "(16, 16)->(16, 15) n=9 own dG=5 HOME",
+     "opp": "(12, 6)->(11, 6) n=34 own dG=9",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 5,
+     "main_d": 8,
+     "main_army": 54
+    },
+    {
+     "t": 419,
+     "kubic": "(9, 9)->(9, 8) n=53 own dG=9",
+     "opp": "(11, 6)->(11, 7) n=35 own dG=8 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 6,
+     "main_d": 8,
+     "main_army": 54
+    },
+    {
+     "t": 420,
+     "kubic": "(16, 15)->(16, 14) n=12 own dG=4 HOME",
+     "opp": "(11, 7)->(11, 8) n=36 own dG=7 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 6,
+     "main_d": 9,
+     "main_army": 55
+    },
+    {
+     "t": 421,
+     "kubic": "(16, 14)->(16, 13) n=14 own dG=3 HOME",
+     "opp": "(11, 8)->(11, 9) n=37 own dG=6 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 7,
+     "main_d": 9,
+     "main_army": 55
+    },
+    {
+     "t": 422,
+     "kubic": "(16, 13)->(15, 13) n=16 own dG=2 HOME",
+     "opp": "(11, 9)->(11, 10) n=38 enem dG=5 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 7,
+     "main_d": 9,
+     "main_army": 55
+    },
+    {
+     "t": 423,
+     "kubic": "(15, 13)->(14, 13) n=18 own dG=1 HOME",
+     "opp": "(11, 10)->(11, 11) n=36 own dG=4 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 8,
+     "main_d": 9,
+     "main_army": 55
+    },
+    {
+     "t": 424,
+     "kubic": "(14, 13)->(14, 12) n=19 own dG=0 HOME",
+     "opp": "(11, 11)->(11, 12) n=37 enem dG=3 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 38,
+     "gen_army": 8,
+     "main_d": 9,
+     "main_army": 55
+    },
+    {
+     "t": 425,
+     "kubic": "(16, 10)->(16, 11) n=4 own dG=3 HOME",
+     "opp": "(11, 12)->(12, 12) n=34 enem dG=2 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 35,
+     "gen_army": 28,
+     "main_d": 9,
+     "main_army": 55
+    },
+    {
+     "t": 426,
+     "kubic": "(16, 11)->(15, 11) n=8 own dG=2 HOME",
+     "opp": "(12, 12)->(13, 12) n=32 enem dG=1 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 33,
+     "gen_army": 28,
+     "main_d": 9,
+     "main_army": 55
+    },
+    {
+     "t": 427,
+     "kubic": "(15, 11)->(14, 11) n=9 own dG=1 HOME",
+     "opp": "(13, 12)->(14, 12) n=30 enem dG=0 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 31,
+     "gen_army": 29,
+     "main_d": 9,
+     "main_army": 55
+    }
+   ],
+   "gen_army_last30": [
+    2,
+    3,
+    3,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    8,
+    8,
+    50,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    8,
+    8,
+    28,
+    28,
+    29,
+    0
+   ],
+   "my_total_last30": [
+    158,
+    138,
+    137,
+    209,
+    209,
+    211,
+    211,
+    213,
+    213,
+    215,
+    215,
+    217,
+    217,
+    219,
+    219,
+    221,
+    219,
+    221,
+    221,
+    223,
+    223,
+    225,
+    225,
+    227,
+    227,
+    228,
+    228,
+    228,
+    227,
+    228,
+    0
+   ],
+   "opp_total_last30": [
+    147,
+    126,
+    125,
+    202,
+    202,
+    203,
+    203,
+    204,
+    204,
+    205,
+    205,
+    206,
+    206,
+    207,
+    207,
+    208,
+    206,
+    207,
+    207,
+    208,
+    208,
+    209,
+    209,
+    210,
+    210,
+    210,
+    210,
+    209,
+    208,
+    208,
+    378
+   ]
+  },
+  {
+   "match_id": "20603",
+   "outcome": "lose",
+   "opponent": "__",
+   "total_ticks": 201,
+   "killer": {
+    "end_kind": "general_capture",
+    "final_moved": 28,
+    "final_def_army": 16,
+    "traj_len": 23,
+    "traj_start_dist": 23,
+    "first_visible": {
+     "t": 187,
+     "cell": [
+      12,
+      9
+     ],
+     "army": 48,
+     "dist": 15
+    },
+    "warning_ticks": 14
+   },
+   "first_vis_dist5_frame": 196,
+   "episodes": [
+    {
+     "t0": 150,
+     "t1": 154,
+     "onset_dist": 6,
+     "onset_manh": 6,
+     "onset_threat_army": 2,
+     "onset_gen_army": 3,
+     "onset_main_dist": 2,
+     "onset_main_army": 8,
+     "min_dist_reached": 6,
+     "first_def": {
+      "tick": 151,
+      "latency": 0,
+      "class": "attack_near_home",
+      "moved": 2,
+      "dst": [
+       6,
+       11
+      ]
+     },
+     "classes_hit": {
+      "attack_near_home": 0,
+      "attack_intruder": 4,
+      "block_path": 10,
+      "reinforce_general": 21
+     },
+     "pre_expand": 0,
+     "pre_pass": 0,
+     "pre_build": 0,
+     "outcome": "threat_left_radius",
+     "tiles_lost": 0,
+     "src_general_moves": 0,
+     "match_id": "20603",
+     "outcome_game": "lose"
+    },
+    {
+     "t0": 195,
+     "t1": 200,
+     "onset_dist": 6,
+     "onset_manh": 6,
+     "onset_threat_army": 38,
+     "onset_gen_army": 12,
+     "onset_main_dist": 17,
+     "onset_main_army": 44,
+     "min_dist_reached": 1,
+     "first_def": null,
+     "classes_hit": {},
+     "pre_expand": 6,
+     "pre_pass": 0,
+     "pre_build": 0,
+     "outcome": "general_captured",
+     "tiles_lost": 5,
+     "src_general_moves": 0,
+     "match_id": "20603",
+     "outcome_game": "lose"
+    }
+   ],
+   "chains": [
+    {
+     "start": 92,
+     "end": 101,
+     "len": 10,
+     "d0": 17,
+     "d1": 13,
+     "start_army": 9,
+     "reached_general": false,
+     "vis_dist": 15,
+     "true_dist": 15,
+     "threat_army": 18,
+     "gen_army": 9,
+     "match_id": "20603"
+    }
+   ],
+   "final_log": [
+    {
+     "t": 172,
+     "kubic": "(1, 10)->(0, 10) n=15 own dG=0 HOME",
+     "opp": "(13, 4)->(12, 4) n=11 own dG=20 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 13,
+     "main_d": 1,
+     "main_army": 16
+    },
+    {
+     "t": 173,
+     "kubic": "(0, 10)->(0, 11) n=28 own dG=1",
+     "opp": "(12, 4)->(11, 4) n=13 own dG=21",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 29,
+     "main_d": 7,
+     "main_army": 13
+    },
+    {
+     "t": 174,
+     "kubic": "(0, 11)->(0, 12) n=29 own dG=2",
+     "opp": "(11, 3)->(11, 4) n=7 own dG=21 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 1,
+     "main_d": 1,
+     "main_army": 30
+    },
+    {
+     "t": 175,
+     "kubic": "(0, 12)->(1, 12) n=30 own dG=3",
+     "opp": "(9, 4)->(10, 4) n=12 own dG=22 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 2,
+     "main_d": 2,
+     "main_army": 31
+    },
+    {
+     "t": 176,
+     "kubic": "(1, 12)->(2, 12) n=31 own dG=4",
+     "opp": "(10, 4)->(11, 4) n=13 own dG=21 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 2,
+     "main_d": 3,
+     "main_army": 32
+    },
+    {
+     "t": 177,
+     "kubic": "(2, 12)->(3, 12) n=32 own dG=5",
+     "opp": "(11, 4)->(11, 5) n=34 own dG=20 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 3,
+     "main_d": 4,
+     "main_army": 33
+    },
+    {
+     "t": 178,
+     "kubic": "(3, 12)->(4, 12) n=33 own dG=6",
+     "opp": "(11, 5)->(12, 5) n=35 own dG=19 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 3,
+     "main_d": 5,
+     "main_army": 34
+    },
+    {
+     "t": 179,
+     "kubic": "(4, 12)->(4, 13) n=34 own dG=7",
+     "opp": "(12, 5)->(12, 6) n=36 neut dG=18 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 4,
+     "main_d": 6,
+     "main_army": 35
+    },
+    {
+     "t": 180,
+     "kubic": "(4, 13)->(5, 13) n=35 own dG=8",
+     "opp": "(14, 14)->(14, 13) n=2 own dG=17 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 4,
+     "main_d": 7,
+     "main_army": 36
+    },
+    {
+     "t": 181,
+     "kubic": "(5, 13)->(5, 12) n=36 own dG=7 HOME",
+     "opp": "(14, 13)->(14, 12) n=4 own dG=16 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 5,
+     "main_d": 8,
+     "main_army": 37
+    },
+    {
+     "t": 182,
+     "kubic": "(5, 12)->(6, 12) n=37 own dG=8",
+     "opp": "(14, 12)->(13, 12) n=6 own dG=15 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 5,
+     "main_d": 7,
+     "main_army": 38
+    },
+    {
+     "t": 183,
+     "kubic": "(6, 12)->(6, 11) n=37 own dG=7 HOME",
+     "opp": "(13, 12)->(13, 11) n=8 own dG=16",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 6,
+     "main_d": 8,
+     "main_army": 38
+    },
+    {
+     "t": 184,
+     "kubic": "(6, 11)->(7, 11) n=54 own dG=8",
+     "opp": "(12, 6)->(12, 7) n=35 own dG=17 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 6,
+     "main_d": 7,
+     "main_army": 55
+    },
+    {
+     "t": 185,
+     "kubic": "(7, 11)->(8, 11) n=55 own dG=9",
+     "opp": "(12, 7)->(12, 8) n=45 own dG=16 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 7,
+     "main_d": 8,
+     "main_army": 56
+    },
+    {
+     "t": 186,
+     "kubic": "(8, 11)->(9, 11) n=56 own dG=10",
+     "opp": "(12, 8)->(12, 9) n=46 own dG=15 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 7,
+     "main_d": 9,
+     "main_army": 57
+    },
+    {
+     "t": 187,
+     "kubic": "(9, 11)->(10, 11) n=57 own dG=11",
+     "opp": "(12, 9)->(12, 10) n=47 own dG=14 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 8,
+     "main_d": 10,
+     "main_army": 58
+    },
+    {
+     "t": 188,
+     "kubic": "(10, 11)->(10, 12) n=58 neut dG=12",
+     "opp": "(12, 10)->(11, 10) n=48 own dG=13 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 8,
+     "main_d": 11,
+     "main_army": 59
+    },
+    {
+     "t": 189,
+     "kubic": "(10, 12)->(11, 12) n=57 own dG=13",
+     "opp": "(11, 10)->(10, 10) n=49 own dG=12 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 9,
+     "main_d": 12,
+     "main_army": 58
+    },
+    {
+     "t": 190,
+     "kubic": "(11, 12)->(11, 11) n=57 own dG=12 HOME",
+     "opp": "(10, 10)->(9, 10) n=50 own dG=11 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 9,
+     "main_d": 13,
+     "main_army": 58
+    },
+    {
+     "t": 191,
+     "kubic": "(11, 11)->(11, 10) n=58 enem dG=13",
+     "opp": "(9, 10)->(9, 11) n=51 enem dG=10 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 10,
+     "main_d": 12,
+     "main_army": 59
+    },
+    {
+     "t": 192,
+     "kubic": "(11, 10)->(12, 10) n=56 enem dG=14",
+     "opp": "(9, 11)->(8, 11) n=49 enem dG=9 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 2,
+     "gen_army": 10,
+     "main_d": 13,
+     "main_army": 57
+    },
+    {
+     "t": 193,
+     "kubic": "(12, 10)->(12, 9) n=54 enem dG=15",
+     "opp": "(8, 11)->(7, 11) n=47 enem dG=8 HOME",
+     "vis_d": 9,
+     "true_d": 9,
+     "threat_army": 48,
+     "gen_army": 11,
+     "main_d": 14,
+     "main_army": 55
+    },
+    {
+     "t": 194,
+     "kubic": "(12, 9)->(12, 8) n=52 enem dG=16",
+     "opp": "(7, 11)->(6, 11) n=45 enem dG=7 HOME",
+     "vis_d": 8,
+     "true_d": 8,
+     "threat_army": 46,
+     "gen_army": 11,
+     "main_d": 15,
+     "main_army": 53
+    },
+    {
+     "t": 195,
+     "kubic": "(12, 8)->(12, 7) n=50 enem dG=17",
+     "opp": "(6, 11)->(5, 11) n=39 enem dG=6 HOME",
+     "vis_d": 7,
+     "true_d": 7,
+     "threat_army": 40,
+     "gen_army": 12,
+     "main_d": 16,
+     "main_army": 51
+    },
+    {
+     "t": 196,
+     "kubic": "(12, 7)->(12, 6) n=43 enem dG=18",
+     "opp": "(5, 11)->(4, 11) n=37 enem dG=5 HOME",
+     "vis_d": 6,
+     "true_d": 6,
+     "threat_army": 38,
+     "gen_army": 12,
+     "main_d": 17,
+     "main_army": 44
+    },
+    {
+     "t": 197,
+     "kubic": "(12, 6)->(12, 5) n=41 enem dG=19",
+     "opp": "(4, 11)->(3, 11) n=35 enem dG=4 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 36,
+     "gen_army": 13,
+     "main_d": 18,
+     "main_army": 42
+    },
+    {
+     "t": 198,
+     "kubic": "(12, 5)->(13, 5) n=39 enem dG=20",
+     "opp": "(3, 11)->(3, 10) n=33 enem dG=3 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 34,
+     "gen_army": 13,
+     "main_d": 19,
+     "main_army": 40
+    },
+    {
+     "t": 199,
+     "kubic": "(13, 5)->(14, 5) n=36 enem dG=21",
+     "opp": "(3, 10)->(2, 10) n=31 enem dG=2 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 32,
+     "gen_army": 14,
+     "main_d": 20,
+     "main_army": 37
+    },
+    {
+     "t": 200,
+     "kubic": "(14, 5)->(15, 5) n=33 enem dG=22",
+     "opp": "(2, 10)->(1, 10) n=29 enem dG=1 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 30,
+     "gen_army": 14,
+     "main_d": 21,
+     "main_army": 34
+    },
+    {
+     "t": 201,
+     "kubic": "(15, 5)->(15, 4) n=32 enem dG=23",
+     "opp": "(1, 10)->(0, 10) n=28 enem dG=0 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 29,
+     "gen_army": 16,
+     "main_d": 22,
+     "main_army": 33
+    }
+   ],
+   "gen_army_last30": [
+    13,
+    29,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    8,
+    8,
+    9,
+    9,
+    10,
+    10,
+    11,
+    11,
+    12,
+    12,
+    13,
+    13,
+    14,
+    14,
+    16,
+    0
+   ],
+   "my_total_last30": [
+    130,
+    132,
+    132,
+    134,
+    134,
+    136,
+    136,
+    138,
+    138,
+    140,
+    140,
+    142,
+    142,
+    144,
+    144,
+    146,
+    146,
+    148,
+    148,
+    150,
+    148,
+    148,
+    146,
+    140,
+    133,
+    133,
+    131,
+    130,
+    127,
+    185,
+    0
+   ],
+   "opp_total_last30": [
+    138,
+    140,
+    140,
+    142,
+    142,
+    144,
+    144,
+    146,
+    146,
+    148,
+    148,
+    150,
+    150,
+    152,
+    152,
+    154,
+    154,
+    156,
+    156,
+    158,
+    156,
+    156,
+    154,
+    150,
+    143,
+    143,
+    141,
+    140,
+    137,
+    195,
+    344
+   ]
+  },
+  {
+   "match_id": "20923",
+   "outcome": "lose",
+   "opponent": "Jonas Dujava",
+   "total_ticks": 132,
+   "killer": {
+    "end_kind": "general_capture",
+    "final_moved": 16,
+    "final_def_army": 9,
+    "traj_len": 18,
+    "traj_start_dist": 16,
+    "first_visible": {
+     "t": 130,
+     "cell": [
+      4,
+      4
+     ],
+     "army": 23,
+     "dist": 3
+    },
+    "warning_ticks": 2
+   },
+   "first_vis_dist5_frame": 106,
+   "episodes": [
+    {
+     "t0": 65,
+     "t1": 131,
+     "onset_dist": 6,
+     "onset_manh": 6,
+     "onset_threat_army": 2,
+     "onset_gen_army": 3,
+     "onset_main_dist": 4,
+     "onset_main_army": 19,
+     "min_dist_reached": 1,
+     "first_def": {
+      "tick": 68,
+      "latency": 2,
+      "class": "attack_near_home",
+      "moved": 20,
+      "dst": [
+       3,
+       7
+      ]
+     },
+     "classes_hit": {
+      "attack_near_home": 2
+     },
+     "pre_expand": 0,
+     "pre_pass": 0,
+     "pre_build": 0,
+     "outcome": "general_captured",
+     "tiles_lost": 13,
+     "src_general_moves": 5,
+     "match_id": "20923",
+     "outcome_game": "lose"
+    }
+   ],
+   "chains": [],
+   "final_log": [
+    {
+     "t": 103,
+     "kubic": "(10, 1)->(9, 1) n=1 own dG=5 HOME",
+     "opp": "(2, 7)->(1, 7) n=2 enem dG=9",
+     "vis_d": 6,
+     "true_d": 6,
+     "threat_army": 3,
+     "gen_army": 4,
+     "main_d": 1,
+     "main_army": 4
+    },
+    {
+     "t": 104,
+     "kubic": "(1, 1)->(2, 1) n=1 own dG=2 HOME",
+     "opp": "(3, 8)->(3, 7) n=1 own dG=7 HOME",
+     "vis_d": 6,
+     "true_d": 6,
+     "threat_army": 3,
+     "gen_army": 4,
+     "main_d": 1,
+     "main_army": 4
+    },
+    {
+     "t": 105,
+     "kubic": "(9, 1)->(8, 1) n=2 own dG=4 HOME",
+     "opp": "(3, 7)->(3, 6) n=1 own dG=6 HOME",
+     "vis_d": 6,
+     "true_d": 6,
+     "threat_army": 3,
+     "gen_army": 5,
+     "main_d": 1,
+     "main_army": 4
+    },
+    {
+     "t": 106,
+     "kubic": "(5, 2)->(5, 1) n=1 own dG=1 HOME",
+     "opp": "(3, 6)->(4, 6) n=3 enem dG=5 HOME",
+     "vis_d": 6,
+     "true_d": 6,
+     "threat_army": 4,
+     "gen_army": 5,
+     "main_d": 1,
+     "main_army": 4
+    },
+    {
+     "t": 107,
+     "kubic": "(8, 1)->(7, 1) n=3 own dG=3 HOME",
+     "opp": "(4, 7)->(4, 6) n=1 own dG=5 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 1,
+     "gen_army": 6,
+     "main_d": 1,
+     "main_army": 4
+    },
+    {
+     "t": 108,
+     "kubic": "(7, 1)->(6, 1) n=4 own dG=2 HOME",
+     "opp": "(7, 10)->(6, 10) n=11 own dG=13 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 6,
+     "main_d": 3,
+     "main_army": 5
+    },
+    {
+     "t": 109,
+     "kubic": "(6, 1)->(5, 1) n=5 own dG=1 HOME",
+     "opp": "(6, 10)->(5, 10) n=12 own dG=12 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 7,
+     "main_d": 2,
+     "main_army": 6
+    },
+    {
+     "t": 110,
+     "kubic": "(1, 2)->(1, 3) n=1 own dG=5",
+     "opp": "(5, 10)->(5, 9) n=13 own dG=11 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 7,
+     "main_d": 1,
+     "main_army": 8
+    },
+    {
+     "t": 111,
+     "kubic": "(1, 3)->(2, 3) n=3 own dG=4 HOME",
+     "opp": "(5, 9)->(4, 9) n=14 own dG=10 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 8,
+     "main_d": 1,
+     "main_army": 8
+    },
+    {
+     "t": 112,
+     "kubic": "(2, 3)->(2, 2) n=4 own dG=3 HOME",
+     "opp": "(6, 13)->(5, 13) n=1 neut dG=17",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 8,
+     "main_d": 1,
+     "main_army": 8
+    },
+    {
+     "t": 113,
+     "kubic": "(2, 2)->(2, 1) n=5 own dG=2 HOME",
+     "opp": "(2, 9)->(1, 9) n=1 neut dG=11",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 9,
+     "main_d": 1,
+     "main_army": 8
+    },
+    {
+     "t": 114,
+     "kubic": "(2, 1)->(3, 1) n=7 own dG=1 HOME",
+     "opp": "(9, 13)->(10, 13) n=1 neut dG=18",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 9,
+     "main_d": 2,
+     "main_army": 8
+    },
+    {
+     "t": 115,
+     "kubic": "(3, 1)->(4, 1) n=10 own dG=0 HOME",
+     "opp": "(5, 12)->(4, 12) n=1 neut dG=17",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 10,
+     "main_d": 1,
+     "main_army": 11
+    },
+    {
+     "t": 116,
+     "kubic": "(4, 1)->(5, 1) n=19 own dG=1",
+     "opp": "(9, 11)->(9, 10) n=1 neut dG=14 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 20,
+     "main_d": 1,
+     "main_army": 8
+    },
+    {
+     "t": 117,
+     "kubic": "(5, 1)->(5, 2) n=26 own dG=2",
+     "opp": "(8, 11)->(7, 11) n=2 own dG=15 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 2,
+     "main_d": 1,
+     "main_army": 27
+    },
+    {
+     "t": 118,
+     "kubic": "(5, 2)->(5, 3) n=26 own dG=3",
+     "opp": "(7, 11)->(7, 10) n=3 own dG=14 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 2,
+     "main_d": 2,
+     "main_army": 27
+    },
+    {
+     "t": 119,
+     "kubic": "(5, 3)->(6, 3) n=27 own dG=4",
+     "opp": "(7, 10)->(7, 9) n=9 own dG=13 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 3,
+     "main_d": 3,
+     "main_army": 28
+    },
+    {
+     "t": 120,
+     "kubic": "(6, 3)->(6, 4) n=28 own dG=5",
+     "opp": "(7, 9)->(6, 9) n=10 own dG=12 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 3,
+     "main_d": 4,
+     "main_army": 29
+    },
+    {
+     "t": 121,
+     "kubic": "(6, 4)->(7, 4) n=29 own dG=6",
+     "opp": "(6, 9)->(5, 9) n=11 own dG=11 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 4,
+     "main_d": 5,
+     "main_army": 30
+    },
+    {
+     "t": 122,
+     "kubic": "(7, 4)->(7, 5) n=30 own dG=7",
+     "opp": "(5, 9)->(4, 9) n=11 own dG=10 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 4,
+     "main_d": 6,
+     "main_army": 31
+    },
+    {
+     "t": 123,
+     "kubic": "(7, 5)->(8, 5) n=31 own dG=8",
+     "opp": "(4, 9)->(3, 9) n=26 own dG=9 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 5,
+     "main_d": 7,
+     "main_army": 32
+    },
+    {
+     "t": 124,
+     "kubic": "(8, 5)->(8, 6) n=32 own dG=9",
+     "opp": "(3, 9)->(3, 8) n=27 own dG=8 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 5,
+     "main_d": 8,
+     "main_army": 33
+    },
+    {
+     "t": 125,
+     "kubic": "(8, 6)->(9, 6) n=33 own dG=10",
+     "opp": "(3, 8)->(3, 7) n=27 own dG=7 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 6,
+     "main_d": 9,
+     "main_army": 34
+    },
+    {
+     "t": 126,
+     "kubic": "(9, 6)->(9, 7) n=34 neut dG=11",
+     "opp": "(3, 7)->(4, 7) n=27 own dG=6 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 6,
+     "main_d": 10,
+     "main_army": 35
+    },
+    {
+     "t": 127,
+     "kubic": "(9, 7)->(9, 8) n=33 neut dG=12",
+     "opp": "(4, 7)->(4, 6) n=27 own dG=5 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 2,
+     "gen_army": 7,
+     "main_d": 11,
+     "main_army": 34
+    },
+    {
+     "t": 128,
+     "kubic": "(9, 8)->(9, 9) n=32 neut dG=13",
+     "opp": "(4, 6)->(4, 5) n=28 enem dG=4 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 29,
+     "gen_army": 7,
+     "main_d": 12,
+     "main_army": 33
+    },
+    {
+     "t": 129,
+     "kubic": "(9, 9)->(9, 10) n=31 enem dG=14",
+     "opp": "(4, 5)->(4, 4) n=25 enem dG=3 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 26,
+     "gen_army": 8,
+     "main_d": 13,
+     "main_army": 32
+    },
+    {
+     "t": 130,
+     "kubic": "(9, 10)->(9, 11) n=29 enem dG=15",
+     "opp": "(4, 4)->(4, 3) n=22 enem dG=2 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 23,
+     "gen_army": 8,
+     "main_d": 14,
+     "main_army": 30
+    },
+    {
+     "t": 131,
+     "kubic": "(9, 11)->(8, 11) n=27 enem dG=16",
+     "opp": "(4, 3)->(4, 2) n=19 enem dG=1 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 20,
+     "gen_army": 9,
+     "main_d": 15,
+     "main_army": 28
+    },
+    {
+     "t": 132,
+     "kubic": "(8, 11)->(7, 11) n=25 enem dG=15 HOME",
+     "opp": "(4, 2)->(4, 1) n=16 enem dG=0 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 17,
+     "gen_army": 9,
+     "main_d": 16,
+     "main_army": 26
+    }
+   ],
+   "gen_army_last30": [
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    8,
+    8,
+    9,
+    9,
+    10,
+    20,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    8,
+    8,
+    9,
+    9,
+    0
+   ],
+   "my_total_last30": [
+    84,
+    83,
+    84,
+    84,
+    83,
+    83,
+    84,
+    84,
+    85,
+    85,
+    86,
+    86,
+    87,
+    87,
+    88,
+    88,
+    89,
+    89,
+    90,
+    90,
+    91,
+    91,
+    92,
+    92,
+    93,
+    93,
+    92,
+    89,
+    87,
+    84,
+    0
+   ],
+   "opp_total_last30": [
+    67,
+    66,
+    67,
+    67,
+    66,
+    66,
+    67,
+    67,
+    68,
+    68,
+    69,
+    69,
+    70,
+    70,
+    71,
+    71,
+    72,
+    72,
+    73,
+    73,
+    74,
+    74,
+    75,
+    75,
+    76,
+    76,
+    75,
+    72,
+    70,
+    67,
+    131
+   ]
+  },
+  {
+   "match_id": "22221",
+   "outcome": "draw",
+   "opponent": "Strateyista",
+   "total_ticks": 1200,
+   "killer": null,
+   "first_vis_dist5_frame": null,
+   "episodes": [],
+   "chains": [
+    {
+     "start": 152,
+     "end": 1200,
+     "len": 1045,
+     "d0": 10,
+     "d1": 5,
+     "start_army": 40,
+     "reached_general": false,
+     "vis_dist": null,
+     "true_dist": 16,
+     "threat_army": 0,
+     "gen_army": 7,
+     "match_id": "22221"
+    }
+   ],
+   "final_log": [
+    {
+     "t": 1171,
+     "kubic": "(1, 8)->(1, 9) n=1076 own dG=3",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 31,
+     "main_d": 2,
+     "main_army": 1077
+    },
+    {
+     "t": 1172,
+     "kubic": "(1, 9)->(1, 8) n=1082 own dG=2 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 31,
+     "main_d": 3,
+     "main_army": 1083
+    },
+    {
+     "t": 1173,
+     "kubic": "(1, 8)->(2, 8) n=1083 own dG=3",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 32,
+     "main_d": 2,
+     "main_army": 1084
+    },
+    {
+     "t": 1174,
+     "kubic": "(2, 8)->(3, 8) n=1083 own dG=4",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 32,
+     "main_d": 3,
+     "main_army": 1084
+    },
+    {
+     "t": 1175,
+     "kubic": "(3, 8)->(4, 8) n=1083 own dG=5",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 33,
+     "main_d": 4,
+     "main_army": 1084
+    },
+    {
+     "t": 1176,
+     "kubic": "(4, 8)->(5, 8) n=1083 own dG=6",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 33,
+     "main_d": 5,
+     "main_army": 1084
+    },
+    {
+     "t": 1177,
+     "kubic": "(5, 8)->(4, 8) n=1083 own dG=5 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 34,
+     "main_d": 6,
+     "main_army": 1084
+    },
+    {
+     "t": 1178,
+     "kubic": "(4, 8)->(5, 8) n=1083 own dG=6",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 34,
+     "main_d": 5,
+     "main_army": 1084
+    },
+    {
+     "t": 1179,
+     "kubic": "(5, 8)->(4, 8) n=1083 own dG=5 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 35,
+     "main_d": 6,
+     "main_army": 1084
+    },
+    {
+     "t": 1180,
+     "kubic": "(4, 8)->(3, 8) n=1083 own dG=4 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 35,
+     "main_d": 5,
+     "main_army": 1084
+    },
+    {
+     "t": 1181,
+     "kubic": "(3, 8)->(2, 8) n=1083 own dG=3 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 36,
+     "main_d": 4,
+     "main_army": 1084
+    },
+    {
+     "t": 1182,
+     "kubic": "(2, 8)->(1, 8) n=1083 own dG=2 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 36,
+     "main_d": 3,
+     "main_army": 1084
+    },
+    {
+     "t": 1183,
+     "kubic": "(1, 8)->(0, 8) n=1088 neut dG=3",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 37,
+     "main_d": 2,
+     "main_army": 1089
+    },
+    {
+     "t": 1184,
+     "kubic": "(0, 8)->(0, 7) n=1087 neut dG=2 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 37,
+     "main_d": 3,
+     "main_army": 1088
+    },
+    {
+     "t": 1185,
+     "kubic": "(0, 7)->(0, 6) n=1086 own dG=1 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 38,
+     "main_d": 2,
+     "main_army": 1087
+    },
+    {
+     "t": 1186,
+     "kubic": "(0, 6)->(0, 5) n=1087 own dG=2",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 38,
+     "main_d": 1,
+     "main_army": 1088
+    },
+    {
+     "t": 1187,
+     "kubic": "(0, 5)->(0, 4) n=1088 own dG=3",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 39,
+     "main_d": 2,
+     "main_army": 1089
+    },
+    {
+     "t": 1188,
+     "kubic": "(0, 4)->(0, 3) n=1095 own dG=4",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 39,
+     "main_d": 3,
+     "main_army": 1096
+    },
+    {
+     "t": 1189,
+     "kubic": "(0, 3)->(1, 3) n=1102 own dG=5",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 40,
+     "main_d": 4,
+     "main_army": 1103
+    },
+    {
+     "t": 1190,
+     "kubic": "(1, 3)->(1, 2) n=1109 own dG=6",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 40,
+     "main_d": 5,
+     "main_army": 1110
+    },
+    {
+     "t": 1191,
+     "kubic": "(1, 2)->(1, 1) n=1125 own dG=7",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 41,
+     "main_d": 6,
+     "main_army": 1126
+    },
+    {
+     "t": 1192,
+     "kubic": "build",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 41,
+     "main_d": 7,
+     "main_army": 1142
+    },
+    {
+     "t": 1193,
+     "kubic": "(1, 1)->(2, 1) n=1101 neut dG=6 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 42,
+     "main_d": 7,
+     "main_army": 1102
+    },
+    {
+     "t": 1194,
+     "kubic": "(2, 1)->(2, 0) n=1100 own dG=7",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 42,
+     "main_d": 6,
+     "main_army": 1101
+    },
+    {
+     "t": 1195,
+     "kubic": "(2, 0)->(3, 0) n=1116 own dG=8",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 43,
+     "main_d": 7,
+     "main_army": 1117
+    },
+    {
+     "t": 1196,
+     "kubic": "(3, 0)->(4, 0) n=1132 own dG=9",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 43,
+     "main_d": 8,
+     "main_army": 1133
+    },
+    {
+     "t": 1197,
+     "kubic": "(4, 0)->(4, 1) n=1148 own dG=8 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 44,
+     "main_d": 9,
+     "main_army": 1149
+    },
+    {
+     "t": 1198,
+     "kubic": "(4, 1)->(4, 2) n=1163 own dG=7 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 44,
+     "main_d": 8,
+     "main_army": 1164
+    },
+    {
+     "t": 1199,
+     "kubic": "(4, 2)->(4, 3) n=1175 own dG=6 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 45,
+     "main_d": 7,
+     "main_army": 1176
+    },
+    {
+     "t": 1200,
+     "kubic": "(4, 3)->(4, 4) n=1187 own dG=5 HOME",
+     "opp": "pass",
+     "vis_d": null,
+     "true_d": 16,
+     "threat_army": 0,
+     "gen_army": 45,
+     "main_d": 6,
+     "main_army": 1188
+    }
+   ],
+   "gen_army_last30": [
+    31,
+    31,
+    32,
+    32,
+    33,
+    33,
+    34,
+    34,
+    35,
+    35,
+    36,
+    36,
+    37,
+    37,
+    38,
+    38,
+    39,
+    39,
+    40,
+    40,
+    41,
+    41,
+    42,
+    42,
+    43,
+    43,
+    44,
+    44,
+    45,
+    45,
+    47
+   ],
+   "my_total_last30": [
+    3197,
+    3197,
+    3200,
+    3200,
+    3203,
+    3203,
+    3206,
+    3206,
+    3209,
+    3209,
+    3212,
+    3212,
+    3215,
+    3215,
+    3218,
+    3218,
+    3221,
+    3221,
+    3224,
+    3224,
+    3227,
+    3227,
+    3190,
+    3190,
+    3194,
+    3194,
+    3198,
+    3198,
+    3202,
+    3202,
+    3349
+   ],
+   "opp_total_last30": [
+    609,
+    609,
+    610,
+    610,
+    611,
+    611,
+    612,
+    612,
+    613,
+    613,
+    614,
+    614,
+    615,
+    615,
+    616,
+    616,
+    617,
+    617,
+    618,
+    618,
+    619,
+    619,
+    620,
+    620,
+    621,
+    621,
+    622,
+    622,
+    623,
+    623,
+    625
+   ]
+  },
+  {
+   "match_id": "24184",
+   "outcome": "lose",
+   "opponent": "bist",
+   "total_ticks": 619,
+   "killer": {
+    "end_kind": "general_capture",
+    "final_moved": 115,
+    "final_def_army": 33,
+    "traj_len": 30,
+    "traj_start_dist": 22,
+    "first_visible": {
+     "t": 589,
+     "cell": [
+      6,
+      10
+     ],
+     "army": 155,
+     "dist": 13
+    },
+    "warning_ticks": 30
+   },
+   "first_vis_dist5_frame": 401,
+   "episodes": [
+    {
+     "t0": 401,
+     "t1": 618,
+     "onset_dist": 5,
+     "onset_manh": 5,
+     "onset_threat_army": 1,
+     "onset_gen_army": 42,
+     "onset_main_dist": 13,
+     "onset_main_army": 141,
+     "min_dist_reached": 1,
+     "first_def": {
+      "tick": 408,
+      "latency": 6,
+      "class": "recall_homeward",
+      "moved": 169,
+      "dst": [
+       8,
+       8
+      ]
+     },
+     "classes_hit": {
+      "recall_homeward": 6
+     },
+     "pre_expand": 0,
+     "pre_pass": 5,
+     "pre_build": 0,
+     "outcome": "general_captured",
+     "tiles_lost": 57,
+     "src_general_moves": 6,
+     "match_id": "24184",
+     "outcome_game": "lose"
+    }
+   ],
+   "chains": [
+    {
+     "start": 75,
+     "end": 77,
+     "len": 3,
+     "d0": 1,
+     "d1": 0,
+     "start_army": 25,
+     "reached_general": true,
+     "vis_dist": null,
+     "true_dist": 15,
+     "threat_army": 0,
+     "gen_army": 2,
+     "match_id": "24184"
+    },
+    {
+     "start": 108,
+     "end": 108,
+     "len": 1,
+     "d0": 2,
+     "d1": 1,
+     "start_army": 28,
+     "reached_general": false,
+     "vis_dist": null,
+     "true_dist": 14,
+     "threat_army": 0,
+     "gen_army": 13,
+     "match_id": "24184"
+    },
+    {
+     "start": 112,
+     "end": 112,
+     "len": 1,
+     "d0": 1,
+     "d1": 0,
+     "start_army": 29,
+     "reached_general": true,
+     "vis_dist": null,
+     "true_dist": 14,
+     "threat_army": 0,
+     "gen_army": 15,
+     "match_id": "24184"
+    },
+    {
+     "start": 494,
+     "end": 494,
+     "len": 1,
+     "d0": 2,
+     "d1": 1,
+     "start_army": 113,
+     "reached_general": false,
+     "vis_dist": 5,
+     "true_dist": 5,
+     "threat_army": 2,
+     "gen_army": 25,
+     "match_id": "24184"
+    },
+    {
+     "start": 498,
+     "end": 498,
+     "len": 1,
+     "d0": 1,
+     "d1": 0,
+     "start_army": 116,
+     "reached_general": true,
+     "vis_dist": 5,
+     "true_dist": 5,
+     "threat_army": 2,
+     "gen_army": 27,
+     "match_id": "24184"
+    },
+    {
+     "start": 524,
+     "end": 524,
+     "len": 1,
+     "d0": 2,
+     "d1": 1,
+     "start_army": 147,
+     "reached_general": false,
+     "vis_dist": 2,
+     "true_dist": 2,
+     "threat_army": 1,
+     "gen_army": 11,
+     "match_id": "24184"
+    }
+   ],
+   "final_log": [
+    {
+     "t": 590,
+     "kubic": "(5, 11)->(4, 11) n=3 enem dG=12 HOME",
+     "opp": "(5, 10)->(5, 11) n=158 enem dG=13",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 17,
+     "main_d": 13,
+     "main_army": 228
+    },
+    {
+     "t": 591,
+     "kubic": "(4, 12)->(3, 12) n=228 enem dG=14",
+     "opp": "(5, 11)->(4, 11) n=153 own dG=12 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 18,
+     "main_d": 13,
+     "main_army": 229
+    },
+    {
+     "t": 592,
+     "kubic": "pass",
+     "opp": "(4, 11)->(4, 12) n=157 enem dG=13",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 18,
+     "main_d": 14,
+     "main_army": 227
+    },
+    {
+     "t": 593,
+     "kubic": "pass",
+     "opp": "(4, 12)->(4, 11) n=156 own dG=12 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 19,
+     "main_d": 14,
+     "main_army": 227
+    },
+    {
+     "t": 594,
+     "kubic": "pass",
+     "opp": "(4, 11)->(4, 10) n=157 own dG=11 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 19,
+     "main_d": 14,
+     "main_army": 227
+    },
+    {
+     "t": 595,
+     "kubic": "(3, 12)->(2, 12) n=226 enem dG=15",
+     "opp": "(4, 10)->(4, 9) n=160 own dG=10 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 20,
+     "main_d": 14,
+     "main_army": 227
+    },
+    {
+     "t": 596,
+     "kubic": "pass",
+     "opp": "(4, 9)->(4, 8) n=161 own dG=9 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 20,
+     "main_d": 15,
+     "main_army": 222
+    },
+    {
+     "t": 597,
+     "kubic": "pass",
+     "opp": "(4, 12)->(3, 12) n=2 enem dG=14",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 21,
+     "main_d": 15,
+     "main_army": 222
+    },
+    {
+     "t": 598,
+     "kubic": "pass",
+     "opp": "(4, 8)->(4, 7) n=161 own dG=8 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 21,
+     "main_d": 15,
+     "main_army": 222
+    },
+    {
+     "t": 599,
+     "kubic": "(2, 12)->(2, 13) n=221 enem dG=16",
+     "opp": "(4, 7)->(5, 7) n=161 enem dG=9",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 22,
+     "main_d": 15,
+     "main_army": 222
+    },
+    {
+     "t": 600,
+     "kubic": "pass",
+     "opp": "(1, 12)->(2, 12) n=7 enem dG=15 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 22,
+     "main_d": 16,
+     "main_army": 217
+    },
+    {
+     "t": 601,
+     "kubic": "pass",
+     "opp": "(4, 6)->(5, 6) n=1 neut dG=8",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 24,
+     "main_d": 16,
+     "main_army": 218
+    },
+    {
+     "t": 602,
+     "kubic": "pass",
+     "opp": "(11, 0)->(12, 0) n=1 neut dG=15",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 24,
+     "main_d": 16,
+     "main_army": 218
+    },
+    {
+     "t": 603,
+     "kubic": "(2, 13)->(2, 14) n=217 enem dG=17",
+     "opp": "(13, 1)->(14, 1) n=1 neut dG=16",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 25,
+     "main_d": 16,
+     "main_army": 218
+    },
+    {
+     "t": 604,
+     "kubic": "pass",
+     "opp": "(1, 13)->(2, 13) n=9 enem dG=16 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 25,
+     "main_d": 17,
+     "main_army": 212
+    },
+    {
+     "t": 605,
+     "kubic": "pass",
+     "opp": "(15, 2)->(16, 2) n=1 neut dG=19",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 26,
+     "main_d": 17,
+     "main_army": 212
+    },
+    {
+     "t": 606,
+     "kubic": "pass",
+     "opp": "(17, 3)->(18, 3) n=1 neut dG=20",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 26,
+     "main_d": 17,
+     "main_army": 212
+    },
+    {
+     "t": 607,
+     "kubic": "(2, 14)->(1, 14) n=211 enem dG=18",
+     "opp": "(19, 4)->(19, 3) n=1 neut dG=21 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 27,
+     "main_d": 17,
+     "main_army": 212
+    },
+    {
+     "t": 608,
+     "kubic": "pass",
+     "opp": "(2, 13)->(2, 14) n=7 enem dG=17",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 27,
+     "main_d": 18,
+     "main_army": 206
+    },
+    {
+     "t": 609,
+     "kubic": "pass",
+     "opp": "(5, 7)->(4, 7) n=152 own dG=8 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 28,
+     "main_d": 18,
+     "main_army": 206
+    },
+    {
+     "t": 610,
+     "kubic": "pass",
+     "opp": "(4, 7)->(4, 6) n=153 own dG=7 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 28,
+     "main_d": 18,
+     "main_army": 206
+    },
+    {
+     "t": 611,
+     "kubic": "(1, 14)->(1, 15) n=205 enem dG=19",
+     "opp": "(4, 6)->(4, 5) n=153 enem dG=6 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 29,
+     "main_d": 18,
+     "main_army": 206
+    },
+    {
+     "t": 612,
+     "kubic": "(4, 4)->(3, 4) n=5 own dG=4 HOME",
+     "opp": "(4, 5)->(4, 4) n=150 enem dG=5 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 29,
+     "main_d": 19,
+     "main_army": 200
+    },
+    {
+     "t": 613,
+     "kubic": "(3, 4)->(2, 4) n=5 own dG=3 HOME",
+     "opp": "(4, 4)->(3, 4) n=143 enem dG=4 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 30,
+     "main_d": 19,
+     "main_army": 200
+    },
+    {
+     "t": 614,
+     "kubic": "(2, 4)->(1, 4) n=3 own dG=4",
+     "opp": "(3, 4)->(2, 4) n=136 enem dG=3 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 30,
+     "main_d": 19,
+     "main_army": 200
+    },
+    {
+     "t": 615,
+     "kubic": "(1, 15)->(1, 16) n=199 enem dG=20",
+     "opp": "(2, 4)->(1, 4) n=131 enem dG=4",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 132,
+     "gen_army": 31,
+     "main_d": 19,
+     "main_army": 200
+    },
+    {
+     "t": 616,
+     "kubic": "(1, 3)->(1, 2) n=2 neut dG=2 HOME",
+     "opp": "(1, 4)->(1, 3) n=127 enem dG=3 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 31,
+     "main_d": 20,
+     "main_army": 194
+    },
+    {
+     "t": 617,
+     "kubic": "(2, 3)->(1, 3) n=2 enem dG=3",
+     "opp": "(1, 3)->(2, 3) n=123 enem dG=2 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 124,
+     "gen_army": 32,
+     "main_d": 20,
+     "main_army": 194
+    },
+    {
+     "t": 618,
+     "kubic": "(2, 2)->(1, 2) n=2 neut dG=2",
+     "opp": "(2, 3)->(2, 2) n=119 enem dG=1 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 120,
+     "gen_army": 32,
+     "main_d": 20,
+     "main_army": 194
+    },
+    {
+     "t": 619,
+     "kubic": "(1, 16)->(0, 16) n=193 enem dG=21",
+     "opp": "(2, 2)->(2, 1) n=115 enem dG=0 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 116,
+     "gen_army": 33,
+     "main_d": 20,
+     "main_army": 194
+    }
+   ],
+   "gen_army_last30": [
+    17,
+    18,
+    18,
+    19,
+    19,
+    20,
+    20,
+    21,
+    21,
+    22,
+    22,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    27,
+    27,
+    28,
+    28,
+    29,
+    29,
+    30,
+    30,
+    31,
+    31,
+    32,
+    32,
+    33,
+    0
+   ],
+   "my_total_last30": [
+    469,
+    468,
+    467,
+    468,
+    468,
+    470,
+    466,
+    468,
+    467,
+    469,
+    456,
+    476,
+    476,
+    478,
+    473,
+    474,
+    474,
+    476,
+    471,
+    472,
+    472,
+    474,
+    467,
+    463,
+    457,
+    455,
+    447,
+    446,
+    443,
+    442,
+    0
+   ],
+   "opp_total_last30": [
+    1982,
+    1991,
+    1990,
+    2003,
+    2003,
+    2017,
+    2013,
+    2027,
+    2026,
+    2040,
+    2027,
+    2311,
+    2311,
+    2325,
+    2320,
+    2333,
+    2333,
+    2347,
+    2342,
+    2355,
+    2355,
+    2369,
+    2362,
+    2370,
+    2364,
+    2374,
+    2366,
+    2377,
+    2374,
+    2385,
+    2751
+   ]
+  },
+  {
+   "match_id": "24185",
+   "outcome": "lose",
+   "opponent": "bist",
+   "total_ticks": 535,
+   "killer": {
+    "end_kind": "general_capture",
+    "final_moved": 182,
+    "final_def_army": 43,
+    "traj_len": 25,
+    "traj_start_dist": 19,
+    "first_visible": {
+     "t": 531,
+     "cell": [
+      4,
+      16
+     ],
+     "army": 200,
+     "dist": 5
+    },
+    "warning_ticks": 4
+   },
+   "first_vis_dist5_frame": 351,
+   "episodes": [
+    {
+     "t0": 304,
+     "t1": 534,
+     "onset_dist": 6,
+     "onset_manh": 4,
+     "onset_threat_army": 1,
+     "onset_gen_army": 16,
+     "onset_main_dist": 4,
+     "onset_main_army": 117,
+     "min_dist_reached": 1,
+     "first_def": {
+      "tick": 308,
+      "latency": 3,
+      "class": "block_path",
+      "moved": 75,
+      "dst": [
+       9,
+       17
+      ]
+     },
+     "classes_hit": {
+      "block_path": 3
+     },
+     "pre_expand": 0,
+     "pre_pass": 2,
+     "pre_build": 1,
+     "outcome": "general_captured",
+     "tiles_lost": 25,
+     "src_general_moves": 3,
+     "match_id": "24185",
+     "outcome_game": "lose"
+    }
+   ],
+   "chains": [],
+   "final_log": [
+    {
+     "t": 506,
+     "kubic": "pass",
+     "opp": "(2, 17)->(2, 18) n=1 neut dG=7",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 28,
+     "main_d": 5,
+     "main_army": 29
+    },
+    {
+     "t": 507,
+     "kubic": "pass",
+     "opp": "(9, 16)->(9, 17) n=2 enem dG=3 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 3,
+     "gen_army": 29,
+     "main_d": 5,
+     "main_army": 29
+    },
+    {
+     "t": 508,
+     "kubic": "pass",
+     "opp": "(3, 17)->(3, 18) n=1 neut dG=6",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 29,
+     "main_d": 5,
+     "main_army": 29
+    },
+    {
+     "t": 509,
+     "kubic": "pass",
+     "opp": "(11, 17)->(12, 17) n=1 neut dG=6",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 30,
+     "main_d": 5,
+     "main_army": 29
+    },
+    {
+     "t": 510,
+     "kubic": "pass",
+     "opp": "(13, 14)->(13, 15) n=1 neut dG=9 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 30,
+     "main_d": 5,
+     "main_army": 29
+    },
+    {
+     "t": 511,
+     "kubic": "pass",
+     "opp": "(14, 11)->(15, 11) n=1 neut dG=15",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 31,
+     "main_d": 5,
+     "main_army": 29
+    },
+    {
+     "t": 512,
+     "kubic": "pass",
+     "opp": "(14, 14)->(14, 15) n=1 neut dG=10 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 31,
+     "main_d": 5,
+     "main_army": 29
+    },
+    {
+     "t": 513,
+     "kubic": "pass",
+     "opp": "(15, 0)->(16, 0) n=1 neut dG=27",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 32,
+     "main_d": 5,
+     "main_army": 29
+    },
+    {
+     "t": 514,
+     "kubic": "pass",
+     "opp": "(16, 10)->(17, 10) n=1 neut dG=18",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 32,
+     "main_d": 5,
+     "main_army": 29
+    },
+    {
+     "t": 515,
+     "kubic": "(9, 15)->(10, 15) n=28 enem dG=6",
+     "opp": "(16, 14)->(16, 15) n=1 neut dG=12 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 33,
+     "main_d": 5,
+     "main_army": 29
+    },
+    {
+     "t": 516,
+     "kubic": "pass",
+     "opp": "(8, 15)->(9, 15) n=4 enem dG=5 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 33,
+     "main_d": 6,
+     "main_army": 25
+    },
+    {
+     "t": 517,
+     "kubic": "pass",
+     "opp": "(17, 14)->(17, 15) n=1 neut dG=13 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 34,
+     "main_d": 6,
+     "main_army": 25
+    },
+    {
+     "t": 518,
+     "kubic": "pass",
+     "opp": "(18, 1)->(19, 1) n=1 neut dG=29",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 34,
+     "main_d": 6,
+     "main_army": 25
+    },
+    {
+     "t": 519,
+     "kubic": "pass",
+     "opp": "(18, 13)->(18, 12) n=1 neut dG=17",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 35,
+     "main_d": 6,
+     "main_army": 25
+    },
+    {
+     "t": 520,
+     "kubic": "pass",
+     "opp": "(18, 14)->(18, 15) n=1 neut dG=14 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 35,
+     "main_d": 6,
+     "main_army": 25
+    },
+    {
+     "t": 521,
+     "kubic": "pass",
+     "opp": "(19, 13)->(19, 12) n=1 neut dG=18",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 36,
+     "main_d": 6,
+     "main_army": 25
+    },
+    {
+     "t": 522,
+     "kubic": "pass",
+     "opp": "(20, 2)->(20, 1) n=1 neut dG=30",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 36,
+     "main_d": 6,
+     "main_army": 25
+    },
+    {
+     "t": 523,
+     "kubic": "pass",
+     "opp": "(20, 13)->(20, 12) n=1 neut dG=19",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 37,
+     "main_d": 6,
+     "main_army": 25
+    },
+    {
+     "t": 524,
+     "kubic": "pass",
+     "opp": "(20, 14)->(20, 15) n=1 neut dG=16 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 37,
+     "main_d": 6,
+     "main_army": 25
+    },
+    {
+     "t": 525,
+     "kubic": "pass",
+     "opp": "(1, 14)->(2, 14) n=156 own dG=9 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 38,
+     "main_d": 6,
+     "main_army": 25
+    },
+    {
+     "t": 526,
+     "kubic": "pass",
+     "opp": "(2, 14)->(3, 14) n=162 own dG=8 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 38,
+     "main_d": 6,
+     "main_army": 25
+    },
+    {
+     "t": 527,
+     "kubic": "(10, 15)->(10, 16) n=24 enem dG=5 HOME",
+     "opp": "(3, 14)->(4, 14) n=163 own dG=7 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 39,
+     "main_d": 6,
+     "main_army": 25
+    },
+    {
+     "t": 528,
+     "kubic": "pass",
+     "opp": "(9, 15)->(10, 15) n=2 enem dG=6",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 39,
+     "main_d": 5,
+     "main_army": 23
+    },
+    {
+     "t": 529,
+     "kubic": "pass",
+     "opp": "(4, 14)->(4, 15) n=164 own dG=6 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 40,
+     "main_d": 5,
+     "main_army": 23
+    },
+    {
+     "t": 530,
+     "kubic": "pass",
+     "opp": "(4, 15)->(4, 16) n=196 own dG=5 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 40,
+     "main_d": 5,
+     "main_army": 23
+    },
+    {
+     "t": 531,
+     "kubic": "(4, 17)->(3, 17) n=2 enem dG=5",
+     "opp": "(4, 16)->(4, 17) n=199 enem dG=4 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 41,
+     "main_d": 5,
+     "main_army": 23
+    },
+    {
+     "t": 532,
+     "kubic": "(5, 17)->(4, 17) n=2 enem dG=4",
+     "opp": "(4, 17)->(5, 17) n=195 enem dG=3 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 41,
+     "main_d": 5,
+     "main_army": 23
+    },
+    {
+     "t": 533,
+     "kubic": "(5, 18)->(5, 17) n=2 enem dG=3",
+     "opp": "(5, 17)->(5, 18) n=191 enem dG=2 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 192,
+     "gen_army": 42,
+     "main_d": 5,
+     "main_army": 23
+    },
+    {
+     "t": 534,
+     "kubic": "(6, 18)->(5, 18) n=3 enem dG=2",
+     "opp": "(5, 18)->(6, 18) n=187 enem dG=1 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 188,
+     "gen_army": 42,
+     "main_d": 5,
+     "main_army": 23
+    },
+    {
+     "t": 535,
+     "kubic": "(7, 18)->(6, 18) n=42 enem dG=1",
+     "opp": "(6, 18)->(7, 18) n=182 enem dG=0 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 183,
+     "gen_army": 43,
+     "main_d": 5,
+     "main_army": 23
+    }
+   ],
+   "gen_army_last30": [
+    28,
+    29,
+    29,
+    30,
+    30,
+    31,
+    31,
+    32,
+    32,
+    33,
+    33,
+    34,
+    34,
+    35,
+    35,
+    36,
+    36,
+    37,
+    37,
+    38,
+    38,
+    39,
+    39,
+    40,
+    40,
+    41,
+    41,
+    42,
+    42,
+    43,
+    0
+   ],
+   "my_total_last30": [
+    75,
+    76,
+    75,
+    76,
+    76,
+    77,
+    77,
+    78,
+    78,
+    79,
+    76,
+    76,
+    76,
+    77,
+    77,
+    78,
+    78,
+    79,
+    79,
+    80,
+    80,
+    81,
+    80,
+    80,
+    80,
+    81,
+    78,
+    76,
+    73,
+    70,
+    0
+   ],
+   "opp_total_last30": [
+    1700,
+    1711,
+    1710,
+    1721,
+    1721,
+    1732,
+    1732,
+    1743,
+    1743,
+    1754,
+    1751,
+    1761,
+    1761,
+    1772,
+    1772,
+    1783,
+    1783,
+    1794,
+    1794,
+    1805,
+    1805,
+    1816,
+    1815,
+    1825,
+    1825,
+    1836,
+    1833,
+    1841,
+    1838,
+    1845,
+    1829
+   ]
+  },
+  {
+   "match_id": "24186",
+   "outcome": "lose",
+   "opponent": "bist",
+   "total_ticks": 170,
+   "killer": {
+    "end_kind": "general_capture",
+    "final_moved": 16,
+    "final_def_army": 3,
+    "traj_len": 25,
+    "traj_start_dist": 19,
+    "first_visible": {
+     "t": 169,
+     "cell": [
+      1,
+      5
+     ],
+     "army": 18,
+     "dist": 2
+    },
+    "warning_ticks": 1
+   },
+   "first_vis_dist5_frame": 168,
+   "episodes": [
+    {
+     "t0": 168,
+     "t1": 169,
+     "onset_dist": 2,
+     "onset_manh": 2,
+     "onset_threat_army": 18,
+     "onset_gen_army": 3,
+     "onset_main_dist": 12,
+     "onset_main_army": 57,
+     "min_dist_reached": 1,
+     "first_def": null,
+     "classes_hit": {},
+     "pre_expand": 0,
+     "pre_pass": 1,
+     "pre_build": 0,
+     "outcome": "general_captured",
+     "tiles_lost": 0,
+     "src_general_moves": 0,
+     "match_id": "24186",
+     "outcome_game": "lose"
+    }
+   ],
+   "chains": [],
+   "final_log": [
+    {
+     "t": 141,
+     "kubic": "(6, 4)->(7, 4) n=54 own dG=7",
+     "opp": "(7, 10)->(6, 10) n=27 neut dG=12 HOME",
+     "vis_d": 10,
+     "true_d": 9,
+     "threat_army": 1,
+     "gen_army": 14,
+     "main_d": 6,
+     "main_army": 55
+    },
+    {
+     "t": 142,
+     "kubic": "pass",
+     "opp": "(6, 10)->(5, 10) n=26 own dG=11 HOME",
+     "vis_d": 10,
+     "true_d": 9,
+     "threat_army": 1,
+     "gen_army": 14,
+     "main_d": 7,
+     "main_army": 56
+    },
+    {
+     "t": 143,
+     "kubic": "pass",
+     "opp": "(5, 10)->(5, 9) n=26 own dG=10 HOME",
+     "vis_d": 10,
+     "true_d": 9,
+     "threat_army": 1,
+     "gen_army": 15,
+     "main_d": 7,
+     "main_army": 56
+    },
+    {
+     "t": 144,
+     "kubic": "pass",
+     "opp": "(5, 9)->(5, 8) n=26 neut dG=9 HOME",
+     "vis_d": 10,
+     "true_d": 9,
+     "threat_army": 1,
+     "gen_army": 15,
+     "main_d": 7,
+     "main_army": 56
+    },
+    {
+     "t": 145,
+     "kubic": "pass",
+     "opp": "(5, 8)->(4, 8) n=25 neut dG=8 HOME",
+     "vis_d": 10,
+     "true_d": 9,
+     "threat_army": 1,
+     "gen_army": 16,
+     "main_d": 7,
+     "main_army": 56
+    },
+    {
+     "t": 146,
+     "kubic": "(7, 4)->(7, 5) n=55 own dG=8",
+     "opp": "(4, 8)->(3, 8) n=24 neut dG=7 HOME",
+     "vis_d": 10,
+     "true_d": 8,
+     "threat_army": 1,
+     "gen_army": 16,
+     "main_d": 7,
+     "main_army": 56
+    },
+    {
+     "t": 147,
+     "kubic": "pass",
+     "opp": "(3, 8)->(3, 7) n=23 neut dG=6 HOME",
+     "vis_d": 10,
+     "true_d": 7,
+     "threat_army": 1,
+     "gen_army": 17,
+     "main_d": 8,
+     "main_army": 57
+    },
+    {
+     "t": 148,
+     "kubic": "pass",
+     "opp": "(3, 7)->(2, 7) n=22 neut dG=5 HOME",
+     "vis_d": 10,
+     "true_d": 6,
+     "threat_army": 1,
+     "gen_army": 17,
+     "main_d": 8,
+     "main_army": 57
+    },
+    {
+     "t": 149,
+     "kubic": "pass",
+     "opp": "(2, 7)->(1, 7) n=21 neut dG=4 HOME",
+     "vis_d": 10,
+     "true_d": 5,
+     "threat_army": 1,
+     "gen_army": 18,
+     "main_d": 8,
+     "main_army": 57
+    },
+    {
+     "t": 150,
+     "kubic": "pass",
+     "opp": "(1, 7)->(0, 7) n=20 neut dG=5",
+     "vis_d": 10,
+     "true_d": 4,
+     "threat_army": 1,
+     "gen_army": 18,
+     "main_d": 8,
+     "main_army": 57
+    },
+    {
+     "t": 151,
+     "kubic": "(7, 5)->(7, 6) n=57 own dG=9",
+     "opp": "(0, 11)->(0, 10) n=1 neut dG=8 HOME",
+     "vis_d": 10,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 20,
+     "main_d": 8,
+     "main_army": 58
+    },
+    {
+     "t": 152,
+     "kubic": "pass",
+     "opp": "(1, 7)->(1, 6) n=1 neut dG=3 HOME",
+     "vis_d": 10,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 20,
+     "main_d": 9,
+     "main_army": 60
+    },
+    {
+     "t": 153,
+     "kubic": "pass",
+     "opp": "(1, 11)->(1, 10) n=1 neut dG=9 HOME",
+     "vis_d": 10,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 21,
+     "main_d": 9,
+     "main_army": 60
+    },
+    {
+     "t": 154,
+     "kubic": "pass",
+     "opp": "(1, 13)->(0, 13) n=1 neut dG=13",
+     "vis_d": 10,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 21,
+     "main_d": 9,
+     "main_army": 60
+    },
+    {
+     "t": 155,
+     "kubic": "pass",
+     "opp": "(2, 7)->(2, 6) n=1 neut dG=4 HOME",
+     "vis_d": 10,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 22,
+     "main_d": 9,
+     "main_army": 60
+    },
+    {
+     "t": 156,
+     "kubic": "(7, 6)->(8, 6) n=59 neut dG=10",
+     "opp": "(3, 7)->(4, 7) n=1 neut dG=7",
+     "vis_d": 10,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 22,
+     "main_d": 9,
+     "main_army": 60
+    },
+    {
+     "t": 157,
+     "kubic": "pass",
+     "opp": "(5, 8)->(5, 7) n=1 neut dG=8 HOME",
+     "vis_d": 7,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 23,
+     "main_d": 10,
+     "main_army": 59
+    },
+    {
+     "t": 158,
+     "kubic": "pass",
+     "opp": "(6, 8)->(6, 7) n=1 neut dG=9 HOME",
+     "vis_d": 7,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 23,
+     "main_d": 10,
+     "main_army": 59
+    },
+    {
+     "t": 159,
+     "kubic": "pass",
+     "opp": "(7, 8)->(8, 8) n=1 neut dG=12",
+     "vis_d": 7,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 24,
+     "main_d": 10,
+     "main_army": 59
+    },
+    {
+     "t": 160,
+     "kubic": "pass",
+     "opp": "(7, 10)->(8, 10) n=1 neut dG=14",
+     "vis_d": 7,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 24,
+     "main_d": 10,
+     "main_army": 59
+    },
+    {
+     "t": 161,
+     "kubic": "(8, 6)->(9, 6) n=58 neut dG=11",
+     "opp": "(9, 12)->(10, 12) n=1 neut dG=18",
+     "vis_d": 7,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 25,
+     "main_d": 10,
+     "main_army": 59
+    },
+    {
+     "t": 162,
+     "kubic": "pass",
+     "opp": "(11, 15)->(11, 14) n=1 neut dG=21 HOME",
+     "vis_d": 7,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 25,
+     "main_d": 11,
+     "main_army": 58
+    },
+    {
+     "t": 163,
+     "kubic": "pass",
+     "opp": "(12, 17)->(13, 17) n=1 neut dG=26",
+     "vis_d": 7,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 26,
+     "main_d": 11,
+     "main_army": 58
+    },
+    {
+     "t": 164,
+     "kubic": "pass",
+     "opp": "(0, 7)->(0, 8) n=20 neut dG=6",
+     "vis_d": 7,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 26,
+     "main_d": 11,
+     "main_army": 58
+    },
+    {
+     "t": 165,
+     "kubic": "(0, 4)->(1, 4) n=26 own dG=1",
+     "opp": "(0, 8)->(1, 8) n=19 neut dG=5 HOME",
+     "vis_d": 7,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 27,
+     "main_d": 11,
+     "main_army": 58
+    },
+    {
+     "t": 166,
+     "kubic": "(9, 6)->(10, 6) n=57 neut dG=12",
+     "opp": "(1, 8)->(1, 7) n=18 own dG=4 HOME",
+     "vis_d": 7,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 1,
+     "main_d": 11,
+     "main_army": 58
+    },
+    {
+     "t": 167,
+     "kubic": "pass",
+     "opp": "(1, 7)->(1, 6) n=18 own dG=3 HOME",
+     "vis_d": 7,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 2,
+     "main_d": 12,
+     "main_army": 57
+    },
+    {
+     "t": 168,
+     "kubic": "pass",
+     "opp": "(1, 6)->(1, 5) n=18 neut dG=2 HOME",
+     "vis_d": 7,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 2,
+     "main_d": 12,
+     "main_army": 57
+    },
+    {
+     "t": 169,
+     "kubic": "pass",
+     "opp": "(1, 5)->(0, 5) n=17 neut dG=1 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 18,
+     "gen_army": 3,
+     "main_d": 12,
+     "main_army": 57
+    },
+    {
+     "t": 170,
+     "kubic": "(1, 4)->(2, 4) n=27 own dG=2",
+     "opp": "(0, 5)->(0, 4) n=16 enem dG=0 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 17,
+     "gen_army": 3,
+     "main_d": 12,
+     "main_army": 57
+    }
+   ],
+   "gen_army_last30": [
+    14,
+    14,
+    15,
+    15,
+    16,
+    16,
+    17,
+    17,
+    18,
+    18,
+    20,
+    20,
+    21,
+    21,
+    22,
+    22,
+    23,
+    23,
+    24,
+    24,
+    25,
+    25,
+    26,
+    26,
+    27,
+    1,
+    2,
+    2,
+    3,
+    3,
+    0
+   ],
+   "my_total_last30": [
+    86,
+    86,
+    87,
+    87,
+    88,
+    88,
+    89,
+    89,
+    90,
+    90,
+    105,
+    105,
+    106,
+    106,
+    107,
+    107,
+    108,
+    108,
+    109,
+    109,
+    110,
+    110,
+    111,
+    111,
+    112,
+    112,
+    113,
+    113,
+    114,
+    114,
+    0
+   ],
+   "opp_total_last30": [
+    141,
+    141,
+    142,
+    142,
+    143,
+    143,
+    144,
+    144,
+    145,
+    145,
+    229,
+    229,
+    230,
+    230,
+    231,
+    231,
+    232,
+    232,
+    233,
+    233,
+    234,
+    234,
+    235,
+    235,
+    236,
+    236,
+    237,
+    237,
+    238,
+    238,
+    346
+   ]
+  },
+  {
+   "match_id": "24187",
+   "outcome": "lose",
+   "opponent": "bist",
+   "total_ticks": 241,
+   "killer": {
+    "end_kind": "general_capture",
+    "final_moved": 24,
+    "final_def_army": 5,
+    "traj_len": 23,
+    "traj_start_dist": 19,
+    "first_visible": {
+     "t": 240,
+     "cell": [
+      5,
+      16
+     ],
+     "army": 27,
+     "dist": 2
+    },
+    "warning_ticks": 1
+   },
+   "first_vis_dist5_frame": 146,
+   "episodes": [
+    {
+     "t0": 145,
+     "t1": 240,
+     "onset_dist": 6,
+     "onset_manh": 6,
+     "onset_threat_army": 9,
+     "onset_gen_army": 4,
+     "onset_main_dist": 2,
+     "onset_main_army": 54,
+     "min_dist_reached": 1,
+     "first_def": {
+      "tick": 146,
+      "latency": 0,
+      "class": "chase_intruder",
+      "moved": 1,
+      "dst": [
+       4,
+       13
+      ]
+     },
+     "classes_hit": {
+      "chase_intruder": 0,
+      "attack_near_home": 14
+     },
+     "pre_expand": 0,
+     "pre_pass": 0,
+     "pre_build": 0,
+     "outcome": "general_captured",
+     "tiles_lost": 14,
+     "src_general_moves": 6,
+     "match_id": "24187",
+     "outcome_game": "lose"
+    }
+   ],
+   "chains": [
+    {
+     "start": 110,
+     "end": 110,
+     "len": 1,
+     "d0": 2,
+     "d1": 1,
+     "start_army": 29,
+     "reached_general": false,
+     "vis_dist": null,
+     "true_dist": 10,
+     "threat_army": 0,
+     "gen_army": 9,
+     "match_id": "24187"
+    },
+    {
+     "start": 120,
+     "end": 120,
+     "len": 1,
+     "d0": 1,
+     "d1": 0,
+     "start_army": 29,
+     "reached_general": true,
+     "vis_dist": null,
+     "true_dist": 10,
+     "threat_army": 0,
+     "gen_army": 14,
+     "match_id": "24187"
+    }
+   ],
+   "final_log": [
+    {
+     "t": 212,
+     "kubic": "pass",
+     "opp": "(7, 12)->(6, 12) n=36 enem dG=7",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 39,
+     "main_d": 7,
+     "main_army": 68
+    },
+    {
+     "t": 213,
+     "kubic": "(6, 13)->(5, 13) n=1 own dG=5 HOME",
+     "opp": "(6, 12)->(6, 13) n=34 enem dG=6 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 40,
+     "main_d": 7,
+     "main_army": 68
+    },
+    {
+     "t": 214,
+     "kubic": "(5, 13)->(4, 13) n=1 enem dG=6",
+     "opp": "(6, 13)->(5, 13) n=31 enem dG=5 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 40,
+     "main_d": 7,
+     "main_army": 68
+    },
+    {
+     "t": 215,
+     "kubic": "(5, 14)->(4, 14) n=1 enem dG=5",
+     "opp": "(5, 13)->(5, 14) n=28 enem dG=4 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 41,
+     "main_d": 7,
+     "main_army": 68
+    },
+    {
+     "t": 216,
+     "kubic": "(5, 15)->(4, 15) n=1 enem dG=4",
+     "opp": "(5, 14)->(5, 15) n=25 enem dG=3 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 41,
+     "main_d": 7,
+     "main_army": 68
+    },
+    {
+     "t": 217,
+     "kubic": "(5, 16)->(4, 16) n=1 enem dG=3",
+     "opp": "(5, 15)->(5, 16) n=22 enem dG=2 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 23,
+     "gen_army": 42,
+     "main_d": 7,
+     "main_army": 68
+    },
+    {
+     "t": 218,
+     "kubic": "(5, 17)->(5, 16) n=2 enem dG=2",
+     "opp": "(5, 16)->(5, 17) n=19 enem dG=1 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 20,
+     "gen_army": 42,
+     "main_d": 7,
+     "main_army": 68
+    },
+    {
+     "t": 219,
+     "kubic": "pass",
+     "opp": "(0, 4)->(0, 3) n=18 own dG=20",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 16,
+     "gen_army": 43,
+     "main_d": 7,
+     "main_army": 68
+    },
+    {
+     "t": 220,
+     "kubic": "(8, 12)->(7, 12) n=67 enem dG=6 HOME",
+     "opp": "(0, 3)->(0, 2) n=21 own dG=21",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 16,
+     "gen_army": 43,
+     "main_d": 7,
+     "main_army": 68
+    },
+    {
+     "t": 221,
+     "kubic": "pass",
+     "opp": "(0, 2)->(1, 2) n=25 own dG=20 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 16,
+     "gen_army": 44,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 222,
+     "kubic": "pass",
+     "opp": "(1, 2)->(2, 2) n=29 own dG=19 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 16,
+     "gen_army": 44,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 223,
+     "kubic": "pass",
+     "opp": "(2, 2)->(3, 2) n=32 own dG=18 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 16,
+     "gen_army": 45,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 224,
+     "kubic": "(6, 17)->(5, 17) n=44 enem dG=1",
+     "opp": "(3, 2)->(4, 2) n=35 own dG=17 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 16,
+     "gen_army": 45,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 225,
+     "kubic": "(6, 17)->(5, 17) n=1 own dG=1",
+     "opp": "(4, 2)->(5, 2) n=38 own dG=16 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 2,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 226,
+     "kubic": "pass",
+     "opp": "(5, 2)->(5, 3) n=45 own dG=15 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 1,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 227,
+     "kubic": "(6, 17)->(5, 17) n=1 own dG=1",
+     "opp": "(5, 3)->(5, 4) n=48 own dG=14 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 2,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 228,
+     "kubic": "pass",
+     "opp": "(5, 4)->(5, 5) n=50 own dG=13 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 1,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 229,
+     "kubic": "(6, 17)->(5, 17) n=1 own dG=1",
+     "opp": "(5, 5)->(5, 6) n=51 own dG=12 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 2,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 230,
+     "kubic": "pass",
+     "opp": "(5, 6)->(5, 7) n=52 own dG=11 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 1,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 231,
+     "kubic": "(6, 17)->(5, 17) n=1 own dG=1",
+     "opp": "(5, 7)->(5, 8) n=53 own dG=10 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 2,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 232,
+     "kubic": "pass",
+     "opp": "(5, 8)->(5, 9) n=54 own dG=9 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 1,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 233,
+     "kubic": "(6, 17)->(5, 17) n=1 own dG=1",
+     "opp": "(5, 9)->(5, 10) n=55 own dG=8 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 2,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 234,
+     "kubic": "(7, 12)->(8, 12) n=65 own dG=7",
+     "opp": "(5, 10)->(5, 11) n=56 own dG=7 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 1,
+     "main_d": 6,
+     "main_army": 66
+    },
+    {
+     "t": 235,
+     "kubic": "(5, 17)->(5, 16) n=32 enem dG=2",
+     "opp": "(5, 11)->(5, 12) n=57 own dG=6 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 2,
+     "main_d": 7,
+     "main_army": 66
+    },
+    {
+     "t": 236,
+     "kubic": "pass",
+     "opp": "(5, 12)->(5, 13) n=58 own dG=5 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 2,
+     "main_d": 7,
+     "main_army": 66
+    },
+    {
+     "t": 237,
+     "kubic": "pass",
+     "opp": "(5, 13)->(5, 14) n=58 own dG=4 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 3,
+     "main_d": 7,
+     "main_army": 66
+    },
+    {
+     "t": 238,
+     "kubic": "pass",
+     "opp": "(5, 14)->(5, 15) n=58 own dG=3 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 3,
+     "main_d": 7,
+     "main_army": 66
+    },
+    {
+     "t": 239,
+     "kubic": "(5, 16)->(4, 16) n=30 enem dG=3",
+     "opp": "(5, 15)->(5, 16) n=58 enem dG=2 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 59,
+     "gen_army": 4,
+     "main_d": 7,
+     "main_army": 66
+    },
+    {
+     "t": 240,
+     "kubic": "pass",
+     "opp": "(5, 16)->(5, 17) n=26 enem dG=1 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 27,
+     "gen_army": 4,
+     "main_d": 7,
+     "main_army": 66
+    },
+    {
+     "t": 241,
+     "kubic": "(6, 17)->(5, 17) n=4 enem dG=1",
+     "opp": "(5, 17)->(6, 17) n=24 enem dG=0 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 25,
+     "gen_army": 5,
+     "main_d": 7,
+     "main_army": 66
+    }
+   ],
+   "gen_army_last30": [
+    39,
+    40,
+    40,
+    41,
+    41,
+    42,
+    42,
+    43,
+    43,
+    44,
+    44,
+    45,
+    45,
+    2,
+    1,
+    2,
+    1,
+    2,
+    1,
+    2,
+    1,
+    2,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    0
+   ],
+   "my_total_last30": [
+    127,
+    127,
+    125,
+    124,
+    122,
+    121,
+    119,
+    117,
+    117,
+    117,
+    117,
+    118,
+    118,
+    103,
+    103,
+    104,
+    104,
+    105,
+    105,
+    106,
+    106,
+    107,
+    107,
+    108,
+    107,
+    108,
+    108,
+    109,
+    78,
+    78,
+    0
+   ],
+   "opp_total_last30": [
+    370,
+    370,
+    368,
+    367,
+    365,
+    364,
+    362,
+    360,
+    360,
+    360,
+    360,
+    361,
+    361,
+    346,
+    346,
+    347,
+    347,
+    348,
+    348,
+    349,
+    349,
+    350,
+    350,
+    351,
+    350,
+    351,
+    351,
+    352,
+    321,
+    321,
+    389
+   ]
+  },
+  {
+   "match_id": "24188",
+   "outcome": "lose",
+   "opponent": "bist",
+   "total_ticks": 366,
+   "killer": {
+    "end_kind": "general_capture",
+    "final_moved": 29,
+    "final_def_army": 15,
+    "traj_len": 19,
+    "traj_start_dist": 19,
+    "first_visible": {
+     "t": 362,
+     "cell": [
+      10,
+      6
+     ],
+     "army": 87,
+     "dist": 5
+    },
+    "warning_ticks": 4
+   },
+   "first_vis_dist5_frame": 233,
+   "episodes": [
+    {
+     "t0": 232,
+     "t1": 365,
+     "onset_dist": 6,
+     "onset_manh": 6,
+     "onset_threat_army": 28,
+     "onset_gen_army": 4,
+     "onset_main_dist": 3,
+     "onset_main_army": 60,
+     "min_dist_reached": 1,
+     "first_def": {
+      "tick": 238,
+      "latency": 5,
+      "class": "attack_intruder",
+      "moved": 32,
+      "dst": [
+       10,
+       3
+      ]
+     },
+     "classes_hit": {
+      "attack_intruder": 5,
+      "attack_near_home": 18
+     },
+     "pre_expand": 0,
+     "pre_pass": 2,
+     "pre_build": 0,
+     "outcome": "general_captured",
+     "tiles_lost": 16,
+     "src_general_moves": 7,
+     "match_id": "24188",
+     "outcome_game": "lose"
+    }
+   ],
+   "chains": [],
+   "final_log": [
+    {
+     "t": 337,
+     "kubic": "(12, 3)->(12, 4) n=2 own dG=1",
+     "opp": "(8, 8)->(9, 8) n=31 own dG=8 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 3,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 338,
+     "kubic": "(4, 11)->(4, 12) n=37 enem dG=17",
+     "opp": "(9, 8)->(10, 8) n=32 own dG=7 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 1,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 339,
+     "kubic": "(12, 3)->(12, 4) n=1 own dG=1",
+     "opp": "(10, 8)->(10, 7) n=33 own dG=6 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 2,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 340,
+     "kubic": "(11, 3)->(11, 4) n=50 enem dG=2",
+     "opp": "(10, 7)->(10, 6) n=34 own dG=5 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 1,
+     "gen_army": 1,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 341,
+     "kubic": "pass",
+     "opp": "(10, 6)->(10, 5) n=35 own dG=4 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 2,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 342,
+     "kubic": "pass",
+     "opp": "(10, 5)->(11, 5) n=36 own dG=3 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 1,
+     "gen_army": 2,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 343,
+     "kubic": "pass",
+     "opp": "build",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 37,
+     "gen_army": 3,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 344,
+     "kubic": "pass",
+     "opp": "(0, 11)->(1, 11) n=29 own dG=19 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 2,
+     "gen_army": 3,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 345,
+     "kubic": "pass",
+     "opp": "(1, 11)->(2, 11) n=30 own dG=18 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 4,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 346,
+     "kubic": "pass",
+     "opp": "(2, 11)->(3, 11) n=30 own dG=17 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 3,
+     "gen_army": 4,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 347,
+     "kubic": "pass",
+     "opp": "(3, 11)->(4, 11) n=31 enem dG=16 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 4,
+     "gen_army": 5,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 348,
+     "kubic": "pass",
+     "opp": "(6, 16)->(6, 15) n=30 own dG=18 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 4,
+     "gen_army": 5,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 349,
+     "kubic": "pass",
+     "opp": "(6, 15)->(7, 15) n=31 own dG=17 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 5,
+     "gen_army": 6,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 350,
+     "kubic": "(6, 6)->(6, 7) n=61 enem dG=10",
+     "opp": "(7, 15)->(8, 15) n=34 own dG=16 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 5,
+     "gen_army": 6,
+     "main_d": 9,
+     "main_army": 62
+    },
+    {
+     "t": 351,
+     "kubic": "(6, 6)->(6, 7) n=1 own dG=10",
+     "opp": "(8, 15)->(9, 15) n=38 own dG=15 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 7,
+     "gen_army": 8,
+     "main_d": 10,
+     "main_army": 61
+    },
+    {
+     "t": 352,
+     "kubic": "(11, 4)->(11, 5) n=49 enem dG=3",
+     "opp": "(9, 15)->(9, 14) n=42 own dG=14 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 7,
+     "gen_army": 8,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 353,
+     "kubic": "pass",
+     "opp": "(9, 14)->(9, 13) n=46 own dG=13 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 9,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 354,
+     "kubic": "pass",
+     "opp": "(9, 13)->(9, 12) n=50 own dG=12 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 9,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 355,
+     "kubic": "pass",
+     "opp": "(9, 12)->(10, 12) n=69 own dG=11 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 10,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 356,
+     "kubic": "pass",
+     "opp": "(10, 12)->(10, 11) n=73 own dG=10 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 10,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 357,
+     "kubic": "pass",
+     "opp": "(10, 11)->(10, 10) n=77 own dG=9 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 11,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 358,
+     "kubic": "pass",
+     "opp": "(10, 10)->(10, 9) n=80 own dG=8 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 11,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 359,
+     "kubic": "pass",
+     "opp": "(10, 9)->(10, 8) n=83 own dG=7 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 12,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 360,
+     "kubic": "pass",
+     "opp": "(10, 8)->(10, 7) n=84 own dG=6 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 12,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 361,
+     "kubic": "pass",
+     "opp": "(10, 7)->(10, 6) n=85 own dG=5 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 13,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 362,
+     "kubic": "(11, 5)->(10, 5) n=46 enem dG=4",
+     "opp": "(10, 6)->(10, 5) n=86 own dG=4 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 2,
+     "gen_army": 13,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 363,
+     "kubic": "(11, 5)->(10, 5) n=1 enem dG=4",
+     "opp": "(10, 5)->(11, 5) n=41 enem dG=3 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 42,
+     "gen_army": 14,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 364,
+     "kubic": "pass",
+     "opp": "(11, 5)->(11, 4) n=38 enem dG=2 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 39,
+     "gen_army": 14,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 365,
+     "kubic": "(12, 4)->(11, 4) n=5 enem dG=2",
+     "opp": "(11, 4)->(12, 4) n=36 enem dG=1 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 37,
+     "gen_army": 15,
+     "main_d": 10,
+     "main_army": 62
+    },
+    {
+     "t": 366,
+     "kubic": "(12, 3)->(11, 3) n=14 own dG=1",
+     "opp": "(12, 4)->(12, 3) n=29 enem dG=0 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 30,
+     "gen_army": 15,
+     "main_d": 10,
+     "main_army": 62
+    }
+   ],
+   "gen_army_last30": [
+    3,
+    1,
+    2,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    8,
+    8,
+    9,
+    9,
+    10,
+    10,
+    11,
+    11,
+    12,
+    12,
+    13,
+    13,
+    14,
+    14,
+    15,
+    15,
+    0
+   ],
+   "my_total_last30": [
+    170,
+    170,
+    142,
+    142,
+    143,
+    143,
+    145,
+    145,
+    147,
+    147,
+    149,
+    148,
+    150,
+    150,
+    168,
+    168,
+    164,
+    164,
+    167,
+    167,
+    170,
+    170,
+    173,
+    173,
+    176,
+    176,
+    133,
+    131,
+    132,
+    126,
+    0
+   ],
+   "opp_total_last30": [
+    756,
+    756,
+    730,
+    730,
+    733,
+    733,
+    737,
+    702,
+    707,
+    707,
+    712,
+    711,
+    716,
+    716,
+    918,
+    918,
+    915,
+    915,
+    919,
+    919,
+    923,
+    923,
+    927,
+    927,
+    931,
+    931,
+    889,
+    887,
+    891,
+    885,
+    981
+   ]
+  },
+  {
+   "match_id": "24988",
+   "outcome": "lose",
+   "opponent": "erik.bystron",
+   "total_ticks": 88,
+   "killer": {
+    "end_kind": "general_capture",
+    "final_moved": 11,
+    "final_def_army": 9,
+    "traj_len": 25,
+    "traj_start_dist": 25,
+    "first_visible": {
+     "t": 83,
+     "cell": [
+      6,
+      6
+     ],
+     "army": 21,
+     "dist": 6
+    },
+    "warning_ticks": 5
+   },
+   "first_vis_dist5_frame": 83,
+   "episodes": [
+    {
+     "t0": 82,
+     "t1": 87,
+     "onset_dist": 6,
+     "onset_manh": 6,
+     "onset_threat_army": 21,
+     "onset_gen_army": 7,
+     "onset_main_dist": 10,
+     "onset_main_army": 16,
+     "min_dist_reached": 1,
+     "first_def": {
+      "tick": 83,
+      "latency": 0,
+      "class": "recall_homeward",
+      "moved": 15,
+      "dst": [
+       4,
+       9
+      ]
+     },
+     "classes_hit": {
+      "recall_homeward": 0
+     },
+     "pre_expand": 0,
+     "pre_pass": 0,
+     "pre_build": 0,
+     "outcome": "general_captured",
+     "tiles_lost": 4,
+     "src_general_moves": 0,
+     "match_id": "24988",
+     "outcome_game": "lose"
+    }
+   ],
+   "chains": [],
+   "final_log": [
+    {
+     "t": 59,
+     "kubic": "(9, 4)->(10, 4) n=1 neut dG=8",
+     "opp": "(9, 14)->(9, 13) n=11 own dG=16 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 7,
+     "main_d": 1,
+     "main_army": 3
+    },
+    {
+     "t": 60,
+     "kubic": "(8, 1)->(9, 1) n=1 neut dG=6",
+     "opp": "(9, 13)->(9, 12) n=12 own dG=15 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 7,
+     "main_d": 1,
+     "main_army": 3
+    },
+    {
+     "t": 61,
+     "kubic": "(9, 3)->(10, 3) n=1 neut dG=7",
+     "opp": "(9, 12)->(9, 11) n=13 own dG=14 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 8,
+     "main_d": 1,
+     "main_army": 3
+    },
+    {
+     "t": 62,
+     "kubic": "(8, 3)->(8, 4) n=1 neut dG=6",
+     "opp": "(9, 11)->(8, 11) n=14 own dG=13 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 8,
+     "main_d": 1,
+     "main_army": 3
+    },
+    {
+     "t": 63,
+     "kubic": "(9, 2)->(8, 2) n=1 own dG=4 HOME",
+     "opp": "(8, 11)->(8, 10) n=15 own dG=12 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 9,
+     "main_d": 1,
+     "main_army": 3
+    },
+    {
+     "t": 64,
+     "kubic": "(8, 2)->(7, 2) n=2 own dG=3 HOME",
+     "opp": "(14, 17)->(14, 16) n=6 own dG=24 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 9,
+     "main_d": 1,
+     "main_army": 3
+    },
+    {
+     "t": 65,
+     "kubic": "(7, 1)->(7, 2) n=1 own dG=3 HOME",
+     "opp": "(14, 16)->(13, 16) n=7 own dG=23 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 10,
+     "main_d": 3,
+     "main_army": 4
+    },
+    {
+     "t": 66,
+     "kubic": "(7, 2)->(6, 2) n=4 own dG=2 HOME",
+     "opp": "(13, 16)->(12, 16) n=8 own dG=22 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 10,
+     "main_d": 3,
+     "main_army": 5
+    },
+    {
+     "t": 67,
+     "kubic": "(6, 1)->(6, 2) n=1 own dG=2 HOME",
+     "opp": "(12, 16)->(12, 15) n=8 own dG=21 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 11,
+     "main_d": 2,
+     "main_army": 6
+    },
+    {
+     "t": 68,
+     "kubic": "(5, 1)->(5, 2) n=1 own dG=1 HOME",
+     "opp": "(12, 15)->(12, 14) n=9 own dG=20 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 11,
+     "main_d": 2,
+     "main_army": 7
+    },
+    {
+     "t": 69,
+     "kubic": "(4, 1)->(4, 2) n=2 own dG=0 HOME",
+     "opp": "(12, 14)->(12, 13) n=10 own dG=19 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 12,
+     "main_d": 2,
+     "main_army": 7
+    },
+    {
+     "t": 70,
+     "kubic": "(7, 3)->(6, 3) n=1 own dG=3 HOME",
+     "opp": "(12, 13)->(12, 12) n=11 own dG=18 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 14,
+     "main_d": 2,
+     "main_army": 7
+    },
+    {
+     "t": 71,
+     "kubic": "(4, 2)->(5, 2) n=14 own dG=1",
+     "opp": "(12, 12)->(11, 12) n=12 neut dG=17 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 15,
+     "main_d": 2,
+     "main_army": 7
+    },
+    {
+     "t": 72,
+     "kubic": "(5, 2)->(6, 2) n=16 own dG=2",
+     "opp": "(11, 12)->(10, 12) n=11 neut dG=16 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 1,
+     "main_d": 1,
+     "main_army": 17
+    },
+    {
+     "t": 73,
+     "kubic": "(6, 2)->(6, 3) n=22 own dG=3",
+     "opp": "(10, 12)->(9, 12) n=10 own dG=15 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 2,
+     "main_d": 2,
+     "main_army": 23
+    },
+    {
+     "t": 74,
+     "kubic": "(6, 3)->(6, 4) n=24 neut dG=4",
+     "opp": "(9, 12)->(9, 11) n=10 own dG=14 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 2,
+     "main_d": 3,
+     "main_army": 25
+    },
+    {
+     "t": 75,
+     "kubic": "(6, 4)->(5, 4) n=23 neut dG=3 HOME",
+     "opp": "(9, 11)->(8, 11) n=10 own dG=13 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 3,
+     "main_d": 4,
+     "main_army": 24
+    },
+    {
+     "t": 76,
+     "kubic": "(5, 4)->(5, 5) n=22 neut dG=4",
+     "opp": "(8, 11)->(8, 10) n=10 own dG=12 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 3,
+     "main_d": 3,
+     "main_army": 23
+    },
+    {
+     "t": 77,
+     "kubic": "(5, 5)->(5, 6) n=21 neut dG=5",
+     "opp": "(8, 10)->(8, 9) n=26 neut dG=11 HOME",
+     "vis_d": null,
+     "true_d": 12,
+     "threat_army": 0,
+     "gen_army": 4,
+     "main_d": 4,
+     "main_army": 22
+    },
+    {
+     "t": 78,
+     "kubic": "(5, 6)->(5, 7) n=20 neut dG=6",
+     "opp": "(8, 9)->(8, 8) n=25 neut dG=10 HOME",
+     "vis_d": null,
+     "true_d": 11,
+     "threat_army": 0,
+     "gen_army": 4,
+     "main_d": 5,
+     "main_army": 21
+    },
+    {
+     "t": 79,
+     "kubic": "(5, 7)->(4, 7) n=19 neut dG=7",
+     "opp": "(8, 8)->(7, 8) n=24 neut dG=9 HOME",
+     "vis_d": null,
+     "true_d": 10,
+     "threat_army": 0,
+     "gen_army": 5,
+     "main_d": 6,
+     "main_army": 20
+    },
+    {
+     "t": 80,
+     "kubic": "(4, 7)->(4, 8) n=18 neut dG=8",
+     "opp": "(7, 8)->(7, 7) n=23 neut dG=8 HOME",
+     "vis_d": null,
+     "true_d": 9,
+     "threat_army": 0,
+     "gen_army": 5,
+     "main_d": 7,
+     "main_army": 19
+    },
+    {
+     "t": 81,
+     "kubic": "(4, 8)->(4, 9) n=17 neut dG=9",
+     "opp": "(7, 7)->(7, 6) n=22 neut dG=7 HOME",
+     "vis_d": null,
+     "true_d": 8,
+     "threat_army": 0,
+     "gen_army": 6,
+     "main_d": 8,
+     "main_army": 18
+    },
+    {
+     "t": 82,
+     "kubic": "(4, 9)->(4, 10) n=16 neut dG=10",
+     "opp": "(7, 6)->(6, 6) n=21 neut dG=6 HOME",
+     "vis_d": null,
+     "true_d": 7,
+     "threat_army": 0,
+     "gen_army": 6,
+     "main_d": 9,
+     "main_army": 17
+    },
+    {
+     "t": 83,
+     "kubic": "(4, 10)->(4, 9) n=15 own dG=9 HOME",
+     "opp": "(6, 6)->(5, 6) n=20 enem dG=5 HOME",
+     "vis_d": 6,
+     "true_d": 6,
+     "threat_army": 21,
+     "gen_army": 7,
+     "main_d": 10,
+     "main_army": 16
+    },
+    {
+     "t": 84,
+     "kubic": "(4, 9)->(5, 9) n=15 neut dG=10",
+     "opp": "(5, 6)->(5, 5) n=18 enem dG=4 HOME",
+     "vis_d": 5,
+     "true_d": 5,
+     "threat_army": 19,
+     "gen_army": 7,
+     "main_d": 9,
+     "main_army": 16
+    },
+    {
+     "t": 85,
+     "kubic": "(5, 9)->(6, 9) n=14 neut dG=11",
+     "opp": "(5, 5)->(5, 4) n=16 enem dG=3 HOME",
+     "vis_d": 4,
+     "true_d": 4,
+     "threat_army": 17,
+     "gen_army": 8,
+     "main_d": 10,
+     "main_army": 15
+    },
+    {
+     "t": 86,
+     "kubic": "(6, 9)->(6, 10) n=13 neut dG=12",
+     "opp": "(5, 4)->(5, 3) n=14 neut dG=2 HOME",
+     "vis_d": 3,
+     "true_d": 3,
+     "threat_army": 15,
+     "gen_army": 8,
+     "main_d": 11,
+     "main_army": 14
+    },
+    {
+     "t": 87,
+     "kubic": "(6, 10)->(7, 10) n=12 neut dG=13",
+     "opp": "(5, 3)->(5, 2) n=13 enem dG=1 HOME",
+     "vis_d": 2,
+     "true_d": 2,
+     "threat_army": 14,
+     "gen_army": 9,
+     "main_d": 12,
+     "main_army": 13
+    },
+    {
+     "t": 88,
+     "kubic": "(7, 10)->(8, 10) n=11 enem dG=12 HOME",
+     "opp": "(5, 2)->(4, 2) n=11 enem dG=0 HOME",
+     "vis_d": 1,
+     "true_d": 1,
+     "threat_army": 12,
+     "gen_army": 9,
+     "main_d": 13,
+     "main_army": 12
+    }
+   ],
+   "gen_army_last30": [
+    7,
+    7,
+    8,
+    8,
+    9,
+    9,
+    10,
+    10,
+    11,
+    11,
+    12,
+    14,
+    15,
+    1,
+    2,
+    2,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    8,
+    8,
+    9,
+    9,
+    0
+   ],
+   "my_total_last30": [
+    54,
+    54,
+    55,
+    55,
+    56,
+    56,
+    57,
+    57,
+    58,
+    58,
+    59,
+    59,
+    60,
+    60,
+    61,
+    61,
+    62,
+    62,
+    63,
+    63,
+    64,
+    64,
+    65,
+    65,
+    66,
+    65,
+    65,
+    64,
+    65,
+    64,
+    0
+   ],
+   "opp_total_last30": [
+    54,
+    54,
+    55,
+    55,
+    56,
+    56,
+    57,
+    57,
+    58,
+    58,
+    59,
+    59,
+    60,
+    60,
+    61,
+    61,
+    62,
+    62,
+    63,
+    63,
+    64,
+    64,
+    65,
+    65,
+    66,
+    65,
+    65,
+    64,
+    65,
+    64,
+    108
+   ]
+  }
+ ]
+}
