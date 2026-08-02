@@ -181,6 +181,21 @@ def test_adding_or_editing_a_probe_does_not_move_the_hash(sandbox):
     }
 
 
+def test_bot_local_tests_dir_does_not_move_the_hash(sandbox):
+    """Unit fixtures under bots/<name>/tests/ stay outside the content hash."""
+    fingerprint, root = sandbox
+    before = fingerprint.content_hash_for_dir(root / "one")
+
+    tests = root / "one" / "tests"
+    tests.mkdir()
+    (tests / "test_logic.py").write_text("def test_ok():\n    assert True\n", encoding="utf-8")
+    assert fingerprint.content_hash_for_dir(root / "one") == before
+    assert not any(
+        "tests" in p.relative_to(root).parts
+        for p in fingerprint.bot_source_closure(root / "one")
+    )
+
+
 def test_a_closure_module_importing_probe_raises(sandbox):
     """
     Unhashed code must be unreachable from the hashed program.

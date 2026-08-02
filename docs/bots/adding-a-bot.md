@@ -9,10 +9,15 @@ bots/<name>/
 ├── agent.py    # decide actions from observation
 ├── main.py     # stdio protocol IO
 ├── probe.py    # optional: per-turn introspection (NOT part of the bot)
-└── run.sh      # entry the matchup runner executes
+├── run.sh      # entry the matchup runner executes
+└── tests/      # optional: unit tests + board fixtures (NOT part of the bot)
 ```
 
 Optional: `build.sh` beside `run.sh` for compile / weight prep.
+
+`tests/` is excluded from the source closure and content hash, like
+`probe.py`. Put decision regressions and hand-built board fixtures there.
+Pytest collects `bots/*/tests/` via `testpaths` in `pytest.ini`.
 
 ## Per-turn introspection
 

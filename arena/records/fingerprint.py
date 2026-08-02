@@ -24,10 +24,12 @@ directory first, then against `bots/`.
 One name is excluded by rule: `probe.py`. A probe is arena-owned per-turn
 introspection that only `arena.instrument.runner` ever loads (see
 docs/arena/trajectories.md); it never plays, never ships in a bundle, and must
-not fork a rating identity when it is edited. What keeps that honest is the
-invariant **unhashed code must be unreachable from the hashed program**: if any
-module in the closure imports `probe`, the walk raises rather than
-under-hashing a program that a probe can influence.
+not fork a rating identity when it is edited. Bot-local `tests/` directories are
+also excluded: unit fixtures sit beside source but do not play.
+
+What keeps that honest is the invariant **unhashed code must be unreachable
+from the hashed program**: if any module in the closure imports `probe`, the
+walk raises rather than under-hashing a program that a probe can influence.
 """
 
 from __future__ import annotations
@@ -43,8 +45,17 @@ BOTS_DIR = REPO_ROOT / "bots"
 
 HASH_LENGTH = 12
 
-# Directories and files that are build output, not source.
-_SKIP_DIRS = {"__pycache__", ".git", ".mypy_cache", ".pytest_cache", ".ruff_cache"}
+# Directories and files that are build output or non-play code, not source.
+# `tests/` sits beside bot source for unit fixtures; it must not fork the
+# content hash (same rule as probe.py — unhashed code stays unreachable).
+_SKIP_DIRS = {
+    "__pycache__",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "tests",
+}
 _SKIP_SUFFIXES = {".pyc", ".pyo"}
 
 # Per-turn introspection, loaded only by `arena.instrument.runner`. Outside the

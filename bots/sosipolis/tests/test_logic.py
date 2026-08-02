@@ -1,17 +1,17 @@
 """Sosipolis decision logic on hand-built board fixtures.
 
-No live match. Fixtures live in tests/fixtures/sosipolis_boards.py and encode
-the turn-572 adjacent-kill miss plus MapMemory latch regressions.
+No live match. Fixtures live beside this file (`boards.py`) and encode the
+turn-572 adjacent-kill miss plus MapMemory latch regressions.
 """
 from __future__ import annotations
 
 import sys
 from contextlib import contextmanager
+from pathlib import Path
 
 import pytest
 
-from arena.records.fingerprint import BOTS_DIR
-from fixtures.sosipolis_boards import (
+from boards import (
     FIXTURES,
     action_dst,
     action_src,
@@ -22,7 +22,7 @@ from fixtures.sosipolis_boards import (
     same_turn_on_axis_general,
 )
 
-SOSIPOLIS = BOTS_DIR / "sosipolis"
+BOT_DIR = Path(__file__).resolve().parents[1]
 
 _BOT_MODULES = (
     "brain",
@@ -37,8 +37,8 @@ _BOT_MODULES = (
 
 @contextmanager
 def sosipolis_imports():
-    """Import bots/sosipolis as top-level modules, then scrub sys.modules."""
-    path = str(SOSIPOLIS)
+    """Import this bot as top-level modules, then scrub sys.modules."""
+    path = str(BOT_DIR)
     sys.path.insert(0, path)
     try:
         yield
@@ -105,8 +105,6 @@ def test_same_turn_on_axis_general_latches():
 
         fixture = same_turn_on_axis_general()
         mem = MapMemory(fixture.H, fixture.W, min_general_distance=17)
-        _ = mem  # seeded via agent path below for known_owner consistency
-        # Seed contact history the way update would after turn 50.
         mem.own_general = fixture.own_general
         mem.first_contact = fixture.first_contact
         mem.first_contact_turn = fixture.first_contact_turn
@@ -186,7 +184,6 @@ def test_act_kills_visible_general_without_prior_latch():
     with sosipolis_imports():
         fixture = adjacent_kill_reported()
         agent = _agent_on(fixture)
-        # Wipe latch after seed; obs still shows the general.
         agent.state.memory.enemy_general = None
         agent.state.phase = "contact"
         move = agent.act(fixture.obs())
