@@ -142,11 +142,11 @@ Named constants (seeded from Kubic aggregates and RULES.md):
 - `HUNT_CONTACT_RADIUS` = 6
 - `HUNT_STEP_BONUS` = 220
 - `SEARCH_HUNT_BONUS` = 90
-- `CONTACT_ASSAULT_STACK` = 55
+- `CONTACT_ASSAULT_STACK` = 15
 - `STRIKE_TIP_HOLD` = 8
 - `STRIKE_PATH_BUFFER` = 2
 - `STRIKE_REGEN_SLACK` = 1
-- `STRIKE_MIN_TIP` = 50
+- `STRIKE_MIN_TIP` = 25
 - `STRIKE_TIP_ARMY_FRAC` = 0.40
 - `STRIKE_TIP_MAX_DIST` = 14
 - `STRIKE_TIP_FEED_BONUS` = 400
@@ -169,8 +169,8 @@ the sector centroid + pressure captures − corridor penalty outside the sector.
 1. If adjacent to a known enemy general and capture is legal, take it.
 2. If an adjacent enemy can capture the own general this turn (imminent loss),
    capture or reinforce.
-3. Else if strike/contact tip is under its mass gate: exclusive `feed_tip_action`
-   (strike: path + `STRIKE_MIN_TIP`; contact: until `CONTACT_ASSAULT_STACK`).
+3. Else if strike tip is under its mass gate: exclusive `feed_tip_action`
+   (path + `STRIKE_MIN_TIP`). Contact does not hard-override; ContactMCTS soft-stages.
 4. Else if a funded castle site exists and castles `< CASTLE_MAX`, build or
    gather to the site (not in `strike` for new projects).
 5. Else if `enemy_general` is known: StrikeMCTS under `STRIKE_BUDGET_MS`

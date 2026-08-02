@@ -4,7 +4,6 @@ from __future__ import annotations
 import time
 
 from components.army import (
-    largest_owned_stack,
     move_action,
     neighbors,
     pass_action,
@@ -148,21 +147,8 @@ class Agent:
                 return None
             return feed_tip_action(obs, tip)
 
-        if phase == "contact":
-            tip = largest_owned_stack(obs)
-            if tip is None:
-                return None
-            hunt = self.state.memory.hunt_cell or self.state.memory.hunt_target(
-                obs, self.params
-            )
-            stack_army = obs.army_grid[tip[0]][tip[1]]
-            # Contact assault unlocks at CONTACT_ASSAULT_STACK; do not wait on frac.
-            if stack_army >= self.params.CONTACT_ASSAULT_STACK:
-                return None
-            if hunt is not None and tip_is_ready(obs, tip, hunt, self.params):
-                return None
-            return feed_tip_action(obs, tip)
-
+        # Contact: never hard-override. ContactMCTS owns hunt + soft staging so
+        # tip-feed cannot pause fog probes (Kubic contact→sight tempo).
         return None
 
     def _kill_shot(self, obs):

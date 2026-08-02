@@ -53,7 +53,8 @@ class ContactMCTS:
         hunt = state.memory.hunt_target(obs, self.params)
         tip = largest_owned_stack(obs)
         stack_army = obs.army_grid[tip[0]][tip[1]] if tip else 0
-        # Pre-sight wave: unlock hunt march at assault stack (path bar optional).
+        # Soft staging only: never exclusive-feed. Hunt roots stay available so
+        # small stacks can still step into fog (multi-wave, Kubic-style).
         assault_ready = stack_army >= self.params.CONTACT_ASSAULT_STACK
         if (
             not assault_ready
@@ -62,12 +63,6 @@ class ContactMCTS:
             and tip_is_ready(obs, tip, hunt, self.params)
         ):
             assault_ready = True
-
-        if tip is not None and not assault_ready:
-            feed = feed_tip_action(obs, tip)
-            if feed is not None:
-                self.stats.root_moves = 1
-                return feed
 
         self._sharpen_priors(state, hunt)
         root_moves = self._root_moves(obs, state, hunt, tip, assault_ready)
@@ -129,10 +124,11 @@ class ContactMCTS:
         blocked = lambda rr, cc: is_wall(obs.type_grid, rr, cc)
         out: list[tuple[Action, float]] = []
 
+        # Soft feed roots when under assault mass — compete with hunt, do not replace it.
         if tip is not None and not assault_ready:
-            return path_feed_roots(obs, tip, self.params.STRIKE_TIP_FEED_BONUS)
+            out.extend(path_feed_roots(obs, tip, self.params.STRIKE_TIP_FEED_BONUS * 0.5))
 
-        if hunt is not None and assault_ready:
+        if hunt is not None:
             stacks: list[tuple[int, int, int]] = []
             for r in range(H):
                 for c in range(W):
@@ -145,12 +141,14 @@ class ContactMCTS:
                 if act is None:
                     continue
                 prior = self.params.HUNT_STEP_BONUS + army * 0.5
+                if not assault_ready:
+                    prior *= 0.85
                 if not state.memory.ever_seen[hunt[0]][hunt[1]]:
                     prior += 40.0
                 out.append((act, prior))
             gact = gather_toward(obs, hunt, blocked)
             if gact is not None:
-                out.append((gact, 80.0))
+                out.append((gact, 80.0 if assault_ready else 60.0))
 
         for r in range(H):
             for c in range(W):
@@ -197,7 +195,7 @@ class ContactMCTS:
 
         prior = state.sections.score_cell(nr, nc)
         score = float(army) + 40.0 * prior
-        hunt_scale = 1.0 if assault_ready else 0.15
+        hunt_scale = 1.0 if assault_ready else 0.55
         if hunt is not None:
             before = abs(r - hunt[0]) + abs(c - hunt[1])
             after = abs(nr - hunt[0]) + abs(nc - hunt[1])

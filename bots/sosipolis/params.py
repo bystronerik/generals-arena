@@ -35,13 +35,13 @@ class Params:
     DEFENSE_WEIGHT_CONTACT: float = 10.0
     DEFENSE_WEIGHT_STRIKE: float = 16.0
     CONTACT_STAGE_STACK: int = 35
-    CONTACT_ASSAULT_STACK: int = 55
+    CONTACT_ASSAULT_STACK: int = 15
     STRIKE_LAND_ROOT_SLOTS: int = 2
     STRIKE_GATHER_WAVES_HINT: int = 4
     STRIKE_TIP_HOLD: int = 8
     STRIKE_PATH_BUFFER: int = 2
     STRIKE_REGEN_SLACK: int = 1
-    STRIKE_MIN_TIP: int = 50
+    STRIKE_MIN_TIP: int = 25
     STRIKE_TIP_ARMY_FRAC: float = 0.40
     STRIKE_TIP_MAX_DIST: int = 14
     STRIKE_TIP_FEED_BONUS: float = 400.0
@@ -59,7 +59,7 @@ class Params:
     HUNT_TRAVEL_DECAY: float = 0.05
     HUNT_CONTACT_RADIUS: int = 6
     HUNT_STEP_BONUS: float = 220.0
-    CASTLE_MAX: int = 0
+    CASTLE_MAX: int = 1
     CASTLE_START_TURN: int = 10
     CASTLE_KEEP: int = 3
     CASTLE_MIN_LAND: int = 5
