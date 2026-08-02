@@ -21,22 +21,25 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+SCRIPT_DIR = Path(__file__).resolve().parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 from arena.instrument.replay.analysis import Analysis
 from arena.instrument.replay.loader import Cell, Replay
 from arena.instrument.replay.metrics import manhattan
 from arena.instrument.replay.path import StackStep
-from scripts.kubic_corpus import (
+from kubic_corpus import (
     MEASUREMENTS,
     corpus_meta,
     dist_summary,
     dump_json,
     iter_analyzed,
 )
-from scripts.kubic_moves import infer_moves_for_player
+from kubic_moves import infer_moves_for_player
 
 PLAYER = "Kubic"
 SUSTAINED_MOVE_MIN = 5  # ticks of consecutive max-stack moves
@@ -959,11 +962,11 @@ def write_markdown(payload: dict) -> str:
 
     lines.append("## Paths")
     lines.append("")
-    lines.append(f"- Script: `scripts/analyze_kubic_army.py`")
+    lines.append(f"- Script: `scripts/grok-analyze/analyze_kubic_army.py`")
     lines.append(f"- JSON: `docs/research/measurements/{JSON_OUT}`")
     lines.append(f"- Markdown: `docs/research/measurements/{MD_OUT}`")
     lines.append(f"- Corpus split: `docs/research/measurements/grok-kubic-corpus-split.json`")
-    lines.append(f"- Helpers: `scripts/kubic_corpus.py`, `scripts/kubic_moves.py`")
+    lines.append(f"- Helpers: `scripts/grok-analyze/kubic_corpus.py`, `scripts/grok-analyze/kubic_moves.py`")
     lines.append(
         "- Replay APIs: `arena/instrument/replay/` "
         "(metrics.max_stack/general_army, path.StackStep, events.gather_wave)"

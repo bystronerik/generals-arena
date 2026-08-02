@@ -11,9 +11,9 @@ Real outcomes (derived from the replay `winner` + Kubic's seat, never the
 folder): 378 wins, 11 losses, 1 draw. Split: sorted by numeric match id,
 every 10th to holdout → fit 351 (340 W / 10 L / 1 D), holdout 39 (38 W /
 1 L). Manifest: `docs/research/measurements/fable-kubic-split.json`
-(`scripts/fable_kubic_split.py`).
+(`scripts/fable-analyze/fable_kubic_split.py`).
 
-**Method.** Replays store per-tick state only. `scripts/fable_kubic_common.py`
+**Method.** Replays store per-tick state only. `scripts/fable-analyze/fable_kubic_common.py`
 reconstructs both players' exact actions per tick by forward-simulating the
 engine (builds → move-order rule → combat → growth) over candidate action
 pairs and accepting the pair that reproduces the next frame bit-for-bit:
@@ -21,7 +21,7 @@ pairs and accepting the pair that reproduces the next frame bit-for-bit:
 ambiguous. Six dimension analyses (opening, expansion, army, attack, defense,
 tempo) each have a deterministic script `scripts/fable_kubic_<dim>.py` and raw
 aggregates `docs/research/measurements/fable-kubic-<dim>.json`. Holdout:
-`scripts/fable_kubic_holdout.py` →
+`scripts/fable-analyze/fable_kubic_holdout.py` →
 `docs/research/measurements/fable-kubic-holdout-verification.json`.
 
 Evidence tags: **MEASURED** (n + rate), **INFERRED** (reasoning stated),
@@ -278,7 +278,7 @@ relay ticks — a path-follower, not a greedy expander.
 ## Holdout verification
 
 39 games (38 W / 1 L), rules frozen before evaluation
-(`scripts/fable_kubic_holdout.py`; raw:
+(`scripts/fable-analyze/fable_kubic_holdout.py`; raw:
 `docs/research/measurements/fable-kubic-holdout-verification.json`).
 
 | rule | fit | holdout | verdict |
@@ -341,8 +341,8 @@ relay ticks — a path-follower, not a greedy expander.
 ## Reproduction
 
 ```bash
-.venv/bin/python scripts/fable_kubic_split.py        # census + 90/10 split
-.venv/bin/python scripts/fable_kubic_common.py all   # exact action reconstruction cache
-.venv/bin/python scripts/fable_kubic_opening.py      # + expansion / army / attack / defense / tempo
-.venv/bin/python scripts/fable_kubic_holdout.py      # holdout verification
+.venv/bin/python scripts/fable-analyze/fable_kubic_split.py        # census + 90/10 split
+.venv/bin/python scripts/fable-analyze/fable_kubic_common.py all   # exact action reconstruction cache
+.venv/bin/python scripts/fable-analyze/fable_kubic_opening.py      # + expansion / army / attack / defense / tempo
+.venv/bin/python scripts/fable-analyze/fable_kubic_holdout.py      # holdout verification
 ```

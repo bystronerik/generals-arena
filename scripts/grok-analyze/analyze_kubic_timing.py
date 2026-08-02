@@ -5,7 +5,7 @@ Derives move-rate, action-density, reaction-latency, turn-modulo, milestone
 timing, and castle-build modulo patterns from fit wins only. Skims losses for
 tempo-collapse signals. Does not touch holdout for rule derivation.
 
-Reproducible: python scripts/analyze_kubic_timing.py
+Reproducible: python scripts/grok-analyze/analyze_kubic_timing.py
 Writes:
   docs/research/measurements/grok-kubic-timing.json
   docs/research/measurements/grok-kubic-timing.md
@@ -18,22 +18,25 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+SCRIPT_DIR = Path(__file__).resolve().parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 from arena.instrument.replay.analysis import Analysis
 from arena.instrument.replay.fog import visible_enemy_tiles
 from arena.instrument.replay.loader import Replay
 from arena.instrument.replay.path import TARGET_GENERAL, TARGET_VISIBLE_TILE
-from scripts.kubic_corpus import (
+from kubic_corpus import (
     MEASUREMENTS,
     corpus_meta,
     dist_summary,
     dump_json,
     iter_analyzed,
 )
-from scripts.kubic_moves import InferredMove, infer_moves_for_player, move_kind_rates
+from kubic_moves import InferredMove, infer_moves_for_player, move_kind_rates
 
 OUT_JSON = "grok-kubic-timing.json"
 OUT_MD = MEASUREMENTS / "grok-kubic-timing.md"
@@ -861,7 +864,7 @@ def write_md(payload: dict) -> None:
     lines.append("")
     lines.append(
         f"Analyst #6. Fit wins only for rules (n={fit['n_games']}). "
-        f"Loss skim n={losses.get('n', 0)}. Script: `scripts/analyze_kubic_timing.py`."
+        f"Loss skim n={losses.get('n', 0)}. Script: `scripts/grok-analyze/analyze_kubic_timing.py`."
     )
     lines.append("")
     lines.append("## Top rules")
@@ -1029,10 +1032,10 @@ def write_md(payload: dict) -> None:
     lines.append("")
     lines.append("## Paths")
     lines.append("")
-    lines.append("- Script: `scripts/analyze_kubic_timing.py`")
+    lines.append("- Script: `scripts/grok-analyze/analyze_kubic_timing.py`")
     lines.append("- JSON: `docs/research/measurements/grok-kubic-timing.json`")
-    lines.append("- Corpus: `scripts/kubic_corpus.py`, split `grok-kubic-corpus-split.json`")
-    lines.append("- Moves: `scripts/kubic_moves.py`")
+    lines.append("- Corpus: `scripts/grok-analyze/kubic_corpus.py`, split `grok-kubic-corpus-split.json`")
+    lines.append("- Moves: `scripts/grok-analyze/kubic_moves.py`")
     lines.append("")
     OUT_MD.write_text("\n".join(lines) + "\n")
 

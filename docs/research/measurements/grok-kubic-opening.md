@@ -2,7 +2,7 @@
 
 **Corpus:** fit wins only, n=341. Holdout excluded. Losses skimmed for failure modes only (not used to derive rules). Split: `docs/research/measurements/grok-kubic-corpus-split.json`.
 
-**Raw JSON:** `docs/research/measurements/grok-kubic-opening.json`. Script: `scripts/analyze_kubic_opening.py`.
+**Raw JSON:** `docs/research/measurements/grok-kubic-opening.json`. Script: `scripts/grok-analyze/analyze_kubic_opening.py`.
 
 Every claim is tagged MEASURED, INFERRED, or UNKNOWN. Folder labels are not outcomes; seats use `Replay.outcome`.
 
@@ -117,7 +117,7 @@ MEASURED: 4/11 losses still show gains at ticks 3,6,9.
 ## Method notes
 
 - Competition rules (`RULES.md`): no pre-placed castles; build cost base 35 + crowding surcharge; production every other turn; bulk +1 every 50.
-- Move inference: `scripts/kubic_moves.py` (frame diffs). Ambiguous ticks exist.
+- Move inference: `scripts/grok-analyze/kubic_moves.py` (frame diffs). Ambiguous ticks exist.
 - Real castle detector: army drop >=30 with no neighbour receive; EventLog `castle_built` alone is unsafe before ~tick 100.
 - Spawn classes: corner = within 1 of both edges; edge = min edge dist <=2; else centerish.
 

@@ -21,15 +21,18 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+SCRIPT_DIR = Path(__file__).resolve().parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 from arena.instrument.replay.analysis import Analysis
 from arena.instrument.replay.fog import sees_cell
 from arena.instrument.replay.loader import Cell, Replay
 from arena.instrument.replay.metrics import manhattan
-from scripts.kubic_corpus import (
+from kubic_corpus import (
     MEASUREMENTS,
     corpus_meta,
     dist_summary,
@@ -1114,7 +1117,7 @@ def _write_md(payload: dict, path: Path) -> None:
     lines.append("")
     lines.append("## Paths")
     lines.append("")
-    lines.append(f"- Script: `scripts/analyze_kubic_defense.py`")
+    lines.append(f"- Script: `scripts/grok-analyze/analyze_kubic_defense.py`")
     lines.append(f"- JSON: `docs/research/measurements/grok-kubic-defense.json`")
     lines.append(f"- This report: `docs/research/measurements/grok-kubic-defense.md`")
     lines.append(f"- Corpus split: `docs/research/measurements/grok-kubic-corpus-split.json`")

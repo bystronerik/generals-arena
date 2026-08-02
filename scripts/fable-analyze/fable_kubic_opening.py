@@ -33,11 +33,11 @@ from pathlib import Path
 
 import numpy as np
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 if str(REPO_ROOT / "scripts") not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fable_kubic_common import DIRECTIONS, kubic_actions, load_actions, split_rows
 from arena.instrument.replay.loader import open_replay

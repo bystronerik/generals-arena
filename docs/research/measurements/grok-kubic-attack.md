@@ -2,7 +2,7 @@
 
 Fit wins n=341; holdout excluded n=37; losses skimmed n=11.
 
-Reproduce: `python scripts/analyze_kubic_attack.py`
+Reproduce: `python scripts/grok-analyze/analyze_kubic_attack.py`
 
 ## Top rules
 
@@ -93,9 +93,9 @@ Reproduce: `python scripts/analyze_kubic_attack.py`
 
 ## Paths
 
-- script: `scripts/analyze_kubic_attack.py`
+- script: `scripts/grok-analyze/analyze_kubic_attack.py`
 - json: `docs/research/measurements/grok-kubic-attack.json`
 - md: `docs/research/measurements/grok-kubic-attack.md`
-- corpus: `scripts/kubic_corpus.py`
-- moves: `scripts/kubic_moves.py`
+- corpus: `scripts/grok-analyze/kubic_corpus.py`
+- moves: `scripts/grok-analyze/kubic_moves.py`
 - split: `docs/research/measurements/grok-kubic-corpus-split.json`

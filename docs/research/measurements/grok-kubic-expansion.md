@@ -142,7 +142,7 @@ Tag legend: **MEASURED** = direct corpus statistic; **INFERRED** = candidate dec
 
 ## Files
 
-- Script: `scripts/analyze_kubic_expansion.py`
+- Script: `scripts/grok-analyze/analyze_kubic_expansion.py`
 - JSON: `docs/research/measurements/grok-kubic-expansion.json`
 - This report: `docs/research/measurements/grok-kubic-expansion.md`
 - Split: `docs/research/measurements/grok-kubic-corpus-split.json`

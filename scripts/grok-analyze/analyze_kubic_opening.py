@@ -17,12 +17,15 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+SCRIPT_DIR = Path(__file__).resolve().parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 from arena.instrument.replay.metrics import manhattan
-from scripts.kubic_corpus import (
+from kubic_corpus import (
     MEASUREMENTS,
     corpus_meta,
     dist_summary,
@@ -30,7 +33,7 @@ from scripts.kubic_corpus import (
     iter_analyzed,
     iter_set,
 )
-from scripts.kubic_moves import infer_moves_for_player
+from kubic_moves import infer_moves_for_player
 
 OPENING_END = 50
 ORTH = ((-1, 0), (1, 0), (0, -1), (0, 1))
@@ -818,7 +821,7 @@ def write_markdown(payload: dict) -> Path:
     lines.append("")
     lines.append(
         "**Raw JSON:** `docs/research/measurements/grok-kubic-opening.json`. "
-        "Script: `scripts/analyze_kubic_opening.py`."
+        "Script: `scripts/grok-analyze/analyze_kubic_opening.py`."
     )
     lines.append("")
     lines.append(
@@ -984,7 +987,7 @@ def write_markdown(payload: dict) -> Path:
         "+ crowding surcharge; production every other turn; bulk +1 every 50."
     )
     lines.append(
-        "- Move inference: `scripts/kubic_moves.py` (frame diffs). Ambiguous ticks exist."
+        "- Move inference: `scripts/grok-analyze/kubic_moves.py` (frame diffs). Ambiguous ticks exist."
     )
     lines.append(
         "- Real castle detector: army drop >=30 with no neighbour receive; "

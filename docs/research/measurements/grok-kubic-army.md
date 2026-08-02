@@ -275,9 +275,9 @@ Overall kind rates:
 
 ## Paths
 
-- Script: `scripts/analyze_kubic_army.py`
+- Script: `scripts/grok-analyze/analyze_kubic_army.py`
 - JSON: `docs/research/measurements/grok-kubic-army.json`
 - Markdown: `docs/research/measurements/grok-kubic-army.md`
 - Corpus split: `docs/research/measurements/grok-kubic-corpus-split.json`
-- Helpers: `scripts/kubic_corpus.py`, `scripts/kubic_moves.py`
+- Helpers: `scripts/grok-analyze/kubic_corpus.py`, `scripts/grok-analyze/kubic_moves.py`
 - Replay APIs: `arena/instrument/replay/` (metrics.max_stack/general_army, path.StackStep, events.gather_wave)

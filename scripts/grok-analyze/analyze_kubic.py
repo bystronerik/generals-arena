@@ -3,14 +3,14 @@
 
 Legacy whole-corpus sketch. For the fit/holdout behavioral spec, prefer:
 
-  python3 scripts/kubic_corpus.py
-  python3 scripts/analyze_kubic_opening.py
-  python3 scripts/analyze_kubic_expansion.py
-  python3 scripts/analyze_kubic_army.py
-  python3 scripts/analyze_kubic_attack.py
-  python3 scripts/analyze_kubic_defense.py
-  python3 scripts/analyze_kubic_timing.py
-  python3 scripts/verify_kubic_holdout.py
+  python3 scripts/grok-analyze/kubic_corpus.py
+  python3 scripts/grok-analyze/analyze_kubic_opening.py
+  python3 scripts/grok-analyze/analyze_kubic_expansion.py
+  python3 scripts/grok-analyze/analyze_kubic_army.py
+  python3 scripts/grok-analyze/analyze_kubic_attack.py
+  python3 scripts/grok-analyze/analyze_kubic_defense.py
+  python3 scripts/grok-analyze/analyze_kubic_timing.py
+  python3 scripts/grok-analyze/verify_kubic_holdout.py
 
 Spec: docs/research/strategies/grok-kubic-behavior-spec.md
 """
@@ -20,7 +20,7 @@ from pathlib import Path
 import json
 from statistics import median, mean
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 

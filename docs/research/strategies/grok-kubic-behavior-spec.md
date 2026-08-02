@@ -24,7 +24,7 @@ Reproduce every quantitative claim by re-running the named script under
 | Fit / holdout | **341 / 37** wins |
 | Outcome source | `Replay.outcome` (name → seat), **never** the scraper folder — see `docs/engine/leaderboard-replays.md` |
 
-Scripts: `scripts/kubic_corpus.py` → `docs/research/measurements/grok-kubic-corpus-split.json`.
+Scripts: `scripts/grok-analyze/kubic_corpus.py` → `docs/research/measurements/grok-kubic-corpus-split.json`.
 
 **Do not** write these games into `data/games/`, `data/ratings/`, or
 `data/remote_games/`.
@@ -42,7 +42,7 @@ Every claim below is tagged:
 - **REFUTED / WEAK (holdout)** — fit-derived rule that failed the holdout gate;
   kept with counterexamples (never silently dropped).
 
-Holdout gates: `scripts/verify_kubic_holdout.py` →
+Holdout gates: `scripts/grok-analyze/verify_kubic_holdout.py` →
 `docs/research/measurements/grok-kubic-holdout-verification.{json,md}`.
 Confirmed = agreement ≥ 0.80; weak = [0.60, 0.80); refuted = < 0.60.
 
@@ -201,7 +201,7 @@ elevated — do not idle for +1 land growth.
 | **No castle in first 50** | MEASURED | 341/341; EventLog `castle_built`@~10 is **false positive** (190 cases, spend drop &lt;30) |
 | First **real** castle | MEASURED | median stamp **138**, dist median **9**, army_before median **37**, drop median **35** |
 
-Script: `scripts/analyze_kubic_opening.py` (spend-detector version from opening analyst).
+Script: `scripts/grok-analyze/analyze_kubic_opening.py` (spend-detector version from opening analyst).
 
 **REFUTED (detector artifact):** “first castle production at tick 10 / adjacent to general.” That claim came from EventLog `castle_built` without a spend check. Timing/attack aggregates that used the raw event are contaminated for early ticks. Keep the claim only as a warning.
 
@@ -215,7 +215,7 @@ Script: `scripts/analyze_kubic_opening.py` (spend-detector version from opening 
 | Multi-option capture: fill + toward-egen | MEASURED | best-option rates ~0.77 / ~0.77 |
 | Stray from territory | MEASURED | orthogonal captures only (Manhattan 1) |
 
-Script: `scripts/analyze_kubic_expansion.py`.
+Script: `scripts/grok-analyze/analyze_kubic_expansion.py`.
 
 ### Army routing
 
@@ -226,7 +226,7 @@ Script: `scripts/analyze_kubic_expansion.py`.
 | Sustained marches start ~15 army | MEASURED | |
 | Full ≫ half | INFERRED | 98.5% of classifiable; 32% ticks ambiguous |
 
-Script: `scripts/analyze_kubic_army.py`.
+Script: `scripts/grok-analyze/analyze_kubic_army.py`.
 
 ### Attack / contest / strike
 
@@ -239,7 +239,7 @@ Script: `scripts/analyze_kubic_army.py`.
 | Sight→kill median 24 ticks | MEASURED | tip@sight median 23 |
 | Enemy castle capture optional | MEASURED | 25% of wins; usually after own castle |
 
-Script: `scripts/analyze_kubic_attack.py`.
+Script: `scripts/grok-analyze/analyze_kubic_attack.py`.
 
 ### Defense
 
@@ -250,11 +250,11 @@ Script: `scripts/analyze_kubic_attack.py`.
 | Exact recall radius D | UNKNOWN | under-sampled in wins |
 | Loss mode | MEASURED | stack away (median dist 12) while gen still has army; often never sight; bist cluster also has pass_rate≥0.30 (tempo collapse / possible disconnect) |
 
-Script: `scripts/analyze_kubic_defense.py`.
+Script: `scripts/grok-analyze/analyze_kubic_defense.py`.
 
 ### Timing
 
-Script: `scripts/analyze_kubic_timing.py` (pass rates, buckets, reaction, milestones).
+Script: `scripts/grok-analyze/analyze_kubic_timing.py` (pass rates, buckets, reaction, milestones).
 
 ---
 
@@ -348,12 +348,12 @@ Script: `scripts/analyze_kubic_timing.py` (pass rates, buckets, reaction, milest
 | --- | --- |
 | This spec | `docs/research/strategies/grok-kubic-behavior-spec.md` |
 | Corpus split | `docs/research/measurements/grok-kubic-corpus-split.json` |
-| Opening | `scripts/analyze_kubic_opening.py` → `grok-kubic-opening.{json,md}` |
-| Expansion | `scripts/analyze_kubic_expansion.py` → `grok-kubic-expansion.{json,md}` |
-| Army | `scripts/analyze_kubic_army.py` → `grok-kubic-army.{json,md}` |
-| Attack | `scripts/analyze_kubic_attack.py` → `grok-kubic-attack.{json,md}` |
-| Defense | `scripts/analyze_kubic_defense.py` → `grok-kubic-defense.{json,md}` |
-| Timing | `scripts/analyze_kubic_timing.py` → `grok-kubic-timing.{json,md}` |
-| Holdout | `scripts/verify_kubic_holdout.py` → `grok-kubic-holdout-verification.{json,md}` |
-| Shared helpers | `scripts/kubic_corpus.py`, `scripts/kubic_moves.py` |
-| Prior batch sketch | `scripts/analyze_kubic.py` → `kubic_full_analysis.json` |
+| Opening | `scripts/grok-analyze/analyze_kubic_opening.py` → `grok-kubic-opening.{json,md}` |
+| Expansion | `scripts/grok-analyze/analyze_kubic_expansion.py` → `grok-kubic-expansion.{json,md}` |
+| Army | `scripts/grok-analyze/analyze_kubic_army.py` → `grok-kubic-army.{json,md}` |
+| Attack | `scripts/grok-analyze/analyze_kubic_attack.py` → `grok-kubic-attack.{json,md}` |
+| Defense | `scripts/grok-analyze/analyze_kubic_defense.py` → `grok-kubic-defense.{json,md}` |
+| Timing | `scripts/grok-analyze/analyze_kubic_timing.py` → `grok-kubic-timing.{json,md}` |
+| Holdout | `scripts/grok-analyze/verify_kubic_holdout.py` → `grok-kubic-holdout-verification.{json,md}` |
+| Shared helpers | `scripts/grok-analyze/kubic_corpus.py`, `scripts/grok-analyze/kubic_moves.py` |
+| Prior batch sketch | `scripts/grok-analyze/analyze_kubic.py` → `kubic_full_analysis.json` |

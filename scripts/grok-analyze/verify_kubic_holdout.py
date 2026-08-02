@@ -5,7 +5,7 @@ Derive rules on fit only (see dimension scripts). This script checks falsifiable
 predictions on holdout wins (every 10th sorted win id).
 
 Reproduce:
-  python3 scripts/verify_kubic_holdout.py
+  python3 scripts/grok-analyze/verify_kubic_holdout.py
 
 Writes:
   docs/research/measurements/grok-kubic-holdout-verification.json
@@ -19,13 +19,16 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+SCRIPT_DIR = Path(__file__).resolve().parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 from arena.instrument.replay.metrics import manhattan
-from scripts.kubic_corpus import MEASUREMENTS, corpus_meta, dump_json, iter_analyzed
-from scripts.kubic_moves import infer_moves_for_player
+from kubic_corpus import MEASUREMENTS, corpus_meta, dump_json, iter_analyzed
+from kubic_moves import infer_moves_for_player
 
 
 def components(replay, tick: int, player: int) -> int:
@@ -336,7 +339,7 @@ def main() -> None:
         f"Holdout wins n={len(rows)} (every 10th sorted win id). "
         "Rules derived on fit only; this page only scores holdout.",
         "",
-        "Script: `scripts/verify_kubic_holdout.py`",
+        "Script: `scripts/grok-analyze/verify_kubic_holdout.py`",
         "",
         "## Per-rule agreement",
         "",

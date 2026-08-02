@@ -5,7 +5,7 @@ Writes:
   docs/research/measurements/grok-kubic-attack.json
   docs/research/measurements/grok-kubic-attack.md
 
-Uses scripts/kubic_corpus.py. Observational only — never writes data/games/.
+Uses scripts/grok-analyze/kubic_corpus.py. Observational only — never writes data/games/.
 """
 
 from __future__ import annotations
@@ -16,14 +16,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+SCRIPT_DIR = Path(__file__).resolve().parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 from arena.instrument.replay.analysis import Analysis
 from arena.instrument.replay.loader import Cell, Replay
 from arena.instrument.replay.path import summarize_path
-from scripts.kubic_corpus import (
+from kubic_corpus import (
     MEASUREMENTS,
     corpus_meta,
     dist_summary,
@@ -31,7 +34,7 @@ from scripts.kubic_corpus import (
     iter_analyzed,
     percentile,
 )
-from scripts.kubic_moves import infer_moves_for_player
+from kubic_moves import infer_moves_for_player
 
 ORTH = ((-1, 0), (1, 0), (0, -1), (0, 1))
 FRONT_WINDOW = 30  # ticks after first_contact for front behavior
@@ -1019,11 +1022,11 @@ def build_report(games: list[GameAttack], losses: list[GameAttack]) -> dict:
             "rows": loss_rows,
         },
         "paths": {
-            "script": "scripts/analyze_kubic_attack.py",
+            "script": "scripts/grok-analyze/analyze_kubic_attack.py",
             "json": "docs/research/measurements/grok-kubic-attack.json",
             "md": "docs/research/measurements/grok-kubic-attack.md",
-            "corpus": "scripts/kubic_corpus.py",
-            "moves": "scripts/kubic_moves.py",
+            "corpus": "scripts/grok-analyze/kubic_corpus.py",
+            "moves": "scripts/grok-analyze/kubic_moves.py",
             "split": "docs/research/measurements/grok-kubic-corpus-split.json",
         },
         "games_compact": [g.as_json() for g in games],
@@ -1039,7 +1042,7 @@ def render_md(report: dict) -> str:
         f"losses skimmed n={report['n_losses_skimmed']}."
     )
     lines.append("")
-    lines.append("Reproduce: `python scripts/analyze_kubic_attack.py`")
+    lines.append("Reproduce: `python scripts/grok-analyze/analyze_kubic_attack.py`")
     lines.append("")
     lines.append("## Top rules")
     lines.append("")

@@ -2,7 +2,7 @@
 
 Holdout wins n=37 (every 10th sorted win id). Rules derived on fit only; this page only scores holdout.
 
-Script: `scripts/verify_kubic_holdout.py`
+Script: `scripts/grok-analyze/verify_kubic_holdout.py`
 
 ## Per-rule agreement
 

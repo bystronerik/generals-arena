@@ -174,7 +174,7 @@ Min enemy_home_dist (pre-capture): fit median=7.0, p10=3.0; losses median=1.0, p
 
 ## Paths
 
-- Script: `scripts/analyze_kubic_defense.py`
+- Script: `scripts/grok-analyze/analyze_kubic_defense.py`
 - JSON: `docs/research/measurements/grok-kubic-defense.json`
 - This report: `docs/research/measurements/grok-kubic-defense.md`
 - Corpus split: `docs/research/measurements/grok-kubic-corpus-split.json`

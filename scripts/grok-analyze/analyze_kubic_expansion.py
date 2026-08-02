@@ -15,22 +15,25 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+SCRIPT_DIR = Path(__file__).resolve().parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 from arena.instrument.replay.analysis import Analysis
 from arena.instrument.replay.loader import Cell, Replay
 from arena.instrument.replay.metrics import manhattan
 from arena.instrument.replay.path import summarize_path
-from scripts.kubic_corpus import (
+from kubic_corpus import (
     PLAYER,
     corpus_meta,
     dist_summary,
     dump_json,
     iter_analyzed,
 )
-from scripts.kubic_moves import infer_moves_for_player
+from kubic_moves import infer_moves_for_player
 
 ORTH = ((-1, 0), (1, 0), (0, -1), (0, 1))
 LAND_TICKS = (25, 50, 100)
@@ -1040,7 +1043,7 @@ def write_md(payload: dict, path: Path) -> None:
     lines.append("")
     lines.append("## Files")
     lines.append("")
-    lines.append("- Script: `scripts/analyze_kubic_expansion.py`")
+    lines.append("- Script: `scripts/grok-analyze/analyze_kubic_expansion.py`")
     lines.append("- JSON: `docs/research/measurements/grok-kubic-expansion.json`")
     lines.append("- This report: `docs/research/measurements/grok-kubic-expansion.md`")
     lines.append("- Split: `docs/research/measurements/grok-kubic-corpus-split.json`")

@@ -1,6 +1,6 @@
 # Kubic timing and tempo (fit wins)
 
-Analyst #6. Fit wins only for rules (n=341). Loss skim n=11. Script: `scripts/analyze_kubic_timing.py`.
+Analyst #6. Fit wins only for rules (n=341). Loss skim n=11. Script: `scripts/grok-analyze/analyze_kubic_timing.py`.
 
 ## Top rules
 
@@ -169,8 +169,8 @@ Loss skim n=11: median pass_rate=0.370 vs fit 0.011; never_sight=9/11. 6/11 loss
 
 ## Paths
 
-- Script: `scripts/analyze_kubic_timing.py`
+- Script: `scripts/grok-analyze/analyze_kubic_timing.py`
 - JSON: `docs/research/measurements/grok-kubic-timing.json`
-- Corpus: `scripts/kubic_corpus.py`, split `grok-kubic-corpus-split.json`
-- Moves: `scripts/kubic_moves.py`
+- Corpus: `scripts/grok-analyze/kubic_corpus.py`, split `grok-kubic-corpus-split.json`
+- Moves: `scripts/grok-analyze/kubic_moves.py`
 
