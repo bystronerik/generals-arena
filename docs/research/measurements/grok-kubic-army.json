@@ -1,0 +1,904 @@
+{
+  "meta": {
+    "player": "Kubic",
+    "analyst": 3,
+    "topic": "army_management_and_routing",
+    "corpus": "fit wins only for rules; losses skimmed",
+    "n_fit_wins": 341,
+    "n_fit_analyzed": 341,
+    "n_holdout_wins_excluded": 37,
+    "n_losses_skimmed": 11,
+    "split": "docs/research/measurements/grok-kubic-corpus-split.json",
+    "thresholds": {
+      "sustained_move_min_ticks": 5,
+      "near_kill_window_ticks": 20,
+      "gather_min_ticks": 5,
+      "phase_buckets": [
+        "expansion",
+        "contest",
+        "post_sight"
+      ],
+      "phase_definition": "expansion: tick < first_contact; contest: first_contact <= tick < first_general_sight; post_sight: tick >= first_general_sight (if no contact, all expansion; if no sight, contest to end)"
+    }
+  },
+  "rules": [
+    {
+      "id": "R1_tip_not_general_bank",
+      "tag": "MEASURED",
+      "claim": "Tip stack holds more army than the general bank across the game (median mean_tip_frac ~2x mean_gen_frac). Most army still sits on ordinary land; castles hold a small extra bank.",
+      "thresholds": {
+        "mean_tip_frac_median": 0.25146804547320817,
+        "mean_gen_frac_median": 0.1326788155057153,
+        "mean_castle_frac_median": 0.054259208968956495
+      }
+    },
+    {
+      "id": "R2_gather_before_sight",
+      "tag": "MEASURED",
+      "claim": "Every fit win has >=1 gather_wave (max-stack grows while moving >= 5 ticks). Most waves start before first_general_sight; waves begin near home and end closer to the enemy general.",
+      "thresholds": {
+        "gather_min_ticks": 5,
+        "unit": "ticks of consecutive growing moves",
+        "pre_sight_wave_share": 0.7247990105132962,
+        "waves_per_game_median": 4.0,
+        "zero_wave_wins": 0,
+        "wave_start_dist_home_median": 2.0,
+        "wave_end_dist_enemy_gen_median": 13.0
+      }
+    },
+    {
+      "id": "R3_sustained_move_start_size",
+      "tag": "MEASURED",
+      "claim": "Sustained tip marches (>= 5 consecutive max-stack moves) typically start with tip army in the mid-teens (p25~9, p75~25).",
+      "thresholds": {
+        "sustained_move_min_ticks": 5,
+        "unit": "consecutive max-stack move ticks",
+        "streak_start_army_median": 15.0,
+        "streak_start_army_p25": 9.0,
+        "streak_start_army_p75": 25.0
+      }
+    },
+    {
+      "id": "R4_full_over_half",
+      "tag": "INFERRED",
+      "claim": "Among classifiable sends, leave-1 (full) dominates (~98.5%); half is ~1.5%. Half is slightly more common in expansion than contest/post_sight. Ambiguity (unknown+multi) is ~32% of all ticks \u2014 treat half/full rates as conditional on successful classification.",
+      "thresholds": {
+        "note": "Rates conditioned on inferred full|half; ambiguity (unknown+multi) is high.",
+        "full_of_actionable": 0.9848355767592435,
+        "half_of_actionable": 0.015164423240756517,
+        "ambiguity_rate": 0.31737545873598394
+      }
+    },
+    {
+      "id": "R5_home_reserve_modest",
+      "tag": "MEASURED",
+      "claim": "General peak bank median ~27 army. At contact median gen~8; at sight median gen~14 \u2014 home is not the strike reservoir.",
+      "thresholds": {
+        "units": "army on general cell",
+        "max_gen_army": {
+          "n": 341,
+          "min": 12.0,
+          "p10": 18.0,
+          "p25": 23.0,
+          "median": 27.0,
+          "p75": 33.0,
+          "p90": 49.0,
+          "max": 121.0,
+          "mean": 30.65982404692082
+        },
+        "gen_at_contact": {
+          "n": 341,
+          "min": 1.0,
+          "p10": 4.0,
+          "p25": 5.0,
+          "median": 8.0,
+          "p75": 11.0,
+          "p90": 14.0,
+          "max": 57.0,
+          "mean": 8.736070381231672
+        },
+        "gen_at_sight": {
+          "n": 341,
+          "min": 2.0,
+          "p10": 9.0,
+          "p25": 11.0,
+          "median": 14.0,
+          "p75": 19.0,
+          "p90": 26.0,
+          "max": 62.0,
+          "mean": 16.21700879765396
+        }
+      }
+    },
+    {
+      "id": "R6_tip_mass_at_sight_and_kill",
+      "tag": "MEASURED",
+      "claim": "Tip at first_general_sight median ~23 army; peak tip in the last 20 ticks median ~53 (strike consolidation). Tip at the final tick is lower (median ~24) after the kill spend.",
+      "thresholds": {
+        "near_kill_window_ticks": 20,
+        "tip_at_sight": {
+          "n": 341,
+          "min": 5.0,
+          "p10": 12.0,
+          "p25": 15.0,
+          "median": 23.0,
+          "p75": 33.0,
+          "p90": 51.0,
+          "max": 175.0,
+          "mean": 28.44574780058651
+        },
+        "tip_near_kill": {
+          "n": 341,
+          "min": 17.0,
+          "p10": 33.0,
+          "p25": 43.0,
+          "median": 53.0,
+          "p75": 75.0,
+          "p90": 100.0,
+          "max": 249.0,
+          "mean": 62.17008797653959
+        },
+        "tip_at_kill": {
+          "n": 341,
+          "min": 7.0,
+          "p10": 12.0,
+          "p25": 15.0,
+          "median": 24.0,
+          "p75": 33.0,
+          "p90": 49.0,
+          "max": 111.0,
+          "mean": 27.070381231671554
+        }
+      }
+    }
+  ],
+  "distributions": {
+    "accumulation": {
+      "mean_gen_frac_dist": {
+        "n": 341,
+        "min": 0.07887588547038853,
+        "p10": 0.10324141728235252,
+        "p25": 0.11808041568963863,
+        "median": 0.1326788155057153,
+        "p75": 0.14965572176207276,
+        "p90": 0.16913878084170397,
+        "max": 0.2365104260722211,
+        "mean": 0.13503874753184295
+      },
+      "mean_tip_frac": {
+        "n": 341,
+        "min": 0.17480028170505205,
+        "p10": 0.21325473292456676,
+        "p25": 0.23125313771313638,
+        "median": 0.25146804547320817,
+        "p75": 0.27731300386528995,
+        "p90": 0.29667571496680917,
+        "max": 0.41946648186993174,
+        "mean": 0.25510559731985843
+      },
+      "mean_castle_frac": {
+        "n": 341,
+        "min": 0.0,
+        "p10": 0.0,
+        "p25": 0.015691213497602136,
+        "median": 0.054259208968956495,
+        "p75": 0.0753050144695868,
+        "p90": 0.09439318886032348,
+        "max": 0.15555320354262514,
+        "mean": 0.04990356809057577
+      },
+      "peak_tip_frac": {
+        "n": 341,
+        "min": 1.0,
+        "p10": 1.0,
+        "p25": 1.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "p90": 1.0,
+        "max": 1.0,
+        "mean": 1.0
+      },
+      "peak_gen_frac": {
+        "n": 341,
+        "min": 1.0,
+        "p10": 1.0,
+        "p25": 1.0,
+        "median": 1.0,
+        "p75": 1.0,
+        "p90": 1.0,
+        "max": 1.0,
+        "mean": 1.0
+      },
+      "tip_frac_at_sight": {
+        "n": 341,
+        "min": 0.04430379746835443,
+        "p10": 0.09770114942528736,
+        "p25": 0.12903225806451613,
+        "median": 0.16393442622950818,
+        "p75": 0.21666666666666667,
+        "p90": 0.26988636363636365,
+        "max": 0.4032258064516129,
+        "mean": 0.17622394003080427
+      },
+      "gen_frac_at_sight": {
+        "n": 341,
+        "min": 0.022222222222222223,
+        "p10": 0.06310679611650485,
+        "p25": 0.07857142857142857,
+        "median": 0.10471204188481675,
+        "p75": 0.13392857142857142,
+        "p90": 0.16393442622950818,
+        "max": 0.23529411764705882,
+        "mean": 0.10898465053171538
+      },
+      "tip_frac_near_kill": {
+        "n": 341,
+        "min": 0.14181818181818182,
+        "p10": 0.2222222222222222,
+        "p25": 0.2631578947368421,
+        "median": 0.3129251700680272,
+        "p75": 0.35537190082644626,
+        "p90": 0.40336134453781514,
+        "max": 0.5220588235294118,
+        "mean": 0.3130049184930678
+      }
+    },
+    "home_reserve": {
+      "max_gen_army": {
+        "n": 341,
+        "min": 12.0,
+        "p10": 18.0,
+        "p25": 23.0,
+        "median": 27.0,
+        "p75": 33.0,
+        "p90": 49.0,
+        "max": 121.0,
+        "mean": 30.65982404692082
+      },
+      "gen_at_contact": {
+        "n": 341,
+        "min": 1.0,
+        "p10": 4.0,
+        "p25": 5.0,
+        "median": 8.0,
+        "p75": 11.0,
+        "p90": 14.0,
+        "max": 57.0,
+        "mean": 8.736070381231672
+      },
+      "gen_at_sight": {
+        "n": 341,
+        "min": 2.0,
+        "p10": 9.0,
+        "p25": 11.0,
+        "median": 14.0,
+        "p75": 19.0,
+        "p90": 26.0,
+        "max": 62.0,
+        "mean": 16.21700879765396
+      },
+      "tip_at_contact": {
+        "n": 341,
+        "min": 3.0,
+        "p10": 5.0,
+        "p25": 10.0,
+        "median": 15.0,
+        "p75": 20.0,
+        "p90": 28.0,
+        "max": 174.0,
+        "mean": 18.228739002932553
+      }
+    },
+    "tip_mass": {
+      "tip_at_sight": {
+        "n": 341,
+        "min": 5.0,
+        "p10": 12.0,
+        "p25": 15.0,
+        "median": 23.0,
+        "p75": 33.0,
+        "p90": 51.0,
+        "max": 175.0,
+        "mean": 28.44574780058651
+      },
+      "tip_near_kill": {
+        "n": 341,
+        "min": 17.0,
+        "p10": 33.0,
+        "p25": 43.0,
+        "median": 53.0,
+        "p75": 75.0,
+        "p90": 100.0,
+        "max": 249.0,
+        "mean": 62.17008797653959
+      },
+      "tip_at_kill": {
+        "n": 341,
+        "min": 7.0,
+        "p10": 12.0,
+        "p25": 15.0,
+        "median": 24.0,
+        "p75": 33.0,
+        "p90": 49.0,
+        "max": 111.0,
+        "mean": 27.070381231671554
+      }
+    },
+    "gather": {
+      "waves_per_game": {
+        "n": 341,
+        "min": 1.0,
+        "p10": 2.0,
+        "p25": 2.0,
+        "median": 4.0,
+        "p75": 7.0,
+        "p90": 9.0,
+        "max": 19.0,
+        "mean": 4.741935483870968
+      },
+      "waves_pre_sight_per_game": {
+        "n": 341,
+        "min": 0.0,
+        "p10": 1.0,
+        "p25": 2.0,
+        "median": 3.0,
+        "p75": 5.0,
+        "p90": 7.0,
+        "max": 19.0,
+        "mean": 3.436950146627566
+      },
+      "waves_post_sight_per_game": {
+        "n": 341,
+        "min": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 1.0,
+        "p75": 2.0,
+        "p90": 4.0,
+        "max": 12.0,
+        "mean": 1.3049853372434017
+      },
+      "games_with_zero_waves": 0,
+      "zero_wave_rate": 0.0,
+      "wave_lengths_ticks": {
+        "n": 1617,
+        "min": 5.0,
+        "p10": 5.0,
+        "p25": 6.0,
+        "median": 8.0,
+        "p75": 12.0,
+        "p90": 18.0,
+        "max": 46.0,
+        "mean": 10.021645021645021
+      },
+      "wave_from_army": {
+        "n": 1617,
+        "min": 5.0,
+        "p10": 12.0,
+        "p25": 16.0,
+        "median": 24.0,
+        "p75": 33.0,
+        "p90": 50.0,
+        "max": 233.0,
+        "mean": 28.06679035250464
+      },
+      "wave_to_army": {
+        "n": 1617,
+        "min": 10.0,
+        "p10": 24.0,
+        "p25": 31.0,
+        "median": 40.0,
+        "p75": 53.0,
+        "p90": 76.0,
+        "max": 249.0,
+        "mean": 45.72727272727273
+      },
+      "wave_start_dist_home": {
+        "n": 1617,
+        "min": 0.0,
+        "p10": 0.0,
+        "p25": 0.0,
+        "median": 2.0,
+        "p75": 7.0,
+        "p90": 10.0,
+        "max": 32.0,
+        "mean": 4.034013605442177
+      },
+      "wave_end_dist_home": {
+        "n": 1617,
+        "min": 0.0,
+        "p10": 5.0,
+        "p25": 7.0,
+        "median": 9.0,
+        "p75": 13.0,
+        "p90": 18.0,
+        "max": 34.0,
+        "mean": 10.42795299938157
+      },
+      "wave_start_dist_enemy_gen": {
+        "n": 1617,
+        "min": 3.0,
+        "p10": 12.0,
+        "p25": 15.0,
+        "median": 19.0,
+        "p75": 23.0,
+        "p90": 27.0,
+        "max": 38.0,
+        "mean": 19.070500927643785
+      },
+      "wave_end_dist_enemy_gen": {
+        "n": 1617,
+        "min": 1.0,
+        "p10": 6.0,
+        "p25": 9.0,
+        "median": 13.0,
+        "p75": 18.0,
+        "p90": 22.0,
+        "max": 33.0,
+        "mean": 13.447124304267161
+      },
+      "wave_count_pre_sight": 1172,
+      "wave_count_post_sight": 445,
+      "pre_sight_share": 0.7247990105132962
+    },
+    "sustained_move_streaks": {
+      "start_army": {
+        "n": 2933,
+        "min": 2.0,
+        "p10": 7.0,
+        "p25": 9.0,
+        "median": 15.0,
+        "p75": 25.0,
+        "p90": 36.0,
+        "max": 135.0,
+        "mean": 19.427548585066486
+      },
+      "length_ticks": {
+        "n": 2933,
+        "min": 5.0,
+        "p10": 5.0,
+        "p25": 6.0,
+        "median": 10.0,
+        "p75": 18.0,
+        "p90": 26.0,
+        "max": 109.0,
+        "mean": 13.425502898056598
+      },
+      "start_gen_army": {
+        "n": 2933,
+        "min": 1.0,
+        "p10": 2.0,
+        "p25": 5.0,
+        "median": 10.0,
+        "p75": 16.0,
+        "p90": 23.800000000000182,
+        "max": 74.0,
+        "mean": 11.580634162973064
+      },
+      "n_streaks": 2933
+    },
+    "move_modes": {
+      "overall_kinds": {
+        "build_suspect": {
+          "count": 24,
+          "rate": 0.00030476577480348957
+        },
+        "full": {
+          "count": 52020,
+          "rate": 0.6605798168865636
+        },
+        "half": {
+          "count": 801,
+          "rate": 0.010171557734066465
+        },
+        "multi": {
+          "count": 23199,
+          "rate": 0.2945942170694231
+        },
+        "pass": {
+          "count": 911,
+          "rate": 0.011568400868582459
+        },
+        "unknown": {
+          "count": 1794,
+          "rate": 0.022781241666560845
+        }
+      },
+      "full_of_actionable": 0.9848355767592435,
+      "half_of_actionable": 0.015164423240756517,
+      "ambiguity_rate_unknown_plus_multi": 0.31737545873598394,
+      "by_phase": {
+        "expansion": {
+          "kinds": {
+            "full": {
+              "count": 19314,
+              "rate": 0.6717679385064868
+            },
+            "half": {
+              "count": 670,
+              "rate": 0.02330353726826893
+            },
+            "multi": {
+              "count": 6576,
+              "rate": 0.22872247921811414
+            },
+            "pass": {
+              "count": 876,
+              "rate": 0.03046850544328893
+            },
+            "unknown": {
+              "count": 1315,
+              "rate": 0.04573753956384126
+            }
+          },
+          "full_of_actionable": 0.9664731785428343,
+          "half_of_actionable": 0.033526821457165734,
+          "ambiguity_rate": 0.2744600187819554,
+          "n_ticks": 28751
+        },
+        "contest": {
+          "kinds": {
+            "build_suspect": {
+              "count": 10,
+              "rate": 0.00027359781121751026
+            },
+            "full": {
+              "count": 24128,
+              "rate": 0.6601367989056087
+            },
+            "half": {
+              "count": 69,
+              "rate": 0.0018878248974008207
+            },
+            "multi": {
+              "count": 11951,
+              "rate": 0.3269767441860465
+            },
+            "pass": {
+              "count": 23,
+              "rate": 0.0006292749658002736
+            },
+            "unknown": {
+              "count": 369,
+              "rate": 0.010095759233926128
+            }
+          },
+          "full_of_actionable": 0.9971484068272927,
+          "half_of_actionable": 0.0028515931727073605,
+          "ambiguity_rate": 0.33707250341997264,
+          "n_ticks": 36550
+        },
+        "post_sight": {
+          "kinds": {
+            "build_suspect": {
+              "count": 14,
+              "rate": 0.001041046995835812
+            },
+            "full": {
+              "count": 8578,
+              "rate": 0.6378643664485425
+            },
+            "half": {
+              "count": 62,
+              "rate": 0.004610350981558596
+            },
+            "multi": {
+              "count": 4672,
+              "rate": 0.34741225461035097
+            },
+            "pass": {
+              "count": 12,
+              "rate": 0.000892325996430696
+            },
+            "unknown": {
+              "count": 110,
+              "rate": 0.00817965496728138
+            }
+          },
+          "full_of_actionable": 0.992824074074074,
+          "half_of_actionable": 0.007175925925925926,
+          "ambiguity_rate": 0.35559190957763237,
+          "n_ticks": 13448
+        }
+      }
+    }
+  },
+  "counterexamples": {
+    "high_gen_low_tip_at_sight": [],
+    "high_gen_low_tip_at_sight_n": 0,
+    "zero_wave_wins_sample": [],
+    "zero_wave_wins_n": 0,
+    "half_heavy_games": [],
+    "half_heavy_games_n": 0
+  },
+  "unknowns": [
+    {
+      "id": "U1_multi_source_ticks",
+      "tag": "UNKNOWN",
+      "text": "Move inference marks many ticks as multi/unknown (simultaneous sources or combat). Half/full rates on those ticks are unreliable."
+    },
+    {
+      "id": "U2_castle_ownership_timing",
+      "tag": "UNKNOWN",
+      "text": "Castle army fraction uses all confirmed castle cells; enemy-captured or late-built castles blur the owned-castle bank estimate."
+    },
+    {
+      "id": "U3_gather_wave_definition",
+      "tag": "UNKNOWN",
+      "text": "gather_wave requires the largest stack to grow while moving. Secondary gathering into a non-max tip is invisible."
+    },
+    {
+      "id": "U4_routing_policy",
+      "tag": "UNKNOWN",
+      "text": "This report measures mass location and send mode, not path choice (toward/away is path analysis, not army-routing thresholds)."
+    }
+  ],
+  "loss_skim": [
+    {
+      "match_id": "20583",
+      "opponent": "Non-Linear Slob",
+      "ticks": 193,
+      "max_gen_army": 33,
+      "gen_at_contact": 3,
+      "gen_at_sight": null,
+      "tip_at_sight": null,
+      "tip_near_kill": 47,
+      "gather_waves_total": 3,
+      "half_of_actionable": 0.010101010101010102,
+      "signals": [
+        "never_saw_enemy_general"
+      ]
+    },
+    {
+      "match_id": "20595",
+      "opponent": "Nicholas",
+      "ticks": 428,
+      "max_gen_army": 56,
+      "gen_at_contact": 4,
+      "gen_at_sight": 11,
+      "tip_at_sight": 41,
+      "tip_near_kill": 55,
+      "gather_waves_total": 9,
+      "half_of_actionable": 0.022727272727272728,
+      "signals": []
+    },
+    {
+      "match_id": "20603",
+      "opponent": "__",
+      "ticks": 202,
+      "max_gen_army": 29,
+      "gen_at_contact": 7,
+      "gen_at_sight": null,
+      "tip_at_sight": null,
+      "tip_near_kill": 59,
+      "gather_waves_total": 3,
+      "half_of_actionable": 0.009615384615384616,
+      "signals": [
+        "never_saw_enemy_general"
+      ]
+    },
+    {
+      "match_id": "20923",
+      "opponent": "Jonas Dujava",
+      "ticks": 133,
+      "max_gen_army": 20,
+      "gen_at_contact": 6,
+      "gen_at_sight": 7,
+      "tip_at_sight": 7,
+      "tip_near_kill": 35,
+      "gather_waves_total": 2,
+      "half_of_actionable": 0.056338028169014086,
+      "signals": [
+        "tiny_tip_at_sight"
+      ]
+    },
+    {
+      "match_id": "24184",
+      "opponent": "bist",
+      "ticks": 620,
+      "max_gen_army": 146,
+      "gen_at_contact": 15,
+      "gen_at_sight": null,
+      "tip_at_sight": null,
+      "tip_near_kill": 218,
+      "gather_waves_total": 0,
+      "half_of_actionable": 0.3764705882352941,
+      "signals": [
+        "zero_gather_waves",
+        "never_saw_enemy_general",
+        "half_move_heavy"
+      ]
+    },
+    {
+      "match_id": "24185",
+      "opponent": "bist",
+      "ticks": 536,
+      "max_gen_army": 49,
+      "gen_at_contact": 11,
+      "gen_at_sight": null,
+      "tip_at_sight": null,
+      "tip_near_kill": 43,
+      "gather_waves_total": 0,
+      "half_of_actionable": 0.2413793103448276,
+      "signals": [
+        "zero_gather_waves",
+        "never_saw_enemy_general"
+      ]
+    },
+    {
+      "match_id": "24186",
+      "opponent": "bist",
+      "ticks": 171,
+      "max_gen_army": 27,
+      "gen_at_contact": 5,
+      "gen_at_sight": null,
+      "tip_at_sight": null,
+      "tip_near_kill": 60,
+      "gather_waves_total": 0,
+      "half_of_actionable": 0.0,
+      "signals": [
+        "zero_gather_waves",
+        "never_saw_enemy_general"
+      ]
+    },
+    {
+      "match_id": "24187",
+      "opponent": "bist",
+      "ticks": 242,
+      "max_gen_army": 47,
+      "gen_at_contact": 4,
+      "gen_at_sight": null,
+      "tip_at_sight": null,
+      "tip_near_kill": 66,
+      "gather_waves_total": 0,
+      "half_of_actionable": 0.34375,
+      "signals": [
+        "zero_gather_waves",
+        "never_saw_enemy_general",
+        "half_move_heavy"
+      ]
+    },
+    {
+      "match_id": "24188",
+      "opponent": "bist",
+      "ticks": 367,
+      "max_gen_army": 49,
+      "gen_at_contact": 4,
+      "gen_at_sight": null,
+      "tip_at_sight": null,
+      "tip_near_kill": 62,
+      "gather_waves_total": 0,
+      "half_of_actionable": 0.3443708609271523,
+      "signals": [
+        "zero_gather_waves",
+        "never_saw_enemy_general",
+        "half_move_heavy"
+      ]
+    },
+    {
+      "match_id": "24189",
+      "opponent": "bist",
+      "ticks": 345,
+      "max_gen_army": 48,
+      "gen_at_contact": 25,
+      "gen_at_sight": null,
+      "tip_at_sight": null,
+      "tip_near_kill": 80,
+      "gather_waves_total": 0,
+      "half_of_actionable": 0.4027777777777778,
+      "signals": [
+        "zero_gather_waves",
+        "never_saw_enemy_general",
+        "half_move_heavy"
+      ]
+    },
+    {
+      "match_id": "24988",
+      "opponent": "erik.bystron",
+      "ticks": 89,
+      "max_gen_army": 15,
+      "gen_at_contact": 7,
+      "gen_at_sight": null,
+      "tip_at_sight": null,
+      "tip_near_kill": 25,
+      "gather_waves_total": 0,
+      "half_of_actionable": 0.020833333333333332,
+      "signals": [
+        "zero_gather_waves",
+        "never_saw_enemy_general"
+      ]
+    }
+  ],
+  "sample_games": [
+    {
+      "match_id": "20524",
+      "ticks": 138,
+      "max_gen_army": 36,
+      "gen_at_contact": 16,
+      "gen_at_sight": 11,
+      "tip_at_sight": 38,
+      "tip_near_kill": 50,
+      "gather_waves_total": 1,
+      "gather_waves_pre_sight": 1,
+      "gather_waves_post_sight": 0,
+      "sustained_move_streaks": 5,
+      "full_rate": 0.5036496350364964,
+      "half_rate": 0.029197080291970802,
+      "ambiguity_rate": 0.45255474452554745,
+      "mean_tip_frac": 0.2645598534391874,
+      "mean_gen_frac": 0.1607652195454116
+    },
+    {
+      "match_id": "20525",
+      "ticks": 336,
+      "max_gen_army": 63,
+      "gen_at_contact": 8,
+      "gen_at_sight": 15,
+      "tip_at_sight": 33,
+      "tip_near_kill": 109,
+      "gather_waves_total": 9,
+      "gather_waves_pre_sight": 9,
+      "gather_waves_post_sight": 0,
+      "sustained_move_streaks": 10,
+      "full_rate": 0.8029850746268656,
+      "half_rate": 0.0029850746268656717,
+      "ambiguity_rate": 0.18507462686567164,
+      "mean_tip_frac": 0.22786174515219879,
+      "mean_gen_frac": 0.11198737876344612
+    },
+    {
+      "match_id": "20526",
+      "ticks": 140,
+      "max_gen_army": 19,
+      "gen_at_contact": 7,
+      "gen_at_sight": 11,
+      "tip_at_sight": 19,
+      "tip_near_kill": 38,
+      "gather_waves_total": 1,
+      "gather_waves_pre_sight": 1,
+      "gather_waves_post_sight": 0,
+      "sustained_move_streaks": 6,
+      "full_rate": 0.9712230215827338,
+      "half_rate": 0.007194244604316547,
+      "ambiguity_rate": 0.0,
+      "mean_tip_frac": 0.2988173636375999,
+      "mean_gen_frac": 0.18385125528522733
+    },
+    {
+      "match_id": "20527",
+      "ticks": 188,
+      "max_gen_army": 14,
+      "gen_at_contact": 8,
+      "gen_at_sight": 13,
+      "tip_at_sight": 30,
+      "tip_near_kill": 38,
+      "gather_waves_total": 3,
+      "gather_waves_pre_sight": 3,
+      "gather_waves_post_sight": 0,
+      "sustained_move_streaks": 9,
+      "full_rate": 0.9786096256684492,
+      "half_rate": 0.0053475935828877,
+      "ambiguity_rate": 0.0,
+      "mean_tip_frac": 0.2663743206592717,
+      "mean_gen_frac": 0.15694334957696823
+    },
+    {
+      "match_id": "20528",
+      "ticks": 207,
+      "max_gen_army": 24,
+      "gen_at_contact": 12,
+      "gen_at_sight": 24,
+      "tip_at_sight": 32,
+      "tip_near_kill": 66,
+      "gather_waves_total": 3,
+      "gather_waves_pre_sight": 3,
+      "gather_waves_post_sight": 0,
+      "sustained_move_streaks": 6,
+      "full_rate": 0.9611650485436893,
+      "half_rate": 0.019417475728155338,
+      "ambiguity_rate": 0.0048543689320388345,
+      "mean_tip_frac": 0.28455942501976345,
+      "mean_gen_frac": 0.15229922038593902
+    }
+  ]
+}

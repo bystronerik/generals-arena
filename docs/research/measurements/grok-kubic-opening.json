@@ -1,0 +1,1871 @@
+{
+  "analyst": "grok-1-opening",
+  "player": "Kubic",
+  "corpus": {
+    "set": "fit_wins",
+    "n": 341,
+    "split_file": "docs/research/measurements/grok-kubic-corpus-split.json",
+    "split_rule": "wins sorted by match_id; index i with i%10==9 -> holdout; else fit. Losses/draws are held out of fit for rule derivation; skimmed separately for failure modes.",
+    "played": {
+      "win": 378,
+      "lose": 11,
+      "draw": 1
+    },
+    "forfeits": 6,
+    "holdout_excluded": true,
+    "losses_skimmed": true,
+    "n_losses_skimmed": 11
+  },
+  "window": {
+    "ticks": "1..50",
+    "note": "tick 0 is initial state"
+  },
+  "tile_growth": {
+    "tiles_at_tick": {
+      "5": {
+        "n": 341,
+        "min": 1.0,
+        "p10": 2.0,
+        "p25": 2.0,
+        "median": 2.0,
+        "p75": 2.0,
+        "p90": 2.0,
+        "max": 2.0,
+        "mean": 1.9853372434017595
+      },
+      "10": {
+        "n": 341,
+        "min": 1.0,
+        "p10": 3.0,
+        "p25": 3.0,
+        "median": 4.0,
+        "p75": 4.0,
+        "p90": 4.0,
+        "max": 4.0,
+        "mean": 3.7331378299120233
+      },
+      "15": {
+        "n": 341,
+        "min": 1.0,
+        "p10": 3.0,
+        "p25": 4.0,
+        "median": 4.0,
+        "p75": 5.0,
+        "p90": 5.0,
+        "max": 5.0,
+        "mean": 4.313782991202346
+      },
+      "20": {
+        "n": 341,
+        "min": 1.0,
+        "p10": 3.0,
+        "p25": 4.0,
+        "median": 4.0,
+        "p75": 5.0,
+        "p90": 5.0,
+        "max": 6.0,
+        "mean": 4.351906158357771
+      },
+      "25": {
+        "n": 341,
+        "min": 2.0,
+        "p10": 3.0,
+        "p25": 4.0,
+        "median": 4.0,
+        "p75": 5.0,
+        "p90": 5.0,
+        "max": 9.0,
+        "mean": 4.3695014662756595
+      },
+      "30": {
+        "n": 341,
+        "min": 5.0,
+        "p10": 7.0,
+        "p25": 7.0,
+        "median": 7.0,
+        "p75": 7.0,
+        "p90": 7.0,
+        "max": 9.0,
+        "mean": 6.9530791788856305
+      },
+      "35": {
+        "n": 341,
+        "min": 10.0,
+        "p10": 12.0,
+        "p25": 12.0,
+        "median": 12.0,
+        "p75": 12.0,
+        "p90": 12.0,
+        "max": 13.0,
+        "mean": 11.900293255131965
+      },
+      "40": {
+        "n": 341,
+        "min": 13.0,
+        "p10": 14.0,
+        "p25": 15.0,
+        "median": 15.0,
+        "p75": 15.0,
+        "p90": 16.0,
+        "max": 17.0,
+        "mean": 14.870967741935484
+      },
+      "45": {
+        "n": 341,
+        "min": 15.0,
+        "p10": 19.0,
+        "p25": 19.0,
+        "median": 20.0,
+        "p75": 20.0,
+        "p90": 20.0,
+        "max": 22.0,
+        "mean": 19.516129032258064
+      },
+      "50": {
+        "n": 341,
+        "min": 20.0,
+        "p10": 23.0,
+        "p25": 23.0,
+        "median": 24.0,
+        "p75": 25.0,
+        "p90": 25.0,
+        "max": 25.0,
+        "mean": 24.032258064516128
+      }
+    },
+    "tiles50": {
+      "n": 341,
+      "min": 20.0,
+      "p10": 23.0,
+      "p25": 23.0,
+      "median": 24.0,
+      "p75": 25.0,
+      "p90": 25.0,
+      "max": 25.0,
+      "mean": 24.032258064516128
+    },
+    "tiles_gained_per_tick": {
+      "1": {
+        "mean": 0.0,
+        "p_gain": 0.0,
+        "n": 341
+      },
+      "2": {
+        "mean": 0.0,
+        "p_gain": 0.0,
+        "n": 341
+      },
+      "3": {
+        "mean": 0.9853372434017595,
+        "p_gain": 0.9853372434017595,
+        "n": 341
+      },
+      "4": {
+        "mean": 0.0,
+        "p_gain": 0.0,
+        "n": 341
+      },
+      "5": {
+        "mean": 0.0,
+        "p_gain": 0.0,
+        "n": 341
+      },
+      "6": {
+        "mean": 0.9354838709677419,
+        "p_gain": 0.9354838709677419,
+        "n": 341
+      },
+      "7": {
+        "mean": 0.005865102639296188,
+        "p_gain": 0.005865102639296188,
+        "n": 341
+      },
+      "8": {
+        "mean": 0.04398826979472141,
+        "p_gain": 0.04398826979472141,
+        "n": 341
+      },
+      "9": {
+        "mean": 0.7390029325513197,
+        "p_gain": 0.7390029325513197,
+        "n": 341
+      },
+      "10": {
+        "mean": 0.02346041055718475,
+        "p_gain": 0.02346041055718475,
+        "n": 341
+      },
+      "11": {
+        "mean": 0.09090909090909091,
+        "p_gain": 0.09090909090909091,
+        "n": 341
+      },
+      "12": {
+        "mean": 0.020527859237536656,
+        "p_gain": 0.020527859237536656,
+        "n": 341
+      },
+      "13": {
+        "mean": 0.3870967741935484,
+        "p_gain": 0.3870967741935484,
+        "n": 341
+      },
+      "14": {
+        "mean": 0.03519061583577713,
+        "p_gain": 0.03519061583577713,
+        "n": 341
+      },
+      "15": {
+        "mean": 0.0469208211143695,
+        "p_gain": 0.0469208211143695,
+        "n": 341
+      },
+      "16": {
+        "mean": 0.002932551319648094,
+        "p_gain": 0.002932551319648094,
+        "n": 341
+      },
+      "17": {
+        "mean": 0.005865102639296188,
+        "p_gain": 0.005865102639296188,
+        "n": 341
+      },
+      "18": {
+        "mean": 0.020527859237536656,
+        "p_gain": 0.020527859237536656,
+        "n": 341
+      },
+      "19": {
+        "mean": 0.005865102639296188,
+        "p_gain": 0.005865102639296188,
+        "n": 341
+      },
+      "20": {
+        "mean": 0.002932551319648094,
+        "p_gain": 0.002932551319648094,
+        "n": 341
+      },
+      "21": {
+        "mean": 0.005865102639296188,
+        "p_gain": 0.005865102639296188,
+        "n": 341
+      },
+      "22": {
+        "mean": 0.002932551319648094,
+        "p_gain": 0.002932551319648094,
+        "n": 341
+      },
+      "23": {
+        "mean": 0.002932551319648094,
+        "p_gain": 0.002932551319648094,
+        "n": 341
+      },
+      "24": {
+        "mean": 0.002932551319648094,
+        "p_gain": 0.002932551319648094,
+        "n": 341
+      },
+      "25": {
+        "mean": 0.002932551319648094,
+        "p_gain": 0.002932551319648094,
+        "n": 341
+      },
+      "26": {
+        "mean": 0.005865102639296188,
+        "p_gain": 0.005865102639296188,
+        "n": 341
+      },
+      "27": {
+        "mean": 0.10263929618768329,
+        "p_gain": 0.10263929618768329,
+        "n": 341
+      },
+      "28": {
+        "mean": 0.5425219941348973,
+        "p_gain": 0.5425219941348973,
+        "n": 341
+      },
+      "29": {
+        "mean": 0.9501466275659824,
+        "p_gain": 0.9501466275659824,
+        "n": 341
+      },
+      "30": {
+        "mean": 0.9824046920821115,
+        "p_gain": 0.9824046920821115,
+        "n": 341
+      },
+      "31": {
+        "mean": 0.9941348973607038,
+        "p_gain": 0.9941348973607038,
+        "n": 341
+      },
+      "32": {
+        "mean": 1.0,
+        "p_gain": 1.0,
+        "n": 341
+      },
+      "33": {
+        "mean": 0.9970674486803519,
+        "p_gain": 0.9970674486803519,
+        "n": 341
+      },
+      "34": {
+        "mean": 0.9853372434017595,
+        "p_gain": 0.9853372434017595,
+        "n": 341
+      },
+      "35": {
+        "mean": 0.9736070381231672,
+        "p_gain": 0.9736070381231672,
+        "n": 341
+      },
+      "36": {
+        "mean": 0.9413489736070382,
+        "p_gain": 0.9413489736070382,
+        "n": 341
+      },
+      "37": {
+        "mean": 0.08504398826979472,
+        "p_gain": 0.08504398826979472,
+        "n": 341
+      },
+      "38": {
+        "mean": 0.1906158357771261,
+        "p_gain": 0.1906158357771261,
+        "n": 341
+      },
+      "39": {
+        "mean": 0.8621700879765396,
+        "p_gain": 0.8621700879765396,
+        "n": 341
+      },
+      "40": {
+        "mean": 0.9237536656891495,
+        "p_gain": 0.9237536656891495,
+        "n": 341
+      },
+      "41": {
+        "mean": 0.9794721407624634,
+        "p_gain": 0.9794721407624634,
+        "n": 341
+      },
+      "42": {
+        "mean": 0.9794721407624634,
+        "p_gain": 0.9794721407624634,
+        "n": 341
+      },
+      "43": {
+        "mean": 0.967741935483871,
+        "p_gain": 0.967741935483871,
+        "n": 341
+      },
+      "44": {
+        "mean": 0.9413489736070382,
+        "p_gain": 0.9413489736070382,
+        "n": 341
+      },
+      "45": {
+        "mean": 0.8005865102639296,
+        "p_gain": 0.8005865102639296,
+        "n": 341
+      },
+      "46": {
+        "mean": 0.9266862170087976,
+        "p_gain": 0.9266862170087976,
+        "n": 341
+      },
+      "47": {
+        "mean": 0.9296187683284457,
+        "p_gain": 0.9296187683284457,
+        "n": 341
+      },
+      "48": {
+        "mean": 0.9648093841642229,
+        "p_gain": 0.9648093841642229,
+        "n": 341
+      },
+      "49": {
+        "mean": 0.8768328445747801,
+        "p_gain": 0.8768328445747801,
+        "n": 341
+      },
+      "50": {
+        "mean": 0.8475073313782991,
+        "p_gain": 0.8475073313782991,
+        "n": 341
+      }
+    },
+    "first_gain_tick": {
+      "n": 341,
+      "min": 3.0,
+      "p10": 3.0,
+      "p25": 3.0,
+      "median": 3.0,
+      "p75": 3.0,
+      "p90": 3.0,
+      "max": 25.0,
+      "mean": 3.129032258064516
+    },
+    "first_gain_tick_counts": {
+      "3": 336,
+      "7": 2,
+      "25": 1,
+      "11": 1,
+      "9": 1
+    },
+    "gen_army_before_first_gain": {
+      "2": 336,
+      "4": 2,
+      "13": 1,
+      "6": 1,
+      "5": 1
+    },
+    "inter_gain_gap": {
+      "n": 7543,
+      "min": 1.0,
+      "p10": 1.0,
+      "p25": 1.0,
+      "median": 1.0,
+      "p75": 1.0,
+      "p90": 3.0,
+      "max": 25.0,
+      "mean": 2.1105660877634893
+    },
+    "inter_gain_gap_counts": {
+      "1": 5902,
+      "3": 823,
+      "2": 197,
+      "4": 175,
+      "16": 105,
+      "19": 103,
+      "5": 67,
+      "17": 30,
+      "21": 26,
+      "6": 24,
+      "15": 20,
+      "14": 19,
+      "18": 11,
+      "7": 9,
+      "12": 9,
+      "23": 7,
+      "8": 5,
+      "9": 3,
+      "10": 2,
+      "20": 2,
+      "11": 2,
+      "13": 1,
+      "25": 1
+    }
+  },
+  "first_expansion_direction": {
+    "align_enemy_general_true": {
+      "counts": {
+        "toward": 276,
+        "away": 65
+      },
+      "toward_rate": 0.8093841642228738,
+      "note": "True enemy-general cell; fog means bot cannot know this."
+    },
+    "align_map_center": {
+      "counts": {
+        "toward": 288,
+        "away": 48,
+        "side": 5
+      },
+      "toward_rate": 0.844574780058651
+    },
+    "min_dist_center_neighbor_rule": {
+      "hits": 310,
+      "n": 341,
+      "rate": 0.9090909090909091
+    },
+    "min_dist_enemy_gen_neighbor_rule": {
+      "hits": 293,
+      "n": 341,
+      "rate": 0.8592375366568915
+    },
+    "either_rule_rate": 0.9354838709677419,
+    "neither_match_ids": [
+      "20551",
+      "20552",
+      "20569",
+      "20602",
+      "20898",
+      "20922",
+      "20993",
+      "21061",
+      "21062",
+      "21084",
+      "21248",
+      "21536",
+      "21548",
+      "21549",
+      "21775",
+      "21859",
+      "21894",
+      "21931",
+      "22020",
+      "22220",
+      "23768",
+      "24809"
+    ],
+    "away_egen_match_ids": [
+      "20527",
+      "20540",
+      "20541",
+      "20551",
+      "20552",
+      "20560",
+      "20564",
+      "20567",
+      "20569",
+      "20602",
+      "20898",
+      "20921",
+      "20922",
+      "20993",
+      "20996",
+      "21058",
+      "21061",
+      "21062",
+      "21084",
+      "21086",
+      "21215",
+      "21221",
+      "21248",
+      "21479",
+      "21502",
+      "21507",
+      "21534",
+      "21536",
+      "21547",
+      "21548",
+      "21549",
+      "21699",
+      "21763",
+      "21765",
+      "21774",
+      "21775",
+      "21777",
+      "21780",
+      "21781",
+      "21807",
+      "21850",
+      "21859",
+      "21860",
+      "21893",
+      "21894",
+      "21907",
+      "21929",
+      "21931",
+      "21972",
+      "21981",
+      "22020",
+      "22042",
+      "22045",
+      "22047",
+      "22058",
+      "22165",
+      "22220",
+      "22911",
+      "23077",
+      "23768",
+      "24011",
+      "24809",
+      "24991",
+      "24992",
+      "25163"
+    ],
+    "away_center_match_ids": [
+      "20526",
+      "20527",
+      "20530",
+      "20545",
+      "20551",
+      "20552",
+      "20564",
+      "20569",
+      "20602",
+      "20898",
+      "20922",
+      "20993",
+      "20996",
+      "21058",
+      "21061",
+      "21062",
+      "21084",
+      "21215",
+      "21218",
+      "21248",
+      "21507",
+      "21536",
+      "21548",
+      "21549",
+      "21699",
+      "21763",
+      "21775",
+      "21777",
+      "21848",
+      "21859",
+      "21860",
+      "21861",
+      "21872",
+      "21894",
+      "21929",
+      "21931",
+      "21934",
+      "21981",
+      "21991",
+      "22020",
+      "22045",
+      "22047",
+      "22055",
+      "22220",
+      "23768",
+      "24013",
+      "24809",
+      "25163"
+    ],
+    "first_move_dir_counts": {
+      "W": 99,
+      "N": 87,
+      "E": 81,
+      "S": 74
+    },
+    "by_spawn": {
+      "corner": {
+        "n": 24,
+        "align_egen": {
+          "toward": 22,
+          "away": 2
+        },
+        "align_center": {
+          "toward": 24
+        },
+        "tiles50": {
+          "n": 24,
+          "min": 20.0,
+          "p10": 23.0,
+          "p25": 23.0,
+          "median": 24.0,
+          "p75": 24.0,
+          "p90": 25.0,
+          "max": 25.0,
+          "mean": 23.666666666666668
+        }
+      },
+      "edge": {
+        "n": 244,
+        "align_egen": {
+          "toward": 205,
+          "away": 39
+        },
+        "align_center": {
+          "toward": 213,
+          "away": 28,
+          "side": 3
+        },
+        "tiles50": {
+          "n": 244,
+          "min": 20.0,
+          "p10": 23.0,
+          "p25": 23.0,
+          "median": 24.0,
+          "p75": 25.0,
+          "p90": 25.0,
+          "max": 25.0,
+          "mean": 24.06967213114754
+        }
+      },
+      "centerish": {
+        "n": 73,
+        "align_egen": {
+          "toward": 49,
+          "away": 24
+        },
+        "align_center": {
+          "toward": 51,
+          "away": 20,
+          "side": 2
+        },
+        "tiles50": {
+          "n": 73,
+          "min": 20.0,
+          "p10": 23.0,
+          "p25": 24.0,
+          "median": 24.0,
+          "p75": 25.0,
+          "p90": 25.0,
+          "max": 25.0,
+          "mean": 24.027397260273972
+        }
+      }
+    },
+    "by_map_size_top": {
+      "18x20": {
+        "n": 37,
+        "align_egen": {
+          "toward": 30,
+          "away": 7
+        }
+      },
+      "20x18": {
+        "n": 36,
+        "align_egen": {
+          "toward": 25,
+          "away": 11
+        }
+      },
+      "21x19": {
+        "n": 28,
+        "align_egen": {
+          "toward": 21,
+          "away": 7
+        }
+      },
+      "18x21": {
+        "n": 26,
+        "align_egen": {
+          "toward": 24,
+          "away": 2
+        }
+      },
+      "20x20": {
+        "n": 25,
+        "align_egen": {
+          "toward": 19,
+          "away": 6
+        }
+      },
+      "20x21": {
+        "n": 23,
+        "align_egen": {
+          "toward": 20,
+          "away": 3
+        }
+      },
+      "18x18": {
+        "n": 22,
+        "align_egen": {
+          "toward": 14,
+          "away": 8
+        }
+      },
+      "19x21": {
+        "n": 21,
+        "align_egen": {
+          "toward": 16,
+          "away": 5
+        }
+      }
+    }
+  },
+  "spawn_and_map": {
+    "spawn_class_counts": {
+      "edge": 244,
+      "centerish": 73,
+      "corner": 24
+    },
+    "map_size_counts": {
+      "18x20": 37,
+      "20x18": 36,
+      "21x19": 28,
+      "18x21": 26,
+      "20x20": 25,
+      "20x21": 23,
+      "18x18": 22,
+      "19x21": 21,
+      "19x18": 20,
+      "20x19": 19,
+      "21x20": 18,
+      "19x19": 18,
+      "21x21": 17,
+      "18x19": 14,
+      "19x20": 10,
+      "21x18": 7
+    }
+  },
+  "early_stack": {
+    "max_stack_at_tick": {
+      "5": {
+        "n": 341,
+        "min": 2.0,
+        "p10": 2.0,
+        "p25": 2.0,
+        "median": 2.0,
+        "p75": 2.0,
+        "p90": 2.0,
+        "max": 3.0,
+        "mean": 2.0146627565982405
+      },
+      "10": {
+        "n": 341,
+        "min": 2.0,
+        "p10": 2.0,
+        "p25": 2.0,
+        "median": 2.0,
+        "p75": 3.0,
+        "p90": 3.0,
+        "max": 6.0,
+        "mean": 2.275659824046921
+      },
+      "15": {
+        "n": 341,
+        "min": 2.0,
+        "p10": 3.0,
+        "p25": 3.0,
+        "median": 3.0,
+        "p75": 4.0,
+        "p90": 5.0,
+        "max": 8.0,
+        "mean": 3.3841642228739004
+      },
+      "20": {
+        "n": 341,
+        "min": 3.0,
+        "p10": 4.0,
+        "p25": 4.0,
+        "median": 5.0,
+        "p75": 6.0,
+        "p90": 8.0,
+        "max": 11.0,
+        "mean": 5.243401759530792
+      },
+      "25": {
+        "n": 341,
+        "min": 4.0,
+        "p10": 5.0,
+        "p25": 6.0,
+        "median": 7.0,
+        "p75": 8.0,
+        "p90": 10.0,
+        "max": 12.0,
+        "mean": 7.24633431085044
+      },
+      "30": {
+        "n": 341,
+        "min": 5.0,
+        "p10": 7.0,
+        "p25": 7.0,
+        "median": 7.0,
+        "p75": 7.0,
+        "p90": 7.0,
+        "max": 10.0,
+        "mean": 7.085043988269795
+      },
+      "40": {
+        "n": 341,
+        "min": 3.0,
+        "p10": 4.0,
+        "p25": 5.0,
+        "median": 5.0,
+        "p75": 5.0,
+        "p90": 6.0,
+        "max": 8.0,
+        "mean": 5.114369501466276
+      },
+      "50": {
+        "n": 341,
+        "min": 3.0,
+        "p10": 3.0,
+        "p25": 3.0,
+        "median": 3.0,
+        "p75": 4.0,
+        "p90": 5.0,
+        "max": 8.0,
+        "mean": 3.375366568914956
+      }
+    },
+    "median_stack_dist_to_general": {
+      "n": 341,
+      "min": 0.0,
+      "p10": 0.0,
+      "p25": 0.0,
+      "median": 1.0,
+      "p75": 2.0,
+      "p90": 2.0,
+      "max": 2.0,
+      "mean": 1.0058651026392962
+    },
+    "frac_ticks_stack_on_general": {
+      "n": 341,
+      "min": 0.24,
+      "p10": 0.32,
+      "p25": 0.36,
+      "median": 0.44,
+      "p75": 0.52,
+      "p90": 0.56,
+      "max": 0.68,
+      "mean": 0.44158357771261003
+    }
+  },
+  "land_vs_enemy_half": {
+    "neutral_captures_first50": 7874,
+    "enemy_captures_first50": 10,
+    "enemy_capture_rate": 0.0012683916793505834,
+    "owned_enemy_half_frac_at_50": {
+      "n": 341,
+      "min": 0.0,
+      "p10": 0.0,
+      "p25": 0.0,
+      "median": 0.0,
+      "p75": 0.08,
+      "p90": 0.13043478260869565,
+      "max": 0.43478260869565216,
+      "mean": 0.038584049084495343
+    },
+    "note": "Enemy half = cells closer to true enemy general than to own general."
+  },
+  "turn_modulo": {
+    "moves_from_general_tick_mod2": {
+      "even": 3427,
+      "odd": 1009,
+      "even_rate": 0.7725428313796213
+    },
+    "moves_not_from_general_tick_mod2": {
+      "even": 4732,
+      "odd": 6801,
+      "even_rate": 0.410300875747854
+    },
+    "move_kinds_by_window": {
+      "0_9": {
+        "full": 2343,
+        "pass": 1050,
+        "half": 17
+      },
+      "10_25": {
+        "full": 4930,
+        "half": 512,
+        "pass": 14
+      },
+      "26_49": {
+        "full": 8165,
+        "pass": 13,
+        "multi": 4,
+        "half": 2
+      }
+    },
+    "mid_phase_move_vs_general": {
+      "away": 3779,
+      "toward": 1663
+    },
+    "note": "Competition production is every other turn on general/castles. Move tick is the transition index in kubic_moves (frame t -> t+1)."
+  },
+  "phases": {
+    "A_pulse": {
+      "description": "Sparse captures at ticks 3,6,9 then near-zero gains",
+      "p_gain_tick3": 0.9853372434017595,
+      "p_gain_tick6": 0.9354838709677419,
+      "p_gain_tick9": 0.7390029325513197
+    },
+    "B_pause_buildup": {
+      "description": "Ticks ~10-25: few tile gains, many territorial moves, stack grows",
+      "tiles_at_20": {
+        "n": 341,
+        "min": 1.0,
+        "p10": 3.0,
+        "p25": 4.0,
+        "median": 4.0,
+        "p75": 5.0,
+        "p90": 5.0,
+        "max": 6.0,
+        "mean": 4.351906158357771
+      },
+      "stack_at_25": {
+        "n": 341,
+        "min": 4.0,
+        "p10": 5.0,
+        "p25": 6.0,
+        "median": 7.0,
+        "p75": 8.0,
+        "p90": 10.0,
+        "max": 12.0,
+        "mean": 7.24633431085044
+      }
+    },
+    "C_flood": {
+      "description": "Continuous land grab starting near tick 27",
+      "start_tick": {
+        "n": 341,
+        "min": 20.0,
+        "p10": 26.0,
+        "p25": 27.0,
+        "median": 27.0,
+        "p75": 28.0,
+        "p90": 28.0,
+        "max": 31.0,
+        "mean": 27.387096774193548
+      },
+      "start_tick_counts": {
+        "27": 150,
+        "28": 139,
+        "26": 33,
+        "29": 11,
+        "30": 4,
+        "31": 1,
+        "24": 1,
+        "20": 1,
+        "25": 1
+      },
+      "stack_at_start": {
+        "n": 341,
+        "min": 5.0,
+        "p10": 9.0,
+        "p25": 9.0,
+        "median": 10.0,
+        "p75": 10.0,
+        "p90": 11.0,
+        "max": 13.0,
+        "mean": 9.665689149560118
+      },
+      "army_at_start": {
+        "n": 341,
+        "min": 11.0,
+        "p10": 14.0,
+        "p25": 14.0,
+        "median": 14.0,
+        "p75": 15.0,
+        "p90": 15.0,
+        "max": 16.0,
+        "mean": 14.454545454545455
+      },
+      "tiles_at_start": {
+        "n": 341,
+        "min": 1.0,
+        "p10": 3.0,
+        "p25": 4.0,
+        "median": 4.0,
+        "p75": 5.0,
+        "p90": 5.0,
+        "max": 6.0,
+        "mean": 4.354838709677419
+      },
+      "start_near_27_pm1_rate": 0.9442815249266863
+    }
+  },
+  "castles": {
+    "event_castle_built_in_first50": {
+      "1": 190,
+      "0": 151
+    },
+    "event_castle_built_whole_game": {
+      "1": 156,
+      "0": 85,
+      "2": 74,
+      "3": 24,
+      "5": 1,
+      "4": 1
+    },
+    "event_false_early_count": 190,
+    "event_false_early_note": "castle_built events with tick<=50 that have no matching spend>=30 on that cell \u2014 false positives from production detector.",
+    "real_builds_in_first50": {
+      "0": 341
+    },
+    "real_builds_whole_game": {
+      "1": 85,
+      "2": 74,
+      "0": 60,
+      "3": 25,
+      "4": 23,
+      "5": 15,
+      "6": 14,
+      "7": 11,
+      "9": 9,
+      "8": 7,
+      "11": 5,
+      "12": 5,
+      "10": 3,
+      "27": 1,
+      "16": 1,
+      "24": 1,
+      "19": 1,
+      "13": 1
+    },
+    "first_real_build_tick": {
+      "n": 281,
+      "min": 116.0,
+      "p10": 120.0,
+      "p25": 124.0,
+      "median": 138.0,
+      "p75": 177.0,
+      "p90": 202.0,
+      "max": 321.0,
+      "mean": 154.51245551601423
+    },
+    "first_real_build_dist_to_general": {
+      "n": 281,
+      "min": 2.0,
+      "p10": 7.0,
+      "p25": 7.0,
+      "median": 9.0,
+      "p75": 16.0,
+      "p90": 20.0,
+      "max": 31.0,
+      "mean": 11.736654804270463
+    },
+    "first_real_build_army_before": {
+      "n": 281,
+      "min": 30.0,
+      "p10": 33.0,
+      "p25": 35.0,
+      "median": 37.0,
+      "p75": 45.0,
+      "p90": 62.0,
+      "max": 174.0,
+      "mean": 45.213523131672595
+    },
+    "first_real_build_army_after": {
+      "n": 281,
+      "min": 0.0,
+      "p10": 1.0,
+      "p25": 1.0,
+      "median": 1.0,
+      "p75": 2.0,
+      "p90": 4.0,
+      "max": 90.0,
+      "mean": 2.2597864768683276
+    },
+    "first_real_build_drop": {
+      "n": 281,
+      "min": 30.0,
+      "p10": 32.0,
+      "p25": 34.0,
+      "median": 35.0,
+      "p75": 42.0,
+      "p90": 60.0,
+      "max": 173.0,
+      "mean": 42.95373665480427
+    },
+    "games_with_zero_real_builds": 60,
+    "detector": "owned non-general cell, army drop >=30, no orthogonal neighbour gains ownership/army consistent with the send"
+  },
+  "counterexamples": {
+    "no_gain_at_tick_3": [
+      "20560",
+      "21972",
+      "22909",
+      "24990",
+      "25166"
+    ],
+    "phase_c_missing_or_after_35": [],
+    "first_move_neither_center_nor_egen_min": [
+      "20551",
+      "20552",
+      "20569",
+      "20602",
+      "20898",
+      "20922",
+      "20993",
+      "21061",
+      "21062",
+      "21084",
+      "21248",
+      "21536",
+      "21548",
+      "21549",
+      "21775",
+      "21859",
+      "21894",
+      "21931",
+      "22020",
+      "22220",
+      "23768",
+      "24809"
+    ],
+    "first_move_away_from_egen": [
+      "20527",
+      "20540",
+      "20541",
+      "20551",
+      "20552",
+      "20560",
+      "20564",
+      "20567",
+      "20569",
+      "20602",
+      "20898",
+      "20921",
+      "20922",
+      "20993",
+      "20996",
+      "21058",
+      "21061",
+      "21062",
+      "21084",
+      "21086",
+      "21215",
+      "21221",
+      "21248",
+      "21479",
+      "21502",
+      "21507",
+      "21534",
+      "21536",
+      "21547",
+      "21548",
+      "21549",
+      "21699",
+      "21763",
+      "21765",
+      "21774",
+      "21775",
+      "21777",
+      "21780",
+      "21781",
+      "21807",
+      "21850",
+      "21859",
+      "21860",
+      "21893",
+      "21894",
+      "21907",
+      "21929",
+      "21931",
+      "21972",
+      "21981",
+      "22020",
+      "22042",
+      "22045",
+      "22047",
+      "22058",
+      "22165",
+      "22220",
+      "22911",
+      "23077",
+      "23768",
+      "24011",
+      "24809",
+      "24991",
+      "24992",
+      "25163"
+    ],
+    "first_move_away_from_center": [
+      "20526",
+      "20527",
+      "20530",
+      "20545",
+      "20551",
+      "20552",
+      "20564",
+      "20569",
+      "20602",
+      "20898",
+      "20922",
+      "20993",
+      "20996",
+      "21058",
+      "21061",
+      "21062",
+      "21084",
+      "21215",
+      "21218",
+      "21248",
+      "21507",
+      "21536",
+      "21548",
+      "21549",
+      "21699",
+      "21763",
+      "21775",
+      "21777",
+      "21848",
+      "21859",
+      "21860",
+      "21861",
+      "21872",
+      "21894",
+      "21929",
+      "21931",
+      "21934",
+      "21981",
+      "21991",
+      "22020",
+      "22045",
+      "22047",
+      "22055",
+      "22220",
+      "23768",
+      "24013",
+      "24809",
+      "25163"
+    ]
+  },
+  "loss_skim": {
+    "excluded_from_rule_derivation": true,
+    "games": [
+      {
+        "match_id": "20583",
+        "total_ticks": 192,
+        "tiles50": 25,
+        "first_gain_tick": 3,
+        "first_contact": 74,
+        "gain_at_3": 1,
+        "gain_at_6": 1,
+        "gain_at_9": 1,
+        "follows_3_6_9": true
+      },
+      {
+        "match_id": "20595",
+        "total_ticks": 427,
+        "tiles50": 21,
+        "first_gain_tick": 3,
+        "first_contact": 31,
+        "gain_at_3": 1,
+        "gain_at_6": 1,
+        "gain_at_9": 1,
+        "follows_3_6_9": true
+      },
+      {
+        "match_id": "20603",
+        "total_ticks": 201,
+        "tiles50": 24,
+        "first_gain_tick": 3,
+        "first_contact": 87,
+        "gain_at_3": 1,
+        "gain_at_6": 1,
+        "gain_at_9": 1,
+        "follows_3_6_9": true
+      },
+      {
+        "match_id": "20923",
+        "total_ticks": 132,
+        "tiles50": 22,
+        "first_gain_tick": 3,
+        "first_contact": 34,
+        "gain_at_3": 1,
+        "gain_at_6": 1,
+        "gain_at_9": 1,
+        "follows_3_6_9": true
+      },
+      {
+        "match_id": "24184",
+        "total_ticks": 619,
+        "tiles50": 7,
+        "first_gain_tick": 6,
+        "first_contact": 206,
+        "gain_at_3": 0,
+        "gain_at_6": 1,
+        "gain_at_9": 0,
+        "follows_3_6_9": false
+      },
+      {
+        "match_id": "24185",
+        "total_ticks": 535,
+        "tiles50": 4,
+        "first_gain_tick": 14,
+        "first_contact": 209,
+        "gain_at_3": 0,
+        "gain_at_6": 0,
+        "gain_at_9": 0,
+        "follows_3_6_9": false
+      },
+      {
+        "match_id": "24186",
+        "total_ticks": 170,
+        "tiles50": 7,
+        "first_gain_tick": 7,
+        "first_contact": 123,
+        "gain_at_3": 0,
+        "gain_at_6": 0,
+        "gain_at_9": 0,
+        "follows_3_6_9": false
+      },
+      {
+        "match_id": "24187",
+        "total_ticks": 241,
+        "tiles50": 4,
+        "first_gain_tick": 36,
+        "first_contact": 145,
+        "gain_at_3": 0,
+        "gain_at_6": 0,
+        "gain_at_9": 0,
+        "follows_3_6_9": false
+      },
+      {
+        "match_id": "24188",
+        "total_ticks": 366,
+        "tiles50": 6,
+        "first_gain_tick": 12,
+        "first_contact": 232,
+        "gain_at_3": 0,
+        "gain_at_6": 0,
+        "gain_at_9": 0,
+        "follows_3_6_9": false
+      },
+      {
+        "match_id": "24189",
+        "total_ticks": 344,
+        "tiles50": 6,
+        "first_gain_tick": 8,
+        "first_contact": 157,
+        "gain_at_3": 0,
+        "gain_at_6": 0,
+        "gain_at_9": 0,
+        "follows_3_6_9": false
+      },
+      {
+        "match_id": "24988",
+        "total_ticks": 88,
+        "tiles50": 24,
+        "first_gain_tick": 3,
+        "first_contact": 82,
+        "gain_at_3": 1,
+        "gain_at_6": 1,
+        "gain_at_9": 0,
+        "follows_3_6_9": false
+      }
+    ],
+    "follows_3_6_9_count": 4,
+    "note": "Losses 24184-24189 break the 3/6/9 pulse and end first-50 with tiles50 in 4..7 \u2014 possible version skew or extreme maps; not used to derive opening rules."
+  },
+  "candidate_rules": [
+    {
+      "id": "R1_first_expand_tick3",
+      "rule": "After even-tick production raises general army to >=2, on the transition into tick 3 issue a full leave-1 move from the general onto an open orthogonal neighbour.",
+      "thresholds": {
+        "first_gain_tick": 3,
+        "gen_army_before": 2,
+        "units": "ticks / army"
+      },
+      "support": {
+        "p_gain_tick3": 0.9853372434017595,
+        "gen_army_2_rate": 0.9853372434017595,
+        "n": 341
+      },
+      "counterexample_ids": [
+        "20560",
+        "21972",
+        "22909",
+        "24990",
+        "25166"
+      ],
+      "tag": "MEASURED"
+    },
+    {
+      "id": "R2_pulse_3_6_9",
+      "rule": "Repeat a capture pulse at ticks 6 and 9 (every +3), then stop net tile growth until ~tick 27.",
+      "thresholds": {
+        "pulse_ticks": [
+          3,
+          6,
+          9
+        ],
+        "pause_until": 27,
+        "units": "ticks"
+      },
+      "support": {
+        "p_gain_3": 0.9853372434017595,
+        "p_gain_6": 0.9354838709677419,
+        "p_gain_9": 0.7390029325513197,
+        "p_gain_20": 0.002932551319648094,
+        "n": 341
+      },
+      "tag": "MEASURED"
+    },
+    {
+      "id": "R3_first_step_toward_center",
+      "rule": "Among open orthogonal neighbours of the general, pick a cell that minimizes Manhattan distance to map center ((rows-1)/2,(cols-1)/2). Tie-break: unknown (dirs W/E/N/S all appear).",
+      "thresholds": {
+        "center_rule_hit_rate": 0.9090909090909091,
+        "egen_rule_hit_rate": 0.8592375366568915,
+        "units": "rate over fit wins"
+      },
+      "support": {
+        "center_hits": 310,
+        "egen_hits": 293,
+        "neither": 22,
+        "n": 341
+      },
+      "counterexample_ids": [
+        "20551",
+        "20552",
+        "20569",
+        "20602",
+        "20898",
+        "20922",
+        "20993",
+        "21061",
+        "21062",
+        "21084",
+        "21248",
+        "21536",
+        "21548",
+        "21549",
+        "21775",
+        "21859",
+        "21894",
+        "21931",
+        "22020",
+        "22220",
+        "23768",
+        "24809"
+      ],
+      "tag": "INFERRED",
+      "reasoning": "Center rule 90.9% > true-enemy-gen rule 85.9%. Center is fog-legal. Enemy-gen alignment is likely a side effect of opposite spawns."
+    },
+    {
+      "id": "R4_no_castle_before_50",
+      "rule": "Do not build castles in the first 50 ticks. Prefer neutral land. First real build (spend detector) occurs at median tick 138, typically dist_to_general in 6..10 with army_before near price.",
+      "thresholds": {
+        "castle_builds_in_first50": 0,
+        "first_build_tick_median": 138.0,
+        "units": "ticks / army on cell"
+      },
+      "support": {
+        "games_with_0_real_builds_in_50": 341,
+        "n": 341,
+        "event_false_early": 190
+      },
+      "tag": "MEASURED"
+    },
+    {
+      "id": "R5_flood_at_tick_27",
+      "rule": "At tick ~27 (median 27; 94.4% within 27\u00b11), begin nearly every-tick neutral expansion until tick 50. Precondition observed: total army median 14, max_stack median 10, tiles still ~4.",
+      "thresholds": {
+        "flood_start_tick": 27,
+        "tolerance": 1,
+        "army_at_start_median": 14.0,
+        "stack_at_start_median": 10.0,
+        "units": "ticks / army"
+      },
+      "support": {
+        "start_near_27_pm1_rate": 0.9442815249266863,
+        "n": 341
+      },
+      "counterexample_ids": [],
+      "tag": "MEASURED"
+    },
+    {
+      "id": "R6_gen_moves_on_even_ticks",
+      "rule": "Moves that leave the general prefer even tick transitions (production ticks). Non-general moves prefer odd transitions.",
+      "thresholds": {
+        "gen_move_even_rate": 0.7725428313796213,
+        "units": "fraction of inferred moves in ticks 0..49"
+      },
+      "support": {
+        "from_gen": {
+          "0": 3427,
+          "1": 1009
+        },
+        "not_from_gen": {
+          "1": 6801,
+          "0": 4732
+        }
+      },
+      "tag": "MEASURED"
+    }
+  ],
+  "could_not_determine": [
+    "Exact tie-break among equal min-center neighbours (W/E/N/S all common).",
+    "Whether flood start is clock(tick==27) vs army/stack threshold (both co-occur).",
+    "Exact mid-phase (10-25) micro-policy: many moves away from general without tile gains \u2014 gather vs patrol vs pathing noise not resolved.",
+    "Half-move policy (512 half moves in ticks 10-25, src_before median 3).",
+    "True action log (builds/moves inferred from frames only).",
+    "Whether first-step rule uses map center, enemy-half heuristic, or openness score \u2014 center fits best among tested fog-legal rules but 22 neither cases remain.",
+    "Bot version identity across the scrape window (loss cluster 24184-24189 opens differently)."
+  ],
+  "per_game_sample": [
+    {
+      "match_id": "20524",
+      "spawn": "edge",
+      "size": "20x19",
+      "quad": "NW",
+      "tiles50": 25,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 28,
+      "n_event_castles_50": 1,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 1,
+      "first_real_build_tick": 137
+    },
+    {
+      "match_id": "20525",
+      "spawn": "edge",
+      "size": "20x19",
+      "quad": "NE",
+      "tiles50": 25,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 26,
+      "n_event_castles_50": 0,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 27,
+      "first_real_build_tick": 146
+    },
+    {
+      "match_id": "20526",
+      "spawn": "edge",
+      "size": "21x21",
+      "quad": "SW",
+      "tiles50": 20,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "away",
+      "phase_c_start": 26,
+      "n_event_castles_50": 0,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 1,
+      "first_real_build_tick": 132
+    },
+    {
+      "match_id": "20527",
+      "spawn": "edge",
+      "size": "21x21",
+      "quad": "SW",
+      "tiles50": 20,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "away",
+      "first_move_align_center": "away",
+      "phase_c_start": 27,
+      "n_event_castles_50": 0,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 0,
+      "first_real_build_tick": null
+    },
+    {
+      "match_id": "20528",
+      "spawn": "edge",
+      "size": "20x18",
+      "quad": "NW",
+      "tiles50": 23,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 28,
+      "n_event_castles_50": 0,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 2,
+      "first_real_build_tick": 128
+    },
+    {
+      "match_id": "20529",
+      "spawn": "edge",
+      "size": "20x18",
+      "quad": "SW",
+      "tiles50": 24,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 28,
+      "n_event_castles_50": 1,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 1,
+      "first_real_build_tick": 121
+    },
+    {
+      "match_id": "20530",
+      "spawn": "centerish",
+      "size": "20x20",
+      "quad": "SE",
+      "tiles50": 24,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "away",
+      "phase_c_start": 28,
+      "n_event_castles_50": 0,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 0,
+      "first_real_build_tick": null
+    },
+    {
+      "match_id": "20531",
+      "spawn": "edge",
+      "size": "20x20",
+      "quad": "NE",
+      "tiles50": 24,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 28,
+      "n_event_castles_50": 1,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 0,
+      "first_real_build_tick": null
+    },
+    {
+      "match_id": "20532",
+      "spawn": "edge",
+      "size": "18x21",
+      "quad": "NW",
+      "tiles50": 22,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 26,
+      "n_event_castles_50": 0,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 2,
+      "first_real_build_tick": 218
+    },
+    {
+      "match_id": "20534",
+      "spawn": "edge",
+      "size": "19x21",
+      "quad": "NW",
+      "tiles50": 25,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 28,
+      "n_event_castles_50": 1,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 11,
+      "first_real_build_tick": 220
+    },
+    {
+      "match_id": "20535",
+      "spawn": "edge",
+      "size": "19x21",
+      "quad": "SE",
+      "tiles50": 25,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 28,
+      "n_event_castles_50": 0,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 2,
+      "first_real_build_tick": 242
+    },
+    {
+      "match_id": "20536",
+      "spawn": "edge",
+      "size": "19x18",
+      "quad": "NW",
+      "tiles50": 25,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 27,
+      "n_event_castles_50": 1,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 0,
+      "first_real_build_tick": null
+    },
+    {
+      "match_id": "20537",
+      "spawn": "centerish",
+      "size": "19x18",
+      "quad": "NE",
+      "tiles50": 24,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 28,
+      "n_event_castles_50": 0,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 0,
+      "first_real_build_tick": null
+    },
+    {
+      "match_id": "20538",
+      "spawn": "edge",
+      "size": "21x20",
+      "quad": "SE",
+      "tiles50": 25,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 31,
+      "n_event_castles_50": 1,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 1,
+      "first_real_build_tick": 134
+    },
+    {
+      "match_id": "20539",
+      "spawn": "centerish",
+      "size": "21x20",
+      "quad": "NW",
+      "tiles50": 25,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 28,
+      "n_event_castles_50": 0,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 0,
+      "first_real_build_tick": null
+    },
+    {
+      "match_id": "20540",
+      "spawn": "edge",
+      "size": "18x18",
+      "quad": "SW",
+      "tiles50": 24,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "away",
+      "first_move_align_center": "toward",
+      "phase_c_start": 27,
+      "n_event_castles_50": 1,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 1,
+      "first_real_build_tick": 146
+    },
+    {
+      "match_id": "20541",
+      "spawn": "corner",
+      "size": "18x18",
+      "quad": "NW",
+      "tiles50": 23,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "away",
+      "first_move_align_center": "toward",
+      "phase_c_start": 27,
+      "n_event_castles_50": 1,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 4,
+      "first_real_build_tick": 164
+    },
+    {
+      "match_id": "20542",
+      "spawn": "edge",
+      "size": "20x19",
+      "quad": "SE",
+      "tiles50": 25,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 28,
+      "n_event_castles_50": 1,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 2,
+      "first_real_build_tick": 194
+    },
+    {
+      "match_id": "20544",
+      "spawn": "edge",
+      "size": "18x19",
+      "quad": "NE",
+      "tiles50": 25,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "toward",
+      "phase_c_start": 27,
+      "n_event_castles_50": 1,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 1,
+      "first_real_build_tick": 192
+    },
+    {
+      "match_id": "20545",
+      "spawn": "edge",
+      "size": "18x19",
+      "quad": "SE",
+      "tiles50": 23,
+      "first_gain_tick": 3,
+      "first_move_align_egen": "toward",
+      "first_move_align_center": "away",
+      "phase_c_start": 30,
+      "n_event_castles_50": 1,
+      "n_real_builds_50": 0,
+      "n_real_builds_game": 2,
+      "first_real_build_tick": 172
+    }
+  ],
+  "n_per_game_records": 341
+}
