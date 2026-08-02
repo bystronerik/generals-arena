@@ -17,6 +17,7 @@ from components.army import (
 )
 from components.clock import Deadline
 from components.conveyor import prefer_chain_roots, prune_by_clock
+from mcts_diag import record_root_pick
 from components.threat import defense_score_delta, recall_armed
 from components.tip import feed_tip_action, path_feed_roots, tip_is_ready
 from params import Params
@@ -26,6 +27,10 @@ from params import Params
 class ContactStats:
     iterations: int = 0
     root_moves: int = 0
+    overrode: int = 0
+    prior_rank: int = -1
+    best_visits: int = 0
+    prior0_visits: int = 0
 
 
 @dataclass
@@ -98,6 +103,7 @@ class ContactMCTS:
                 break
 
         best = max(root.children, key=lambda n: (n.visits, n.value, n.prior))
+        record_root_pick(self.stats, root.children, best)
         return best.action if best.action is not None else pass_action()
 
     def _sharpen_priors(self, state, hunt) -> None:
@@ -133,51 +139,58 @@ class ContactMCTS:
         if clock == "gather":
             # Soft feed to muster/tip only; no hunt march.
             rally = muster or tip
+            if hunt is not None and tip is None:
+                tip = largest_owned_stack(obs)
+            if hunt is not None and tip is not None:
+                # Prefer tip that will march next wave: feed the tip near hunt.
+                rally = tip
             if rally is not None:
                 out.extend(
                     path_feed_roots(
-                        obs, rally, self.params.STRIKE_TIP_FEED_BONUS * 0.5
+                        obs, rally, self.params.STRIKE_TIP_FEED_BONUS * 0.45
                     )
                 )
                 gact = gather_toward(obs, rally, blocked)
                 if gact is not None:
                     out.append((gact, 70.0))
         else:
-            # Wave: hunt march + on-route neutrals; soft feed diluted.
-            if tip is not None and not assault_ready:
-                feeds = path_feed_roots(
-                    obs, tip, self.params.STRIKE_TIP_FEED_BONUS * 0.5
-                )
-                out.extend((a, p * 0.3) for a, p in feeds)
-
-            if hunt is not None:
+            # Wave: tip→hunt first (contact→sight tempo). Soft feed stays off.
+            if tip is None:
+                tip = largest_owned_stack(obs)
+            if hunt is not None and tip is not None:
+                tip_army = obs.army_grid[tip[0]][tip[1]]
+                act = step_toward(obs, tip, hunt, blocked)
+                if act is not None:
+                    prior = self.params.HUNT_STEP_BONUS * 2.0 + tip_army
+                    if not state.memory.ever_seen[hunt[0]][hunt[1]]:
+                        prior += 60.0
+                    out.append((act, prior))
+                # Second stack also closes if tip is thin.
                 stacks: list[tuple[int, int, int]] = []
                 for r in range(H):
                     for c in range(W):
+                        if (r, c) == tip:
+                            continue
                         if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
                             continue
                         stacks.append((obs.army_grid[r][c], r, c))
                 stacks.sort(reverse=True)
-                for army, r, c in stacks[:6]:
+                for army, r, c in stacks[:4]:
                     act = step_toward(obs, (r, c), hunt, blocked)
                     if act is None:
                         continue
                     prior = self.params.HUNT_STEP_BONUS + army * 0.5
-                    if not assault_ready:
-                        prior *= 0.85
-                    if not state.memory.ever_seen[hunt[0]][hunt[1]]:
-                        prior += 40.0
                     out.append((act, prior))
                 gact = gather_toward(obs, hunt, blocked)
                 if gact is not None:
-                    out.append((gact, 80.0 if assault_ready else 60.0))
+                    out.append((gact, 90.0 if assault_ready else 70.0))
 
-            # Border captures toward hunt (post-contact expand ~63%).
+            # On-route neutrals/enemies from tip + chain (post-contact expand).
             seeds = []
-            if state.chain_head is not None:
-                seeds.append(state.chain_head)
             if tip is not None:
                 seeds.append(tip)
+            if state.chain_head is not None:
+                seeds.append(state.chain_head)
             for r, c in seeds:
                 if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
                     continue
@@ -195,7 +208,9 @@ class ContactMCTS:
                     out.append((move_action(r, c, nr, nc, 0), prior))
 
         out = prune_by_clock(obs, out, clock, hunt, muster)
-        out = prefer_chain_roots(obs, state.chain_head, out, self.params)
+        # Prefer tip as chain head during contact wave.
+        head = tip if (clock == "wave" and tip is not None) else state.chain_head
+        out = prefer_chain_roots(obs, head, out, self.params)
 
         if not out and hunt is not None:
             act = gather_toward(obs, hunt, blocked)

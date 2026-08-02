@@ -1,16 +1,22 @@
-"""Analyze Sosipolis sight timing on recorded sosipolis-sight1 round."""
+"""Analyze Sosipolis sight timing on a recorded round."""
 from __future__ import annotations
 
+import argparse
 import json
+import re
 from pathlib import Path
+
+import numpy as np
+
 from arena.records.trajectories import read_jsonl_gz, trace_path
 
-GAMES_DIR = Path("data/games/sosipolis-sight1")
-TRAJ_DIR = Path("data/trajectories/sosipolis-sight1")
 
-def analyze():
-    game_files = sorted(GAMES_DIR.glob("*.json"))
-    game_files = [f for f in game_files if f.name != "manifest.json"]
+def analyze(round_name: str) -> None:
+    games_dir = Path(f"data/games/{round_name}")
+    traj_dir = Path(f"data/trajectories/{round_name}")
+    game_files = sorted(
+        f for f in games_dir.glob("*.json") if f.name != "manifest.json"
+    )
 
     records = []
     for gf in game_files:
@@ -22,20 +28,14 @@ def analyze():
         bot_b = data["bot_b"]
         seed = data.get("seed")
         if seed is None:
-            import re
             m = re.search(r"_s(\d+)_", game_id)
             seed = int(m.group(1)) if m else -1
         winner = data["winner"]
         turns = data["turns"]
 
-        if bot_a == "sosipolis":
-            seat = "a"
-            opp_seat = "b"
-        else:
-            seat = "b"
-            opp_seat = "a"
+        seat = "a" if bot_a == "sosipolis" else "b"
 
-        trace_file = trace_path(game_id, seat, TRAJ_DIR)
+        trace_file = trace_path(game_id, seat, traj_dir)
         t_contact = None
         t_sight = None
         phase_counts = {"search": 0, "contact": 0, "strike": 0}
@@ -52,7 +52,9 @@ def analyze():
                 if t_contact is None and phase in ("contact", "strike"):
                     t_contact = t
 
-                if t_sight is None and (sighted == 1 or phase == "strike"):
+                if t_sight is None and (
+                    sighted is True or sighted == 1 or phase == "strike"
+                ):
                     t_sight = t
 
         if winner == "a":
@@ -62,37 +64,55 @@ def analyze():
         else:
             winning_bot = winner
 
-        records.append({
-            "game_id": game_id,
-            "seed": seed,
-            "seat": seat,
-            "bot_a": bot_a,
-            "bot_b": bot_b,
-            "winner_seat": winner,
-            "winner_bot": winning_bot,
-            "turns": turns,
-            "t_contact": t_contact,
-            "t_sight": t_sight,
-            "contact_to_sight": (t_sight - t_contact) if (t_sight is not None and t_contact is not None) else None,
-            "phases": phase_counts,
-        })
+        records.append(
+            {
+                "game_id": game_id,
+                "seed": seed,
+                "seat": seat,
+                "bot_a": bot_a,
+                "bot_b": bot_b,
+                "winner_seat": winner,
+                "winner_bot": winning_bot,
+                "turns": turns,
+                "t_contact": t_contact,
+                "t_sight": t_sight,
+                "contact_to_sight": (
+                    (t_sight - t_contact)
+                    if (t_sight is not None and t_contact is not None)
+                    else None
+                ),
+                "phases": phase_counts,
+            }
+        )
 
     records.sort(key=lambda r: (r["seed"], r["seat"]))
 
-    print(f"{'Seed':<5} {'Seat':<5} {'Winner':<10} {'Turns':<6} {'Contact':<8} {'Sight':<8} {'Contact->Sight':<16} {'Phases (S/C/St)':<15}")
+    print(f"Round: {round_name}")
+    print(
+        f"{'Seed':<5} {'Seat':<5} {'Winner':<10} {'Turns':<6} "
+        f"{'Contact':<8} {'Sight':<8} {'Contact->Sight':<16} {'Phases (S/C/St)':<15}"
+    )
     print("-" * 75)
 
     sighted_count = 0
     sight_turns = []
     contact_turns = []
     c2s_deltas = []
+    wins = 0
 
     for r in records:
         win_str = r["winner_bot"]
         s_str = str(r["t_sight"]) if r["t_sight"] is not None else "None"
         c_str = str(r["t_contact"]) if r["t_contact"] is not None else "None"
-        c2s_str = str(r["contact_to_sight"]) if r["contact_to_sight"] is not None else "N/A"
-        p_str = f"{r['phases']['search']}/{r['phases']['contact']}/{r['phases']['strike']}"
+        c2s_str = (
+            str(r["contact_to_sight"]) if r["contact_to_sight"] is not None else "N/A"
+        )
+        p_str = (
+            f"{r['phases']['search']}/{r['phases']['contact']}/{r['phases']['strike']}"
+        )
+
+        if r["winner_bot"] == "sosipolis":
+            wins += 1
 
         if r["t_sight"] is not None:
             sighted_count += 1
@@ -103,18 +123,43 @@ def analyze():
         if r["t_contact"] is not None:
             contact_turns.append(r["t_contact"])
 
-        print(f"{r['seed']:<5} {r['seat']:<5} {win_str:<10} {r['turns']:<6} {c_str:<8} {s_str:<8} {c2s_str:<16} {p_str:<15}")
+        print(
+            f"{r['seed']:<5} {r['seat']:<5} {win_str:<10} {r['turns']:<6} "
+            f"{c_str:<8} {s_str:<8} {c2s_str:<16} {p_str:<15}"
+        )
 
     print("-" * 75)
     print(f"Total Games: {len(records)}")
-    print(f"Sight Rate: {sighted_count}/{len(records)} ({sighted_count/len(records)*100:.1f}%)")
-    import numpy as np
+    print(f"Sosipolis W-L: {wins}-{len(records) - wins}")
+    print(
+        f"Sight Rate: {sighted_count}/{len(records)} "
+        f"({sighted_count / len(records) * 100:.1f}%)"
+    )
     if sight_turns:
-        print(f"Median Sight Turn (when sighted): {np.median(sight_turns):.1f} (min={min(sight_turns)}, max={max(sight_turns)})")
+        print(
+            f"Median Sight Turn (when sighted): {np.median(sight_turns):.1f} "
+            f"(min={min(sight_turns)}, max={max(sight_turns)})"
+        )
     if contact_turns:
-        print(f"Median Contact Turn: {np.median(contact_turns):.1f} (min={min(contact_turns)}, max={max(contact_turns)})")
+        print(
+            f"Median Contact Turn: {np.median(contact_turns):.1f} "
+            f"(min={min(contact_turns)}, max={max(contact_turns)})"
+        )
+    else:
+        print("Median Contact Turn: n/a (no contact)")
     if c2s_deltas:
-        print(f"Median Contact->Sight Delta: {np.median(c2s_deltas):.1f} (min={min(c2s_deltas)}, max={max(c2s_deltas)})")
+        print(
+            f"Median Contact->Sight Delta: {np.median(c2s_deltas):.1f} "
+            f"(min={min(c2s_deltas)}, max={max(c2s_deltas)})"
+        )
+
 
 if __name__ == "__main__":
-    analyze()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--round",
+        default="sosipolis-sight3",
+        help="Round name under data/games and data/trajectories",
+    )
+    args = parser.parse_args()
+    analyze(args.round)

@@ -16,6 +16,7 @@ from components.army import (
 )
 from components.clock import Deadline
 from components.conveyor import prefer_chain_roots, prune_by_clock
+from mcts_diag import record_root_pick
 from components.threat import defense_score_delta, imminent_loss_move, recall_armed
 from components.tip import (
     feed_tip_action,
@@ -34,6 +35,10 @@ Cell = tuple[int, int]
 class StrikeStats:
     iterations: int = 0
     root_moves: int = 0
+    overrode: int = 0
+    prior_rank: int = -1
+    best_visits: int = 0
+    prior0_visits: int = 0
 
 
 @dataclass
@@ -108,6 +113,7 @@ class StrikeMCTS:
                 break
 
         best = max(root.children, key=lambda n: (n.visits, n.value, n.prior))
+        record_root_pick(self.stats, root.children, best)
         return best.action if best.action is not None else pass_action()
 
     def _kill_shot(self, obs, goal) -> Action | None:

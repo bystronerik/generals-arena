@@ -17,6 +17,7 @@ from components.army import (
 )
 from components.clock import Deadline
 from components.conveyor import prefer_chain_roots, prune_by_clock, prune_opening
+from mcts_diag import record_root_pick
 from components.threat import defense_score_delta, recall_armed
 from params import Params
 
@@ -25,6 +26,10 @@ from params import Params
 class SearchStats:
     iterations: int = 0
     root_moves: int = 0
+    overrode: int = 0
+    prior_rank: int = -1
+    best_visits: int = 0
+    prior0_visits: int = 0
 
 
 @dataclass
@@ -82,6 +87,7 @@ class SearchMCTS:
                 break
 
         best = max(root.children, key=lambda n: (n.visits, n.value, n.prior))
+        record_root_pick(self.stats, root.children, best)
         return best.action if best.action is not None else pass_action()
 
     def _select(self, root: _Node, c: float) -> _Node:
@@ -192,29 +198,27 @@ class SearchMCTS:
                             continue
                         out.append((move_action(r, c, nr, nc, 0), prior))
         else:
-            if hunt is not None:
-                stack = largest_owned_stack(obs)
-                if stack is not None:
-                    act = step_toward(obs, stack, hunt, blocked)
-                    if act is not None:
-                        out.append(
-                            (
-                                act,
-                                self.params.SEARCH_HUNT_BONUS
-                                + obs.army_grid[stack[0]][stack[1]] * 0.3,
-                            )
+            tip = largest_owned_stack(obs)
+            if hunt is not None and tip is not None:
+                act = step_toward(obs, tip, hunt, blocked)
+                if act is not None:
+                    out.append(
+                        (
+                            act,
+                            self.params.SEARCH_HUNT_BONUS * 1.5
+                            + obs.army_grid[tip[0]][tip[1]] * 0.4,
                         )
+                    )
                 gact = gather_toward(obs, hunt, blocked)
                 if gact is not None:
-                    out.append((gact, self.params.SEARCH_HUNT_BONUS * 0.6))
+                    out.append((gact, self.params.SEARCH_HUNT_BONUS * 0.7))
 
             # Prefer chain / tip neighbourhood over full H×W scan.
             seeds: list[tuple[int, int]] = []
-            if state.chain_head is not None:
-                seeds.append(state.chain_head)
-            tip = largest_owned_stack(obs)
             if tip is not None:
                 seeds.append(tip)
+            if state.chain_head is not None:
+                seeds.append(state.chain_head)
             for r, c in seeds:
                 if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
                     continue
@@ -231,25 +235,24 @@ class SearchMCTS:
                         continue
                     out.append((move_action(r, c, nr, nc, 0), prior))
 
-            # Fallback: light frontier scan from owned border only.
-            if len(out) < 4:
-                for r in range(H):
-                    for c in range(W):
-                        if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
+            # Always add frontier land captures (search expand → contact ≤82).
+            for r in range(H):
+                for c in range(W):
+                    if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
+                        continue
+                    for nr, nc in neighbors(H, W, r, c):
+                        if is_wall(obs.type_grid, nr, nc):
                             continue
-                        for nr, nc in neighbors(H, W, r, c):
-                            if is_wall(obs.type_grid, nr, nc):
-                                continue
-                            if obs.owner_grid[nr][nc] == 1:
-                                continue
-                            if (nr, nc) in dead and obs.owner_grid[nr][nc] != 2:
-                                continue
-                            prior = self._score_expand(
-                                obs, state, r, c, nr, nc, hunt, clock
-                            )
-                            if prior < 0:
-                                continue
-                            out.append((move_action(r, c, nr, nc, 0), prior))
+                        if obs.owner_grid[nr][nc] == 1:
+                            continue
+                        if (nr, nc) in dead and obs.owner_grid[nr][nc] != 2:
+                            continue
+                        prior = self._score_expand(
+                            obs, state, r, c, nr, nc, hunt, clock
+                        )
+                        if prior < 0:
+                            continue
+                        out.append((move_action(r, c, nr, nc, 0), prior))
 
         out = prune_by_clock(obs, out, clock, hunt, muster)
         if opening:

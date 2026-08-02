@@ -7,19 +7,10 @@ from params import Params
 
 
 def opening_should_pass(obs, params: Params) -> bool:
-    """Forced/early starvation passes; pulse ticks move, staging may trickle."""
+    """Forced early passes only; keep staging moving toward flood."""
     t = obs.turn
     if t <= 2:
         return True
-    # Between pulse ticks before flood: allow only every-other staging sends.
-    if t < params.OPEN_FLOOD_START:
-        if t in params.OPEN_PULSE_TICKS:
-            return False
-        # Staging ~14–26: move on odd ticks (relay), soft pass on even if tip thin.
-        if 14 <= t < params.OPEN_FLOOD_START and t % 2 == 0:
-            tip = largest_owned_stack(obs)
-            if tip is None or obs.army_grid[tip[0]][tip[1]] < 3:
-                return True
     return False
 
 
@@ -51,8 +42,12 @@ def opening_first_step(obs, state) -> Action | None:
 
 def decide_opening(obs, state, search_mcts, deadline: Deadline, params: Params) -> Action | None:
     """Hard tempo + SearchMCTS under opening mask for destination choice."""
+    from components.search_mcts import SearchStats
+
     if obs.turn > params.OPEN_END:
         return None
+    # Clear prior-turn UCT diag unless this tick runs SearchMCTS.
+    search_mcts.stats = SearchStats()
     if opening_should_pass(obs, params):
         return pass_action()
     if obs.turn == 3:

@@ -168,20 +168,20 @@ def has_leave1_move(obs) -> bool:
 
 
 def opening_mask_ok(obs, state, dst: Cell, params: Params) -> bool:
-    """Opening: prefer own-half / never-seen frontier; no enemy-half push."""
+    """Opening: stay near home half before flood; after flood, allow frontier push."""
     home = state.memory.own_general
     if home is None:
         return True
-    # Own half: closer to home than to map center is a soft proxy; use Manhattan
-    # from home vs board radius so we stay near spawn through t=50.
+    if obs.owner_grid[dst[0]][dst[1]] == 2:
+        return False
+    # After flood start, only block enemy captures / walls already filtered.
+    if obs.turn >= params.OPEN_FLOOD_START:
+        return True
     mid_r = obs.H // 2
     mid_c = obs.W // 2
     home_d = abs(dst[0] - home[0]) + abs(dst[1] - home[1])
     center_d = abs(home[0] - mid_r) + abs(home[1] - mid_c)
-    # Reject destinations deep past the center away from home before flood ends.
-    if obs.turn < params.OPEN_FLOOD_START and home_d > center_d + 2:
-        return False
-    if obs.owner_grid[dst[0]][dst[1]] == 2:
+    if home_d > center_d + 2:
         return False
     return True
 
@@ -258,7 +258,11 @@ def prefer_chain_roots(
     scored: list[tuple[Action, float]],
     params: Params,
 ) -> list[tuple[Action, float]]:
-    """If chain head can move, prefer those roots; fill only if empty."""
+    """Prefer chain-head continues that already passed scoring/prune.
+
+    Never re-inject raw continues that failed the clock/objective filter — that
+    locked the tip onto sideways snakes and delayed contact→sight.
+    """
     continues = chain_roots(obs, chain_head)
     if not continues:
         return apply_chain_priors(scored, chain_head, params)
@@ -270,5 +274,5 @@ def prefer_chain_roots(
     ]
     if preferred:
         return preferred
-    # Chain can move but scored list missed them — inject raw continues.
-    return [(a, params.CHAIN_CONTINUE_PRIOR * 10.0) for a in continues]
+    # Chain cannot close on the objective this tick: allow a break from scored.
+    return apply_chain_priors(scored, chain_head, params)

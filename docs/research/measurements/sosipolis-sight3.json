@@ -1,0 +1,31 @@
+{
+  "round": "sosipolis-sight3",
+  "date": "2026-08-02",
+  "bot": "sosipolis",
+  "opponent": "macaria",
+  "seeds": "0-4",
+  "seat_policy": "alternate",
+  "games": 10,
+  "sosipolis_w_l": [1, 9],
+  "sight_rate": 0.1,
+  "median_contact": 80.0,
+  "contact_turns": [102, 82, 66, 85, 81, 83, 61, 59, 79, 79],
+  "median_sight_when_sighted": 503.0,
+  "median_contact_to_sight": 437.0,
+  "toward_frac_search": 0.858,
+  "toward_frac_contact_to_sight": 0.673,
+  "mcts_override_rate_contact_to_sight": 0.006,
+  "median_contact_window": 242.5,
+  "median_distinct_hunts": 12.5,
+  "kubic_targets": {
+    "contact_median": 82,
+    "sight_median": 181.5,
+    "contact_to_sight": 95.5,
+    "sight_rate": 1.0
+  },
+  "comparisons": {
+    "sight1": {"sight_rate": 0.1, "median_contact": 130.5, "median_sight": 592, "contact_to_sight": 467},
+    "sight2": {"sight_rate": 0.0, "median_contact": 132.0, "median_sight": null, "contact_to_sight": null}
+  },
+  "verdict": "contact_tempo_pass_sight_conversion_fail"
+}

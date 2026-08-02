@@ -37,7 +37,7 @@ class Params:
     GATHER_PHASE_HI: int = 27
     # Opening tempo (Kubic MEASURED).
     OPEN_END: int = 50
-    OPEN_FLOOD_START: int = 27
+    OPEN_FLOOD_START: int = 24
     OPEN_PULSE_TICKS: tuple = (3, 6, 9)
     OPEN_TILES_T50_LO: int = 20
     OPEN_TILES_T50_HI: int = 25
@@ -63,20 +63,20 @@ class Params:
     STRIKE_TIP_ARMY_FRAC: float = 0.40
     STRIKE_TIP_MAX_DIST: int = 14
     STRIKE_TIP_FEED_BONUS: float = 400.0
-    SEARCH_LAND_BONUS: float = 80.0
-    SEARCH_FOG_BONUS: float = 50.0
+    SEARCH_LAND_BONUS: float = 110.0
+    SEARCH_FOG_BONUS: float = 85.0
     SEARCH_ENEMY_BONUS: float = 70.0
-    SEARCH_HUNT_BONUS: float = 90.0
+    SEARCH_HUNT_BONUS: float = 160.0
     CONTACT_ENEMY_BONUS: float = 45.0
-    CONTACT_LAND_BONUS: float = 40.0
-    CONTACT_CANDIDATE_BONUS: float = 80.0
+    CONTACT_LAND_BONUS: float = 55.0
+    CONTACT_CANDIDATE_BONUS: float = 100.0
     # Belief hunt (Macaria-style, local to map_memory + contact_mcts).
-    HUNT_INTERVAL: int = 8
+    HUNT_INTERVAL: int = 4
     HUNT_REVEAL_RADIUS: int = 2
     HUNT_PRIOR_DECAY: float = 0.35
-    HUNT_TRAVEL_DECAY: float = 0.05
-    HUNT_CONTACT_RADIUS: int = 6
-    HUNT_STEP_BONUS: float = 220.0
+    HUNT_TRAVEL_DECAY: float = 0.04
+    HUNT_CONTACT_RADIUS: int = 10
+    HUNT_STEP_BONUS: float = 320.0
     CASTLE_MAX: int = 4
     CASTLE_START_TURN: int = 116
     CASTLE_KEEP: int = 1

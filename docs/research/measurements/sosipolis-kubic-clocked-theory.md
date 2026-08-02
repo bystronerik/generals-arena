@@ -20,14 +20,18 @@ Seeds 1–4 vs smoke: all sosipolis wins; first castles when built were ≥218
 
 ## Stage B — behavioural probes (soft)
 
+Recorded panel: [`sosipolis-kubic-clocked-probes.md`](sosipolis-kubic-clocked-probes.md)
+(10 games vs smoke, seeds 0–4 alternate).
+
 | Probe | Observation |
 | --- | --- |
-| No real castle before 116 | Pass (smoke seed 0 first @168; others ≥218 or skip) |
-| Match finishes / no fault | Pass |
-| Land @ t=50 ∈ [20,25] | Not measured this grid (no trajectory land sample) |
-| Wave ≫ gather capture | Not measured this grid |
-| Chain continue rate | Not measured this grid |
-| Pass rate after t=50 | No fault / stall observed on smoke panel |
+| No real castle before 116 | **PASS** (first median 168) |
+| Match finishes / no fault | **PASS** (10/10 sosipolis wins) |
+| Land @ t=50 ∈ [20,25] | **FAIL** (median 19.5; 50% in band) |
+| Wave ≫ gather capture | **PASS** (median ratio 1.95) |
+| Chain continue rate | **PASS** (median 0.95) |
+| Pass rate after t=50 | **PASS** (0.0) |
+| Post-sight toward_frac ≥ 0.70 | **FAIL** (median 0.52; sight 100% vs smoke) |
 
 ## Stage C — macaria A/B
 
@@ -40,6 +44,6 @@ Seeds 1–4 vs smoke: all sosipolis wins; first castles when built were ≥218
 
 ## Verdict
 
-Architecture gate: **keep** for further tune. Not Elo-final. Clocked shell beats
-both prior failure modes on this macaria panel. Next: land@50 / chain / capture
-ratio probes with trajectories, then tip5-scale panel under the decision rule.
+Architecture gate: **keep** for further tune. Stage B shows chain/castle/pass
+clocks work; opening land@50 and post-sight toward_frac need the next revision
+before a tip5-scale Elo panel.
