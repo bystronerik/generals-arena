@@ -66,6 +66,23 @@ class Agent:
 
 No per-bot wire code is required.
 
+## In-process load isolation
+
+`arena.bot_api.load_strategy_class` execs `agent.py` with the bot dir (and
+`bots/`) on `sys.path`, then **removes the bot's private sibling modules from
+`sys.modules`** (shared `bots/_common/` stays). Two bots that ship identically
+named siblings (`params.py`, `search.py`, `blitz_core.py`, …) therefore each
+get their own implementation in one interpreter — previously the second bot
+silently reused the first bot's modules. If a sibling name is already held by
+a module from outside the bot dir, the load raises `ImportError` instead of
+aliasing.
+
+Consequence for bot authors: **import siblings at module top level**, not
+inside functions. A lazy `from params import …` executed after loading (e.g.
+in `Agent.__init__`) runs after the bot dir has left `sys.path` and fails with
+`ModuleNotFoundError`. The stdio path (`run.sh` → `main.py`) is unaffected —
+each bot owns its process.
+
 ## Bridges
 
 | Bridge | Module | Wire |

@@ -29,6 +29,8 @@ import json
 import os
 from dataclasses import dataclass, fields, replace
 
+from blitz_core import BlitzConfig
+
 TUNE_ENV = "MACARIA_TUNE"
 
 
@@ -224,8 +226,6 @@ def load_params(base: MacariaParams | None = None) -> MacariaParams:
 
 def blitz_config(params: MacariaParams):
     """A `BlitzConfig` for the vendored core, carrying macaria's values."""
-    from blitz_core import BlitzConfig
-
     return BlitzConfig(
         opening_end=params.blitz_opening_end,
         chain_detour=params.blitz_chain_detour,

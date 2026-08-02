@@ -21,6 +21,10 @@ import json
 import os
 from dataclasses import dataclass, fields, replace
 
+from yankee.blitz_core import BlitzConfig
+from yankee.boom_core import BoomParams
+from yankee.deathtouch import DeathtouchConfig
+
 TUNE_ENV = "YANKEE_TUNE"
 
 
@@ -155,8 +159,6 @@ def load_params(base: YankeeParams | None = None) -> YankeeParams:
 
 def blitz_config(params: YankeeParams):
     """A `BlitzConfig` for the vendored blitz core, carrying yankee's values."""
-    from yankee.blitz_core import BlitzConfig
-
     return BlitzConfig(
         opening_end=params.blitz_opening_end,
         rally_ticks=params.blitz_rally_ticks,
@@ -175,8 +177,6 @@ def blitz_config(params: YankeeParams):
 
 def deathtouch_config(params: YankeeParams):
     """A `DeathtouchConfig` carrying yankee's values."""
-    from yankee.deathtouch import DeathtouchConfig
-
     return DeathtouchConfig(
         touch_turn=params.deathtouch_from,
         garrison_margin=params.deathtouch_garrison_margin,
@@ -186,8 +186,6 @@ def deathtouch_config(params: YankeeParams):
 
 def boom_params(params: YankeeParams):
     """A `BoomParams` for the vendored boom core, carrying yankee's values."""
-    from yankee.boom_core import BoomParams
-
     return BoomParams(
         threat_dist=params.boom_threat_dist,
         intercept_dist=params.boom_intercept_dist,

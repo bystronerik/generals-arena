@@ -69,13 +69,95 @@ def list_bots() -> list[str]:
     )
 
 
+def _module_locations(module) -> list[Path]:
+    file = getattr(module, "__file__", None)
+    if file:
+        return [Path(file)]
+    # Namespace packages (e.g. ``yankee`` imported as ``yankee.search``) have
+    # no __file__, only __path__.
+    return [Path(p) for p in list(getattr(module, "__path__", None) or [])]
+
+
+def _is_under(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _sibling_module_names(bot_name: str, bot_dir: Path) -> set[str]:
+    """Top-level module names a bot's plain imports can bind to."""
+    names = {bot_name}  # the bot dir itself, as a namespace package
+    for p in bot_dir.iterdir():
+        if p.name in ("agent.py", "__init__.py"):
+            continue
+        if p.suffix == ".py":
+            names.add(p.stem)
+        elif p.is_dir() and not p.name.startswith(("_", ".")):
+            names.add(p.name)
+    return names
+
+
+def _guard_sibling_collisions(bot_name: str, bot_dir: Path) -> None:
+    """Refuse to exec a bot whose sibling imports would hit a foreign module.
+
+    ``import blitz_core`` inside a bot is satisfied from ``sys.modules`` before
+    ``sys.path`` is consulted, so a same-named module loaded from anywhere else
+    would silently alias this bot's code to the other implementation.
+    """
+    for name in _sibling_module_names(bot_name, bot_dir):
+        existing = sys.modules.get(name)
+        if existing is None:
+            continue
+        locations = _module_locations(existing)
+        if any(_is_under(loc, bot_dir) for loc in locations):
+            continue
+        origin = ", ".join(str(loc) for loc in locations) or "<no file>"
+        raise ImportError(
+            f"Cannot load bot {bot_name!r}: sys.modules[{name!r}] is already "
+            f"loaded from {origin}, which is outside {bot_dir}. The bot's "
+            f"'import {name}' would silently reuse that module instead of "
+            f"{bot_dir / name}. Rename the sibling module or import it as "
+            f"'{bot_name}.{name}' (as bots/yankee does)."
+        )
+
+
+def _purge_private_modules(before: set[str], bots_dir: Path) -> None:
+    """Drop bot-private modules registered during one bot's exec.
+
+    Sibling modules under ``bots/<name>/`` stay reachable through the agent
+    module's own references, but must not linger in ``sys.modules`` where the
+    next bot's identically named imports would pick them up. Shared code under
+    ``bots/_common/`` is deliberately kept.
+    """
+    common_dir = bots_dir / "_common"
+    for name in set(sys.modules) - before:
+        module = sys.modules.get(name)
+        if module is None:
+            continue
+        locations = _module_locations(module)
+        if any(
+            _is_under(loc, bots_dir) and not _is_under(loc, common_dir)
+            for loc in locations
+        ):
+            del sys.modules[name]
+
+
 def load_strategy_class(bot_name: str) -> Type:
-    """Import ``bots/<name>/agent.py`` ``Agent`` class without copying strategy code."""
+    """Import ``bots/<name>/agent.py`` ``Agent`` class without copying strategy code.
+
+    Each load is self-contained: bot-private sibling modules (``params``,
+    ``search``, …) are removed from ``sys.modules`` afterwards, so two bots
+    that ship identically named siblings each get their own implementation.
+    """
     bot_dir = REPO_ROOT / "bots" / bot_name
     agent_path = bot_dir / "agent.py"
     if not agent_path.is_file():
         known = ", ".join(list_bots())
         raise ValueError(f"Unknown bot {bot_name!r}. Known bots: {known}")
+
+    _guard_sibling_collisions(bot_name, bot_dir)
 
     module_name = f"_arena_bot_{bot_name}_agent"
     spec = importlib.util.spec_from_file_location(module_name, agent_path)
@@ -83,10 +165,11 @@ def load_strategy_class(bot_name: str) -> Type:
         raise ImportError(f"Cannot load {agent_path}")
 
     module = importlib.util.module_from_spec(spec)
+    bots_dir = REPO_ROOT / "bots"
+    before = set(sys.modules)
     # Register before exec (importlib recipe) — dataclasses and other
     # introspection in the agent module need sys.modules[module.__module__].
     sys.modules[module_name] = module
-    bots_dir = REPO_ROOT / "bots"
     sys.path.insert(0, str(bots_dir))
     sys.path.insert(0, str(bot_dir))
     try:
@@ -99,6 +182,7 @@ def load_strategy_class(bot_name: str) -> Type:
             sys.path.remove(str(bot_dir))
         if str(bots_dir) in sys.path:
             sys.path.remove(str(bots_dir))
+        _purge_private_modules(before | {module_name}, bots_dir)
 
     agent_cls = getattr(module, "Agent", None)
     if agent_cls is None:

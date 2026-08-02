@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import logging
+import sys
+import types
 
 import numpy as np
 import pytest
@@ -140,6 +142,57 @@ def test_arena_agent_protocol_smoke():
     agent_cls = load_strategy_class("smoke")
     agent = agent_cls(player_id=0, H=3, W=3)
     assert isinstance(agent, ArenaAgent)
+
+
+def _write_bot_with_helper(bots_root, name: str, value: str) -> None:
+    bot_dir = bots_root / name
+    bot_dir.mkdir(parents=True)
+    (bot_dir / "helper.py").write_text(f"VALUE = {value!r}\n")
+    (bot_dir / "agent.py").write_text(
+        "from helper import VALUE\n"
+        "\n"
+        "class Agent:\n"
+        "    def __init__(self, player_id, H, W):\n"
+        "        self.value = VALUE\n"
+        "\n"
+        "    def act(self, obs):\n"
+        "        return (1, 0, 0, 0, 0)\n"
+    )
+
+
+def test_colliding_sibling_modules_stay_private(tmp_path, monkeypatch):
+    """Two bots shipping a same-named sibling each get their own copy."""
+    import arena.bot_api as bot_api
+
+    _write_bot_with_helper(tmp_path / "bots", "iso_alpha", "alpha-impl")
+    _write_bot_with_helper(tmp_path / "bots", "iso_beta", "beta-impl")
+    monkeypatch.setattr(bot_api, "REPO_ROOT", tmp_path)
+
+    alpha_cls = load_strategy_class("iso_alpha")
+    beta_cls = load_strategy_class("iso_beta")
+
+    assert alpha_cls(player_id=0, H=1, W=1).value == "alpha-impl"
+    assert beta_cls(player_id=0, H=1, W=1).value == "beta-impl"
+    # The private sibling must not linger for the next load to alias.
+    assert "helper" not in sys.modules
+
+    sys.modules.pop("_arena_bot_iso_alpha_agent", None)
+    sys.modules.pop("_arena_bot_iso_beta_agent", None)
+
+
+def test_preloaded_foreign_sibling_module_raises(tmp_path, monkeypatch):
+    """A foreign module already holding a sibling's name fails loudly."""
+    import arena.bot_api as bot_api
+
+    _write_bot_with_helper(tmp_path / "bots", "iso_gamma", "gamma-impl")
+    monkeypatch.setattr(bot_api, "REPO_ROOT", tmp_path)
+
+    foreign = types.ModuleType("helper")
+    foreign.__file__ = "/somewhere/else/helper.py"
+    monkeypatch.setitem(sys.modules, "helper", foreign)
+
+    with pytest.raises(ImportError, match="helper"):
+        load_strategy_class("iso_gamma")
 
 
 def test_strategy_session_records_first_fault_traceback(caplog):
