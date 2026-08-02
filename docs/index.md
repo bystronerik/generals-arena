@@ -72,6 +72,7 @@ Small topic files for the Generals Arena research repo.
 - [tournament plan](research/strategies/tournament-plan.md) — seed grid, staging, metrics, and the round 2 schedule
 - [diversity constraints](research/strategies/diversity-constraints.md) — hard rules that keep the roster from converging
 - [sosipolis strategy](research/strategies/sosipolis.md) — dual-mode MCTS find-and-strike research bot
+- [Kubic behavior (merged)](research/strategies/kubic-behavior-spec.md) — reverse-engineered leaderboard bot; defense present-but-rare
 - [human 95/100 plan](research/strategies/human-95-plan.md) — remote goal: 95 wins in 100 logged games against humans on classic generals.io
 - `research/measurements/` — one result set per tournament round
 - [learned bot plan](research/learned-bot-plan.md) — not started; scaffold notes only

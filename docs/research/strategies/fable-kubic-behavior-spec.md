@@ -1,5 +1,9 @@
 # Kubic — implementation-grade behavior specification
 
+> Superseded for implementation reading by the merge
+> [`kubic-behavior-spec.md`](kubic-behavior-spec.md) (defense =
+> present-but-rare). Keep this file as the fable evidence trail.
+
 Reverse-engineered from 390 playable scraped leaderboard replays
 (`competition-replays/Kubic/`), competition rules (`RULES.md`). Derived on a
 351-game fit set; every rule verified against a 39-game holdout (see

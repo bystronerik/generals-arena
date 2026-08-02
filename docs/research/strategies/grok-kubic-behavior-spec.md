@@ -1,5 +1,9 @@
 # Kubic behavioral specification (observational)
 
+> Superseded for implementation reading by the merge
+> [`kubic-behavior-spec.md`](kubic-behavior-spec.md) (defense =
+> present-but-rare). Keep this file as the grok evidence trail.
+
 Implementation-grade reading of `competition-replays/Kubic/` under competition
 rules (`RULES.md`). This is **not** a bot to ship. It is a reverse-engineered
 decision procedure so a developer can reimplement move-for-move behavior without
