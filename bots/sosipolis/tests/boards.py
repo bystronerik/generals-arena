@@ -31,6 +31,90 @@ def clone_grid(g: list[list[int]]) -> list[list[int]]:
     return [row[:] for row in g]
 
 
+def plain(H: int, W: int) -> tuple[list[list[int]], list[list[int]], list[list[int]]]:
+    """All-plain empty boards: types=PLAIN, owner=0, army=0."""
+    return grid(H, W, T_PLAIN), grid(H, W), grid(H, W)
+
+
+def corridor(
+    H: int, W: int, *, row: int | None = None
+) -> tuple[list[list[int]], list[list[int]], list[list[int]]]:
+    """Mountain walls with one passable row (default mid-row). Unique BFS path."""
+    if row is None:
+        row = H // 2
+    types = grid(H, W, T_MOUNTAIN)
+    for c in range(W):
+        types[row][c] = T_PLAIN
+    return types, grid(H, W), grid(H, W)
+
+
+def make_obs(
+    types: list[list[int]],
+    owner: list[list[int]],
+    army: list[list[int]],
+    turn: int,
+    **overrides: Any,
+):
+    """Build UnifiedObservation from three grids; stats scan unless overridden."""
+    H, W = len(types), len(types[0])
+    fixture = BoardFixture(
+        label="ad_hoc",
+        turn=turn,
+        types=types,
+        owner=owner,
+        army=army,
+    )
+    return fixture.obs(**overrides)
+
+
+def probe_macro(
+    *,
+    kind: str,
+    waypoint: Cell,
+    evidence_anchor: Cell | None = None,
+    candidate_cells: frozenset[Cell] | None = None,
+    score: float = 1.0,
+):
+    """Build a ProbeMacro; import only inside sosipolis_imports()."""
+    from components.contact_mcts import ProbeMacro
+
+    return ProbeMacro(
+        kind=kind,
+        waypoint=waypoint,
+        evidence_anchor=evidence_anchor or waypoint,
+        candidate_cells=candidate_cells or frozenset({waypoint}),
+        score=score,
+    )
+
+
+def seeded_contact_mcts(
+    *,
+    belief: dict[Cell, float] | None = None,
+    tip_bfs: dict[Cell, int] | None = None,
+    footprint_bfs: dict[Cell, int] | None = None,
+    waypoint_bfs: dict[Cell, int] | None = None,
+    reveal_count: dict[Cell, int] | None = None,
+):
+    """ContactMCTS with cache fields pre-seeded; skip _refresh_cache in tests."""
+    from components.contact_mcts import ContactMCTS
+    from params import PARAMS
+
+    mcts = ContactMCTS(PARAMS)
+    cache = mcts._cache
+    if belief is not None:
+        cache.belief = dict(belief)
+        cache.belief_sum = sum(belief.values())
+    if tip_bfs is not None:
+        cache.tip_bfs = dict(tip_bfs)
+    if footprint_bfs is not None:
+        cache.footprint_bfs = dict(footprint_bfs)
+    if waypoint_bfs is not None:
+        cache.waypoint_bfs = dict(waypoint_bfs)
+    if reveal_count is not None:
+        cache.reveal_count = dict(reveal_count)
+    return mcts
+
+
 @dataclass
 class BoardFixture:
     """One observation plus optional MapMemory seed applied before update."""

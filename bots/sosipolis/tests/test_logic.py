@@ -5,12 +5,9 @@ turn-572 adjacent-kill miss plus MapMemory latch regressions.
 """
 from __future__ import annotations
 
-import sys
-from contextlib import contextmanager
-from pathlib import Path
-
 import pytest
 
+from _imports import agent_on, sosipolis_imports
 from boards import (
     FIXTURES,
     action_dst,
@@ -21,59 +18,6 @@ from boards import (
     contact_then_off_axis_general,
     same_turn_on_axis_general,
 )
-
-BOT_DIR = Path(__file__).resolve().parents[1]
-
-_BOT_MODULES = (
-    "brain",
-    "params",
-    "state",
-    "agent",
-    "probe",
-    "stdio",
-    "mcts_diag",
-)
-
-
-@contextmanager
-def sosipolis_imports():
-    """Import this bot as top-level modules, then scrub sys.modules."""
-    path = str(BOT_DIR)
-    sys.path.insert(0, path)
-    try:
-        yield
-    finally:
-        if path in sys.path:
-            sys.path.remove(path)
-        for name in list(sys.modules):
-            if name in _BOT_MODULES or name.startswith("components"):
-                sys.modules.pop(name, None)
-
-
-def _seed_memory(agent, fixture) -> None:
-    mem = agent.state.memory
-    if fixture.own_general is not None:
-        mem.own_general = fixture.own_general
-    if fixture.first_contact is not None:
-        mem.first_contact = fixture.first_contact
-        mem.first_contact_turn = fixture.first_contact_turn
-        mem.enemy_seen.add(fixture.first_contact)
-        mem.known_owner[fixture.first_contact[0]][fixture.first_contact[1]] = 2
-    for cell in fixture.primary_path:
-        mem.primary_path.add(cell)
-        mem.enemy_seen.add(cell)
-    if fixture.own_general is not None:
-        mem._seeded = True
-    if fixture.clear_enemy_general:
-        mem.enemy_general = None
-
-
-def _agent_on(fixture):
-    from brain import Agent
-
-    agent = Agent(player_id=0, H=fixture.H, W=fixture.W)
-    _seed_memory(agent, fixture)
-    return agent
 
 
 # ---------------------------------------------------------------------------
@@ -139,7 +83,7 @@ def test_kill_shot_thresholds(label, stack, gen_army, turn, expect_kill):
             turn=turn,
             label=label,
         )
-        agent = _agent_on(fixture)
+        agent = agent_on(fixture)
         obs = fixture.obs()
         agent.state.update(obs)
         assert agent.state.memory.enemy_general == (2, 2)
@@ -156,7 +100,7 @@ def test_act_takes_reported_adjacent_kill():
     """Full priority ladder: act() must capture before gather/MCTS/castle."""
     with sosipolis_imports():
         fixture = adjacent_kill_reported()
-        agent = _agent_on(fixture)
+        agent = agent_on(fixture)
         obs = fixture.obs()
         move = agent.act(obs)
         assert agent.branch == "kill", agent.branch
@@ -173,7 +117,7 @@ def test_act_kills_on_gather_clock_residue():
         fixture = adjacent_kill_reported()
         assert fixture.turn % 50 == 22
         assert mod50_phase(fixture.turn, PARAMS) == "gather"
-        agent = _agent_on(fixture)
+        agent = agent_on(fixture)
         move = agent.act(fixture.obs())
         assert agent.branch == "kill"
         assert action_dst(move) == (2, 2)
@@ -183,7 +127,7 @@ def test_act_kills_visible_general_without_prior_latch():
     """Belt-and-suspenders: visible type-4 enemy even if memory was empty."""
     with sosipolis_imports():
         fixture = adjacent_kill_reported()
-        agent = _agent_on(fixture)
+        agent = agent_on(fixture)
         agent.state.memory.enemy_general = None
         agent.state.phase = "contact"
         move = agent.act(fixture.obs())

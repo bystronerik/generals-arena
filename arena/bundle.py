@@ -17,8 +17,9 @@ because the server's validation rejects bundles that ship it.
 
 What goes in is exactly `arena.records.fingerprint.bot_source_closure` — the
 file set behind the bot's rating identity — so the bundle of hash X is the
-program rated as X. cm_* bots are refused: they depend on the
-competition-module submodule, which we do not ship.
+program rated as X. That closure already drops `probe.py` and bot-local
+`tests/`, so neither reaches the zip. cm_* bots are refused: they depend on
+the competition-module submodule, which we do not ship.
 
 Python members are minified **on the way into the zip only**; the repo files
 are never touched. python-minifier does the rewrite: comments, docstrings,

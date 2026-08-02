@@ -15,9 +15,11 @@ bots/<name>/
 
 Optional: `build.sh` beside `run.sh` for compile / weight prep.
 
-`tests/` is excluded from the source closure and content hash, like
-`probe.py`. Put decision regressions and hand-built board fixtures there.
-Pytest collects `bots/*/tests/` via `testpaths` in `pytest.ini`.
+`tests/` is excluded from the source closure, content hash, and submission
+bundle, like `probe.py`. Put decision regressions and hand-built board
+fixtures there. Editing a test never forks a rating identity and never ships
+to generals.bot. Pytest collects `bots/*/tests/` via `testpaths` in
+`pytest.ini`.
 
 ## Per-turn introspection
 

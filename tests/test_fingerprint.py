@@ -196,6 +196,17 @@ def test_bot_local_tests_dir_does_not_move_the_hash(sandbox):
     )
 
 
+def test_sosipolis_tests_stay_out_of_the_live_closure():
+    """Real bots/<name>/tests/ must not enter the hashed source closure."""
+    tests_dir = BOTS_DIR / "sosipolis" / "tests"
+    assert tests_dir.is_dir(), "sosipolis tests/ is the live fixture for this guard"
+    names = closure_names("sosipolis")
+    assert not any("tests" in name.split("/") for name in names)
+    assert bot_content_hash(BOTS_DIR / "sosipolis" / "run.sh") == content_hash_for_dir(
+        BOTS_DIR / "sosipolis"
+    )
+
+
 def test_a_closure_module_importing_probe_raises(sandbox):
     """
     Unhashed code must be unreachable from the hashed program.

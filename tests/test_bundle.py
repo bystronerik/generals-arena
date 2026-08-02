@@ -229,3 +229,17 @@ def test_a_probe_beside_the_agent_stays_out_of_the_bundle():
     assert (BOTS_DIR / "metro" / "probe.py").is_file()
     names = {arcname for _, arcname in bundle_members("metro")}
     assert "bots/metro/probe.py" not in names
+
+
+def test_bot_local_tests_stay_out_of_the_bundle():
+    """sosipolis ships a real tests/; the submission zip must omit it."""
+    assert (BOTS_DIR / "sosipolis" / "tests").is_dir()
+    names = {arcname for _, arcname in bundle_members("sosipolis")}
+    assert not any(
+        arcname == "bots/sosipolis/tests"
+        or arcname.startswith("bots/sosipolis/tests/")
+        for arcname in names
+    )
+    # Bundle membership is the hashed closure (minus run.sh); keep that link tight.
+    assert "bots/sosipolis/brain.py" in names
+    assert "bots/sosipolis/probe.py" not in names
