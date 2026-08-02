@@ -122,9 +122,9 @@ _PROBE_KEYS = (
     _key(
         "searched",
         Kind.BOOL01,
-        "search bots (yankee, macaria): the move search ran this turn. Both "
-        "scope it to a trigger window, so this is mostly 0 by design — see "
-        "each bot's search.py",
+        "search bots (macaria): the move search ran this turn. It is scoped "
+        "to a trigger window, so this is mostly 0 by design — see the bot's "
+        "search.py",
         F,
         MEAN,
         AUC,
@@ -133,7 +133,7 @@ _PROBE_KEYS = (
     _key(
         "overrode",
         Kind.BOOL01,
-        "search bots (yankee, macaria): the search returned a move other than "
+        "search bots (macaria): the search returned a move other than "
         "the heuristic core's. The pair (searched, overrode) separates 'the "
         "search never ran' from 'it ran and agreed', which are different "
         "defects with the same symptom",
@@ -144,7 +144,7 @@ _PROBE_KEYS = (
     _key(
         "search_iters",
         Kind.INT,
-        "search bots (yankee, macaria): search iterations completed this turn, "
+        "search bots (macaria): search iterations completed this turn, "
         "0 when it did not run; the budget is wall-clock, so this is how much "
         "search the budget actually bought on this machine",
         F,
@@ -154,7 +154,7 @@ _PROBE_KEYS = (
     _key(
         "move_ms",
         Kind.INT,
-        "search bots (yankee, macaria): wall-clock milliseconds for the whole "
+        "search bots (macaria): wall-clock milliseconds for the whole "
         "move, heuristic plus search (RULES.md §08 budgets 150)",
         F,
         MEAN,

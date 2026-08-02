@@ -35,8 +35,8 @@ Use this for every measurable bot or arena change.
   rounds is not a valid comparator: round-to-round drift alone has measured at
   +46 Elo between byte-identical programs (see
   [`docs/arena/decision-rule.md`](../arena/decision-rule.md)). Re-run the
-  baseline alongside the candidate — `bots/macaria_base/` is a frozen
-  pre-change copy of macaria kept for exactly this.
+  baseline alongside the candidate — keep a frozen pre-change copy of the bot
+  under `bots/` for the duration of the comparison, then delete it.
 - Never quote a leaderboard rank as a result. Quote the contrast.
 - Two engine eras never pool. If `excluded.engine_mismatch` is non-zero after a
   refit, the `competition-module` submodule moved and the leaderboard needs a

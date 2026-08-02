@@ -133,7 +133,7 @@ Local practice uses the classic-approximate harness in
 
 ### 3.3 Research carve-out: `sosipolis`
 
-`bots/sosipolis/` is a **research bot** (same class as `macaria` / `yankee`),
+`bots/sosipolis/` is a **research bot** (same class as `macaria`),
 not a competition-roster axis owner. Spec:
 [`sosipolis.md`](sosipolis.md).
 

@@ -39,8 +39,10 @@ vs `macaria_base@862ac0189a1a` from rounds `macaria-hunt-*` — fitted at
 drift of that size exceeds the 10 and 25 Elo thresholds below, so a contrast
 against a baseline measured in earlier rounds measures the rounds, not the
 change. Re-measure the baseline in the same rounds as the candidate, with
-matched seed lists and alternated seats; `bots/macaria_base/` exists as a
-frozen copy of pre-change macaria for exactly this purpose.
+matched seed lists and alternated seats. The usual way to do that is a frozen
+copy of the pre-change bot under `bots/`, kept only for the duration of the
+comparison (`bots/macaria_base/` was that copy for the run above; it has since
+been removed).
 
 ## Gate
 

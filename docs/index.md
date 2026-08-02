@@ -49,7 +49,6 @@ Small topic files for the Generals Arena research repo.
 - [aegis](bots/aegis.md) — turtle + event-driven counterattack (migrated from generals-bot)
 - [proteus](bots/proteus.md) — adaptive switcher over blitz/boom/metro/aegis (migrated from generals-bot)
 - [macaria](bots/macaria.md) — vendored blitz core + a scoped tactical search
-- [yankee](bots/yankee.md) — proteus plus a scoped MCTS and a RULES.md §07 endgame core
 - [sosipolis](bots/sosipolis.md) — dual-mode MCTS general search with pocket skip and section priors
 
 ## Arena

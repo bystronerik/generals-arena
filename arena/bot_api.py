@@ -73,8 +73,8 @@ def _module_locations(module) -> list[Path]:
     file = getattr(module, "__file__", None)
     if file:
         return [Path(file)]
-    # Namespace packages (e.g. ``yankee`` imported as ``yankee.search``) have
-    # no __file__, only __path__.
+    # Namespace packages (e.g. ``macaria`` imported as ``macaria.search``)
+    # have no __file__, only __path__.
     return [Path(p) for p in list(getattr(module, "__path__", None) or [])]
 
 
@@ -119,7 +119,7 @@ def _guard_sibling_collisions(bot_name: str, bot_dir: Path) -> None:
             f"loaded from {origin}, which is outside {bot_dir}. The bot's "
             f"'import {name}' would silently reuse that module instead of "
             f"{bot_dir / name}. Rename the sibling module or import it as "
-            f"'{bot_name}.{name}' (as bots/yankee does)."
+            f"'{bot_name}.{name}' (package-qualified)."
         )
 
 
