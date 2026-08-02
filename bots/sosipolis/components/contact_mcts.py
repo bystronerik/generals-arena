@@ -108,9 +108,22 @@ class ContactMCTS:
         sector_cands = self._contact_sector_candidates(state)
         blocked = lambda rr, cc: is_wall(obs.type_grid, rr, cc)
         out: list[tuple[Action, float]] = []
+        stack = largest_owned_stack(obs)
+        stack_army = obs.army_grid[stack[0]][stack[1]] if stack else 0
+        assault_ready = stack_army >= self.params.CONTACT_ASSAULT_STACK
 
         # Hard hunt roots: march / gather the main stacks onto the hunt cell.
         if hunt is not None:
+            # Under assault stack: path-gather only — do not push the last fog hop thin.
+            gact = gather_toward(obs, hunt, blocked)
+            if gact is not None:
+                gather_prior = (
+                    self.params.HUNT_STEP_BONUS
+                    if not assault_ready
+                    else 80.0 + max(0, self.params.CONTACT_STAGE_STACK - stack_army)
+                )
+                out.append((gact, gather_prior))
+
             stacks: list[tuple[int, int, int]] = []
             for r in range(H):
                 for c in range(W):
@@ -118,20 +131,27 @@ class ContactMCTS:
                         continue
                     stacks.append((obs.army_grid[r][c], r, c))
             stacks.sort(reverse=True)
-            for army, r, c in stacks[:6]:
-                act = step_toward(obs, (r, c), hunt, blocked)
-                if act is None:
-                    continue
-                prior = self.params.HUNT_STEP_BONUS + army * 0.5
-                if not state.memory.ever_seen[hunt[0]][hunt[1]]:
-                    prior += 40.0
-                out.append((act, prior))
-            gact = gather_toward(obs, hunt, blocked)
-            if gact is not None:
-                stack = largest_owned_stack(obs)
-                stack_army = obs.army_grid[stack[0]][stack[1]] if stack else 0
-                gather_prior = 80.0 + max(0, self.params.CONTACT_STAGE_STACK - stack_army)
-                out.append((gact, gather_prior))
+
+            if assault_ready:
+                for army, r, c in stacks[:6]:
+                    act = step_toward(obs, (r, c), hunt, blocked)
+                    if act is None:
+                        continue
+                    prior = self.params.HUNT_STEP_BONUS + army * 0.5
+                    if not state.memory.ever_seen[hunt[0]][hunt[1]]:
+                        prior += 40.0
+                    out.append((act, prior))
+            else:
+                # Feed the largest stack as tip toward the hunt without committing a thin march.
+                if stack is not None:
+                    for army, r, c in stacks[:6]:
+                        if (r, c) == stack:
+                            continue
+                        act = step_toward(obs, (r, c), stack, blocked)
+                        if act is not None:
+                            out.append(
+                                (act, self.params.HUNT_STEP_BONUS * 0.9 + army * 0.3)
+                            )
 
         for r in range(H):
             for c in range(W):
@@ -143,7 +163,9 @@ class ContactMCTS:
                     if (nr, nc) in dead and obs.owner_grid[nr][nc] != 2:
                         if not self._pocket_ok(state, nr, nc, sector_cands):
                             continue
-                    prior = self._score(obs, state, r, c, nr, nc, hunt)
+                    prior = self._score(
+                        obs, state, r, c, nr, nc, hunt, assault_ready
+                    )
                     if prior < 0:
                         continue
                     out.append((move_action(r, c, nr, nc, 0), prior))
@@ -162,7 +184,7 @@ class ContactMCTS:
         return False
 
     def _score(
-        self, obs, state, r: int, c: int, nr: int, nc: int, hunt
+        self, obs, state, r: int, c: int, nr: int, nc: int, hunt, assault_ready: bool
     ) -> float:
         army = obs.army_grid[r][c]
         dest_army = obs.army_grid[nr][nc]
@@ -173,16 +195,17 @@ class ContactMCTS:
         prior = state.sections.score_cell(nr, nc)
         score = float(army) + 40.0 * prior
 
-        # Fog toward the hunt outranks fighting the visible front.
+        # Fog toward the hunt outranks fighting the visible front — only when assault-ready.
+        hunt_scale = 1.0 if assault_ready else 0.25
         if hunt is not None:
             before = abs(r - hunt[0]) + abs(c - hunt[1])
             after = abs(nr - hunt[0]) + abs(nc - hunt[1])
             if after < before:
-                score += self.params.HUNT_STEP_BONUS * 0.35
+                score += self.params.HUNT_STEP_BONUS * 0.35 * hunt_scale
                 if not state.memory.ever_seen[nr][nc]:
-                    score += self.params.HUNT_STEP_BONUS * 0.25
+                    score += self.params.HUNT_STEP_BONUS * 0.25 * hunt_scale
             elif after > before:
-                score -= 25.0
+                score -= 25.0 * hunt_scale
 
         if owner == 2:
             score += self.params.CONTACT_ENEMY_BONUS + min(dest_army, 20)
@@ -190,10 +213,12 @@ class ContactMCTS:
         elif owner == 0:
             score += self.params.CONTACT_LAND_BONUS
             if not state.memory.ever_seen[nr][nc]:
-                score += 40.0 * (0.3 + prior)
+                score += 40.0 * (0.3 + prior) * hunt_scale
                 if hunt is not None:
-                    score += self.params.CONTACT_CANDIDATE_BONUS / (
-                        1.0 + abs(nr - hunt[0]) + abs(nc - hunt[1])
+                    score += (
+                        self.params.CONTACT_CANDIDATE_BONUS
+                        * hunt_scale
+                        / (1.0 + abs(nr - hunt[0]) + abs(nc - hunt[1]))
                     )
             else:
                 score += 8.0
@@ -224,8 +249,11 @@ class ContactMCTS:
         nr, nc = r + dr, c + dc
         if not (0 <= nr < obs.H and 0 <= nc < obs.W):
             return -1.0
-        value = self._score(obs, state, r, c, nr, nc, hunt) / 150.0
-        if hunt is not None:
+        stack = largest_owned_stack(obs)
+        stack_army = obs.army_grid[stack[0]][stack[1]] if stack else 0
+        assault_ready = stack_army >= self.params.CONTACT_ASSAULT_STACK
+        value = self._score(obs, state, r, c, nr, nc, hunt, assault_ready) / 150.0
+        if hunt is not None and assault_ready:
             before = abs(r - hunt[0]) + abs(c - hunt[1])
             after = abs(nr - hunt[0]) + abs(nc - hunt[1])
             if after < before:

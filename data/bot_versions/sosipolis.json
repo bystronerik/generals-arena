@@ -91,6 +91,11 @@
       "at": "2026-08-02T11:53:41Z",
       "content_hash": "8fad61784f84",
       "seq": 18
+    },
+    {
+      "at": "2026-08-02T12:17:55Z",
+      "content_hash": "5b1e99482620",
+      "seq": 19
     }
   ],
   "version": 1,
@@ -1723,6 +1728,106 @@
       ],
       "first_seen_at": "2026-08-02T11:53:41Z",
       "git_commit": "682523b77700f595759df1e027f6bdd6046f118f",
+      "git_dirty": true
+    },
+    {
+      "closure_ref": "refs/bot-versions/5b1e99482620",
+      "closure_tree": "3ace1c33b34e668367f252725a259b0057ef7cb8",
+      "content_hash": "5b1e99482620",
+      "files": [
+        {
+          "blob": "5e603b0fed0991c47d0b680733968b9278b9419e",
+          "path": "bots/sosipolis/agent.py",
+          "sha256": "90816878b9ff5dadf581d79d4cc83df5434a067c63361c826b83623c6e0bbc79"
+        },
+        {
+          "blob": "3acd7cd8216f85b6244830ec5a17ef8a1a04867a",
+          "path": "bots/sosipolis/brain.py",
+          "sha256": "81b829f9d3a0e1be8d6eab87930209c780ece34180973696f40112fb0f3b9d73"
+        },
+        {
+          "blob": "93a9a538e0fd62c74f408703c96b8f97b0f8b999",
+          "path": "bots/sosipolis/components/__init__.py",
+          "sha256": "a91f9847bcfce6326f20980b24d00a84721263f6b052be37e0f4ade91988b2db"
+        },
+        {
+          "blob": "24195f0ef59f9cad3cb82476894b130103946d53",
+          "path": "bots/sosipolis/components/army.py",
+          "sha256": "b0e7a4228039269f0f560e7ee088c313e17f6bdd6b8f9860a9681b89beb04852"
+        },
+        {
+          "blob": "6302aeecab6f0560ca02b788ff1ee2d43bb63486",
+          "path": "bots/sosipolis/components/clock.py",
+          "sha256": "586e63f9a0e89051a2d134d24f9d8b7b079ebcc6afe337cefb48898196a92230"
+        },
+        {
+          "blob": "0233b80249f3f019beb4225f4b8b21fe358520b8",
+          "path": "bots/sosipolis/components/contact_mcts.py",
+          "sha256": "ed3bda6acdda4d971ea8f024594ea45a44b46d0fa49c8d3d2c15e6ecfdb49a4e"
+        },
+        {
+          "blob": "2c3b0da4c9e1d02a66f685594dfa8bc5b23806db",
+          "path": "bots/sosipolis/components/economy.py",
+          "sha256": "54f053307d7be7bc2cdf5da7e32765d430f4dba6867e6ee65aa6c93af00208b5"
+        },
+        {
+          "blob": "d3c22caca8ece23e8faf354bd3908e371154efbf",
+          "path": "bots/sosipolis/components/map_memory.py",
+          "sha256": "9ff640d560c74b2790da983bba258b1f3e951ce468a3e5836ed016fc5528c690"
+        },
+        {
+          "blob": "aa342068ee46b70001447d6af3ae182605644691",
+          "path": "bots/sosipolis/components/pockets.py",
+          "sha256": "ac389df52aa5226299098aa8f1604e48fe8ebe930e3e405f04279eadc3ba8fc1"
+        },
+        {
+          "blob": "e3922c2d426dfb14722b73bb476315a059530dfe",
+          "path": "bots/sosipolis/components/search_mcts.py",
+          "sha256": "73cc1b1d59e907e5be58f6951da38b37b818a985f5b65848d07abc2bc3252bf2"
+        },
+        {
+          "blob": "2fb1ce5f5d479980bd994c18d8138ea6c5f84dbd",
+          "path": "bots/sosipolis/components/sections.py",
+          "sha256": "2870bb7bd806ae5a514cd6dfc464b16efb64991d84e4d87de60360cc5e38e562"
+        },
+        {
+          "blob": "c9780171dba17226e137aef64225fc05dfbd887d",
+          "path": "bots/sosipolis/components/strike_mcts.py",
+          "sha256": "f382f383586a4c7f4ff1327a538a0ba32a4799075cb8945231a1e93e3a48a27b"
+        },
+        {
+          "blob": "a5dc6bb8b632abfb4ac7854347559b449a1504a8",
+          "path": "bots/sosipolis/components/threat.py",
+          "sha256": "bb731a64999fc01f7c3288e46789f9e33380cd582eca9082f9f5ecbd827b0fdb"
+        },
+        {
+          "blob": "3a15829322283c274ffa479923b0f5c7d9b71f73",
+          "path": "bots/sosipolis/main.py",
+          "sha256": "12102b9916080e2aa8969354dd74ea6f97729d47cb9cee4a961f1ed25bddf40e"
+        },
+        {
+          "blob": "924f3825f4a2e1acb84bdc86f0cdc561b1b493fb",
+          "path": "bots/sosipolis/params.py",
+          "sha256": "e0ab07c62fcf1e23bde7657a180ed5bdb81dd3d698787d575ff49dab8b84cbb9"
+        },
+        {
+          "blob": "e7d78ac169a30678efe60bdb108611f9d932e630",
+          "path": "bots/sosipolis/run.sh",
+          "sha256": "3a4eb8902a76a3bd1a8e9292feef29339976c72786d157da3a20edfcbf296f56"
+        },
+        {
+          "blob": "d71fc8389d6a72161abe0eee92a912e063773fee",
+          "path": "bots/sosipolis/state.py",
+          "sha256": "046a7ca8dae655301d067cbe903db8ef74cf4d2dbde13a6b4046682fdade769e"
+        },
+        {
+          "blob": "a407de61f58cccfa71ac4ac1cc4c8de81f308256",
+          "path": "bots/sosipolis/stdio.py",
+          "sha256": "c3ecf1e8ec79ccac362a22b7947d0f47ba8655e112f23d30147d4e601bb1246e"
+        }
+      ],
+      "first_seen_at": "2026-08-02T12:17:55Z",
+      "git_commit": "95bd655c17c86c002a6c0af09f7e2d5d53331ce2",
       "git_dirty": true
     }
   ]

@@ -76,7 +76,7 @@ Verdict vs existing bots: **distinct** (research axis).
 | --- | --- | --- |
 | `search` | Soft bank `HOME_BANK_SEARCH`; avoid stripping the general under threat | Land + mild section prior |
 | `contact` | Perimeter in `DEFENSE_RADIUS`; bank `HOME_BANK_CONTACT`; staging gather if stack < `CONTACT_STAGE_STACK` | Sector hunt + contact pressure |
-| `strike` | Same perimeter at `DEFENSE_WEIGHT_STRIKE`; intercept if enemy closer to home than we are to goal | Toward bias + land root slots + multi-wave gather when path is long |
+| `strike` | Same perimeter at `DEFENSE_WEIGHT_STRIKE`; intercept only if imminent | Tip path-gather until finish gate; then tip march + light land |
 
 ## State
 
@@ -142,6 +142,10 @@ Named constants (seeded from Kubic aggregates and RULES.md):
 - `HUNT_CONTACT_RADIUS` = 6
 - `HUNT_STEP_BONUS` = 220
 - `SEARCH_HUNT_BONUS` = 90
+- `CONTACT_ASSAULT_STACK` = 55
+- `STRIKE_TIP_HOLD` = 8
+- `STRIKE_PATH_BUFFER` = 1
+- `STRIKE_TIP_FEED_BONUS` = 250
 
 ## Threat or scoring model
 

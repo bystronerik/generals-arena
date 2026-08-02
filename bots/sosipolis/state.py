@@ -22,6 +22,8 @@ class GameState:
         self._contact_reweighted = False
         self.build_site: tuple[int, int] | None = None
         self.castles_owned = 0
+        self.strike_tip: tuple[int, int] | None = None
+        self.strike_tip_turn: int = -10_000
 
     def enemy_land_known(self) -> bool:
         if self.memory.first_contact is not None:
@@ -46,8 +48,10 @@ class GameState:
             self.phase = "strike"
         elif self.enemy_land_known():
             self.phase = "contact"
+            self.strike_tip = None
         else:
             self.phase = "search"
+            self.strike_tip = None
 
         if (
             self.memory.first_contact is not None
