@@ -93,12 +93,21 @@ class Params:
     CONTACT_FLANK_DELTA_SCALE: float = 0.25
     CONTACT_CHASE_VISIBLE: float = 2.0  # belief boost near live enemy tiles
     CONTACT_CHASE_VISIBLE_RADIUS: int = 3
+    # Chase fog ranking: cells per step of drift off the home→source ray.
+    CONTACT_CHASE_LATERAL: float = 1.0
+    # Fused contact evidence: every contact point votes on the general's cell.
+    CONTACT_EVIDENCE_RADIUS: int = 4
+    CONTACT_DENSITY_WEIGHT: float = 3.0
+    CONTACT_OPEN_WEIGHT: float = 1.5
     # Early contact → trust axis more; late contact → weaker axis lock.
     CONTACT_AXIS_EARLY_TURN: int = 55
     CONTACT_AXIS_LATE_TURN: int = 100
     # ContactMCTS owns post-contact probe target (Phase 1 / Phase 2).
     CONTACT_PATH_MODE: str = "shallow"  # "shallow" | "macro_mcts"
-    CONTACT_PREP_BUDGET_MS: int = 3
+    # Belief refresh costs ~4.5 ms median / 14 ms worst on a 21x20 board. At 3
+    # the deadline expired inside _refresh_cache on 67% of contact turns and
+    # the commitment was never re-examined. The move cap is 100 ms.
+    CONTACT_PREP_BUDGET_MS: int = 20
     CONTACT_PATH_SCORE_BUDGET_MS: int = 8
     CONTACT_COMMIT_MIN_TURNS: int = 12
     CONTACT_SWITCH_RATIO: float = 1.35

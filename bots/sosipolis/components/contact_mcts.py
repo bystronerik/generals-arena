@@ -15,6 +15,7 @@ from components.army import (
     step_toward,
 )
 from components.clock import Deadline
+from components.contact_evidence import ContactEvidence
 from components.conveyor import prefer_chain_roots, prune_by_clock
 from mcts_diag import record_root_pick
 from components.threat import defense_score_delta, recall_armed
@@ -80,9 +81,11 @@ class _ContactCache:
     enemy_obs_epoch: int = -1
     tip: Cell | None = None
     waypoint: Cell | None = None
+    home_epoch: int = -1
     tip_bfs: dict[Cell, int] = field(default_factory=dict)
     footprint_bfs: dict[Cell, int] = field(default_factory=dict)
     waypoint_bfs: dict[Cell, int] = field(default_factory=dict)
+    home_bfs: dict[Cell, int] = field(default_factory=dict)
     belief: dict[Cell, float] = field(default_factory=dict)
     reveal_count: dict[Cell, int] = field(default_factory=dict)
     belief_sum: float = 0.0
@@ -94,6 +97,7 @@ class ContactMCTS:
         self.stats = ContactStats()
         self.commitment: ContactCommitment | None = None
         self._cache = _ContactCache()
+        self.evidence = ContactEvidence(params)
 
     def prepare_contact(self, obs, state, deadline: Deadline) -> ContactCommitment | None:
         """Own post-contact probe target: belief → macros → sticky commit."""
@@ -175,9 +179,14 @@ class ContactMCTS:
     def _live_army_target(self, obs, state) -> Cell | None:
         """Cell the tip should walk at while enemy land is visible.
 
-        Prefer fog just behind the visible front (macaria contact_target), else
-        the strongest visible enemy stack. Restrict fog to belief candidates
-        when possible so the chase still aims at a possible general.
+        Aim along the *source ray*: our general through the far end of the
+        visible enemy chain, extended into the fog behind their front. Their
+        tiles run back to their base, so the deepest one we can see is the best
+        read we have on where the army came from.
+
+        Ranking that fog by raw distance from home instead leaves the whole arc
+        behind the front tied, and the coordinate tie-break then takes whichever
+        cell sorts last — walking the probe off the contact by board geometry.
         """
         enemies: list[Cell] = [
             (r, c)
@@ -192,6 +201,9 @@ class ContactMCTS:
         allowed = state.memory.candidates
         # BFS distance from visible enemy footprint.
         from_enemy = state.memory._bfs_multi(enemies)
+        rank = self._source_ray_rank(
+            home, self._enemy_source_anchor(state, enemies, home)
+        )
         fog: list[Cell] = []
         for r in range(obs.H):
             for c in range(obs.W):
@@ -203,28 +215,80 @@ class ContactMCTS:
                 if allowed and (r, c) not in allowed:
                     continue
                 fog.append((r, c))
-        if fog and home is not None:
+        if fog and rank is not None:
+            # Deepest along the ray, then closest behind the front (no overshoot).
             return max(
                 fog,
-                key=lambda cell: (
-                    abs(cell[0] - home[0]) + abs(cell[1] - home[1]),
-                    -from_enemy.get(cell, 99),
-                    cell,
-                ),
+                key=lambda cell: (rank(cell), -from_enemy.get(cell, 99), cell),
             )
         if fog:
             return min(fog, key=lambda cell: (from_enemy.get(cell, 99), cell))
-        # No fog: walk onto the farthest/strongest enemy tile from home.
-        if home is not None:
+        # No fog in reach: walk onto the enemy tile deepest along the same ray.
+        if rank is not None:
             return max(
                 enemies,
                 key=lambda cell: (
-                    abs(cell[0] - home[0]) + abs(cell[1] - home[1]),
+                    rank(cell),
                     obs.army_grid[cell[0]][cell[1]],
                     cell,
                 ),
             )
         return max(enemies, key=lambda cell: (obs.army_grid[cell[0]][cell[1]], cell))
+
+    def _enemy_source_anchor(
+        self, state, enemies: list[Cell], home: Cell | None
+    ) -> Cell | None:
+        """Far end of the visible enemy chain — where their army came from.
+
+        Deepest by walking distance, and on a tie the one nearest in a straight
+        line: as their footprint sprawls the ray should stay anchored on the
+        closest cell that is still deepest, not swing out to a board corner.
+        """
+        if home is None or not enemies:
+            return None
+        depth = self._home_depth(state)
+
+        def walked(cell: Cell) -> int:
+            straight = abs(cell[0] - home[0]) + abs(cell[1] - home[1])
+            return depth.get(cell, straight)
+
+        return max(
+            enemies,
+            key=lambda cell: (
+                walked(cell),
+                -(abs(cell[0] - home[0]) + abs(cell[1] - home[1])),
+                cell,
+            ),
+        )
+
+    def _home_depth(self, state) -> dict[Cell, int]:
+        """BFS depth from our general over passable belief, cached on terrain."""
+        mem = state.memory
+        cache = self._cache
+        if cache.home_epoch != mem.terrain_epoch or not cache.home_bfs:
+            home = mem.own_general
+            cache.home_bfs = mem._bfs_multi([home]) if home is not None else {}
+            cache.home_epoch = mem.terrain_epoch
+        return cache.home_bfs
+
+    def _source_ray_rank(self, home: Cell | None, anchor: Cell | None):
+        """Rank cells by depth along home→anchor, penalised by lateral drift."""
+        if home is None or anchor is None:
+            return None
+        length = (
+            (anchor[0] - home[0]) ** 2 + (anchor[1] - home[1]) ** 2
+        ) ** 0.5
+        if length <= 0:
+            return None
+        penalty = self.params.CONTACT_CHASE_LATERAL
+
+        def rank(cell: Cell) -> float:
+            t = self._axis_t(home, anchor, cell)
+            if t is None:
+                return 0.0
+            return t * length - penalty * self._axis_lateral(home, anchor, cell)
+
+        return rank
 
     # --- belief / cache -------------------------------------------------
 
@@ -308,24 +372,36 @@ class ContactMCTS:
             return 0.0
         return abs((cell[0] - hx) * vy - (cell[1] - hy) * vx) / denom
 
+    def _hunt_anchor(self, state) -> Cell | None:
+        """The cell the hunt axis points through — fused over all contacts.
+
+        Every axis test used to run through `first_contact`, so a contact that
+        arrived later and somewhere else could never move the line. This
+        tracks the accumulated evidence and falls back to first contact only
+        while there is nothing else to fuse.
+        """
+        mem = state.memory
+        self.evidence.refresh(mem)
+        anchor = self.evidence.anchor(mem, self._home_depth(state))
+        return anchor or mem.first_contact
+
     def _on_hunt_axis(self, state, cell: Cell) -> bool:
         conf = self._axis_confidence(state.memory)
         min_t = self.params.CONTACT_AXIS_MIN_T * (0.5 + 0.5 * conf)
-        t = self._axis_t(
-            state.memory.own_general, state.memory.first_contact, cell
-        )
+        anchor = self._hunt_anchor(state)
+        t = self._axis_t(state.memory.own_general, anchor, cell)
         if t is None:
             return True
         if t < min_t:
             return False
         return self._axis_lateral(
-            state.memory.own_general, state.memory.first_contact, cell
+            state.memory.own_general, anchor, cell
         ) <= (5.0 + 4.0 * (1.0 - conf))
 
     def _far_off_axis(self, state, cell: Cell) -> bool:
-        """True only when clearly off the original approach (late flank)."""
+        """True only when clearly off the fused approach (late flank)."""
         lat = self._axis_lateral(
-            state.memory.own_general, state.memory.first_contact, cell
+            state.memory.own_general, self._hunt_anchor(state), cell
         )
         return lat >= self.params.CONTACT_AXIS_RECOVER_LATERAL
 
@@ -346,7 +422,6 @@ class ContactMCTS:
         if not mem.candidates:
             return {}
         home = mem.own_general
-        fc = mem.first_contact
         far = mem.H + mem.W
         foot = self._cache.footprint_bfs
         tip_bfs = self._cache.tip_bfs
@@ -354,6 +429,9 @@ class ContactMCTS:
             mem.recent_enemy_cells(obs.turn, params.CONTACT_ENEMY_OBS_AGE)
         )
         conf = self._axis_confidence(mem)
+        evidence = self.evidence
+        evidence.refresh(mem)
+        fc = self._hunt_anchor(state)
         visible_enemy: list[Cell] = [
             (r, c)
             for r in range(obs.H)
@@ -371,6 +449,11 @@ class ContactMCTS:
             if foot:
                 d_foot = foot.get(cell, far)
                 w *= 1.0 + params.CONTACT_BELIEF_NEAR_FOOT / (1.0 + d_foot)
+            # Fused over every contact so far: thick enemy land nearby, and
+            # neighbourhood we have not scouted yet.
+            if evidence.has_evidence():
+                w *= 1.0 + params.CONTACT_DENSITY_WEIGHT * evidence.density(cell)
+                w *= 1.0 + params.CONTACT_OPEN_WEIGHT * evidence.openness(cell)
             # Chase currently visible enemy army (must fight into them).
             if visible_enemy and params.CONTACT_CHASE_VISIBLE > 0:
                 d_vis = min(abs(r - er) + abs(c - ec) for er, ec in visible_enemy)
@@ -390,11 +473,9 @@ class ContactMCTS:
                     w /= 1.0 + off * (min_t - t)
                 lat = self._axis_lateral(home, fc, cell)
                 w /= 1.0 + params.CONTACT_AXIS_LATERAL * conf * lat
-            if home is not None and fc is not None:
-                if abs(r - home[0]) + abs(c - home[1]) < abs(fc[0] - home[0]) + abs(
-                    fc[1] - home[1]
-                ):
-                    w /= 1.0 + 0.35 * conf
+            # No "closer to us than first contact" penalty: with contacts in
+            # several places the general is often nearer to us than the cell we
+            # first met them on, and that rule demoted exactly those cells.
             for er, ec in recent:
                 age = max(0, obs.turn - mem.last_seen_turn[er][ec])
                 freshness = 1.0 / (1.0 + 0.05 * age)
@@ -453,12 +534,8 @@ class ContactMCTS:
         far = state.H + state.W
         tip_bfs = self._cache.tip_bfs
         foot = self._cache.footprint_bfs
-        evidence = state.memory.first_contact or (
-            state.memory.primary_path_cells()[0]
-            if state.memory.primary_path_cells()
-            else (
-                state.enemy_footprint()[0] if state.enemy_footprint() else None
-            )
+        evidence = self._hunt_anchor(state) or (
+            state.enemy_footprint()[0] if state.enemy_footprint() else None
         )
         if evidence is None:
             evidence = next(iter(belief))
@@ -800,9 +877,9 @@ class ContactMCTS:
     def _axis_path_waypoint(
         self, obs, state, belief: dict[Cell, float]
     ) -> Cell | None:
-        """Waypoint past first_contact on the original hunt axis."""
+        """Waypoint past the fused contact anchor, on the hunt axis."""
         home = state.memory.own_general
-        fc = state.memory.first_contact
+        fc = self._hunt_anchor(state)
         if home is None or fc is None:
             return None
         best = None
@@ -817,7 +894,7 @@ class ContactMCTS:
                 best_key, best = key, cell
         if best is not None:
             return best
-        # Geometric step past first contact along home → fc.
+        # Geometric step past the anchor along home → fc.
         hx, hy = home
         ax, ay = fc
         dr = 0 if ax == hx else (1 if ax > hx else -1)
@@ -837,19 +914,19 @@ class ContactMCTS:
     def _extend_past_waypoint(
         self, obs, state, from_cell: Cell
     ) -> ProbeMacro | None:
-        """Continue along the *first-contact* axis, not toward a late flank tip."""
+        """Continue along the fused contact axis, not toward a late flank tip."""
         home = state.memory.own_general
-        fc = state.memory.first_contact
+        fc = self._hunt_anchor(state)
         if home is None or fc is None:
             return None
         hx, hy = home
-        # Always aim past first contact (original signal), not from an off-axis tip.
+        # Always aim past the fused anchor, not from an off-axis tip.
         ax, ay = fc
         dr = 0 if ax == hx else (1 if ax > hx else -1)
         dc = 0 if ay == hy else (1 if ay > hy else -1)
         if dr == 0 and dc == 0:
             return None
-        # Start at tip when fighting live army or already on-axis; else snap to fc.
+        # Start at tip when fighting live army or already on-axis; else snap to the anchor.
         if self._near_visible_enemy(obs, from_cell) or self._on_hunt_axis(
             state, from_cell
         ):

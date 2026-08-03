@@ -79,20 +79,45 @@ def _chase_board(*, fog_cells=(), enemies=()):
     return H, W, types, owner, army
 
 
-def test_live_army_target_picks_fog_behind_front_farthest_from_home():
-    """Both fog cells are in reach of the front; the far one from home wins."""
+def test_live_army_target_follows_the_source_ray_not_the_far_corner():
+    """Home (0,0), enemy (4,0): the ray runs straight down column 0.
+
+    (7,0) sits on it, 7 from home; (4,6) is 10 from home but 6 cells off the
+    line. Distance from home alone picked (4,6) — a corner the enemy never
+    came from.
+    """
     with sosipolis_imports():
         H, W, types, owner, army = _chase_board(
-            fog_cells=[(2, 4), (4, 7)], enemies=[((4, 4), 3)]
+            fog_cells=[(7, 0), (4, 6)], enemies=[((4, 0), 3)]
         )
         obs = make_obs(types, owner, army, turn=200)
-        state = _contact_state(H, W, home=(8, 0), first_contact=(4, 4))
+        state = _contact_state(H, W, home=(0, 0), first_contact=(4, 0))
         mcts = seeded_contact_mcts()
 
         target = mcts._live_army_target(obs, state)
-        # (4,7) is 11 from home, (2,4) is 10.
-        assert target == (4, 7)
+        assert target == (7, 0)
         assert obs.type_grid[target[0]][target[1]] == T_FOG
+
+
+def test_live_army_target_breaks_the_equidistant_arc_by_direction():
+    """The arc behind the front is equidistant from home; the ray decides.
+
+    Seed 1 turn 67 in miniature: every candidate is the same distance from
+    home and the same distance behind the enemy, so the old key fell through
+    to the coordinate tuple and always took the highest row.
+    """
+    with sosipolis_imports():
+        H, W, types, owner, army = _chase_board(
+            fog_cells=[(8, 2), (6, 4)], enemies=[((4, 2), 3)]
+        )
+        obs = make_obs(types, owner, army, turn=200)
+        state = _contact_state(H, W, home=(2, 0), first_contact=(4, 2))
+        mcts = seeded_contact_mcts()
+
+        # Both are 8 from home and 4 behind the front, so the old key tied and
+        # took the higher row. (6,4) continues the home→enemy line.
+        assert {abs(r - 2) + abs(c - 0) for r, c in [(8, 2), (6, 4)]} == {8}
+        assert mcts._live_army_target(obs, state) == (6, 4)
 
 
 def test_live_army_target_restricts_fog_to_belief_candidates():
