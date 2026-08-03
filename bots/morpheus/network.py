@@ -1,7 +1,6 @@
 """Fully convolutional Morpheus residual network — policy, WDL, and auxiliary heads."""
 from __future__ import annotations
 
-import math
 from typing import Any, NamedTuple, Optional, Sequence
 
 import numpy as np
@@ -11,18 +10,6 @@ import torch.nn.functional as F
 
 from action import encode_action, N_CELLS
 from schema import ARMY_BIN_EDGES, N_ARMY_BINS
-from tensor import (
-    P_ARMY_MARGIN,
-    P_BELIEF_ENEMY_ARMY_MEAN,
-    P_BELIEF_ENEMY_OWNER,
-    P_ENEMY_ARMY_TOTAL,
-    P_ENEMY_LAND_FRACTION,
-    P_ENEMY_VISIBLE,
-    P_LAND_MARGIN,
-    P_OWN_ARMY_TOTAL,
-    P_OWNED_NOW,
-    P_OWN_LAND_FRACTION,
-)
 
 IN_CHANNELS = 49
 BOARD = 21
@@ -212,24 +199,6 @@ def legal_normalized_policy(
     masked_logits = logits.masked_fill(~mask, torch.finfo(logits.dtype).min)
     dist = F.softmax(masked_logits, dim=-1)
     return dist * mask.to(dtype=dist.dtype)
-
-
-def flip_perspective_tensor(tensor: np.ndarray) -> np.ndarray:
-    """Swap seat perspective on a ``(49, 21, 21)`` observation tensor."""
-    out = tensor.copy()
-    swap_pairs = [
-        (P_OWNED_NOW, P_ENEMY_VISIBLE),
-        (P_OWN_LAND_FRACTION, P_ENEMY_LAND_FRACTION),
-        (P_OWN_ARMY_TOTAL, P_ENEMY_ARMY_TOTAL),
-    ]
-    for a, b in swap_pairs:
-        out[a], out[b] = tensor[b].copy(), tensor[a].copy()
-    out[P_LAND_MARGIN] = -tensor[P_LAND_MARGIN]
-    out[P_ARMY_MARGIN] = -tensor[P_ARMY_MARGIN]
-    # Belief planes describe hidden enemy from root view; swap owner semantics.
-    out[P_BELIEF_ENEMY_OWNER] = 1.0 - tensor[P_BELIEF_ENEMY_OWNER]
-    out[P_BELIEF_ENEMY_ARMY_MEAN] = tensor[P_BELIEF_ENEMY_ARMY_MEAN]
-    return out
 
 
 def backup_value(wdl_logits: torch.Tensor, *, from_root: bool) -> torch.Tensor:

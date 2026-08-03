@@ -161,21 +161,25 @@ def test_policy_spatial_matches_action_codec_transform():
         policy = model(torch.from_numpy(tensor).unsqueeze(0)).policy[0]
     flat = policy.reshape(-1).cpu().numpy()
     logits = np.zeros(N_ACTIONS, dtype=np.float32)
-    logits[:flat.shape[0]] = flat
-    sym = get_symmetry("rot90")
+    logits[: flat.shape[0]] = flat
+    from action import decode_action
     from symmetry import transform_action_tuple
 
-    remapped = np.zeros_like(logits)
-    for idx in range(PASS_INDEX):
-        new_action = transform_action_tuple(
-            __import__("action").decode_action(idx), sym
+    for sym_name in all_symmetry_names():
+        sym = get_symmetry(sym_name)
+        remapped = np.zeros_like(logits)
+        for idx in range(PASS_INDEX):
+            new_action = transform_action_tuple(decode_action(idx), sym)
+            remapped[encode_action(new_action)] = logits[idx]
+        torch_remapped = transform_policy_spatial(policy.unsqueeze(0), sym_name)[0]
+        assert np.allclose(
+            torch_remapped.reshape(-1).cpu().numpy(),
+            remapped[: 9 * BOARD * BOARD],
         )
-        remapped[encode_action(new_action)] = logits[idx]
-    torch_remapped = transform_policy_spatial(policy.unsqueeze(0), "rot90")[0]
-    assert np.allclose(torch_remapped.reshape(-1).cpu().numpy(), remapped[:9 * BOARD * BOARD])
 
 
 def test_identity_policy_equivariance():
+    """Identity is the only architectural free lunch; D4 comes from training augments."""
     obs = _obs_hw(21, 21)
     mem = empty_memory(21, 21)
     tensor, _ = observation_tensor(obs, mem)

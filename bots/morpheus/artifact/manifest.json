@@ -74,8 +74,16 @@
   "quantization": {
     "engine": "qnnpack",
     "float_to_export_mae": {
+      "army_margin_mae": 0.3932209014892578,
+      "castle_margin_mae": 0.8586301803588867,
+      "enemy_army_bins_mae": 1.4210108518600464,
+      "enemy_general_mae": 1.0559444427490234,
+      "hidden_castle_mae": 1.0538197755813599,
+      "hidden_owner_mae": 1.130753755569458,
+      "land_margin_mae": 0.423628032207489,
       "pass_logit_mae": 0.04449462890625,
       "policy_mae": 1.1903561353683472,
+      "turns_to_termination_mae": 1.626566767692566,
       "wdl_mae": 0.28664568066596985
     },
     "format": "static_ptq_fx_qnnpack_int8",
@@ -89,5 +97,5 @@
     "checkpoint_id": "tiny",
     "run_id": "fixture"
   },
-  "weights_sha256": "e67a8bbb7c4cbfb2da339b440d48189144639199850ce03789961d5f26bfa808"
+  "weights_sha256": "c3231fcb4ac887af4a71be68fc394e01efec09c4c0336bde40eb98c830efd8a9"
 }

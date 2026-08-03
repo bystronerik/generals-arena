@@ -22,12 +22,44 @@ from network import (
 from schema import (
     ARMY_BIN_EDGES,
     ARMY_SCALE_DEFAULT,
+    N_ARMY_BINS,
     build_manifest,
     write_manifest,
 )
 
 MANIFEST_NAME = "manifest.json"
 DEFAULT_ARTIFACT_FILE = "model.pt"
+
+EXPORT_OUTPUT_NAMES = (
+    "policy",
+    "pass_logit",
+    "wdl",
+    "hidden_owner",
+    "enemy_army_bins",
+    "enemy_general",
+    "hidden_castle",
+    "land_margin",
+    "army_margin",
+    "castle_margin",
+    "turns_to_termination",
+)
+
+
+def expected_export_shapes(batch: int) -> list[list[int]]:
+    """Canonical TorchScript output shapes for one batch size."""
+    return [
+        [batch, 9, BOARD, BOARD],
+        [batch, 1],
+        [batch, 3],
+        [batch, 1, BOARD, BOARD],
+        [batch, N_ARMY_BINS, BOARD, BOARD],
+        [batch, 1, BOARD, BOARD],
+        [batch, 1, BOARD, BOARD],
+        [batch, 1],
+        [batch, 1],
+        [batch, 1],
+        [batch, 1],
+    ]
 
 
 def _supported_qengines() -> list[str]:
@@ -60,9 +92,33 @@ class MorpheusExportWrapper(nn.Module):
 
     def forward(
         self, x: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+    ]:
         out = self.model(x)
-        return out.policy, out.pass_logit, out.wdl_logits
+        return (
+            out.policy,
+            out.pass_logit,
+            out.wdl_logits,
+            out.hidden_owner,
+            out.enemy_army_bins,
+            out.enemy_general,
+            out.hidden_castle,
+            out.land_margin,
+            out.army_margin,
+            out.castle_margin,
+            out.turns_to_termination,
+        )
 
 
 def load_checkpoint_state(path: Path) -> dict[str, Any]:
@@ -73,7 +129,6 @@ def load_checkpoint_state(path: Path) -> dict[str, Any]:
             path / "model.pt",
             path / "checkpoint.pt",
         ]
-        meta = path / "meta.json"
         for candidate in candidates:
             if candidate.is_file():
                 path = candidate
@@ -122,10 +177,9 @@ def _parity_errors(
     float_out: tuple[torch.Tensor, ...],
     export_out: tuple[torch.Tensor, ...],
 ) -> dict[str, float]:
-    names = ("policy", "pass_logit", "wdl")
     return {
         f"{name}_mae": _mae(f, e)
-        for name, f, e in zip(names, float_out, export_out, strict=True)
+        for name, f, e in zip(EXPORT_OUTPUT_NAMES, float_out, export_out, strict=True)
     }
 
 
@@ -141,6 +195,11 @@ def export_static_int8(
     """FX static PTQ export to ``output_dir`` with manifest and traced ``model.pt``."""
     output_dir.mkdir(parents=True, exist_ok=True)
     engine = qengine or _pick_qengine()
+    supported = _supported_qengines()
+    if engine not in supported:
+        raise RuntimeError(
+            f"quantized engine {engine!r} not in supported_engines={supported}"
+        )
     _set_qengine(engine)
 
     wrapper = MorpheusExportWrapper(model)
@@ -238,28 +297,10 @@ def forward_exported(
     session: torch.jit.ScriptModule,
     x: torch.Tensor,
 ) -> MorpheusOutput:
-    """Run a traced export (policy, pass, WDL only)."""
-    policy, pass_logit, wdl_logits = session(x)
-    zeros = torch.zeros(
-        x.shape[0],
-        1,
-        BOARD,
-        BOARD,
-        device=x.device,
-        dtype=policy.dtype,
-    )
-    z1 = torch.zeros(x.shape[0], 16, BOARD, BOARD, device=x.device, dtype=policy.dtype)
-    zscalar = torch.zeros(x.shape[0], 1, device=x.device, dtype=policy.dtype)
-    return MorpheusOutput(
-        policy=policy,
-        pass_logit=pass_logit,
-        wdl_logits=wdl_logits,
-        hidden_owner=zeros,
-        enemy_army_bins=z1,
-        enemy_general=zeros,
-        hidden_castle=zeros,
-        land_margin=zscalar,
-        army_margin=zscalar,
-        castle_margin=zscalar,
-        turns_to_termination=zscalar,
-    )
+    """Run a traced export and rebuild the named output tuple."""
+    outputs = session(x)
+    if len(outputs) != len(EXPORT_OUTPUT_NAMES):
+        raise ValueError(
+            f"export returned {len(outputs)} tensors; expected {len(EXPORT_OUTPUT_NAMES)}"
+        )
+    return MorpheusOutput(*outputs)

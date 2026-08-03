@@ -35,6 +35,7 @@ def main() -> int:
     import torch
 
     from morpheus.export import (
+        EXPORT_OUTPUT_NAMES,
         build_model_from_checkpoint,
         export_static_int8,
         load_checkpoint_state,
@@ -62,16 +63,15 @@ def main() -> int:
     for fixture in all_batch_fixtures(seed=args.seed):
         with torch.no_grad():
             float_out = model(fixture.tensor)
-            export_policy, export_pass, export_wdl = session(fixture.tensor)
-        float_policy = float_out.policy
-        mae_policy = float((float_policy - export_policy).abs().mean().item())
-        mae_pass = float((float_out.pass_logit - export_pass).abs().mean().item())
-        mae_wdl = float((float_out.wdl_logits - export_wdl).abs().mean().item())
+            export_tuple = session(fixture.tensor)
+        float_tuple = tuple(float_out)
+        batch_mae = {
+            name: float((f - e).abs().mean().item())
+            for name, f, e in zip(EXPORT_OUTPUT_NAMES, float_tuple, export_tuple, strict=True)
+        }
         batch_reports[fixture.name] = {
             "batch": fixture.batch,
-            "policy_mae": mae_policy,
-            "pass_logit_mae": mae_pass,
-            "wdl_mae": mae_wdl,
+            **{f"{k}_mae": v for k, v in batch_mae.items()},
         }
 
     report = {

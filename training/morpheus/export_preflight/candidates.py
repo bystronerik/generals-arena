@@ -19,17 +19,21 @@ from training.morpheus.export_preflight.fixtures import (
     make_input,
 )
 from training.morpheus.export_preflight.model import make_probe
-from morpheus.export import MorpheusExportWrapper
+from morpheus.export import (
+    EXPORT_OUTPUT_NAMES,
+    MorpheusExportWrapper,
+    expected_export_shapes,
+)
 from morpheus.network import MorpheusOutput
 
 
-def _forward_policy_wdl(
+def _forward_export_outputs(
     model: torch.nn.Module, x: torch.Tensor
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, ...]:
     out = model(x)
     if isinstance(out, MorpheusOutput):
-        return out.policy, out.pass_logit, out.wdl_logits
-    return out
+        return tuple(out)
+    return tuple(out)
 
 # Soft bound matching the competition process memory ceiling.
 RSS_BOUND_BYTES = 2 * 1024 * 1024 * 1024
@@ -100,10 +104,9 @@ def _parity_errors(
     float_out: tuple[torch.Tensor, ...],
     export_out: tuple[torch.Tensor, ...],
 ) -> dict[str, float]:
-    names = ("policy", "pass_logit", "wdl")
     return {
         f"{name}_mae": _mae(f, e)
-        for name, f, e in zip(names, float_out, export_out, strict=True)
+        for name, f, e in zip(EXPORT_OUTPUT_NAMES, float_out, export_out, strict=True)
     }
 
 
@@ -154,12 +157,7 @@ def _run_batches(
             "batch": fixture.batch,
             "output_shapes": shapes,
             "latency": lat,
-            "ok": shapes
-            == [
-                [fixture.batch, 9, 21, 21],
-                [fixture.batch, 1],
-                [fixture.batch, 3],
-            ],
+            "ok": shapes == expected_export_shapes(fixture.batch),
         }
     return results
 
@@ -236,7 +234,7 @@ def try_torch_fx_static(
     wrapper = MorpheusExportWrapper(float_model)
     example = make_input(1, seed=seed)
     with torch.no_grad():
-        float_ref = _outputs_to_cpu(_forward_policy_wdl(float_model, example))
+        float_ref = _outputs_to_cpu(_forward_export_outputs(float_model, example))
 
     try:
         _set_qengine(engine)
@@ -288,7 +286,7 @@ def try_torch_fx_static(
 
         def forward(x: torch.Tensor) -> tuple[torch.Tensor, ...]:
             with torch.no_grad():
-                return _outputs_to_cpu(_forward_policy_wdl(loaded, x))
+                return _outputs_to_cpu(_forward_export_outputs(loaded, x))
 
         result["batch_results"] = _run_batches(forward, seed=seed)
         result["executed"] = all(
@@ -332,7 +330,7 @@ def try_torch_jit_float(
     wrapper = MorpheusExportWrapper(float_model)
     example = make_input(1, seed=seed)
     with torch.no_grad():
-        float_ref = _outputs_to_cpu(_forward_policy_wdl(float_model, example))
+        float_ref = _outputs_to_cpu(_forward_export_outputs(float_model, example))
     try:
         artifact = work_dir / "float_script.pt"
         scripted = torch.jit.script(wrapper)
@@ -347,7 +345,7 @@ def try_torch_jit_float(
 
         def forward(x: torch.Tensor) -> tuple[torch.Tensor, ...]:
             with torch.no_grad():
-                return _outputs_to_cpu(_forward_policy_wdl(loaded, x))
+                return _outputs_to_cpu(_forward_export_outputs(loaded, x))
 
         result["batch_results"] = _run_batches(forward, seed=seed)
         result["executed"] = all(
@@ -385,7 +383,7 @@ def try_safetensors_weight_only_int8(
     float_model = make_probe(seed=seed, n_blocks=n_blocks)
     example = make_input(1, seed=seed)
     with torch.no_grad():
-        float_ref = _outputs_to_cpu(_forward_policy_wdl(float_model, example))
+        float_ref = _outputs_to_cpu(_forward_export_outputs(float_model, example))
     try:
         artifact_dir = work_dir / "weight_only_int8"
         artifact_dir.mkdir(parents=True, exist_ok=True)
@@ -429,7 +427,7 @@ def try_safetensors_weight_only_int8(
 
         def forward(x: torch.Tensor) -> tuple[torch.Tensor, ...]:
             with torch.no_grad():
-                return _outputs_to_cpu(_forward_policy_wdl(restored, x))
+                return _outputs_to_cpu(_forward_export_outputs(restored, x))
 
         result["batch_results"] = _run_batches(forward, seed=seed)
         result["executed"] = all(
