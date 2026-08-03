@@ -90,6 +90,30 @@ support the claim. Seeds 20-39 were run once, after the choice:
   the next gain is: **what the tip spends on the way in**, not what it leaves
   home with.
 
+## Follow-up that failed: committing the staged stack to a march
+
+The obvious next step, and a wrong one. Over 20 seeds, the turns between the
+tip's peak mass and its closest approach to their general split the outcomes:
+
+| outcome | gap (turns) |
+| --- | --- |
+| won | 1, 3, 4, 23, 24, 72, 80 |
+| lost | 14, 29, 30, 55, **104, 115, 123, 173** |
+
+And in the losing games the stack does not die, it *dissolves*: on seed 2 the
+tip fell 93 -> 25 across those 173 turns while our own army grew 333 -> 598.
+
+So: latch a staged tip and march it at the objective every tick until spent.
+Implemented with `march_dist` routing and a release at `CONTACT_ASSAULT_STACK`.
+**3/20.** Reverted.
+
+The correlation is a survivorship artifact. When we win, the game *ends* a few
+turns after the peak, so the peak is necessarily near the arrival; when we
+lose, play continues for hundreds of turns and the peak is early by
+construction. The gap measures game length after the peak, not commitment.
+The dissolution is real, but nothing here shows that marching sooner fixes it —
+and marching blind at an objective that is often wrong spends the stack on fog.
+
 ## Reproduction
 
 ```bash
