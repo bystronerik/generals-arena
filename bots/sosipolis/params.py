@@ -57,6 +57,10 @@ class Params:
     GATHER_LOCAL_HAUL: int = 8
     CONTACT_STAGE_STACK: int = 35
     CONTACT_ASSAULT_STACK: int = 15
+    # Feed the tip on gather ticks until it is worth marching. Games won had
+    # the tip arrive at their general holding 53-110 — 10-15% of our army;
+    # games lost, 2-8, or 0-3%. A share, not a constant: see brain.py.
+    CONTACT_FEED_FRAC: float = 0.20
     # Routing charges the army a step costs. Capped low on purpose: the target
     # sits inside their land, so a big garrison must read as "expensive", not
     # as a wall worth a ten-step detour. At 12 the tip circled and drew.

@@ -15,6 +15,7 @@ from components.strike_mcts import StrikeMCTS
 from components.threat import imminent_loss_move, recall_move
 from components.tip import (
     can_finish_now,
+    total_owned_army,
     feed_tip_action,
     select_mass_tip,
     tip_below_sight_floor,
@@ -271,6 +272,40 @@ class Agent:
                 return self._finish(
                     obs, start, take, searched=False, branch="expand"
                 )
+
+        # The gather half of the clock has to actually gather. The tip feed
+        # below only ran in strike phase, which needs the general *sighted* —
+        # never in 8 of 20 games, and late in the rest. So through the whole
+        # contact phase nothing concentrated army, and the assault arrived on
+        # whatever it happened to be carrying.
+        #
+        # Measured at the tip's closest approach to their general, over 20
+        # seeds: median tip 7 army against a median 260 on our own board — 3%.
+        # Every game we won had the tip arrive with 53-110 (10-15%); every game
+        # we lost had 2-8 (0-3%). We were never short of army, only of army in
+        # one place.
+        if (
+            clock == "gather"
+            and self.state.phase == "contact"
+            and self.state.strike_tip is not None
+        ):
+            # The bar is a share of what we own, not a constant. A fixed 35 cut
+            # the median arrival 7 -> 12 and still lost, because it also capped
+            # the tail: games arriving with 50+ fell from 6 to 1, and those are
+            # the games that end with a dead general. A share keeps growing with
+            # the board, so a 500-army midgame stages a 100-army assault instead
+            # of walking in with 35.
+            tip = self.state.strike_tip
+            target = max(
+                self.params.CONTACT_ASSAULT_STACK,
+                int(self.params.CONTACT_FEED_FRAC * total_owned_army(obs)),
+            )
+            if obs.army_grid[tip[0]][tip[1]] < target:
+                feed = feed_tip_action(obs, tip)
+                if feed is not None:
+                    return self._finish(
+                        obs, start, feed, searched=False, branch="tip_feed"
+                    )
 
         if self.state.phase == "strike":
             budget = min(budget, float(self.params.STRIKE_MARCH_BUDGET_MS))

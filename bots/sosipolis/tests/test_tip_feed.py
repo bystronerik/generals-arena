@@ -83,3 +83,93 @@ def test_tip_below_sight_floor_predicate(tip_army, expect_below):
 
         obs = _strike_board(tip_army).obs()
         assert tip_below_sight_floor(obs, TIP, PARAMS) is expect_below
+
+
+# ---------------------------------------------------------------------------
+# Contact rung: the gather half of the clock has to actually gather
+# ---------------------------------------------------------------------------
+
+CONTACT_TURN = 210  # residue 10 — inside GATHER_PHASE_LO..HI
+WAVE_TURN = 230  # residue 30 — outside it
+
+
+def _contact_board(turn: int, tip_army: int, spare: int, spares: int) -> BoardFixture:
+    """Contact board with the army *dispersed*: the tip is the biggest stack,
+    but most of our army sits on `spares` smaller cells elsewhere. That is the
+    real shape — median 3% of our army on the tip at the closest approach.
+    """
+    types, owner, army = plain(8, 8)
+    types[0][0] = T_GENERAL
+    owner[0][0] = 1
+    army[0][0] = 1
+    owner[TIP[0]][TIP[1]] = 1
+    army[TIP[0]][TIP[1]] = tip_army
+    placed = 0
+    for r in range(8):
+        for c in range(8):
+            if placed >= spares:
+                break
+            if (r, c) in ((0, 0), TIP) or (r, c) == (7, 7):
+                continue
+            owner[r][c] = 1
+            army[r][c] = spare
+            placed += 1
+    owner[7][7] = 2  # enemy land only — phase is contact, not strike
+    army[7][7] = 4
+    return BoardFixture(
+        label=f"contact_t{turn}_tip{tip_army}",
+        turn=turn,
+        types=types,
+        owner=owner,
+        army=army,
+        own_general=(0, 0),
+    )
+
+
+def test_contact_gather_tick_feeds_a_thin_tip():
+    """The feed rung used to require strike phase, which needs the general
+    *sighted* — never in 8 of 20 games. So through the whole contact phase
+    nothing concentrated army: measured at the tip's closest approach to their
+    general, median tip 7 against a median 260 on our own board.
+    """
+    with sosipolis_imports():
+        fixture = _contact_board(CONTACT_TURN, tip_army=5, spare=4, spares=12)
+        agent = agent_on(fixture)
+
+        move = agent.act(fixture.obs())
+
+        assert agent.state.phase == "contact", agent.state.phase
+        assert agent.branch == "tip_feed", agent.branch
+        # Feeding moves army toward the tip, never away from it.
+        assert _tip_dist(action_dst(move)) < _tip_dist(action_src(move))
+
+
+def test_contact_feed_bar_is_a_share_of_our_army_not_a_constant():
+    """A fixed bar capped the tail: arrivals of 50+ fell from 6 games to 1, and
+    those are the games that end with a dead general. The tip here already
+    clears every fixed threshold in the file and must still be fed.
+    """
+    with sosipolis_imports():
+        from components.tip import total_owned_army
+        from params import PARAMS
+
+        fixture = _contact_board(CONTACT_TURN, tip_army=30, spare=20, spares=10)
+        agent = agent_on(fixture)
+        obs = fixture.obs()
+
+        assert 30 >= PARAMS.CONTACT_ASSAULT_STACK
+        assert 30 < PARAMS.CONTACT_FEED_FRAC * total_owned_army(obs)
+
+        agent.act(obs)
+        assert agent.branch == "tip_feed", agent.branch
+
+
+def test_contact_wave_tick_does_not_feed():
+    """Feeding belongs to the gather half of the mod-50 clock, not the wave."""
+    with sosipolis_imports():
+        fixture = _contact_board(WAVE_TURN, tip_army=5, spare=4, spares=12)
+        agent = agent_on(fixture)
+
+        agent.act(fixture.obs())
+
+        assert agent.branch != "tip_feed", agent.branch
