@@ -84,6 +84,40 @@ The replacement waypoint is drawn from the same diffuse belief, so switching
 targets buys nothing. **Do not re-try this without changing what the
 replacement is chosen from.**
 
+## Coverage weighting: the mechanism moves, the wins do not
+
+Acting on the section below: `_macro_score` weighted `_reveal_belief` — belief
+*mass* in a radius-2 window at the waypoint, which ranks the likeliest single
+cell and says nothing about how much of the search space a trip closes out. So
+add a candidates-eliminated-per-turn term, `CONTACT_COVERAGE_WEIGHT * cover /
+(1 + dist)`, with `cover` the *count* of candidates in the reveal window.
+
+Seeds 0-19, subprocess grid:
+
+| weight | 0.0 | 2.0 | 8.0 | 20.0 | 45.0 |
+| --- | --- | --- | --- | --- | --- |
+| wins /20 | 7 | 7 | 8 | 8 | 7 |
+
+Flat across a 20x range. Note the control: **weight 0.0 scores 7 where the same
+build without the term scores 8** — one extra 5x5 window scan per macro is
+enough to move a game, because the bot is deadline-driven. That is the ±2 noise
+floor made visible, and it is why none of 7/8 here is a result.
+
+The mechanism did work, in the in-process harness:
+
+| build | sighted | won |
+| --- | --- | --- |
+| coverage 0 | 9/20 (45%) | 7 |
+| coverage 20 | **11/20 (55%)** | 9 |
+
+Conversion held at 9/11 = 82%. But held out on seeds 20-39 it scores **7/20
+against the committed build's 9/20** — 15/40 against 17/40 overall. Reverted.
+
+So P(sight) is movable by re-scoring the waypoint, and moving it this way does
+not produce wins. Either the extra sightings land in games that were already
+decided, or waypoint choice is the wrong lever for coverage and the tour has to
+be over the candidate set itself rather than one target at a time.
+
 ## Where this points
 
 Sight needs us to *own a cell adjacent to* their general — visibility is a 3x3
