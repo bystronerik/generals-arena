@@ -716,9 +716,6 @@ Small and single-purpose, per AGENTS.md:
 - [game-record-schema.md](game-record-schema.md) §Bot content hash — the
   closure contract gains the `probe.py` exclusion and its imports-probe
   guard (part of the v5 rewrite above).
-- [`docs/research/learned-bot-plan.md`](../research/learned-bot-plan.md) — its
-  "richer per-turn trajectory dumps if/when" open follow-up resolves to a
-  pointer at `trajectories.md`.
 - [`docs/index.md`](../index.md) — one line for the new page.
 - [`AGENTS.md`](../../AGENTS.md) — file-placement table gains the
   `data/trajectories/` row (derived, gitignored).
@@ -776,7 +773,7 @@ Overridable, but the plan now assumes these.
 
 | # | Question | Default applied |
 | --- | --- | --- |
-| O1 | Dense-tensor layout for RL training | **Don't store dense states at all.** Actions-only canonical form plus a `--materialize` replayer emitting npz per game into a gitignored cache; decide shard layout when the RL work (learned-bot-plan) actually starts. |
+| O1 | Dense-tensor layout for RL training | **Don't store dense states at all.** Actions-only canonical form plus a `--materialize` replayer emitting npz per game into a gitignored cache; decide shard layout when the RL work actually starts. |
 | O2 | gzip vs zstd | **gzip** — stdlib, and at ~130 MB worst case the difference is noise. Revisit only if RL-scale materialization measurably bottlenecks on decompression. |
 | O5 | Trajectory retention | **Manual.** A round's trajectory dir is deletable once its experiment note is published, kept while tuning or RL work references it; no auto-GC. Revisit when `data/trajectories/` first crosses ~2 GB. |
 | O8 | The "11 bots" figure | **9 is the count of record** (§1 A2; `classic_duel` among them never reaches `data/games/`). If more bots were intended (e.g. `garrison`, `late_rush`), each is a new `probe.py` plus a schema entry, per §3.4. |

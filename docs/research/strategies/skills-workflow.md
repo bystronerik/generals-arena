@@ -229,7 +229,7 @@ This skill holds the auto-improve rules in section 4.
 Do not build this skill now. Build the skill when the heuristic count reaches
 about 10 and a remote evaluation path exists. The skill will check the learned-bot
 gate: heuristic count, decisive-game rate, telemetry fields, and one remote
-evaluation result. See `docs/research/learned-bot-plan.md`.
+evaluation result.
 
 ## 4. Auto-improve rules
 

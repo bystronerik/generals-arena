@@ -6,13 +6,6 @@ guides a belief-aware Monte Carlo tree search.
 This directory is a strategy specification only. It contains no bot code,
 training code, implementation plan, task list, or schedule.
 
-## Relationship to the learned-bot plan
-
-Morpheus **extends** the
-[learned-bot plan](../../research/learned-bot-plan.md). That file remains the
-general pointer for learned-bot work. These files resolve the strategic choices
-that the placeholder left open.
-
 ## Objective
 
 Morpheus maximizes expected game outcome: win probability minus loss

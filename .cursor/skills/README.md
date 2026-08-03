@@ -36,4 +36,4 @@ Project skills for the Generals Competition research loop. Authority: [`docs/res
 
 ## Deferred
 
-`learned-bot-readiness` — build when ~10 heuristic bots exist and a remote evaluation path is ready. See [`docs/research/learned-bot-plan.md`](../../docs/research/learned-bot-plan.md).
+`learned-bot-readiness` — build when ~10 heuristic bots exist and a remote evaluation path is ready.
