@@ -8,7 +8,7 @@ WDL path before the full network is implemented.
 
 **Touches**
 
-- `scripts/`: add the isolated export probe.
+- `scripts/`: add the isolated export probe and the Modal CPU entry.
 - `training/morpheus/`: add random-weight fixtures and parity tests.
 - `bots/`, `arena/`, and `data/bot_versions/`: none.
 - `competition-module/`: read its canonical dependency pins only.
@@ -54,6 +54,18 @@ python scripts/morpheus_export_preflight.py \
   --requirements requirements-sandbox.txt \
   --output docs/research/measurements/morpheus-export-preflight.json
 ```
+
+Local Darwin hosts often expose only `qnnpack`. The Linux competition image may
+use `fbgemm` or `x86`. Measure that seat with Modal CPU (no GPU, no A100):
+
+```bash
+modal run scripts/morpheus_modal_export_preflight.py
+```
+
+The Modal command installs the sandbox pin set with the CPU torch wheel, runs
+the same probe, and overwrites
+`docs/research/measurements/morpheus-export-preflight.{json,md}` on the local
+machine.
 
 ## Specification gaps
 

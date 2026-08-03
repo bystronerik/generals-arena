@@ -1,0 +1,89 @@
+{
+  "name": "morpheus-bootstrap",
+  "selection_date": "2026-08-04",
+  "rating_era": "9e3b9d13cca51caa1bb07db48bb85c9e90ce0462",
+  "fit_counts_digest": "sha256:7b8f3e0d09ecbe32d5638db32b6cffe89b3f0072b0804ca54a51bb2a24263102",
+  "round_seed": 7,
+  "seat_policy": "alternate",
+  "games_per_pair": 2,
+  "source_label": "fixed_panel",
+  "excluded": [
+    "classic_duel",
+    "yankee",
+    "ResBot",
+    "remote"
+  ],
+  "selection_notes": [
+    "Members come from the current competition pool under bots/.",
+    "Roles cover the decision-rule panel needs: anchor, rating span, heuristics, research.",
+    "castle_builder supplies castle-build coverage for later curriculum and belief work.",
+    "classic_duel, remote, and scraped ResBot games stay out.",
+    "sosipolis content_hash is the current checkout; rating evidence cites the most-played registered lineage head."
+  ],
+  "members": [
+    {
+      "bot_id": "cm_expander",
+      "content_hash": "3097ee53a533",
+      "role": "anchor",
+      "rating": 1500.0,
+      "decisive_games": 5214,
+      "rated_games": 5604,
+      "evidence_entity": "cm_expander@3097ee53a533"
+    },
+    {
+      "bot_id": "castle_builder",
+      "content_hash": "34c33cba59d8",
+      "role": "heuristic",
+      "rating": 1408.8,
+      "decisive_games": 95,
+      "rated_games": 200,
+      "evidence_entity": "castle_builder@34c33cba59d8"
+    },
+    {
+      "bot_id": "fog_scout",
+      "content_hash": "62b1acf0c289",
+      "role": "heuristic",
+      "rating": 1861.5,
+      "decisive_games": 1534,
+      "rated_games": 2100,
+      "evidence_entity": "fog_scout@62b1acf0c289"
+    },
+    {
+      "bot_id": "aegis",
+      "content_hash": "b160fb7cbf75",
+      "role": "heuristic",
+      "rating": 2050.1,
+      "decisive_games": 2834,
+      "rated_games": 2984,
+      "evidence_entity": "aegis@b160fb7cbf75"
+    },
+    {
+      "bot_id": "boom",
+      "content_hash": "9e4a37370ddf",
+      "role": "heuristic",
+      "rating": 2166.6,
+      "decisive_games": 3178,
+      "rated_games": 3234,
+      "evidence_entity": "boom@9e4a37370ddf"
+    },
+    {
+      "bot_id": "macaria",
+      "content_hash": "5760b30723e4",
+      "role": "research",
+      "rating": 2291.6,
+      "decisive_games": 723,
+      "rated_games": 728,
+      "evidence_entity": "macaria@5760b30723e4"
+    },
+    {
+      "bot_id": "sosipolis",
+      "content_hash": "e8d618ef7dc6",
+      "role": "research",
+      "rating": 2034.5,
+      "decisive_games": 245,
+      "rated_games": 250,
+      "evidence_entity": "sosipolis@1efe9ed58fc9",
+      "evidence_note": "Rating and decisive counts come from the most-played registered lineage head; the panel records the current content_hash."
+    }
+  ]
+}

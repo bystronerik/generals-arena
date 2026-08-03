@@ -31,7 +31,15 @@ Process rules for agents that work in this repo. Put game and bot knowledge in `
 | Per-turn trajectories (derived, gitignored, opt-in `--record`) | `data/trajectories/` |
 | Bot version registry (committed) | `data/bot_versions/` |
 | Scraped leaderboard replays (derived, gitignored) | `competition-replays/<player>/{win,lose,draw}/` |
+| Morpheus training-only modules | `training/morpheus/` |
+| Morpheus local derived training data (gitignored) | `data/morpheus/` |
+| Submission-harness failure fixtures | `tests/fixtures/submission_bots/` |
 | Cursor skills | `.cursor/skills/` |
+
+Modal Volumes remain the primary storage for remote Morpheus training runs.
+Local `data/morpheus/` shards, checkpoints, and materializations stay
+gitignored and never enter `data/games/`, `data/ratings/`, or
+`data/bot_versions/`.
 
 Do not put strategy content in `AGENTS.md` or skill files beyond process pointers that link into `docs/`.
 

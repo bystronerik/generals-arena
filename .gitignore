@@ -36,3 +36,8 @@ data/trajectories/**
 # player; re-fetchable with scripts/scrape_replays.py). Keep the directory.
 competition-replays/*
 !competition-replays/.gitkeep
+
+# Morpheus local shards, checkpoints, and materializations (derived; Modal
+# Volumes are primary for remote runs). Keep the directory.
+data/morpheus/*
+!data/morpheus/.gitkeep
