@@ -37,6 +37,11 @@ memory. After a simulation samples a particle, it uses only the enemy actions
 legal for that hash. An unavailable action receives no prior, visit, value, or
 regret update for that particle.
 
+`P_B,h` comes from the shared network on the enemy-perspective tensor. Each node
+keeps at most 8 enemy tables, an **initial guess**. Hash deduplication reuses a
+table. Weighted least-recently-used eviction removes an inactive table and its
+joint statistics; the table used by a pending simulation cannot be evicted.
+
 Progressive widening uses:
 
 ```text
@@ -79,6 +84,12 @@ One simulation:
 
 Depth 16 is an **initial guess**. Search uses no random rollout. A rollout to
 turn 1200 is too slow and gives high-variance values under fog.
+
+## Pending leaf batch
+
+Search selects up to 4 paths from one frozen statistics snapshot without
+virtual loss or temporary regret. Duplicate leaves are allowed. One batch
+evaluates them; backup follows selection order and reserves no prior statistics.
 
 ## Matrix backup
 
@@ -127,16 +138,11 @@ Otherwise it starts a new root.
 
 ## Alternatives rejected
 
-Alternating PUCT is rejected because it lets the second player observe the
-first action before choosing. A fixed sequential approximation creates the
-same false information.
-
-Decoupled UCT is rejected because independent marginal values miss joint
-effects such as chasing a source or two actions contesting one cell.
+Alternating PUCT and fixed sequential approximations are rejected because they
+give the second player false action information. Decoupled UCT is rejected
+because marginal values miss chasing and contested-cell interactions.
 
 ## Failure mode
 
-Regret estimates are noisy when the clock visits only a small part of the
-matrix. Progressive widening can omit a low-prior enemy tactic. The opponent
-cap and exploration floor must therefore be benchmarked against tactical
-counterexample positions.
+Low visit counts make regrets noisy and can omit a low-prior enemy tactic.
+Benchmark the opponent cap and exploration floor on tactical counterexamples.

@@ -32,6 +32,13 @@ states:
 4. Pre-contact states from later and later distances.
 5. Full competition starts.
 
+Before Morpheus can win, classes 1-3 come from decisive competition
+trajectories made by the fixed heuristic and research panel. Class 4 uses all
+legal fixed-panel prefixes. Class 5 starts from new competition maps. Once
+Morpheus produces decisive games, immutable league and self-play trajectories
+join classes 1-4. Source labels detect one source taking over. ResBot replays
+are never curriculum states.
+
 Every curriculum state comes from a legal trajectory produced by
 `GeneralsEnv(mode="competition")`. Training does not invent board states,
 remove fog, shorten the board, or change deathtouch.
@@ -109,6 +116,14 @@ Rated play uses neither root noise nor action temperature.
 Noise concentration, temperature, and the turn at which sampling becomes
 deterministic are deliberately deferred to measured training stability.
 
+## Training compute
+
+Training may use more particles, simulations, and batch parallelism than rated
+play. It must keep the same tensor, action, belief, matrix, and reward
+semantics. Every promoted checkpoint completes final self-play and calibration
+with the deployment settings. Hardware and games per checkpoint remain an
+[open question](open-questions.md).
+
 ## Checkpoint promotion
 
 A candidate first passes WDL, legality, belief calibration, and runtime checks
@@ -130,7 +145,6 @@ because it caps adaptation at a fixed opponent distribution.
 
 ## Failure mode
 
-The curriculum can overrepresent short tactical states and fail from full
-starts. Full-start arena games remain the promotion authority. Auxiliary
-hidden-state losses can also dominate policy learning, so their weights require
-an ablation before they become fixed values.
+The curriculum can overrepresent tactics and fail from full starts. Full-start
+arena games remain authoritative. Auxiliary losses require an ablation before
+their weights become fixed.

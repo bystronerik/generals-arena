@@ -53,12 +53,26 @@ The proposal uses the same policy from the enemy perspective. Its belief
 planes come from the enemy's simulated last-seen memory and a level-zero
 state estimate. Morpheus does not build recursive beliefs about beliefs.
 
+Morpheus deduplicates identical enemy information tensors by hash. It evaluates
+all remaining particle proposals in one batch of up to 64, then samples one
+action per particle from the matching policy. It does not run 64 serial
+forwards.
+
 ## Rejuvenation and recovery
 
 Resampling alone copies particles and loses alternatives. A rejuvenation move
 replays the last 8 enemy turns from a stored ancestor with different legal
 enemy actions. It accepts only histories that reproduce every observation and
 public total. The 8-turn window is an **initial guess**.
+
+Rejuvenation uses policy-guided bounded beam sampling. At the first replayed
+turn it branches over pass, the top 4 legal policy actions, and any
+vision-changing action. Later turns sample from the policy. It prunes a branch
+as soon as a recorded observation or public total differs.
+
+Beam width 8, at most 16 completed proposal histories, and at most 128 replayed
+transitions per real turn are **initial guesses**. Admission control can stop
+rejuvenation before these limits without changing the current valid belief.
 
 If all particles fail:
 

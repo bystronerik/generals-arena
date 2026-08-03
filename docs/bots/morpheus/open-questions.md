@@ -1,20 +1,20 @@
 # Open questions
 
-These choices are deliberately deferred. Each question has a current safe
-default and the evidence required for a final value. None changes Morpheus's
-strategic design.
+These choices are deliberately deferred. Each question gives a current default
+and the evidence that must replace the default.
 
-## Inference runtime and exact capacity
+## Coupled online compute
 
-**Unknown:** Which CPU static-graph runtime and exact channel count meet the
-competition environment.
+**Unknown:** Which inference runtime, model width, particle count, simulation
+target, and deadline reserve fit together on one competition CPU core.
 
-**Current default:** Quantized 8-bit, 64 trunk channels, 12 inverted residual
-blocks, about 0.35 million parameters.
+**Current default:** 8-bit 64-channel network, 64 particles, 32 target
+simulations, at most 113 forward-equivalents, and a 125 ms internal deadline.
 
-**Evidence:** Cold-load time, batch latency, p99 move latency, resident memory,
-and playing strength from at least two capacity points on one dedicated CPU
-core.
+**Evidence:** Measure the complete belief batch, root, enemy priors, leaf
+batches, transitions, hashing, backup, and reply at p50 and p99. Compare joint
+configurations such as 32/64/128 particles with several simulation targets.
+Zero faults is required; no component is tuned in isolation.
 
 ## Army normalization
 
@@ -22,123 +22,98 @@ core.
 
 **Current default:** `log1p(x) / log1p(4096)`.
 
-**Evidence:** Army and stack quantiles from generated competition trajectories,
-split by turn and outcome. Select a scale above the measured high quantile and
-confirm that quantization error stays small for ordinary stacks.
+**Evidence:** Army quantiles by turn and outcome, plus quantization error for
+ordinary and extreme stacks.
 
-## Particle count
+## Belief recovery bounds
 
-**Unknown:** The smallest particle count that preserves calibrated general,
-ownership, and army beliefs.
+**Unknown:** Final lag, beam width, history count, and transition cap.
 
-**Current default:** 64 particles; resample below half effective sample size.
+**Current default:** 8 turns, beam 8, 16 histories, and 128 transitions.
 
-**Evidence:** Hidden-state log loss, general-cell coverage, collapse frequency,
-recovery frequency, update latency, and arena strength for 32, 64, and 128
-particles.
+**Evidence:** Exact recovery rate and p99 cost after forced proposal mismatch
+on recorded trajectories.
 
-## Belief recovery window
+## Search resources
 
-**Unknown:** How many enemy turns fixed-lag rejuvenation must replay.
+**Unknown:** Widening caps, exploration floor, depth, enemy-table cap, and tree
+size.
 
-**Current default:** 8 turns.
-
-**Evidence:** Recovery success and CPU cost after forced proposal mismatch on
-recorded trajectories. The chosen window must restore exact observation
-consistency without consuming the normal move budget.
-
-## Search width and depth
-
-**Unknown:** Final self and enemy widening caps, coefficients, exploration
-floor, and depth.
-
-**Current default:** self cap 16, enemy cap 12, depth 16, and the formulas in
-[search.md](search.md).
+**Current default:** Self cap 16, enemy cap 12, depth 16, 8 enemy tables per
+node, and 4,096 tree nodes.
 
 **Evidence:** Tactical suites for chase, reinforcement, castle, mutual capture,
-and deathtouch, plus completed simulations and arena contrast. An omitted
-low-prior enemy response is a failure even when average throughput improves.
-
-## Simulation target and deadline reserve
-
-**Unknown:** Sustainable completed simulations and the smallest safe reserve.
-
-**Current default:** target 32, minimum 8, 125 ms internal deadline, and 10 ms
-batch-admission guard.
-
-**Evidence:** p50 and p99 reply time under cold and warm process conditions,
-belief recovery turns, maximum matrix width, and CPU contention. Zero faults
-is required.
-
-## Tree size
-
-**Unknown:** The reuse benefit beyond 4,096 nodes.
-
-**Current default:** 4,096 nodes with off-root least-recently-used eviction.
-
-**Evidence:** Reuse hit rate, value change after reroot, memory, and simulations
-saved per turn across full-length games.
+and deathtouch, plus table hit rate, eviction loss, memory, and arena contrast.
 
 ## Curriculum promotion
 
-**Unknown:** The confidence rule that moves sampling from tactical states to
-earlier and full-start states.
+**Unknown:** The confidence rule that shifts sampling toward earlier and
+full-start states.
 
-**Current default:** Advance only when each active state class produces a
-non-degenerate WDL target.
+**Current default:** Advance only when each active class has a non-degenerate
+WDL target.
 
-**Evidence:** WDL counts and confidence intervals by state class, followed by
-full-start decisive rate and held-out arena strength. Training loss alone is
-not evidence.
+**Evidence:** WDL intervals by class, full-start decisive rate, and held-out
+arena strength. Training loss alone is not evidence.
 
 ## Opponent mixture
 
-**Unknown:** Final league-to-roster ratio and sampling weights.
+**Unknown:** Final league-to-panel ratio and sampling weights.
 
 **Current default:** 70% checkpoint league and 30% fixed bot panel.
 
-**Evidence:** Exploitability against held-out checkpoints, opponent coverage,
-cycling, decisive rate, and pairwise arena contrast. Do not optimize the mix
-against leaderboard rank.
+**Evidence:** Held-out exploitability, cycling, opponent coverage, decisive
+rate, and pairwise arena contrast.
 
-## Auxiliary loss weights
+## Training losses and exploration
 
-**Unknown:** Relative weights for hidden state, final margins, and termination.
+**Unknown:** Auxiliary-loss weights, root noise, action temperature, and the
+deterministic turn.
 
-**Current default:** No fixed values.
+**Current default:** No fixed values; rated play disables all exploration.
 
-**Evidence:** Ablations that hold self-play games and search settings constant.
-Keep a head only when it improves belief calibration or arena strength without
-reducing policy learning.
+**Evidence:** Controlled ablations for belief calibration, policy entropy,
+action coverage, cycling, and held-out arena strength.
 
-## Training exploration
+## Training compute
 
-**Unknown:** Root-noise concentration, action temperature, and deterministic
-turn.
+**Unknown:** Hardware, parallelism, self-play throughput, and games required per
+checkpoint.
 
-**Current default:** No fixed values; rated play always disables them.
+**Current default:** Training may use larger search settings, followed by a
+deployment-matched self-play and calibration phase.
 
-**Evidence:** Policy entropy, action coverage, self-play cycling, and held-out
-strength. Exploration that causes protocol faults or persistent random play is
-rejected.
+**Evidence:** End-to-end games per hour, network forwards per game, checkpoint
+learning curves, and strength versus compute. A training design that cannot
+produce enough games is rejected before implementation.
 
 ## Opponent belief approximation
 
-**Unknown:** Whether level-zero last-seen belief is sufficient for enemy-action
-proposals.
+**Unknown:** Whether level-zero last-seen belief is sufficient.
 
 **Current default:** No recursive opponent particles.
 
-**Evidence:** Enemy-action negative log likelihood on held-out self-play and
-particle survival after real observations. If the proposal misses critical
-actions, compare one bounded additional belief level within the same deadline.
+**Evidence:** Enemy-action log loss and real-observation particle survival.
+Compare one bounded extra belief level only if the default misses critical
+actions within the same deadline.
+
+## Submission-shaped harness
+
+**Unknown:** Which repository component owns the 150 ms, first-move, 2 GB,
+fault, and EOF acceptance check.
+
+**Current default:** No harness is assumed to exist.
+
+**Evidence:** Choose `arena/` or `scripts/` from reuse requirements, then prove
+the check can reject controlled timeout, memory, malformed-output, crash, and
+EOF failures. Morpheus cannot promote before this is resolved.
 
 ## ResBot castle evidence
 
-**Unknown:** Whether production candidates at distance 7 represent a stable
-build preference or a replay-detector effect.
+**Unknown:** Whether distance-7 production candidates are stable build behavior
+or a detector effect.
 
-**Current default:** Use the finding as a diagnostic only.
+**Current default:** Diagnostic only.
 
-**Evidence:** Action reconstruction that proves the spend cell and turn on a
+**Evidence:** Action reconstruction that proves spend cell and turn on a
 held-out ResBot sample. The result still cannot specify ResBot internals.

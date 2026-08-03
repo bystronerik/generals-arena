@@ -36,19 +36,41 @@ Every turn follows this order:
 3. Build legal masks.
 4. Run one root network evaluation.
 5. Store the highest-prior legal action as the policy fallback.
-6. Run search in batches of up to 4 virtual simulations.
+6. Run search in batches of up to 4 pending leaf evaluations.
 7. Stop before the internal deadline.
 8. Serialize the best available action.
 
-The batch size is the same **initial guess** as in
-[network.md](network.md).
+Belief proposals use one separate batch of up to 64 unique enemy tensors.
+Search batch size 4 is an **initial guess**.
+
+## Per-turn network budget
+
+A forward-equivalent is one tensor through the network, even when a batch
+executes many tensors together.
+
+| Consumer | Default maximum | Batch form |
+| --- | ---: | --- |
+| belief enemy-action proposals | 64 | one deduplicated batch |
+| root policy and value | 1 | one tensor |
+| search leaf values | 32 | up to 8 batches of 4 |
+| new enemy-table priors | 16 | join compatible search batches |
+| total | 113 | hard accounting maximum |
+
+The enemy-prior limit of 16 is an **initial guess**. Cached or deduplicated
+priors consume zero new forward-equivalents.
+
+The total is a limit, not proof of feasibility. A valid deployment
+configuration must fit belief update, root, target search, transitions, and
+reply inside 125 ms at measured p99. Particle count and simulation target are
+selected together. If belief plus root cannot fit, the artifact is rejected.
 
 ## Admission control
 
-Morpheus keeps moving estimates for tensor, inference, simulation, and reply
-cost. It starts a network batch only when the measured p99 batch time plus a
-10 ms guard fits before the internal deadline. The 10 ms guard is an
-**initial guess**.
+Morpheus keeps separate moving estimates for belief tensor construction,
+belief-proposal batch, particle transitions, hashing, root inference, leaf
+batches, enemy-prior batches, backup, and reply cost. It starts a network batch
+only when its measured p99 time plus a 10 ms guard fits before the internal
+deadline. The 10 ms guard is an **initial guess**.
 
 The clock is monotonic. Morpheus checks it before selection, before inference,
 and before starting another simulation. Work already in a network call is not
@@ -64,10 +86,14 @@ Morpheus uses the following deterministic path:
 | Completed simulations | Decision |
 | ---: | --- |
 | 16 or more | root average strategy |
-| 8-15 | root average strategy with no further widening |
+| 8-15 | root average strategy |
 | 1-7 | highest marginal visit; tie by root policy |
 | 0 | highest-prior legal root action |
 | no root result | pass |
+
+When the forecast falls below 16 completed simulations, search stops widening
+before it selects more paths. This is a search-time rule, not a final-decision
+rule.
 
 If belief filtering consumes too much time, Morpheus keeps the last valid
 particle set, applies visible contradictions, lowers `belief_ess`, and proceeds.

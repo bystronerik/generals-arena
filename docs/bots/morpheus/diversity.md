@@ -12,14 +12,14 @@ enter arena games and ratings without replacing a roster measurement bot.
 
 | Axis | Morpheus |
 | --- | --- |
-| Primary objective | maximize probability of general capture |
+| Primary objective | maximize expected game outcome: win probability minus loss probability |
 | Risk posture | state- and belief-dependent equilibrium response |
 | Time profile | continuous; no hard strategy windows |
 | Information use | persistent memory plus explicit particle belief |
 | Army handling | learned joint choice among full, half, merge, build, and pass |
 
-The verdict is **distinct**. Morpheus shares the general-kill objective with
-some bots, but its information, control, timing, and army decisions differ.
+The verdict is **distinct**. Morpheus shares general capture as the win
+condition with some bots, but its objective and decision mechanism differ.
 
 ## Must always be true
 

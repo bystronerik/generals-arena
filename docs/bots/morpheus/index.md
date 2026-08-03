@@ -15,9 +15,9 @@ that the placeholder left open.
 
 ## Objective
 
-Morpheus maximizes the probability of capturing the enemy general before turn
-1200. It treats a simultaneous capture as a draw and models deathtouch from
-turn 800.
+Morpheus maximizes expected game outcome: win probability minus loss
+probability. It treats a simultaneous capture as a draw and models deathtouch
+from turn 800.
 
 The policy has no fixed expansion, castle, or strike phase. The network and
 search compare all legal actions on each turn. Hard rules apply only to action

@@ -28,7 +28,7 @@ rejected because it changes edge meaning and prevents simple tree batching.
 | 13 | `owned_army` | transformed army on owned cells |
 | 14 | `enemy_army_visible` | transformed visible enemy army |
 | 15 | `ever_visible` | 1 after the first direct sight |
-| 16 | `sight_age` | turns since direct sight, divided by 1200 |
+| 16 | `sight_age` | 0 until seen; then turns since sight divided by 1200 |
 | 17 | `remembered_owned` | owner at the last sight was Morpheus |
 | 18 | `remembered_enemy` | owner at the last sight was the enemy |
 | 19 | `remembered_neutral` | owner at the last sight was neutral |
@@ -90,6 +90,8 @@ identifies a new castle even while its owner and army remain hidden.
 Static terrain and both general locations, once seen, never expire. Dynamic
 owner and army memory keeps the last value and its age. Current visible data
 always replaces memory before the tensor is built.
+
+`ever_visible` gates `sight_age`. Both planes are zero before first sight.
 
 ## Rejected alternative
 

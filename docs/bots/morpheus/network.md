@@ -70,11 +70,16 @@ belief collapse. The margin and termination heads are not used by search.
 ## Inference budget
 
 The parameter count gives less than 0.5 MB of raw 8-bit weights and leaves the
-2 GB limit dominated by the runtime, tree, and particles. The initial target is
-one batch of 4 leaf evaluations at a time. Batch size 4 is an **initial guess**.
+2 GB limit dominated by the runtime, tree, and particles.
 
-The deployment gate measures full inference, tensor construction, and search
-on one CPU core. A parameter count alone does not prove the 150 ms deadline.
+Belief propagation uses one large enemy-proposal batch with up to 64 unique
+information tensors. Search uses batches of up to 4 pending leaf evaluations.
+Root and new enemy-table priors join a compatible search batch when possible.
+The batch sizes are **initial guesses**.
+
+The deployment gate measures both batch shapes, total forward-equivalents,
+tensor construction, belief transition, and search on one CPU core. A parameter
+count alone does not prove the 150 ms deadline.
 
 ## Training behavior
 
