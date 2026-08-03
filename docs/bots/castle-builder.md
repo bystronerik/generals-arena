@@ -24,7 +24,7 @@ experiment note for detail.
 
 ## Experiment
 
-[`docs/research/experiments/002-castle-builder-early-investment.md`](../research/experiments/002-castle-builder-early-investment.md) — kept (rested-general mechanism; it is the only version that ever builds). Economic payoff itself is unverified: the game-record schema does not yet capture final land/army.
+Kept (rested-general mechanism; it is the only version that ever builds). Economic payoff itself is unverified: the game-record schema does not yet capture final land/army.
 
 ## Verification
 

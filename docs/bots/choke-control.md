@@ -18,10 +18,6 @@
 6. BFS frontier march fallback — unchanged from `expand_plus`, with a
    preference to march toward held chokes under threat.
 
-## Experiment
-
-[`docs/research/experiments/009-choke-control-corridor-hold.md`](../research/experiments/009-choke-control-corridor-hold.md)
-
 ## Verification
 
 ```bash

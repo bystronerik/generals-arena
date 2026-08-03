@@ -107,4 +107,3 @@ opponents `smoke`, `expand_plus`, `army_convey`, `late_rush`; seeds 0–2;
 `--mode competition` only. Metrics: W-L-D, mean turns to capture (primary
 signal — target < 400), strikes per game from telemetry, faults.
 
-See [`012-blitz-general-rush.md`](../experiments/012-blitz-general-rush.md).

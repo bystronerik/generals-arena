@@ -12,7 +12,7 @@ Enemy-general sighting is recorded every tick from turn 0 but not acted on until
 
 ## Experiment
 
-[`docs/research/experiments/010-phase-switch-gated-builds.md`](../research/experiments/010-phase-switch-gated-builds.md) — provisional keep pending full seed grid.
+Provisional keep pending full seed grid.
 
 ## Verification
 

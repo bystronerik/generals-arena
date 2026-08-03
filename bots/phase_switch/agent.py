@@ -6,9 +6,8 @@ Mid (80 <= turn < 800): `castle_builder` build/relocate/rest on top of
 expand_plus expansion. Late (turn >= 800): `general_hunter` beeline when
 the enemy general was ever sighted; otherwise mid loop continues.
 
-See docs/bots/phase-switch.md,
-docs/research/strategies/phase_switch.md, and
-docs/research/experiments/010-phase-switch-gated-builds.md.
+See docs/bots/phase-switch.md and
+docs/research/strategies/phase_switch.md.
 """
 from collections import deque
 

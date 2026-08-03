@@ -5,8 +5,7 @@ Expands early, selects a rally cell and main stack, then commits toward
 the enemy between turns 650–800. After turn 800, deathtouch contact on
 the known enemy general is highest priority.
 
-See docs/research/strategies/late_rush.md and
-docs/research/experiments/007-late-rush-commitment-window.md.
+See docs/research/strategies/late_rush.md.
 """
 from collections import deque
 

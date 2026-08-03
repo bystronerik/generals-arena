@@ -20,10 +20,6 @@
 
 Spec: [`docs/research/strategies/garrison.md`](../research/strategies/garrison.md).
 
-## Experiment
-
-[`docs/research/experiments/006-garrison-defensive-reserves.md`](../research/experiments/006-garrison-defensive-reserves.md).
-
 ## Verification
 
 ```bash

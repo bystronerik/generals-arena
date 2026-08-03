@@ -16,10 +16,6 @@
 
 Spec: [`docs/research/strategies/army_convey.md`](../research/strategies/army_convey.md).
 
-## Experiment
-
-[`docs/research/experiments/005-army-convey-frontier-funnel.md`](../research/experiments/005-army-convey-frontier-funnel.md).
-
 ## Verification
 
 ```bash

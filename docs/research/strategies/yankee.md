@@ -37,9 +37,8 @@ propagate. Accepted — both are rated roster entities, not libraries.
 The brief's baseline (46-4 over 50 games, all four losses at turns 202-314, all
 four with cm_hunter in seat A) comes from `round5`, which played proteus
 `91d2a88f8316`. The lineage head is `7ae237e99d34`, two steps later — the
-detection rework of
-[`017-proteus-detection-rework.md`](../experiments/017-proteus-detection-rework.md),
-which shipped as "proven flat". Re-measured on the head, seat-alternated,
+detection rework, which shipped as "proven flat". Re-measured on the head,
+seat-alternated,
 300 games:
 
 | | games | W | L | D | winrate |

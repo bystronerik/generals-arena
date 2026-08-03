@@ -37,8 +37,7 @@ a weighted policy.
 ## 2. Castle cost / build policy (vs `castle_builder`)
 
 Same build action and cost model as `castle_builder` (see
-[`docs/bots/castle-builder.md`](../../bots/castle-builder.md) and
-experiment [`002-castle-builder-early-investment.md`](../experiments/002-castle-builder-early-investment.md)):
+[`docs/bots/castle-builder.md`](../../bots/castle-builder.md)):
 
 ```
 cost(cell) = 35 + sum_over_own_structures(max(0, 14 - 2 * manhattan(cell, s)))
@@ -237,10 +236,10 @@ unchanged from `castle_builder` / `expand_plus` / `general_hunter`.
 
 **Metrics:** W-L-D per matchup, mean turns, castles built per game, hunt
 activations (count of games where the late phase fired a beeline/execute).
-Expected outcome mirrors experiments `001`–`003`: most games draw at 1200
+Expected outcome mirrors the early expansion bots: most games draw at 1200
 turns because none of the opponents scout deep enough to expose a general;
 the positive evidence is "no regression + the hunt mechanism is wired and
-unit-checkable", same framing as `003-general-hunter-deathtouch-beeline.md`.
+unit-checkable", the same framing used for `general_hunter`.
 
 **Failure mode that would force a revert:** any matchup where phase_switch
 finishes fewer games cleanly (more faults / crashes / non-termination) than
@@ -251,7 +250,7 @@ mechanism rather than only re-windowing it).
 **Telemetry gap:** the current game-record schema stores
 winner/turns/terminated/truncated, not final land/army or per-tick army. The
 income claim cannot be measured from stored games alone; proving it needs a
-schema follow-up (see `002-castle-builder-early-investment.md`'s open note).
+schema follow-up (the same open gap `castle_builder` recorded).
 The winrate / fault / castle-count claims can be measured today.
 
 ## Parameter revision 1

@@ -235,10 +235,9 @@ reused unchanged from `castle_builder` / `expand_plus`.
 - Store under `data/games/` before any rating update.
 
 **Metrics:** W-L-D per matchup, mean turns, castles built per game (primary
-signal — must be >= 3 on average), fault count. Expected outcome mirrors
-experiments `001`–`003`: most games draw at 1200 turns against the
-non-raiding pool; the positive evidence is "more castles built, no fault
-regression".
+signal — must be >= 3 on average), fault count. Expected outcome mirrors the
+early expansion bots: most games draw at 1200 turns against the non-raiding
+pool; the positive evidence is "more castles built, no fault regression".
 
 **Failure mode that would force a revert:**
 

@@ -216,11 +216,10 @@ def act(obs):
 - **Time budget**: layers 1–2 are \(O(HW)\) with tiny constants; one BFS
   per turn. Far under the 150 ms limit (RULES.md section 08).
 
-## Experiment hypothesis (009)
+## Experiment hypothesis
 
-File: `docs/research/experiments/009-choke-control-corridor-hold.md`
-(write after implementation, per
-[`experiment-protocol.md`](../experiment-protocol.md)).
+Write the note under `docs/research/experiments/` after implementation, per
+[`experiment-protocol.md`](../experiment-protocol.md).
 
 - **Change**: choke-aware scoring + hold/deny rules on `expand_plus`.
   One change only.
@@ -233,10 +232,10 @@ File: `docs/research/experiments/009-choke-control-corridor-hold.md`
   by run time); seeds 0, 1, 2; `--mode competition`; store all games
   under `data/games/` before any rating update.
 - **Metrics**: winrate, draw rate, mean turns, faults. Expectation:
-  holding behavior likely *raises* draw rate (matches the all-draws
-  pattern of experiments 001–003); decisive value needs final land/army
-  telemetry, which the current game-record schema does not store — same
-  known gap as 001/008, flagged as a separate arena follow-up.
+  holding behavior likely *raises* draw rate (matching the all-draws
+  pattern seen across the early expansion bots); decisive value needs final
+  land/army telemetry, which the current game-record schema does not store —
+  a known gap, flagged as a separate arena follow-up.
 - **Mechanism tests** (primary evidence if games all draw): unit-test the
   detector on synthetic boards — straight corridor, bend, open plain,
   pocket with mouth, fogged edge — and unit-test the hold rule (a held

@@ -16,10 +16,6 @@
 4. When no capture is available, BFS frontier march and any-valid-move
    fallback — unchanged from `expand_plus` (`split=0` only).
 
-## Experiment
-
-[`docs/research/experiments/008-splitter-half-army-fronts.md`](../research/experiments/008-splitter-half-army-fronts.md)
-
 ## Verification
 
 ```bash

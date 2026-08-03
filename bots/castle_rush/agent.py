@@ -5,9 +5,8 @@ Expands like `expand_plus` during setup (turn < 10) and after the rush
 cap (4 castles). Between those, rests the general and builds castles with
 tighter margins, shorter cooldown, and a higher cap than `castle_builder`.
 
-See docs/bots/castle-rush.md,
-docs/research/strategies/castle_rush.md, and
-docs/research/experiments/011-castle-rush-aggressive-builds.md.
+See docs/bots/castle-rush.md and
+docs/research/strategies/castle_rush.md.
 """
 from collections import deque
 

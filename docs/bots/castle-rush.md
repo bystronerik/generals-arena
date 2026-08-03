@@ -12,7 +12,7 @@ Enemy-general sighting is recorded every tick but not acted on (economy bot, not
 
 ## Experiment
 
-[`docs/research/experiments/011-castle-rush-aggressive-builds.md`](../research/experiments/011-castle-rush-aggressive-builds.md) — provisional keep pending full seed grid.
+Provisional keep pending full seed grid.
 
 ## Verification
 

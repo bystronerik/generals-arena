@@ -6,8 +6,7 @@ both split=0 and split=1 candidates and pick the best, so large stacks
 can capture with half army while garrisoning the source or opening a
 second front.
 
-See docs/bots/splitter.md and
-docs/research/experiments/008-splitter-half-army-fronts.md.
+See docs/bots/splitter.md.
 """
 from collections import deque
 

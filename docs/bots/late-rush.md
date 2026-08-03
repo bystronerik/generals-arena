@@ -19,10 +19,6 @@
 
 Spec: [`docs/research/strategies/late_rush.md`](../research/strategies/late_rush.md).
 
-## Experiment
-
-[`docs/research/experiments/007-late-rush-timed-commitment.md`](../research/experiments/007-late-rush-timed-commitment.md).
-
 ## Verification
 
 ```bash

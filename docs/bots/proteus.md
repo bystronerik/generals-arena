@@ -33,10 +33,8 @@ Spec: [`docs/research/strategies/proteus.md`](../research/strategies/proteus.md)
 
 ## Experiment
 
-[`017-proteus-detection-rework.md`](../research/experiments/017-proteus-detection-rework.md)
-— the detection rework: `no change (proven flat)`, kept for simplicity.
-[`016-proteus-adaptive-switching.md`](../research/experiments/016-proteus-adaptive-switching.md)
-— the original migration.
+The detection rework measured `no change (proven flat)` and was kept for
+simplicity, on top of the original migration to adaptive switching.
 
 ## Verification
 

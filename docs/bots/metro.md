@@ -26,8 +26,7 @@ Spec: [`docs/research/strategies/metro.md`](../research/strategies/metro.md).
 
 ## Experiment
 
-[`docs/research/experiments/014-metro-castle-network.md`](../research/experiments/014-metro-castle-network.md)
-— provisional keep pending full seed grid.
+Provisional keep pending full seed grid.
 
 ## Verification
 

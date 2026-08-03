@@ -5,8 +5,7 @@ Protects the own general with a reserve floor, reinforcement toward the
 general, and deathtouch intercept logic after turn 800. Expands only when
 defense is satisfied.
 
-See docs/research/strategies/garrison.md and
-docs/research/experiments/006-garrison-phase-reserve.md.
+See docs/research/strategies/garrison.md.
 """
 import math
 from collections import deque

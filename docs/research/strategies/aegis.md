@@ -94,4 +94,3 @@ Seed grid: opponents `smoke`, `garrison`, `late_rush`, `blitz`; seeds
 0–2; `--mode competition`. Metrics: W-L-D, counter conversions (games won
 inside a counter window), castles built, faults.
 
-See [`015-aegis-turtle-counter.md`](../experiments/015-aegis-turtle-counter.md).

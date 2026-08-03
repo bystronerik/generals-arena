@@ -103,7 +103,7 @@ visible opponent stacks).
 - or deathtouch-era runner split: turn >= 800, enemy general known, and
   the stack can divide into two runners on parallel approach paths (two
   independent one-unit execution threats; see
-  [`003-general-hunter-deathtouch-beeline.md`](../experiments/003-general-hunter-deathtouch-beeline.md)).
+  [`docs/bots/general-hunter.md`](../../bots/general-hunter.md)).
 
 **Use `split=0` when any hold:**
 
@@ -186,11 +186,10 @@ def act(obs):
 - **Time budget**: scoring stays \(O(HW)\) per turn plus one BFS — far
   under the 150 ms limit (RULES.md section 08).
 
-## Experiment hypothesis (008)
+## Experiment hypothesis
 
-File: `docs/research/experiments/008-splitter-half-army-fronts.md`
-(write after implementation, per
-[`experiment-protocol.md`](../experiment-protocol.md)).
+Write the note under `docs/research/experiments/` after implementation, per
+[`experiment-protocol.md`](../experiment-protocol.md).
 
 - **Change**: split-flag decision layer on `expand_plus`. One change only.
 - **Claim**: multi-front pressure and garrison remainders let splitter

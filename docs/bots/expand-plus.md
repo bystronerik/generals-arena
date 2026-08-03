@@ -16,7 +16,7 @@
 
 ## Experiment
 
-[`docs/research/experiments/001-expand-plus-frontier-march.md`](../research/experiments/001-expand-plus-frontier-march.md) — kept; full-game telemetry only confirms no regression (still finishes clean, no faults), since land/army are not yet in the game-record schema.
+Kept; full-game telemetry only confirms no regression (still finishes clean, no faults), since land/army are not yet in the game-record schema.
 
 ## Verification
 

@@ -27,8 +27,7 @@ Spec: [`docs/research/strategies/aegis.md`](../research/strategies/aegis.md).
 
 ## Experiment
 
-[`docs/research/experiments/015-aegis-turtle-counter.md`](../research/experiments/015-aegis-turtle-counter.md)
-— provisional keep pending full seed grid.
+Provisional keep pending full seed grid.
 
 ## Verification
 

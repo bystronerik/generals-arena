@@ -25,8 +25,7 @@ Spec: [`docs/research/strategies/blitz.md`](../research/strategies/blitz.md).
 
 ## Experiment
 
-[`docs/research/experiments/012-blitz-general-rush.md`](../research/experiments/012-blitz-general-rush.md)
-— provisional keep pending full seed grid.
+Provisional keep pending full seed grid.
 
 ## Verification
 

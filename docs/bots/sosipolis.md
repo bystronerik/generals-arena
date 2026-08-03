@@ -5,10 +5,6 @@ early castle programme, then strike.** Triple-mode MCTS with persistent fog
 memory, mountain-pocket skip, and section priors.
 
 Spec: [`../research/strategies/sosipolis.md`](../research/strategies/sosipolis.md).
-Experiments:
-[`../research/experiments/019-sosipolis-dual-mcts.md`](../research/experiments/019-sosipolis-dual-mcts.md),
-[`../research/experiments/020-sosipolis-contact-castle.md`](../research/experiments/020-sosipolis-contact-castle.md),
-[`../research/experiments/021-sosipolis-phase-defense.md`](../research/experiments/021-sosipolis-phase-defense.md).
 
 ## Layout
 

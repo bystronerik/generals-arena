@@ -92,4 +92,3 @@ Seed grid: opponents `smoke`, `expand_plus`, `castle_builder`,
 built (target 3), draws vs the castle cluster (primary diversity signal —
 must not regress to all-draws), faults.
 
-See [`014-metro-castle-network.md`](../experiments/014-metro-castle-network.md).

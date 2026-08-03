@@ -75,14 +75,14 @@ python competition-module/competition/matchup.py \
 ## Heuristic bots
 
 Scaffolded with the `build-bot-from-spec` skill from a spec under
-`docs/research/strategies/`. One doc
-file each, one experiment note each under `docs/research/experiments/`:
+`docs/research/strategies/`. One doc file each, plus one experiment note each
+under `docs/research/experiments/`:
 
-| Bot | Idea | Doc | Experiment note |
-| --- | --- | --- | --- |
-| `bots/expand_plus/` | expand | [`expand-plus.md`](expand-plus.md) | [`001-expand-plus-frontier-march.md`](../research/experiments/001-expand-plus-frontier-march.md) |
-| `bots/castle_builder/` | castle-aware | [`castle-builder.md`](castle-builder.md) | [`002-castle-builder-early-investment.md`](../research/experiments/002-castle-builder-early-investment.md) |
-| `bots/general_hunter/` | late-game hunt | [`general-hunter.md`](general-hunter.md) | [`003-general-hunter-deathtouch-beeline.md`](../research/experiments/003-general-hunter-deathtouch-beeline.md) |
+| Bot | Idea | Doc |
+| --- | --- | --- |
+| `bots/expand_plus/` | expand | [`expand-plus.md`](expand-plus.md) |
+| `bots/castle_builder/` | castle-aware | [`castle-builder.md`](castle-builder.md) |
+| `bots/general_hunter/` | late-game hunt | [`general-hunter.md`](general-hunter.md) |
 
 Every one of these strategy changes needs a note before merge — see
 [`docs/research/experiment-protocol.md`](../research/experiment-protocol.md)

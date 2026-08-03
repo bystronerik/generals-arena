@@ -55,8 +55,8 @@ the 3×3 box around the enemy general. Greedy expansion stops long before
 that (see D3). So `self.enemy_general` stays `None`, `_hunt` never runs, and
 `general_hunter` is behaviourally identical to `expand_plus` minus the march.
 
-Experiment note `003` records the hunt as "wired but unmeasured". It is worse
-than unmeasured: under the current expansion policy it is unreachable.
+The `general_hunter` write-up records the hunt as "wired but unmeasured". It is
+worse than unmeasured: under the current expansion policy it is unreachable.
 
 ### D3 — The capture gate stops expansion at the first defended tile
 
@@ -438,8 +438,9 @@ terminated win.
 
 `data/games/*.json` stores `winner`, `turns`, `terminated`, `truncated` and
 nothing else. Every claim above about land, army, income, or sighting is
-unmeasurable from the store today. Experiment notes `001`, `002`, `003` and
-the `castle_rush` / `phase_switch` specs all record the same gap.
+unmeasurable from the store today. The `expand_plus`, `castle_builder` and
+`general_hunter` write-ups and the `castle_rush` / `phase_switch` specs all
+record the same gap.
 
 ### 5.2 Requested schema addition (backward compatible)
 

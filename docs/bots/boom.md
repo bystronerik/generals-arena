@@ -23,8 +23,7 @@ Spec: [`docs/research/strategies/boom.md`](../research/strategies/boom.md).
 
 ## Experiment
 
-[`docs/research/experiments/013-boom-economy-latch.md`](../research/experiments/013-boom-economy-latch.md)
-— provisional keep pending full seed grid.
+Provisional keep pending full seed grid.
 
 ## Verification
 

@@ -14,10 +14,6 @@
 
 Spec: [`docs/research/strategies/fog_scout.md`](../research/strategies/fog_scout.md).
 
-## Experiment
-
-[`docs/research/experiments/004-fog-scout-systematic-probing.md`](../research/experiments/004-fog-scout-systematic-probing.md).
-
 ## Verification
 
 ```bash

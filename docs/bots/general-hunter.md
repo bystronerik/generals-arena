@@ -20,7 +20,7 @@
 
 ## Experiment
 
-[`docs/research/experiments/003-general-hunter-deathtouch-beeline.md`](../research/experiments/003-general-hunter-deathtouch-beeline.md) — kept, but unproven in full games: the beeline/execute logic was checked directly against a synthetic observation and behaves correctly, but no game in the seed grid ever sighted the opposing general before truncation (none of the current opponents probe past the shared frontier).
+Kept, but unproven in full games: the beeline/execute logic was checked directly against a synthetic observation and behaves correctly, but no game in the seed grid ever sighted the opposing general before truncation (none of the current opponents probe past the shared frontier).
 
 ## Verification
 

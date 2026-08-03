@@ -18,12 +18,9 @@ pointer for the agent that picks up learned bots, not an implementation.
   `python -m arena.records.trajectories <file> --materialize` replays it into
   dense per-turn states on demand, so states are regenerated rather than
   stored. Final land and army are now engine truth on **every** record,
-  recorded or not, which is the specific gap
-  [`001-expand-plus-frontier-march.md`](experiments/001-expand-plus-frontier-march.md)
-  and
-  [`002-castle-builder-early-investment.md`](experiments/002-castle-builder-early-investment.md)
-  flagged. Shard layout is still an open decision for whenever this work
-  starts.
+  recorded or not, which closes the land/army telemetry gap that the early
+  `expand_plus` and `castle_builder` work flagged. Shard layout is still an
+  open decision for whenever this work starts.
 - Checkpoints become rated arena citizens through the same
   `arena/run_match.py` / `arena/tournament.py` + `arena/ratings.py` path
   used for heuristic bots — no separate scoring path.

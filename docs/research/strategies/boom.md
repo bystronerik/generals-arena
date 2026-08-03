@@ -101,4 +101,3 @@ Seed grid: opponents `smoke`, `expand_plus`, `castle_builder`,
 `late_rush`; seeds 0–2; `--mode competition`. Metrics: W-L-D, mean turns,
 castles built, guard at end, faults.
 
-See [`013-boom-economy-latch.md`](../experiments/013-boom-economy-latch.md).
