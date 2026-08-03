@@ -6,9 +6,8 @@ Minimum fields for one stored match under
 
 **Schema v5 is the only readable version.** `GameRecord.from_dict` rejects
 anything older, loudly. There is never a two-branch reader: the stored v4 pool
-was projected onto v5 once, in place, by
-[`scripts/migrate_games_v5.py`](../../scripts/migrate_games_v5.py) — exactly as
-v4 refused to read v3.
+was projected onto v5 once, in place, by a one-shot migration script — exactly
+as v4 refused to read v3. No pre-v5 record survives, so that script is gone.
 
 The split rule at v5: **required fields are the rating identity and the
 outcome; everything observational lives in `metrics`.**

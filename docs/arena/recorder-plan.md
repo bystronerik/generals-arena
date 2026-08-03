@@ -594,8 +594,6 @@ arena/records/
   telemetry_schema.py       NEW — TELEMETRY_SCHEMA, kinds, reducers (pure)
   trajectories.py           NEW — TrajectoryRecorder, writer/reader, replay,
                             CLI (--replay, --verify, --materialize)
-scripts/
-  migrate_games_v5.py       NEW — one-shot v4→v5 projection (§2.4)
 arena/matches/
   loop.py                   recorder=None hook; engine-truth finals on
                             MatchLoopResult; instrumented-spawn selection

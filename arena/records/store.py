@@ -34,7 +34,8 @@ Winner = Literal["a", "b", "draw"]
 # everything observational lives in `metrics`. Fields no reader consumed
 # (`started_at`, `finished_at`, `duration_seconds`) and one that was fully
 # derivable (`terminated` ≡ `winner != "draw"`) were dropped; the stored v4
-# pool was projected onto v5 once by `scripts/migrate_games_v5.py`.
+# pool was projected onto v5 once, in place, by a migration script that has
+# since been removed — no pre-v5 record survives.
 #
 # There is never a two-branch reader: v4 is rejected exactly as loudly as v4
 # rejected v3. See docs/arena/game-record-schema.md.
@@ -132,7 +133,8 @@ class GameRecord:
             raise ValueError(
                 f"game record schema v{version} is not readable; "
                 f"v{MIN_SCHEMA_VERSION} is the minimum "
-                f"(run scripts/migrate_games_v5.py over pre-v5 records)"
+                f"(the stored pool was projected onto v5; this record "
+                f"predates that and must be re-recorded or discarded)"
             )
         missing = [f for f in REQUIRED_FIELDS if f not in data]
         if missing:
