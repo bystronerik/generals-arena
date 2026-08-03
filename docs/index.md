@@ -50,6 +50,7 @@ Small topic files for the Generals Arena research repo.
 - [proteus](bots/proteus.md) — adaptive switcher over blitz/boom/metro/aegis (migrated from generals-bot)
 - [macaria](bots/macaria.md) — vendored blitz core + a scoped tactical search
 - [sosipolis](bots/sosipolis.md) — dual-mode MCTS general search with pocket skip and section priors
+- [morpheus](bots/morpheus/index.md) — RL policy/value network + belief-aware simultaneous MCTS
 
 ## Arena
 
