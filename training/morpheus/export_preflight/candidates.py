@@ -19,6 +19,17 @@ from training.morpheus.export_preflight.fixtures import (
     make_input,
 )
 from training.morpheus.export_preflight.model import make_probe
+from morpheus.export import MorpheusExportWrapper
+from morpheus.network import MorpheusOutput
+
+
+def _forward_policy_wdl(
+    model: torch.nn.Module, x: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    out = model(x)
+    if isinstance(out, MorpheusOutput):
+        return out.policy, out.pass_logit, out.wdl_logits
+    return out
 
 # Soft bound matching the competition process memory ceiling.
 RSS_BOUND_BYTES = 2 * 1024 * 1024 * 1024
@@ -222,9 +233,10 @@ def try_torch_fx_static(
         return result
 
     float_model = make_probe(seed=seed, n_blocks=n_blocks)
+    wrapper = MorpheusExportWrapper(float_model)
     example = make_input(1, seed=seed)
     with torch.no_grad():
-        float_ref = _outputs_to_cpu(float_model(example))
+        float_ref = _outputs_to_cpu(_forward_policy_wdl(float_model, example))
 
     try:
         _set_qengine(engine)
@@ -233,7 +245,7 @@ def try_torch_fx_static(
             warnings.simplefilter("ignore", UserWarning)
             qconfig_mapping = get_default_qconfig_mapping(engine)
             prepared = prepare_fx(
-                float_model,
+                wrapper,
                 qconfig_mapping,
                 example_inputs=(example,),
             )
@@ -276,7 +288,7 @@ def try_torch_fx_static(
 
         def forward(x: torch.Tensor) -> tuple[torch.Tensor, ...]:
             with torch.no_grad():
-                return _outputs_to_cpu(loaded(x))
+                return _outputs_to_cpu(_forward_policy_wdl(loaded, x))
 
         result["batch_results"] = _run_batches(forward, seed=seed)
         result["executed"] = all(
@@ -317,12 +329,13 @@ def try_torch_jit_float(
         "Control path only. Float weights do not satisfy static 8-bit deployment."
     )
     float_model = make_probe(seed=seed, n_blocks=n_blocks)
+    wrapper = MorpheusExportWrapper(float_model)
     example = make_input(1, seed=seed)
     with torch.no_grad():
-        float_ref = _outputs_to_cpu(float_model(example))
+        float_ref = _outputs_to_cpu(_forward_policy_wdl(float_model, example))
     try:
         artifact = work_dir / "float_script.pt"
-        scripted = torch.jit.script(float_model)
+        scripted = torch.jit.script(wrapper)
         torch.jit.save(scripted, str(artifact))
         result["exported"] = True
         result["serialized_bytes"] = _serialize_size(artifact)
@@ -334,7 +347,7 @@ def try_torch_jit_float(
 
         def forward(x: torch.Tensor) -> tuple[torch.Tensor, ...]:
             with torch.no_grad():
-                return _outputs_to_cpu(loaded(x))
+                return _outputs_to_cpu(_forward_policy_wdl(loaded, x))
 
         result["batch_results"] = _run_batches(forward, seed=seed)
         result["executed"] = all(
@@ -372,7 +385,7 @@ def try_safetensors_weight_only_int8(
     float_model = make_probe(seed=seed, n_blocks=n_blocks)
     example = make_input(1, seed=seed)
     with torch.no_grad():
-        float_ref = _outputs_to_cpu(float_model(example))
+        float_ref = _outputs_to_cpu(_forward_policy_wdl(float_model, example))
     try:
         artifact_dir = work_dir / "weight_only_int8"
         artifact_dir.mkdir(parents=True, exist_ok=True)
@@ -416,7 +429,7 @@ def try_safetensors_weight_only_int8(
 
         def forward(x: torch.Tensor) -> tuple[torch.Tensor, ...]:
             with torch.no_grad():
-                return _outputs_to_cpu(restored(x))
+                return _outputs_to_cpu(_forward_policy_wdl(restored, x))
 
         result["batch_results"] = _run_batches(forward, seed=seed)
         result["executed"] = all(

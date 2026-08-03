@@ -70,7 +70,8 @@ def test_probe_architecture_shapes():
     model = make_probe(seed=0, n_blocks=3)
     x = torch.randn(2, IN_CHANNELS, BOARD, BOARD)
     with torch.no_grad():
-        policy, pass_logit, wdl = model(x)
+        out = model(x)
+        policy, pass_logit, wdl = out.policy, out.pass_logit, out.wdl_logits
     assert policy.shape == (2, 9, BOARD, BOARD)
     assert pass_logit.shape == (2, 1)
     assert wdl.shape == (2, 3)
