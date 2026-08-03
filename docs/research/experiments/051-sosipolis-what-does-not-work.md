@@ -46,17 +46,27 @@ reconstructed actions:
 | --- | --- | --- |
 | immediate reversals (A→B then B→A) | **14.8%** | 0.7% |
 | stepped onto a cell left within 6 turns | **27.3%** | 2.5% |
-| tip identity changes | **70% of turns** | — |
+| tip identity changes | 70% of turns | — (mostly the tip walking; see below) |
 
 97% of the reversals coincide with a tip change. `select_mass_tip` re-picks by
 raw mass every tick and `STRIKE_TIP_HOLD` only keeps a tip already holding 12
 army *and* within 80% of the best stack, so a working tip is essentially never
-held. Every rung — recall, the probe march, the gather rally, the wave — takes
-"the tip" as its subject, and that subject is a different stack most turns.
+held.
+
+**But read the 70% carefully.** The tip is our biggest stack ~100% of the time
+in both arms, so most of that figure is the tip *walking* — move a stack from
+A to B and the biggest-stack cell is now B. That is the chain advancing, which
+is correct and is not instability. Only the reversals are unambiguous waste.
+Do not treat "tip identity changes" as a defect on its own.
 
 Three independent attempts to stabilise it (rows 9, 10, and deleting the
 recall arm that walks at an enemy it cannot beat) all made either the defect
-or the win rate worse. The thrashing appears to be load-bearing.
+or the win rate worse. Row 10 is the diagnostic one: holding the tip cut
+reversals 3.4× and, on the same five seeds, raised median land 47 → 58 and
+median army 140 → 197 while games got *longer* and `tip_feed` fired 42 times
+against 3. It survives more and kills less — it commits everything to one
+stack that is then too small to finish (median tip 19 → 15). Whatever is worth
+recovering here has to keep the killing, not just the tidiness.
 
 ## What did work, and the pattern
 
