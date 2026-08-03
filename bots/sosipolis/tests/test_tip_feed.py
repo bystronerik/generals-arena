@@ -63,16 +63,27 @@ def test_tip_below_sight_floor_feeds():
         assert _tip_dist(dst) < _tip_dist(src)
 
 
-def test_tip_at_sight_floor_marches_under_mcts():
+def test_tip_at_sight_floor_marches_at_the_general():
+    """At the floor the tip stops feeding and closes on the remembered cell.
+
+    The rung that owns this is a deterministic near-BFS march, not the search:
+    StrikeMCTS spent its whole budget on every strike tick, so the same
+    position played differently depending on machine load.
+    """
     with sosipolis_imports():
         fixture = _strike_board(10)
         agent = agent_on(fixture)
 
-        agent.act(fixture.obs())
+        move = agent.act(fixture.obs())
 
         assert agent.phase == "strike", agent.phase
-        assert agent.branch == "mcts", agent.branch
+        assert agent.branch != "tip_feed", agent.branch
         assert agent.tip == TIP
+        src, dst = action_src(move), action_dst(move)
+        assert src == TIP
+        before = abs(src[0] - ENEMY_GENERAL[0]) + abs(src[1] - ENEMY_GENERAL[1])
+        after = abs(dst[0] - ENEMY_GENERAL[0]) + abs(dst[1] - ENEMY_GENERAL[1])
+        assert after < before
 
 
 @pytest.mark.parametrize("tip_army, expect_below", [(9, True), (10, False)])

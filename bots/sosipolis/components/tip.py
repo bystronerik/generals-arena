@@ -4,8 +4,10 @@ from __future__ import annotations
 from components.army import (
     Action,
     bfs_dist,
+    march_dist,
     gather_toward,
     is_wall,
+    move_action,
     neighbors,
     step_toward,
 )
@@ -172,19 +174,34 @@ def tip_needs_feed(obs, tip: Cell | None, goal: Cell, params: Params) -> bool:
     return army - 1 < tip_feed_target(obs, tip, goal, params)
 
 
+def touches_enemy(obs, r: int, c: int) -> bool:
+    return any(
+        obs.owner_grid[nr][nc] == 2
+        for nr, nc in neighbors(obs.H, obs.W, r, c)
+    )
+
+
 def select_mass_tip(
     obs,
     goal: Cell,
     params: Params,
     cached: Cell | None,
     cached_turn: int,
+    prefer_front: bool = False,
 ) -> Cell | None:
-    """Mass-first tip on a path to goal; do not lock a thin tip."""
+    """Mass-first tip on a path to goal; do not lock a thin tip.
+
+    `prefer_front` restricts the pool to stacks already touching enemy land.
+    Kubic's attack source is the largest such stack on 94.5-95.6% of its
+    attacks; ours starts a wave adjacent to the enemy only 43% of the time,
+    so the mass we build is behind the front and pays the walk again.
+    """
     blocked = _blocked(obs)
     dist = bfs_dist(obs.H, obs.W, [goal], blocked)
     max_d = params.STRIKE_TIP_MAX_DIST
 
     candidates: list[tuple[int, int, int, int]] = []
+    front: list[tuple[int, int, int, int]] = []
     for r in range(obs.H):
         for c in range(obs.W):
             if obs.owner_grid[r][c] != 1 or obs.army_grid[r][c] <= 1:
@@ -194,6 +211,10 @@ def select_mass_tip(
             d = dist[(r, c)]
             army = obs.army_grid[r][c]
             candidates.append((army, -d, r, c))
+            if prefer_front and touches_enemy(obs, r, c):
+                front.append((army, -d, r, c))
+    if prefer_front and front:
+        candidates = front
     if not candidates:
         return None
     candidates.sort(reverse=True)
@@ -219,6 +240,99 @@ def select_mass_tip(
             return cached
 
     return best
+
+
+def attack_move(obs, tip: Cell | None, goal: Cell | None, params: Params):
+    """One forward attack from the front stack — Kubic's engagement rule.
+
+    Three measured details of Kubic's attack, which only mean anything
+    together (see 055):
+
+    - Source is the largest stack already adjacent to enemy land (94.5-95.6%);
+      that is `select_mass_tip(prefer_front=True)`, upstream of this.
+    - Destination is the enemy neighbour minimising BFS distance to the
+      believed general (~87% pre-sight, ~93% post-sight).
+    - It does not attack at a losing margin (`moved > defender` in 95-97%,
+      `P(attack | negative margin) ~= 1%`; ours measured 3.1%, and on seed 1
+      alone that threw away 520 army).
+
+    Forward only: the step must reduce distance to the objective. Waves that
+    walk back are the behaviour this whole line of work started from.
+
+    Being a rule rather than an MCTS root also removes the decision from the
+    deadline: the same position now yields the same attack whatever the search
+    budget happened to be that tick.
+    """
+    if tip is None or goal is None:
+        return None
+    army = obs.army_grid[tip[0]][tip[1]]
+    if army <= 1:
+        return None
+    blocked = _blocked(obs)
+    dist = bfs_dist(obs.H, obs.W, [goal], blocked)
+    here = dist.get(tip)
+    if here is None:
+        return None
+    best: Cell | None = None
+    best_key = None
+    for nr, nc in neighbors(obs.H, obs.W, *tip):
+        if obs.owner_grid[nr][nc] != 2:
+            continue
+        if army - 1 <= obs.army_grid[nr][nc]:
+            continue  # losing margin — Kubic does this ~1% of the time
+        d = dist.get((nr, nc))
+        if d is None:
+            continue
+        if params.CONTACT_ATTACK_FORWARD_ONLY and d >= here:
+            continue
+        key = (d, obs.army_grid[nr][nc], nr, nc)
+        if best_key is None or key < best_key:
+            best_key = key
+            best = (nr, nc)
+    if best is None:
+        return None
+    return move_action(tip[0], tip[1], best[0], best[1], 0)
+
+
+def strike_march(obs, tip: Cell | None, goal: Cell | None, params: Params):
+    """Deterministic near-BFS march to the remembered general.
+
+    Kubic post-sight is not a search: it marches the remembered cell at a
+    median path overhead of 11-20% and its first wave kills ~85%. Ours ran
+    StrikeMCTS, which spent its entire STRIKE_MARCH_BUDGET_MS on every single
+    strike tick (measured: median 55 ms, max 56, against a 55 ms budget). An
+    iteration count that depends on machine load makes the same position play
+    differently from run to run — the reason a no-op computation change moved
+    a game in the coverage sweep.
+
+    Cheapest route rather than shortest (`march_dist`), and never a step into
+    a cell this stack cannot take.
+    """
+    if tip is None or goal is None:
+        return None
+    army = obs.army_grid[tip[0]][tip[1]]
+    if army <= 1:
+        return None
+    blocked = _blocked(obs)
+    dist = march_dist(obs, [goal], blocked, params.MARCH_COST_CAP)
+    here = dist.get(tip)
+    if here is None:
+        return None
+    best: Cell | None = None
+    best_key = None
+    for nr, nc in neighbors(obs.H, obs.W, *tip):
+        d = dist.get((nr, nc))
+        if d is None or d >= here:
+            continue
+        if obs.owner_grid[nr][nc] == 2 and army - 1 <= obs.army_grid[nr][nc]:
+            continue
+        key = (d, nr, nc)
+        if best_key is None or key < best_key:
+            best_key = key
+            best = (nr, nc)
+    if best is None:
+        return None
+    return move_action(tip[0], tip[1], best[0], best[1], 0)
 
 
 def feed_tip_action(obs, tip: Cell) -> Action | None:

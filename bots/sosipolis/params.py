@@ -55,6 +55,13 @@ class Params:
     # Gather haul beyond this many steps is worth less than the land the same
     # stack could take where it stands.
     GATHER_LOCAL_HAUL: int = 8
+    # Stage the assault on a stack that already touches enemy land, the way
+    # Kubic sources 94.5-95.6% of its attacks. Ours starts a wave adjacent to
+    # the enemy 43% of the time, so the mass builds behind the front.
+    CONTACT_FRONT_TIP: bool = True
+    STRIKE_MARCH_RULE: bool = True
+    CONTACT_ATTACK_RULE: bool = True
+    CONTACT_ATTACK_FORWARD_ONLY: bool = False
     CONTACT_STAGE_STACK: int = 35
     CONTACT_ASSAULT_STACK: int = 15
     # Feed the tip on gather ticks until it is worth marching. Games won had

@@ -14,7 +14,9 @@ from components.search_mcts import SearchMCTS
 from components.strike_mcts import StrikeMCTS
 from components.threat import imminent_loss_move, recall_move
 from components.tip import (
+    attack_move,
     can_finish_now,
+    strike_march,
     total_owned_army,
     feed_tip_action,
     select_mass_tip,
@@ -158,6 +160,10 @@ class Agent:
                 self.params,
                 self.state.strike_tip,
                 self.state.strike_tip_turn,
+                prefer_front=(
+                    self.params.CONTACT_FRONT_TIP
+                    and self.state.phase == "contact"
+                ),
             )
             if tip is not None:
                 self.state.strike_tip = tip
@@ -187,6 +193,7 @@ class Agent:
                     self.params,
                     self.state.strike_tip,
                     self.state.strike_tip_turn,
+                    prefer_front=self.params.CONTACT_FRONT_TIP,
                 )
                 if tip is not None:
                     self.state.strike_tip = tip
@@ -306,6 +313,30 @@ class Agent:
                     return self._finish(
                         obs, start, feed, searched=False, branch="tip_feed"
                     )
+
+        # Engagement is a rule, not a search: from the front stack, take the
+        # enemy neighbour that closes on the objective, never at a losing
+        # margin, never backwards. See components/tip.py::attack_move.
+        if self.state.phase == "contact" and self.params.CONTACT_ATTACK_RULE:
+            hit = attack_move(
+                obs, self.state.strike_tip, self.state.objective, self.params
+            )
+            if hit is not None:
+                return self._finish(
+                    obs, start, hit, searched=False, branch="attack"
+                )
+
+        if self.state.phase == "strike" and self.params.STRIKE_MARCH_RULE:
+            mv = strike_march(
+                obs,
+                self.state.strike_tip,
+                self.state.memory.enemy_general,
+                self.params,
+            )
+            if mv is not None:
+                return self._finish(
+                    obs, start, mv, searched=False, branch="march"
+                )
 
         if self.state.phase == "strike":
             budget = min(budget, float(self.params.STRIKE_MARCH_BUDGET_MS))
