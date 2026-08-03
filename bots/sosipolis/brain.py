@@ -14,6 +14,7 @@ from components.search_mcts import SearchMCTS
 from components.strike_mcts import StrikeMCTS
 from components.threat import imminent_loss_move, recall_move
 from components.tip import (
+    can_finish_now,
     feed_tip_action,
     select_mass_tip,
     tip_below_sight_floor,
@@ -389,9 +390,22 @@ class Agent:
         return largest_owned_stack(obs)
 
     def _tip_feed_wave(self, obs):
-        """Exclusive gather onto tip while below TIP_AT_SIGHT_FLOOR."""
+        """Exclusive gather onto tip while below TIP_AT_SIGHT_FLOOR.
+
+        Two things come first. A stack that can already walk in and take the
+        general does that instead of feeding — the sight floor is an operating
+        level, not a reason to stand next to a general it beats. And such a
+        stack keeps the tip, because mass-first reselection once handed the
+        tip to a bigger stack fourteen cells away while this one stood two
+        cells from the kill.
+        """
         goal = self.state.memory.enemy_general
         if goal is None:
+            return None
+        held = self.state.strike_tip
+        if can_finish_now(obs, held, goal, self.params):
+            self.state.strike_tip_turn = obs.turn
+            self.state.muster = held
             return None
         tip = select_mass_tip(
             obs,
@@ -401,6 +415,11 @@ class Agent:
             self.state.strike_tip_turn,
         )
         if tip is None:
+            return None
+        if can_finish_now(obs, tip, goal, self.params):
+            self.state.strike_tip = tip
+            self.state.strike_tip_turn = obs.turn
+            self.state.muster = tip
             return None
         self.state.strike_tip = tip
         self.state.strike_tip_turn = obs.turn

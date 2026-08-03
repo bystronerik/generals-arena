@@ -101,6 +101,49 @@ def tip_feed_target(obs, tip: Cell, goal: Cell, params: Params) -> int:
     return max(tip_mass_target(obs, tip, goal, params), frac_need)
 
 
+def finish_cost_exact(obs, tip: Cell, goal: Cell, params: Params) -> int:
+    """Army the tip needs to walk the path and take the general — no slack.
+
+    `path_finish_need` adds `STRIKE_PATH_BUFFER` a hop plus a regen allowance.
+    That is right for planning a long march and wrong for deciding whether a
+    kill two steps away is already on: it priced a 2-hop finish at ~10 and the
+    tip sat feeding, seven army against a general holding two, until the
+    general had grown past it.
+    """
+    if obs.turn >= params.DEATHTOUCH_TURN:
+        base = 1
+    else:
+        base = params.FINISH_MARGIN
+        if obs.owner_grid[goal[0]][goal[1]] == 2:
+            base += obs.army_grid[goal[0]][goal[1]]
+
+    path = path_cells_to_goal(obs, tip, goal)
+    if not path or path[-1] != goal:
+        return 1 << 20
+    cost = base
+    for cell in path[1:]:
+        if cell == goal:
+            continue
+        r, c = cell
+        owner = obs.owner_grid[r][c]
+        if owner == 2:
+            cost += obs.army_grid[r][c] + 1
+        elif owner == 0:
+            cost += 1
+        # own land is free — the stack absorbs it
+    return cost
+
+
+def can_finish_now(obs, tip: Cell | None, goal: Cell | None, params: Params) -> bool:
+    """True when this stack, as it stands, can walk in and take the general."""
+    if tip is None or goal is None:
+        return False
+    army = obs.army_grid[tip[0]][tip[1]]
+    if army <= 1:
+        return False
+    return army - 1 >= finish_cost_exact(obs, tip, goal, params)
+
+
 def tip_is_ready(obs, tip: Cell | None, goal: Cell, params: Params) -> bool:
     """True when the tip can march (path + operating mass). Frac is feed-only."""
     if tip is None:
