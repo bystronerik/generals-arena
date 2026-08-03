@@ -32,6 +32,7 @@ plateau is the wrong target for this matchup.
 | 8 | push the tip outward instead of walking it back | — | **1** |
 | 9 | latched defence + wire the dead home bank + hold the general | reversals 14.8% → 22.7% (worse) | not run |
 | 10 | sticky tip identity | **reversals 14.8% → 4.4%** | **3** |
+| 11 | hold only a tip that can still fight (>= `CONTACT_ASSAULT_STACK`) | — | 3 |
 
 Row 10 is the important one. It fixes the largest measurable defect in the bot
 — see below — by a factor of 3.4, and halves the win rate. Row 8 copied a
