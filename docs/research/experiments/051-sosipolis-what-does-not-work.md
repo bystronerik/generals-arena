@@ -33,6 +33,7 @@ plateau is the wrong target for this matchup.
 | 9 | latched defence + wire the dead home bank + hold the general | reversals 14.8% → 22.7% (worse) | not run |
 | 10 | sticky tip identity | **reversals 14.8% → 4.4%** | **3** |
 | 11 | hold only a tip that can still fight (>= `CONTACT_ASSAULT_STACK`) | — | 3 |
+| 12 | **directed expansion** — rank capturable cells by walk *and* progress toward the objective, so taking land and closing on the general are one motion | — | 7 (wash) |
 
 Row 10 is the important one. It fixes the largest measurable defect in the bot
 — see below — by a factor of 3.4, and halves the win rate. Row 8 copied a
@@ -68,6 +69,16 @@ median army 140 → 197 while games got *longer* and `tip_feed` fired 42 times
 against 3. It survives more and kills less — it commits everything to one
 stack that is then too small to finish (median tip 19 → 15). Whatever is worth
 recovering here has to keep the killing, not just the tidiness.
+
+Row 12 deserves its own note because it was the structural change the wave
+data pointed at, and the one thing here that is not merely a preference bolted
+onto the existing shape: `capture_move` ranked candidate cells purely by walk
+from our own general, growing the blob *behind* us while a separate probe
+marched at the enemy. Making the two one motion — cost = walk +
+`EXPAND_TOWARD_WEIGHT` x distance-to-objective — scores 7/20 at weight 1.0 and
+7/20 again at 2.5, against 7/20 for the committed bot. Different seeds win
+(4, 8, 18 gained; 1, 3, 9 lost); the total does not move. The idea is sound
+and faithful to Kubic §2, and on this bot it is worth nothing measurable.
 
 ## What did work, and the pattern
 
