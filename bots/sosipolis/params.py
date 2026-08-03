@@ -52,6 +52,9 @@ class Params:
     DEFENSE_WEIGHT_SEARCH: float = 4.0
     DEFENSE_WEIGHT_CONTACT: float = 6.0
     DEFENSE_WEIGHT_STRIKE: float = 8.0
+    # Gather haul beyond this many steps is worth less than the land the same
+    # stack could take where it stands.
+    GATHER_LOCAL_HAUL: int = 8
     CONTACT_STAGE_STACK: int = 35
     CONTACT_ASSAULT_STACK: int = 15
     # Routing charges the army a step costs. Capped low on purpose: the target

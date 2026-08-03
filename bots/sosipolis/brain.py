@@ -8,6 +8,7 @@ from components.clock import Deadline, ms_since
 from components.contact_mcts import ContactMCTS
 from components.conveyor import action_src_dst, has_leave1_move, mod50_phase, update_chain
 from components.economy import Economy, count_owned_castles
+from components.expand import expand_move, far_haul_capture
 from components.opening import decide_opening
 from components.search_mcts import SearchMCTS
 from components.strike_mcts import StrikeMCTS
@@ -262,12 +263,24 @@ class Agent:
         else:
             budget = min(remaining, float(self.params.WAVE_BUDGET_MS))
 
+        # Gather that would haul army across the map converts to land instead.
+        if clock == "gather" and self.state.phase != "strike":
+            take = far_haul_capture(obs, self.state, self.params, self.state.muster)
+            if take is not None:
+                return self._finish(
+                    obs, start, take, searched=False, branch="expand"
+                )
+
         if self.state.phase == "strike":
             budget = min(budget, float(self.params.STRIKE_MARCH_BUDGET_MS))
             move = self.strike.search(obs, self.state, Deadline(budget))
             self.search_iters = self.strike.stats.iterations
             self._pull_mcts_diag(self.strike.stats)
         elif self.state.phase == "contact":
+            # Not expanding here on purpose. Taking neutrals instead of pushing
+            # after contact grew our land to Kubic's 0.24 share and still lost
+            # more: macaria's peak land went 0.36 -> 0.51 once the pressure came
+            # off. Contesting their ground is what holds them down.
             budget = min(budget, float(self.params.CONTACT_BUDGET_MS))
             if self.params.CONTACT_PATH_MODE == "macro_mcts":
                 score_cap = budget
@@ -284,6 +297,17 @@ class Agent:
             self.contact_switches = st.switch_count
             self.contact_candidate_mass = float(st.candidate_mass)
         else:
+            # Pre-contact wave: take land. Kubic captures ~0.5 neutrals a tick
+            # before contact — one per unit the general makes — and land is the
+            # compounding resource (RULES §04: every cell grows every 50).
+            # Marching a fog-frontier objective instead spent the wave walking
+            # over ground we already owned.
+            if clock == "wave":
+                take = expand_move(obs, self.state, self.params)
+                if take is not None:
+                    return self._finish(
+                        obs, start, take, searched=False, branch="expand"
+                    )
             budget = min(budget, float(self.params.SEARCH_BUDGET_MS))
             move = self.search.search(obs, self.state, Deadline(budget))
             self.search_iters = self.search.stats.iterations

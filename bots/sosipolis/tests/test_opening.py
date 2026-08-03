@@ -76,7 +76,11 @@ def test_open_end_is_the_last_opening_turn():
         last.act(at_end.obs())
         assert last.branch == "opening", last.branch
 
+        # Past OPEN_END the opening script is done. What follows is the
+        # ordinary post-opening economy — `expand` on a wave tick with a
+        # neutral in reach, `mcts` otherwise — but never `opening` again.
         past_end = _open_board(51)
         after = agent_on(past_end)
         after.act(past_end.obs())
-        assert after.branch == "mcts", after.branch
+        assert after.branch in ("expand", "mcts"), after.branch
+        assert after.branch != "opening"

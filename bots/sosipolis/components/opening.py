@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from components.army import Action, is_wall, largest_owned_stack, move_action, neighbors, pass_action
 from components.clock import Deadline
+from components.expand import expand_move
 from params import Params
 
 
@@ -41,7 +42,14 @@ def opening_first_step(obs, state) -> Action | None:
 
 
 def decide_opening(obs, state, search_mcts, deadline: Deadline, params: Params) -> Action | None:
-    """Hard tempo + SearchMCTS under opening mask for destination choice."""
+    """Kubic §3: a script, not a search. Land by t=50 decides the game.
+
+    The old path handed the opening to SearchMCTS, whose objective is the fog
+    frontier *away from home*. That drew a one-cell-wide tendril across the
+    map and left every capturable cell five to seven steps from the only stack
+    that could take it. Expansion is a transit problem, not a search problem —
+    see components/expand.py.
+    """
     from components.search_mcts import SearchStats
 
     if obs.turn > params.OPEN_END:
@@ -54,7 +62,9 @@ def decide_opening(obs, state, search_mcts, deadline: Deadline, params: Params) 
         first = opening_first_step(obs, state)
         if first is not None:
             return first
-    # Free destination ticks: SearchMCTS with opening prune applied inside search.
-    state.clock_phase = "wave"  # opening flood/expand uses wave-like roots
-    move = search_mcts.search(obs, state, deadline, opening=True)
-    return move
+    move = expand_move(obs, state, params)
+    if move is not None:
+        return move
+    # Nothing to expand into: fall back to the search under the opening mask.
+    state.clock_phase = "wave"
+    return search_mcts.search(obs, state, deadline, opening=True)
