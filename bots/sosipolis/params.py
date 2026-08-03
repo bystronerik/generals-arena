@@ -121,6 +121,7 @@ class Params:
     CONTACT_AXIS_EARLY_TURN: int = 55
     CONTACT_AXIS_LATE_TURN: int = 100
     # ContactMCTS owns post-contact probe target (Phase 1 / Phase 2).
+    CONTACT_TOUR: bool = True
     CONTACT_PATH_MODE: str = "shallow"  # "shallow" | "macro_mcts"
     # Belief refresh costs ~4.5 ms median / 14 ms worst on a 21x20 board. At 3
     # the deadline expired inside _refresh_cache on 67% of contact turns and

@@ -379,3 +379,66 @@ def test_prepare_contact_republishes_objective_when_deadline_expired():
         assert out is cur
         assert state.contact_commitment is cur
         assert state.objective == WAYPOINT_A
+
+
+# ---------------------------------------------------------------------------
+# Candidate tour: nearest reachable candidate, re-picked as they are cleared
+# ---------------------------------------------------------------------------
+
+
+def test_tour_targets_the_nearest_reachable_candidate():
+    """The tour never commits to a cell it cannot reach.
+
+    The belief-argmax waypoint could, and nothing released it: a commitment is
+    dropped only on arrival or on vision, both of which need us to get there.
+    Seed 1 marched at the corner (0,19) for 853 turns without coming closer
+    than 7, while the true general sat in the candidate set the whole game.
+    """
+    with sosipolis_imports():
+        from components.clock import Deadline
+        from params import PARAMS
+
+        assert PARAMS.CONTACT_TOUR
+
+        H = W = 12
+        near, far = (0, 7), (11, 11)
+        types, owner, army = plain(H, W)
+        owner[0][0] = 1
+        army[0][0] = 30  # the tip, at home
+        obs = make_obs(types, owner, army, turn=TURN)
+        state = _contact_state(H, W, candidates={near, far})
+        state.strike_tip = HOME
+
+        mcts = seeded_contact_mcts(belief={near: 0.1, far: 0.9})
+        commit = mcts.prepare_contact(obs, state, Deadline(10_000))
+
+        # `far` carries nine times the belief; the tour still clears `near`
+        # first, because an arrival is what eliminates candidates.
+        assert commit is not None
+        assert commit.macro.kind == "tour", commit.macro.kind
+        assert commit.macro.waypoint == near, commit.macro.waypoint
+        assert state.objective == near
+
+
+def test_tour_repicks_once_a_candidate_is_cleared():
+    """Clearing the near candidate moves the tour on to the next one."""
+    with sosipolis_imports():
+        from components.clock import Deadline
+
+        H = W = 12
+        near, far = (0, 7), (11, 11)
+        types, owner, army = plain(H, W)
+        owner[0][0] = 1
+        army[0][0] = 30
+        obs = make_obs(types, owner, army, turn=TURN)
+        state = _contact_state(H, W, candidates={near, far})
+        state.strike_tip = HOME
+
+        mcts = seeded_contact_mcts(belief={near: 0.1, far: 0.9})
+        assert mcts.prepare_contact(obs, state, Deadline(10_000)).macro.waypoint == near
+
+        state.memory.candidates = {far}
+        mcts._cache.belief = {far: 0.9}
+        commit = mcts.prepare_contact(obs, state, Deadline(10_000))
+
+        assert commit.macro.waypoint == far, commit.macro.waypoint

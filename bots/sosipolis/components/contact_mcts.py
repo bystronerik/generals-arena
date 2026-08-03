@@ -121,8 +121,11 @@ class ContactMCTS:
                 state.objective = self.commitment.macro.waypoint
             return self.commitment
 
-        macros = self._generate_probe_macros(obs, state, tip)
-        chosen = self._commit_macro(obs, state, macros, tip)
+        if self.params.CONTACT_TOUR:
+            chosen = self._tour_commitment(obs, state, tip)
+        else:
+            macros = self._generate_probe_macros(obs, state, tip)
+            chosen = self._commit_macro(obs, state, macros, tip)
         if chosen is None:
             return self.commitment
 
@@ -542,6 +545,54 @@ class ContactMCTS:
         return mass
 
     # --- probe macros ---------------------------------------------------
+
+    def _tour_commitment(self, obs, state, tip: Cell | None):
+        """Walk the candidate set, nearest first, instead of aiming at its peak.
+
+        The belief-argmax waypoint has one failure the tour cannot have: it can
+        pick a cell we never reach, and nothing releases it. A commitment is
+        only dropped on *arrival* or on *vision*, both of which require getting
+        there, so seed 1 marched at the corner (0,19) for 853 turns without
+        ever coming closer than 7, and seed 13 held (20,18) for 351 turns from
+        12 away. Both ended with the true general still sitting in a candidate
+        set of 39-166 cells we never looked at.
+
+        Nearest-by-march-cost is always reachable, so every commitment ends in
+        an arrival that reveals a 3x3 block and eliminates candidates, and the
+        next target is chosen from what is left. Sight — not aim — is what
+        decides these games: we win 78% of the games where we see their general
+        and none of the ones where we do not.
+        """
+        cands = state.memory.candidates
+        if not cands or tip is None:
+            return self.commitment
+        blocked = lambda r, c: is_wall(obs.type_grid, r, c)
+        dist = march_dist(obs, [tip], blocked, self.params.MARCH_COST_CAP)
+        belief = self._cache.belief
+        best = None
+        best_key = None
+        for cell in cands:
+            d = dist.get(cell)
+            if d is None:
+                continue
+            key = (d, -belief.get(cell, 0.0), cell[0], cell[1])
+            if best_key is None or key < best_key:
+                best_key = key
+                best = cell
+        if best is None:
+            return self.commitment
+        cur = self.commitment
+        if cur is not None and cur.macro.waypoint == best:
+            return cur
+        macro = ProbeMacro(
+            kind="tour",
+            waypoint=best,
+            evidence_anchor=state.memory.first_contact or best,
+            candidate_cells=frozenset({best}),
+            score=belief.get(best, 0.0),
+        )
+        switches = cur.switch_count + 1 if cur is not None else 0
+        return ContactCommitment(macro, obs.turn, macro.score, switches)
 
     def _generate_probe_macros(
         self, obs, state, tip: Cell | None
