@@ -54,6 +54,10 @@ class Params:
     DEFENSE_WEIGHT_STRIKE: float = 8.0
     CONTACT_STAGE_STACK: int = 35
     CONTACT_ASSAULT_STACK: int = 15
+    # Routing charges the army a step costs. Capped low on purpose: the target
+    # sits inside their land, so a big garrison must read as "expensive", not
+    # as a wall worth a ten-step detour. At 12 the tip circled and drew.
+    MARCH_COST_CAP: int = 3
     STRIKE_LAND_ROOT_SLOTS: int = 0
     STRIKE_GATHER_WAVES_HINT: int = 4
     STRIKE_TIP_HOLD: int = 8

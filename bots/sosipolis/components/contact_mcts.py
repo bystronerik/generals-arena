@@ -9,6 +9,7 @@ from components.army import (
     gather_toward,
     is_wall,
     largest_owned_stack,
+    march_dist,
     move_action,
     neighbors,
     pass_action,
@@ -24,6 +25,9 @@ from params import Params
 
 
 Cell = tuple[int, int]
+
+# Cost map lookups for cells no march can reach.
+_UNREACHABLE = 1 << 20
 
 
 @dataclass
@@ -81,6 +85,7 @@ class _ContactCache:
     enemy_obs_epoch: int = -1
     tip: Cell | None = None
     waypoint: Cell | None = None
+    waypoint_turn: int = -1
     home_epoch: int = -1
     tip_bfs: dict[Cell, int] = field(default_factory=dict)
     footprint_bfs: dict[Cell, int] = field(default_factory=dict)
@@ -164,7 +169,7 @@ class ContactMCTS:
 
         self._sharpen_priors(state, hunt)
         if hunt is not None:
-            self._ensure_waypoint_bfs(state, hunt)
+            self._ensure_waypoint_bfs(obs, state, hunt)
 
         clock = state.clock_phase
         mode = self.params.CONTACT_PATH_MODE
@@ -327,12 +332,26 @@ class ContactMCTS:
             cache.enemy_obs_epoch = mem.enemy_obs_epoch
             cache.terrain_epoch = mem.terrain_epoch
 
-    def _ensure_waypoint_bfs(self, state, waypoint: Cell) -> None:
+    def _ensure_waypoint_bfs(self, obs, state, waypoint: Cell) -> None:
+        """Cost to reach the waypoint, not hops to it.
+
+        The scorer treats this as "am I getting closer", so charging the army
+        a step actually costs is what stops the tip chewing through a snake
+        when it could walk round for a fraction of the mass.
+        """
         cache = self._cache
-        if cache.waypoint == waypoint and cache.waypoint_bfs:
+        if (
+            cache.waypoint == waypoint
+            and cache.waypoint_bfs
+            and cache.waypoint_turn == obs.turn
+        ):
             return
-        cache.waypoint_bfs = state.memory._bfs_multi([waypoint])
+        blocked = lambda rr, cc: is_wall(obs.type_grid, rr, cc)
+        cache.waypoint_bfs = march_dist(
+            obs, [waypoint], blocked, self.params.MARCH_COST_CAP
+        )
         cache.waypoint = waypoint
+        cache.waypoint_turn = obs.turn
 
     def _axis_confidence(self, mem) -> float:
         """Early first contact → trust the axis; late contact → weaker lock."""
@@ -1254,10 +1273,10 @@ class ContactMCTS:
         score = self._score(obs, state, r, c, nr, nc, hunt, assault_ready)
         if score < 0:
             return -1.0
-        # BFS closure to waypoint.
+        # Cost-to-waypoint closure (see _ensure_waypoint_bfs).
         if hunt is not None and self._cache.waypoint_bfs:
-            before = self._cache.waypoint_bfs.get((r, c), obs.H + obs.W)
-            after = self._cache.waypoint_bfs.get((nr, nc), obs.H + obs.W)
+            before = self._cache.waypoint_bfs.get((r, c), _UNREACHABLE)
+            after = self._cache.waypoint_bfs.get((nr, nc), _UNREACHABLE)
             if after < before:
                 score += 80.0
             elif after > before:
@@ -1273,8 +1292,8 @@ class ContactMCTS:
                 gain = self._cell_reveal_belief(n2r, n2c)
                 close = 0.0
                 if self._cache.waypoint_bfs:
-                    d1 = self._cache.waypoint_bfs.get((nr, nc), 99)
-                    d2 = self._cache.waypoint_bfs.get((n2r, n2c), 99)
+                    d1 = self._cache.waypoint_bfs.get((nr, nc), _UNREACHABLE)
+                    d2 = self._cache.waypoint_bfs.get((n2r, n2c), _UNREACHABLE)
                     if d2 < d1:
                         close = 1.0
                 best_next = max(best_next, 12.0 * gain + 8.0 * close)
@@ -1393,14 +1412,14 @@ class ContactMCTS:
                 break
             value += 0.4 * self._cell_reveal_belief(cr, cc)
             if self._cache.waypoint_bfs:
-                here = self._cache.waypoint_bfs.get((cr, cc), 99)
+                here = self._cache.waypoint_bfs.get((cr, cc), _UNREACHABLE)
                 # Greedy step closing on waypoint.
                 best = None
                 best_d = here
                 for nr, nc in neighbors(obs.H, obs.W, cr, cc):
                     if is_wall(obs.type_grid, nr, nc):
                         continue
-                    dd = self._cache.waypoint_bfs.get((nr, nc), 99)
+                    dd = self._cache.waypoint_bfs.get((nr, nc), _UNREACHABLE)
                     if dd < best_d:
                         best_d = dd
                         best = (nr, nc)
