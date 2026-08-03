@@ -24,7 +24,6 @@ Project skills for the Generals Competition research loop. Authority: [`docs/res
 | A/B evaluation | evaluate-bot-change | [evaluate-bot-change/](evaluate-bot-change/) |
 | Ratings | update-leaderboard | [update-leaderboard/](update-leaderboard/) |
 | Commits | commit-research-increment | [commit-research-increment/](commit-research-increment/) |
-| Core unit tests | analyze-and-test-core | [analyze-and-test-core/](analyze-and-test-core/) |
 | Classic harness grid | run-classic-grid | [run-classic-grid/](run-classic-grid/) |
 | Remote human block | run-remote-block | [run-remote-block/](run-remote-block/) |
 
