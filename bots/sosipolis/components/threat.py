@@ -89,16 +89,48 @@ def defense_weight(phase: str, params: Params) -> float:
     return params.DEFENSE_WEIGHT_SEARCH
 
 
+def strongest_near_home(obs, home: Cell, radius: int) -> tuple[int, Cell | None]:
+    """Biggest enemy stack within `radius` (manhattan) of home, and where it is.
+
+    The *nearest* enemy tile is the wrong thing to measure. Once they take a
+    cell near our general it stays taken, and a captured cell holding one army
+    is not a threat — it is furniture.
+    """
+    best_army = 0
+    best_cell: Cell | None = None
+    for r in range(obs.H):
+        for c in range(obs.W):
+            if obs.owner_grid[r][c] != 2:
+                continue
+            if abs(r - home[0]) + abs(c - home[1]) > radius:
+                continue
+            army = obs.army_grid[r][c]
+            if army > best_army:
+                best_army = army
+                best_cell = (r, c)
+    return best_army, best_cell
+
+
 def recall_armed(obs, state, params: Params) -> bool:
-    """True when a visible/known enemy tile is within RECALL_PROX_D of home."""
+    """True when a stack near home could actually take the general.
+
+    This used to arm on *presence*: any visible enemy tile within
+    RECALL_PROX_D. Enemy land near our general is permanent, so the gate
+    latched the first time macaria captured a cell there and never released —
+    measured at 148 consecutive recall turns on seed 7 and 86 on seed 5, the
+    bot walking its assault home and shuffling there until it lost. Arm on
+    what the stack can do instead: attacking spends one unit to leave, so it
+    needs `army - 1` to beat what the general is holding.
+    """
     home = state.memory.own_general
     if home is None:
         return False
     d, _ = manhattan_enemy_to_home(obs, home)
     state.home_threat_dist = d
-    if d is None:
+    if d is None or d > params.RECALL_PROX_D:
         return False
-    return d <= params.RECALL_PROX_D
+    army, _cell = strongest_near_home(obs, home, params.RECALL_PROX_D)
+    return army - 1 >= obs.army_grid[home[0]][home[1]]
 
 
 def recall_move(obs, state, params: Params):

@@ -82,3 +82,26 @@ def test_strike_phase_blocks_the_castle_programme():
 
         agent.state.phase = "strike"
         assert economy.decide(obs, agent.state, Deadline(50.0)) is None
+
+
+def test_contact_phase_blocks_the_castle_programme():
+    """Castles are a pre-contact investment; the hunt outranks them.
+
+    The branch sits above the assault and `gather_toward` is mass-first, so a
+    build tick during a hunt reaches for the assault tip and walks it home.
+    """
+    with sosipolis_imports():
+        from components.clock import Deadline
+        from components.economy import Economy
+        from params import PARAMS
+
+        fixture = _castle_board(116)
+        agent = agent_on(fixture)
+        obs = fixture.obs(my_land=MY_LAND)
+        agent.state.update(obs)
+
+        economy = Economy(PARAMS)
+        assert economy.decide(obs, agent.state, Deadline(50.0)) is not None
+
+        agent.state.phase = "contact"
+        assert economy.decide(obs, agent.state, Deadline(50.0)) is None

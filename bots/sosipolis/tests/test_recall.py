@@ -39,15 +39,17 @@ def _imminent_board(
     )
 
 
-def _proximity_board(*, enemy_col: int) -> BoardFixture:
+def _proximity_board(
+    *, enemy_col: int, enemy_army: int = 2, gen_army: int = 1
+) -> BoardFixture:
     """One enemy tile on row 0 at manhattan `enemy_col` from home; tip at (4,0)."""
     H, W = 6, 6
     types, owner, army = plain(H, W)
     types[0][0] = T_GENERAL
     owner[0][0] = 1
-    army[0][0] = 1
+    army[0][0] = gen_army
     owner[0][enemy_col] = 2
-    army[0][enemy_col] = 2
+    army[0][enemy_col] = enemy_army
     owner[4][0] = 1
     army[4][0] = 20
     return BoardFixture(
@@ -163,3 +165,39 @@ def test_enemy_beyond_prox_d_leaves_turn_to_mcts():
 
         assert agent.branch == "mcts", agent.branch
         assert agent.recall_fired == 0
+
+
+def test_harmless_enemy_tile_at_prox_d_does_not_arm_recall():
+    """Presence is not threat. Enemy land near our general is permanent.
+
+    Arming on presence latched the gate the first time the opponent captured a
+    cell within RECALL_PROX_D and never released it — 148 consecutive recall
+    turns on seed 7, the assault walked home and shuffled there until the loss.
+    A captured cell holding one army against a general holding six is furniture.
+    """
+    with sosipolis_imports():
+        fixture = _proximity_board(enemy_col=3, enemy_army=1, gen_army=6)
+        agent = agent_on(fixture)
+
+        agent.act(fixture.obs())
+
+        assert agent.branch == "mcts", agent.branch
+        assert agent.recall_fired == 0
+
+
+def test_recall_arms_on_the_strongest_stack_not_the_nearest_tile():
+    """A one-army cell at d=2 must not mask a lethal stack at d=3."""
+    with sosipolis_imports():
+        from components.threat import recall_armed
+        from params import PARAMS
+
+        fixture = _proximity_board(enemy_col=3, enemy_army=40, gen_army=6)
+        types, owner, army = fixture.types, fixture.owner, fixture.army
+        owner[0][2] = 2  # nearer, harmless — the old gate measured only this
+        army[0][2] = 1
+
+        agent = agent_on(fixture)
+        obs = fixture.obs()
+        agent.state.update(obs)
+
+        assert recall_armed(obs, agent.state, PARAMS)

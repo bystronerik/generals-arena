@@ -96,8 +96,15 @@ class Economy:
         """Return a build or gather-to-site move, or None to leave the turn to MCTS."""
         if deadline.expired():
             return None
-        # No new castle projects in strike phase.
-        if state.phase == "strike":
+        # Castles are a pre-contact investment only. The branch sits above the
+        # assault, and `gather_toward` is mass-first, so once a hunt is running
+        # every build tick reaches for the tip: on seed 1 it owned 86 of 290
+        # post-t50 turns and walked a 47-army tip from 8 cells off the objective
+        # back to 15, arriving at 27. Two castles, first at t223, game lost at
+        # t340. A castle repays its ~40 army at one unit per two turns, so it
+        # needs ~80 quiet turns to break even — time a contested midgame does
+        # not have.
+        if state.phase != "search":
             return None
         if obs.turn < self.params.CASTLE_START_TURN:
             return None
