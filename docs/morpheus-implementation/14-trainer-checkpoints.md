@@ -18,6 +18,11 @@ Training checkpoints remain outside the bot closure until Part 15 freezes one.
 
 ## Prerequisites
 
+- [Part 10: Curriculum data](10-curriculum-data.md) with an executable
+  non-degenerate-WDL rule.
+- [Part 11: Self-play league](11-self-play-league.md) with a named fixed panel.
+- [Part 12: Training objective](12-training-objective.md) with selected explicit
+  loss and exploration values.
 - [Part 13: Modal compute gate](13-modal-compute-gate.md) with a `yes` result.
 
 ## Source specifications
@@ -88,4 +93,5 @@ schedule, and one candidate completes deployment-matched self-play and
 calibration.
 
 Answer `no` for state loss, mutable checkpoint names, schema drift, untracked
-compute, or a candidate that skips deployment calibration.
+compute, an unresolved curriculum or panel gate, or a candidate that skips
+deployment calibration.

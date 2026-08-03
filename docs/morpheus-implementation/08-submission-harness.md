@@ -23,10 +23,11 @@ Promotion is blocked until this part passes its own negative controls.
 - `arena/`: add the process harness under `arena/matches/` and bundle support.
 - `scripts/`: none. The CLI is `python -m arena.matches.submission`.
 - `data/bot_versions/`: none.
-- `tests/fixture_bots/`: add controlled failure programs.
+- `tests/fixtures/submission_bots/`: add controlled failure programs.
 
 ## Prerequisites
 
+- [Part -1: Process substrate](-1-process-substrate.md)
 - [Part 01: Protocol shell](01-protocol-shell.md)
 
 ## Source specifications

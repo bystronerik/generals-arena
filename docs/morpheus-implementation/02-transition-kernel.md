@@ -20,10 +20,11 @@ Both return the next state and terminal result.
 
 ## Prerequisites
 
-- [Part 00: Modal JAX preflight](00-modal-jax-preflight.md)
+- [Part -1: Process substrate](-1-process-substrate.md)
 
-Part 00 can return `no`. In that case, this part still delivers the deployment
-transition and a CPU training adapter.
+Part 00 is not a hard dependency for the deployment transition. Its result
+selects the optional GPU training adapter. A delayed or failed Modal preflight
+must not block the bundle-safe transition or CPU adapter.
 
 ## Source specifications
 

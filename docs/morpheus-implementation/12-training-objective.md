@@ -58,6 +58,7 @@ reward terms.
 
 Policy targets come from normalized root average strategy. Value targets use
 final WDL from the sample seat. Hidden-state labels use engine truth.
+Enemy-army labels use the versioned bin edges from Part 04.
 
 Apply rotations and reflections to tensor, legal mask, action channels, memory,
 belief planes, generals, and spatial targets as one transform.
@@ -83,9 +84,9 @@ its A100 time to Part 13.
 
 ## Specification gaps
 
-The specs do not define loss functions for the scalar heads, army-bin edges,
-class balancing, optimizer, learning-rate schedule, batch size, regularization,
-or the candidate grid for exploration.
+The specs do not define loss functions for the scalar heads, class balancing,
+optimizer, learning-rate schedule, batch size, regularization, or the candidate
+grid for exploration.
 
 The main run cannot begin until the ablation records explicit values. This is a
 measurement gate, not permission to add hidden defaults.

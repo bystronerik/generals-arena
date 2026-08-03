@@ -16,11 +16,12 @@ state parity.
 - `arena/`: none.
 - `scripts/`: add the thin Modal preflight entry point.
 - `data/bot_versions/`: none.
+- `training/morpheus/`: add parity fixtures and the preflight test.
 - `competition-module/`: read and import only.
 
 ## Prerequisites
 
-None.
+- [Part -1: Process substrate](-1-process-substrate.md)
 
 ## Source specifications
 

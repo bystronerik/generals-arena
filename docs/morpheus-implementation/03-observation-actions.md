@@ -18,6 +18,7 @@ The same code must work from either seat and on every competition rectangle.
 
 - [Part 01: Protocol shell](01-protocol-shell.md)
 - [Part 02: Transition kernel](02-transition-kernel.md)
+- [Part 00c: Measurement corpus](00c-measurement-corpus.md)
 
 ## Source specifications
 
@@ -62,7 +63,7 @@ python -m pytest \
 
 ```bash
 python scripts/morpheus_measure.py army-normalization \
-  --trajectories data/trajectories \
+  --trajectories data/trajectories/morpheus-bootstrap \
   --output docs/research/measurements/morpheus-army-normalization.json
 ```
 

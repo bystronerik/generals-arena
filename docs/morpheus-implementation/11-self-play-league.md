@@ -21,6 +21,7 @@ verifiable training shards.
 ## Prerequisites
 
 - [Part 00: Modal JAX preflight](00-modal-jax-preflight.md)
+- [Part 00c: Measurement corpus](00c-measurement-corpus.md)
 - [Part 06: Simultaneous search](06-simultaneous-search.md)
 - [Part 07: Runtime controller](07-runtime-controller.md)
 - [Part 10: Curriculum data](10-curriculum-data.md)
@@ -47,7 +48,8 @@ reward semantics. Seat and map assignment remain random.
 
 Snapshots are immutable during an epoch. The league includes the current
 learner, promoted best, recent snapshots, and measured exploiters. The fixed
-panel excludes classic and remote results.
+panel comes from `scripts/configs/morpheus/bootstrap-panel.json` and excludes
+classic and remote results.
 
 If Part 00 passes, first test fixed-shape JAX batching for states, transitions,
 and compatible network batches. Keep CPU control when particles, hashes, tree
@@ -78,9 +80,8 @@ python scripts/morpheus_self_play.py verify \
 
 ## Specification gaps
 
-The fixed panel is described by category but has no bot list. Exploiter
-selection, recent-snapshot window, opponent coverage metric, and epoch boundary
-are not defined.
+Exploiter selection, recent-snapshot window, opponent coverage metric, and
+epoch boundary are not defined.
 
 The specs allow larger training search settings but provide no values. Part 13
 must select them from throughput and learning evidence.

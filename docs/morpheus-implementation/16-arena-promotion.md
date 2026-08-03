@@ -40,6 +40,7 @@ No fixed promotion panel or held-out seed split exists. This part must record
 both before games start. The panel must contain at least five bots, span the
 rating range, include `cm_expander`, include strong heuristic and research
 bots, and include the prior Morpheus checkpoint when one exists.
+Store the exact choice in `scripts/configs/morpheus/promotion-panel.json`.
 
 ## Implementation boundary
 
@@ -63,11 +64,21 @@ leaderboard rank.
 Safety checks can reject a candidate. They cannot promote a weaker candidate.
 Part 08 must accept the exact candidate bundle with zero faults.
 
+For the first frozen artifact only, use a bootstrap path:
+
+1. pass every Part 15 safety and identity gate;
+2. play the fixed panel until the artifact is not provisional;
+3. publish the panel and secondary metrics;
+4. mark it `bootstrap baseline`, not `improvement`.
+
+The next candidate compares against this baseline with the normal pairwise
+decision rule. No later artifact can use the bootstrap exception.
+
 ## Isolated test and measurement
 
 ```bash
 python scripts/morpheus_evaluate.py run \
-  --config training/morpheus/configs/promotion-panel.json \
+  --config scripts/configs/morpheus/promotion-panel.json \
   --baseline bots/morpheus_base/run.sh \
   --candidate bots/morpheus/run.sh \
   --round morpheus-promotion \
@@ -98,27 +109,36 @@ python scripts/morpheus_measure.py resbot-castle-reconstruction \
 The ResBot command is optional for promotion while the diagnostic default
 holds.
 
+The temporary baseline is a runnable bot and must also pass the raw gate:
+
+```bash
+python competition-module/competition/matchup.py \
+  bots/morpheus_base/run.sh bots/smoke/run.sh \
+  --mode competition --seed 0
+```
+
 ## Specification gaps
 
 The exact panel, held-out seed rule, acceptable belief ESS, recovery threshold,
 and completed-simulation threshold are not defined. Parts 09 and 13 must record
 safety floors before the outcomes are inspected.
 
-There is no first-checkpoint promotion rule because the decision rule requires
-a non-provisional baseline. The first accepted artifact can enter the arena as
-a provisional bootstrap baseline, but it cannot be called an improvement.
-Normal promotion starts with a later candidate unless the specification adds a
-separate bootstrap rule.
+The bootstrap path makes no absolute strength claim. It creates the
+non-provisional baseline required for later pairwise decisions.
 
 The repository's diversity matrix does not yet contain Morpheus. Promotion must
 add its measured row without changing the strategy specification.
 
 ## Exit criterion
 
-Answer `yes` only if all decision-rule gates pass, the pairwise verdict is
-`improvement`, every safety check passes, action traces are not more than 90%
-identical to a roster owner on shared seeds, and the five-axis verdict remains
-distinct.
+For the first artifact, answer `yes — bootstrap baseline` only if every safety
+check passes, the artifact is registered and non-provisional, action traces are
+not more than 90% identical to a roster owner on shared seeds, and the
+five-axis verdict remains distinct. Do not report an improvement.
+
+For every later artifact, answer `yes` only if all decision-rule gates pass,
+the pairwise verdict is `improvement`, every safety check passes, and the same
+distance and diversity checks pass.
 
 Answer `no` for a regression or safety failure. Answer `unproven` when the
 decision rule cannot resolve the contrast, and report the additional games

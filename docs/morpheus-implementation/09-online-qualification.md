@@ -7,7 +7,8 @@ one dedicated CPU core and the final submission process shape.
 
 The result fixes the inference runtime, network width, quantization, particle
 count, search target, forward limit, batch shapes, reserve, tree bounds, and
-first-move setup for one checkpoint family.
+first-move setup for one checkpoint family. It also fixes the p99 estimator,
+warm-up rule, sample window, admission guard, and resident-memory target.
 
 **Touches**
 
@@ -48,6 +49,15 @@ capacity and export results in Part 04, not from an invented list.
 Replace the default only from complete-turn p50 and p99 results. Zero protocol
 faults are required.
 
+Select the admission guard from the zero-fault boundary under measured
+scheduler variation. Select the resident target from complete-process peak RSS
+while preserving margin below the fixed 2 GB limit.
+
+Sweep bounded windows for Part 07's nearest-rank empirical p99. Reject a window
+that forgets a measured slow path or adapts too slowly after a cost change.
+Write the selected window and offline component p99 values into the runtime
+configuration.
+
 ## Implementation boundary
 
 Measure tensor construction, belief proposal batch, particle transitions,
@@ -57,6 +67,10 @@ and reply delivery together.
 Use an idle, pinned core. Record CPU identity and scheduler state. Run both cold
 first moves and warm normal moves across all board sizes and turn bands.
 
+Write every selected estimator and safety field into
+`scripts/configs/morpheus/online-runtime.json` before the final acceptance run.
+Do not leave a runtime field to an implementation default.
+
 Use the instrumented unbundled bot for component metrics. Use the extracted
 bundle and Part 08 for external timing, memory, crash, and EOF acceptance.
 
@@ -64,7 +78,7 @@ bundle and Part 08 for external timing, memory, crash, and EOF acceptance.
 
 ```bash
 python scripts/morpheus_measure.py online-runtime \
-  --config training/morpheus/configs/online-sweep.json \
+  --config scripts/configs/morpheus/online-sweep.json \
   --single-core \
   --output docs/research/measurements/morpheus-online-runtime.json
 ```
@@ -88,17 +102,18 @@ No judge CPU model is published, so local latency is conditional on the
 recorded machine.
 
 The specs do not define the configuration sweep, acceptable quantization
-error, moving p99 estimator, or a belief-quality threshold. The report must
-show these omissions. It must not hide a belief collapse behind a fast reply.
+error, moving p99 estimator, or a belief-quality threshold. This part must
+resolve the estimator fields and record the remaining belief limitation. It
+must not hide a belief collapse behind a fast reply.
 
 ## Exit criterion
 
 Answer `yes` only if one joint configuration has zero faults, first replies
 inside both the 8.5-second internal and 10-second judge limits, normal p99
 replies inside the selected internal deadline, peak RSS below 2 GB, belief plus
-root always complete, and the selected minimum search target completes at the
-reported rate.
+root always complete, and every measured normal nonterminal move after warm-up
+completes at least the current minimum search target of 8 simulations.
 
-Answer `no` if belief plus root cannot fit, if repeated policy-only turns make
-the result cease to be the specified search bot, or if the submission harness
-rejects the bundle.
+Answer `no` if belief plus root cannot fit, any measured normal move misses the
+minimum search target, an estimator field remains undefined, or the submission
+harness rejects the bundle.

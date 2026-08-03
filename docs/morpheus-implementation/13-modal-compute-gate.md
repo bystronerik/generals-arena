@@ -28,7 +28,10 @@ The report must state:
 ## Prerequisites
 
 - [Part 00: Modal JAX preflight](00-modal-jax-preflight.md)
+- [Part 00c: Measurement corpus](00c-measurement-corpus.md)
 - [Part 09: Online qualification](09-online-qualification.md)
+- [Part 10: Curriculum data](10-curriculum-data.md) with a resolved promotion
+  rule.
 - [Part 11: Self-play league](11-self-play-league.md)
 - [Part 12: Training objective](12-training-objective.md)
 
@@ -37,6 +40,7 @@ The report must state:
 - [Training compute](../bots/morpheus/training.md#training-compute)
 - [Training compute open question](../bots/morpheus/open-questions.md#training-compute)
 - [Coupled online compute](../bots/morpheus/open-questions.md#coupled-online-compute)
+- [Arena decision rule](../arena/decision-rule.md)
 
 ## Defaults and replacement measurement
 
@@ -105,11 +109,17 @@ The result must be at most 48 hours. Report CPU hours separately.
 
 ## Minimum useful game count
 
-The specs do not define enough games. Use a bounded pilot learning curve to
-estimate the games needed for a checkpoint to improve held-out policy, WDL,
-belief calibration, and arena strength.
+The specs do not define enough games. Test candidate checkpoint cadences in a
+bounded pilot. For each cadence, compare the later checkpoint with the prior
+trained checkpoint on the fixed held-out panel and matched seeds.
 
-If the pilot cannot identify a useful game count, this part returns `no`. It
+The smallest useful cadence is the first one that:
+
+- passes the curriculum confidence rule from Part 10;
+- does not regress held-out belief calibration;
+- receives `improvement` from the pairwise contrast in the arena decision rule.
+
+If no tested cadence meets all three conditions, this part returns `no`. It
 must not define success as all games that happen to fit the budget.
 
 ## Isolated test
@@ -141,7 +151,8 @@ Do not remove the deployment-matched final phase.
 ## Specification gaps
 
 The minimum useful games/checkpoint, checkpoint count, training-time search
-settings, CPU price budget, and learning-curve decision rule are absent.
+settings, and CPU price budget are absent. This part owns the cadence decision
+rule above and must record its matched arena evidence.
 
 The A100 can accelerate vectorized transitions and networks. It does not
 automatically accelerate dynamic particle and tree control. Only the full
@@ -151,6 +162,7 @@ both-seat game measurement can select the backend.
 
 Answer `yes` only if the report states an exact CPU/GPU layout, the learner is
 not starved, the measured useful games/checkpoint and checkpoint count fit,
+the cadence passes the stated curriculum, calibration, and pairwise rules,
 deployment calibration fits, and total A100 usage is at most 48 hours.
 
 Answer `no` otherwise and name the selected fallback or non-promotable scope.

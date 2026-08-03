@@ -20,6 +20,8 @@ code in the bot bundle.
 ## Prerequisites
 
 - [Part 03: Observation and actions](03-observation-actions.md)
+- [Part 00b: Sandbox export preflight](00b-sandbox-export-preflight.md) with a
+  `yes` result.
 
 ## Source specifications
 
@@ -27,6 +29,8 @@ code in the bot bundle.
 - [Action space](../bots/morpheus/action-space.md)
 - [Observation tensor](../bots/morpheus/observation-tensor.md)
 - [Frozen artifact](../bots/morpheus/evaluation.md#frozen-artifact)
+- [Sandbox dependency pins](../../requirements-sandbox.txt)
+- [Canonical judge pins](../../competition-module/competition/requirements.txt)
 
 ## Defaults and replacement measurement
 
@@ -48,6 +52,10 @@ quantization description, training run identity, and full weight SHA-256.
 Test all heads on padded 18–21 rectangles. Test perspective sign, legal policy
 normalization, and symmetry equivariance. Measure float-to-export error on
 fixed tensors before Part 09 measures game-time behavior.
+
+Define and version the 16 logarithmic enemy-army bin edges in the model schema.
+Part 12 must import these edges for auxiliary labels instead of defining a
+second copy.
 
 ## Isolated test
 
@@ -77,7 +85,8 @@ python competition-module/competition/matchup.py \
 
 The specs do not select a training framework, CPU inference runtime, 8-bit
 scheme, scale granularity, calibration set, normalization group count, bias
-rules, auxiliary-head layout, army-bin edges, or scalar-target normalization.
+rules, auxiliary-head layout, or scalar-target normalization. This part owns
+the missing army-bin edges because its output schema defines that head.
 
 The competition sandbox lists Torch, JAX, Numba, NumPy, and safetensors, but it
 does not list ONNX Runtime. Do not plan an unavailable runtime.
@@ -89,8 +98,9 @@ does not satisfy the deployment requirement.
 ## Exit criterion
 
 Answer `yes` if all heads have the specified shapes, perspective and symmetry
-tests pass, a sandbox-available static 8-bit candidate loads from a manifest,
-and the bundle and competition gates finish.
+tests pass, the versioned army-bin edges are recorded, a sandbox-available
+static 8-bit candidate loads from a manifest, and the bundle and competition
+gates finish.
 
 Answer `no` if no candidate export preserves the model contract. Part 09 makes
 the final runtime choice.

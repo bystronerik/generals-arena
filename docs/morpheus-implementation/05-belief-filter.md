@@ -20,6 +20,7 @@ The same shared policy proposes enemy actions from the enemy perspective.
 - [Part 02: Transition kernel](02-transition-kernel.md)
 - [Part 03: Observation and actions](03-observation-actions.md)
 - [Part 04: Network and export](04-network-export.md)
+- [Part 00c: Measurement corpus](00c-measurement-corpus.md)
 
 ## Source specifications
 
@@ -46,6 +47,11 @@ Replace level-zero opponent belief only from enemy-action log loss and
 real-observation particle survival. Compare one bounded extra belief level only
 if the default misses critical actions within the same deadline.
 
+Replace the half-count ESS threshold only from a threshold sweep that reports
+unique-particle count, real-observation survival, hidden-state calibration,
+recovery frequency, and p99 update cost. Record the selected threshold in the
+deployment configuration.
+
 ## Implementation boundary
 
 Keep every particle rule-consistent. Visible cells, types, owners, armies,
@@ -68,15 +74,21 @@ python -m pytest bots/morpheus/tests/test_belief_filter.py \
 
 ```bash
 python scripts/morpheus_measure.py belief-recovery \
-  --trajectories data/trajectories \
+  --trajectories data/trajectories/morpheus-bootstrap \
   --force-proposal-mismatch \
   --output docs/research/measurements/morpheus-belief-recovery.json
 ```
 
 ```bash
 python scripts/morpheus_measure.py opponent-belief \
-  --trajectories data/trajectories \
+  --trajectories data/trajectories/morpheus-bootstrap \
   --output docs/research/measurements/morpheus-opponent-belief.json
+```
+
+```bash
+python scripts/morpheus_measure.py ess-threshold \
+  --trajectories data/trajectories/morpheus-bootstrap \
+  --output docs/research/measurements/morpheus-ess-threshold.json
 ```
 
 ```bash
@@ -101,8 +113,8 @@ an unconstrained random fill as a silent substitute.
 
 Answer `yes` if initialization, filtering, resampling, and recovery preserve
 all rules and observations; forced mismatches recover whenever a legal history
-exists inside the configured bounds; and both measurement reports include
-recovery rate, p99 cost, log loss, and survival.
+exists inside the configured bounds; and the measurement reports include
+recovery rate, p99 cost, log loss, survival, and a selected ESS threshold.
 
 Answer `no` on any impossible state, public-total mismatch, silent collapse, or
 unbounded recovery.

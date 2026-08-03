@@ -40,12 +40,21 @@ Start with these runtime guesses:
 - resident-memory target below 256 MB.
 
 Part 09 replaces the coupled configuration. No component can be tuned alone.
+Its result must include the p99 estimator type, warm-up rule, sample window,
+admission guard, and resident-memory target.
 
 ## Implementation boundary
 
 Use a monotonic clock. Check admission before selection, before inference, and
 before each new simulation. Do not assume that an inference call can be
 cancelled.
+
+Use a rolling nearest-rank empirical p99 for each named cost component. Keep a
+bounded window `W`. Before `W` local samples exist, forecast the maximum of the
+offline qualification p99 and every observed local sample. Make `W`, the
+offline bounds, and the guard explicit configuration fields. Part 09 selects
+the measured window and guard; this part supplies deterministic tests for the
+estimator.
 
 The fallback order is pass, then highest-prior legal policy action, then the
 best available completed-search result. A partial simulation cannot affect the
@@ -76,7 +85,8 @@ python competition-module/competition/matchup.py \
 ## Specification gaps
 
 The specs do not define the moving p99 estimator, its warm-up behavior, sample
-window, or what forecast to use before enough samples exist.
+window, or what forecast to use before enough samples exist. Part 09 owns the
+selection and cannot leave these fields unresolved.
 
 The boundary between `0 completed simulations` and `no root result` needs an
 executable definition. The first-move warm-up batch set also depends on the
@@ -86,7 +96,8 @@ runtime selected in Part 09.
 
 Answer `yes` if every injected-cost case returns the specified legal fallback,
 no partial simulation changes statistics, all storage bounds hold, probe
-metrics are passive, and the competition gate finishes.
+metrics are passive, every configured estimator has deterministic warm-up and
+window behavior, and the competition gate finishes.
 
 Answer `no` for a missed fallback, non-monotonic timing decision, work admitted
 past its forecast, or unbounded memory.

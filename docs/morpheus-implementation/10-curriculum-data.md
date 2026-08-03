@@ -23,6 +23,7 @@ to `GameRecord`.
 - [Part 02: Transition kernel](02-transition-kernel.md)
 - [Part 03: Observation and actions](03-observation-actions.md)
 - [Part 05: Belief filter](05-belief-filter.md)
+- [Part 00c: Measurement corpus](00c-measurement-corpus.md)
 
 ## Source specifications
 
@@ -38,15 +39,16 @@ earlier class until every active class has a non-degenerate WDL target.
 Replace this rule only from WDL intervals by class, full-start decisive rate,
 and held-out arena strength. Training loss alone cannot replace it.
 
-While `non-degenerate` remains undefined, the scheduler must keep its current
-weights and report the unresolved gate. It must not invent a confidence
-threshold.
+This part owns a bounded curriculum pilot. Before it exits, the pilot must write
+an executable confidence rule with interval method, sample requirements, and
+thresholds to the curriculum manifest. The values must be selected before the
+main run and linked to the WDL, decisive-rate, and held-out evidence.
 
 ## Implementation boundary
 
-Initial classes 1–4 use legal trajectories from a checked-in fixed heuristic
-and research panel. Class 5 uses new competition maps. Source labels remain on
-every item.
+Initial classes 1–4 use legal trajectories from the exact panel in
+`scripts/configs/morpheus/bootstrap-panel.json`. Class 5 uses new competition
+maps. Source labels remain on every item.
 
 Use `arena.records.trajectories.replay_states` and the era guard. Verify the
 recorded state digests before extracting prefixes. Reconstruct fog observations
@@ -64,8 +66,8 @@ python -m pytest training/morpheus/tests/test_curriculum.py \
 
 ```bash
 python scripts/morpheus_curriculum.py build \
-  --panel training/morpheus/configs/curriculum-panel.json \
-  --trajectories data/trajectories \
+  --panel scripts/configs/morpheus/bootstrap-panel.json \
+  --trajectories data/trajectories/morpheus-bootstrap \
   --output training/morpheus/manifests/curriculum.json
 ```
 
@@ -82,9 +84,6 @@ seat observations at each sampled prefix.
 The five class descriptions are not executable classifiers. `One tactical
 sequence`, `contact`, and pre-contact distance need exact definitions.
 
-The fixed bootstrap panel is not named. The plan cannot select it without
-measurement evidence.
-
 Trajectory files do not store Morpheus particle RNG state. Deterministic belief
 reconstruction therefore needs a specified seed derivation from immutable item
 fields.
@@ -93,7 +92,8 @@ fields.
 
 Answer `yes` if every item replays in the matching engine era, every sampled
 prefix reproduces engine and fog state for both seats, class and source labels
-are explicit, and no ResBot replay enters the manifest.
+are explicit, the manifest contains an executable non-degenerate-WDL
+confidence rule, and no ResBot replay enters the manifest.
 
 Answer `no` for an invented state, replay mismatch, missing source, cross-era
 item, or undefined class assignment.
