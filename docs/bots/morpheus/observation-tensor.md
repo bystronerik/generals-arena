@@ -74,11 +74,36 @@ army_value(x) = clip(log(1 + max(x, 0)) / log(1 + 4096), 0, 1)
 ```
 
 `4096` is an **initial guess**. Training statistics can replace this scale
-without changing the plane meanings.
+without changing the plane meanings. Record the selected scale in the model
+manifest so a scale change moves the artifact identity.
 
 `structure_growth_next` uses `(turn + 1) mod 2 == 0`.
 `bulk_growth_countdown` uses
 `((50 - ((turn + 1) mod 50)) mod 50) / 49`.
+
+## Belief army planes (Part 03 choice)
+
+Particle army aggregates stay in raw army units until the tensor builder runs:
+
+```text
+belief_enemy_army_mean = army_value(raw particle mean)
+belief_enemy_army_std  = army_value(raw particle std)
+```
+
+Averaging happens before the transform. The std plane uses the same
+`army_value` map so both belief army planes share one scale.
+
+## Previous-action planes (Part 03 choice)
+
+Planes 30-33 encode the **perspective player's** most recent action in that
+player's coordinates:
+
+- Morpheus's root tensor uses Morpheus's last wire action.
+- An enemy-policy tensor uses the enemy's last action from the enemy seat's
+  view and memory.
+- Pass leaves all four planes zero.
+- Seat swap rebuilds memory and previous action from the other seat; it does
+  not mirror Morpheus's last move into the enemy tensor.
 
 ## Fog and memory
 

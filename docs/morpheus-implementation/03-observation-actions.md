@@ -75,13 +75,13 @@ python competition-module/competition/matchup.py \
 
 ## Specification gaps
 
-The tensor specification does not say whether
-`belief_enemy_army_mean` transforms before or after averaging. It also does
-not define the scale of `belief_enemy_army_std`.
+Resolved in this part and recorded in
+[observation-tensor.md](../bots/morpheus/observation-tensor.md):
 
-The previous-action planes do not explicitly define the perspective swap used
-for enemy policy proposals. This part must choose and document one
-perspective-relative rule before a golden tensor can pass.
+- `belief_enemy_army_mean` averages raw particle armies, then applies
+  `army_value`.
+- `belief_enemy_army_std` applies `army_value` to the raw particle std.
+- Previous-action planes encode the perspective player's last action only.
 
 The 16 auxiliary army-bin edges belong to Part 04 and are not defined by the
 current specs.
