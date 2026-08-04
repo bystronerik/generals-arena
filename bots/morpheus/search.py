@@ -93,6 +93,7 @@ class SearchController:
     rng: np.random.Generator = field(
         default_factory=lambda: np.random.default_rng(0)
     )
+    last_root_prior: Optional[Array] = field(default=None, init=False)
 
     def __post_init__(self) -> None:
         self.tree = SearchTree(
@@ -100,6 +101,7 @@ class SearchController:
             max_enemy_tables=self.config.max_enemy_tables,
             seat=self.seat,
         )
+        self.last_root_prior = None
 
     def ensure_root(
         self,
@@ -114,6 +116,7 @@ class SearchController:
         prior, value = self.evaluator.evaluate(
             obs, memory, belief, from_root=True
         )
+        self.last_root_prior = np.asarray(prior, dtype=np.float64)
         node = self.tree.make_node(
             key=key,
             turn=int(obs.turn),
@@ -152,12 +155,13 @@ class SearchController:
             child, turn=int(obs.turn), memory_digest=mem_d, obs_hash=obs_h
         ):
             child.reservoir.replace_from_belief(belief)
-            prior, value = self.evaluator.evaluate(
+            prior_e, value = self.evaluator.evaluate(
                 obs, memory, belief, from_root=True
             )
             child.network_value = float(value)
+            self.last_root_prior = np.asarray(prior_e, dtype=np.float64)
             if not child.actions:
-                self._expand_self_candidates(child, obs, memory, prior)
+                self._expand_self_candidates(child, obs, memory, prior_e)
             self.memory = memory
             self.tree.set_root(child)
             return child
@@ -273,8 +277,13 @@ class SearchController:
         belief: BeliefState,
         *,
         freeze_snapshot: bool = True,
+        freeze_widening: bool = False,
     ) -> PendingPath:
-        """Select one simulation path from a frozen statistics snapshot."""
+        """Select one simulation path from a frozen statistics snapshot.
+
+        When ``freeze_widening`` is True, progressive widening is skipped so
+        the matrix width stays fixed (runtime forecast below 16 simulations).
+        """
         assert self.tree.root is not None and self.memory is not None
         node = self.tree.root
         particle = node.reservoir.sample(self.rng)
@@ -330,22 +339,23 @@ class SearchController:
             # candidates when the node's visit count warrants it. When
             # freeze_snapshot is True we still allow widening based on N
             # observed at selection start for this node.
-            self._widen_if_needed(
-                node, my_obs, my_mem, prior_full, enemy=False
-            )
             enemy_seat = 1 - self.seat
             enemy_obs = emit_observation(state, enemy_seat)
             enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
-            self._widen_if_needed(
-                node,
-                my_obs,
-                my_mem,
-                prior_full,
-                enemy=True,
-                enemy_obs=enemy_obs,
-                enemy_mem=enemy_mem,
-                table=table,
-            )
+            if not freeze_widening:
+                self._widen_if_needed(
+                    node, my_obs, my_mem, prior_full, enemy=False
+                )
+                self._widen_if_needed(
+                    node,
+                    my_obs,
+                    my_mem,
+                    prior_full,
+                    enemy=True,
+                    enemy_obs=enemy_obs,
+                    enemy_mem=enemy_mem,
+                    table=table,
+                )
 
             sigma_a = mixed_strategy(node.regret, node.prior, node.N)
             sigma_b = mixed_strategy(table.regret, table.prior, node.N)
@@ -527,6 +537,7 @@ class SearchController:
         belief: BeliefState,
         *,
         n_sims: Optional[int] = None,
+        freeze_widening: bool = False,
     ) -> int:
         """Select up to ``pending_batch`` paths, evaluate, backup in order."""
         if self.tree.root is None:
@@ -535,7 +546,13 @@ class SearchController:
         batch_n = min(batch_n, self.config.pending_batch)
         paths: list[PendingPath] = []
         for _ in range(batch_n):
-            paths.append(self.select_path(belief, freeze_snapshot=True))
+            paths.append(
+                self.select_path(
+                    belief,
+                    freeze_snapshot=True,
+                    freeze_widening=freeze_widening,
+                )
+            )
         completed = 0
         for path in paths:
             value = self.evaluate_leaf(path, belief)
@@ -543,10 +560,26 @@ class SearchController:
             completed += 1
         return completed
 
+    def root_marginal_visits(self) -> Array:
+        assert self.tree.root is not None
+        visits = np.zeros(len(self.tree.root.actions), dtype=np.float64)
+        for table in self.tree.root.enemy_tables.values():
+            if table.visits.shape[0] == len(self.tree.root.actions):
+                visits = visits + table.visits.sum(axis=1)
+        return visits
+
     def best_action(self) -> Action5:
         idx = self.tree.root_action_index()
         assert self.tree.root is not None
         return as_action5(decode_action(self.tree.root.actions[idx]))
+
+    def best_action_by_visits(self) -> Action5:
+        """Highest marginal visit; ties by root prior (1–7 simulation band)."""
+        assert self.tree.root is not None and self.tree.root.actions
+        visits = self.root_marginal_visits()
+        prior = np.asarray(self.tree.root.prior, dtype=np.float64)
+        order = np.lexsort((-prior, -visits))
+        return as_action5(decode_action(self.tree.root.actions[int(order[0])]))
 
     def best_action_or_pass(self) -> Action5:
         if self.tree.root is None or not self.tree.root.actions:
@@ -556,6 +589,8 @@ class SearchController:
             root = self.tree.root
             order = int(np.argmax(root.prior)) if len(root.prior) else 0
             return as_action5(decode_action(root.actions[order]))
+        if self.tree.completed_simulations < 8:
+            return self.best_action_by_visits()
         return self.best_action()
 
 

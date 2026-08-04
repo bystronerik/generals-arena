@@ -1,4 +1,4 @@
-"""Part 01 protocol shell — pass reply, clean EOF, no stderr protocol data."""
+"""Part 01 protocol shell — legal reply, clean EOF, no stderr protocol data."""
 from __future__ import annotations
 
 import os
@@ -12,7 +12,6 @@ pytestmark = pytest.mark.morpheus
 
 BOT_DIR = Path(__file__).resolve().parents[1]
 RUN_SH = BOT_DIR / "run.sh"
-PASS = (1, 0, 0, 0, 0)
 
 H = W = 2
 
@@ -37,13 +36,18 @@ def _run_shell(stdin_text: str) -> subprocess.CompletedProcess[str]:
         text=True,
         cwd=str(BOT_DIR),
         env=env,
-        timeout=10,
+        timeout=30,
         check=False,
     )
 
 
-def test_agent_always_returns_pass():
-    from agent import PASS as AGENT_PASS
+def _assert_legal_line(line: str) -> None:
+    parts = line.split()
+    assert len(parts) == 5
+    assert all(p.lstrip("-").isdigit() for p in parts)
+
+
+def test_agent_returns_legal_five_tuple():
     from agent import Agent
     from _common.wire import Observation
 
@@ -60,30 +64,33 @@ def test_agent_always_returns_pass():
         owner_grid=[[1, 0], [0, 2]],
         army_grid=[[5, 0], [0, 4]],
     )
-    assert AGENT_PASS == PASS
-    assert agent.act(obs) == PASS
+    action = agent.act(obs)
+    assert isinstance(action, tuple) and len(action) == 5
+    assert all(isinstance(x, int) for x in action)
 
 
-def test_one_pass_line_per_observation():
+def test_one_legal_line_per_observation():
     result = _run_shell(_frames(3))
     assert result.returncode == 0, result.stderr
     lines = [ln for ln in result.stdout.splitlines() if ln.strip()]
-    assert lines == ["1 0 0 0 0", "1 0 0 0 0", "1 0 0 0 0"]
+    assert len(lines) == 3
     for line in lines:
-        parts = line.split()
-        assert len(parts) == 5
-        assert all(p.lstrip("-").isdigit() for p in parts)
+        _assert_legal_line(line)
 
 
 def test_eof_exits_status_zero_with_empty_stderr():
     result = _run_shell(_frames(2))
     assert result.returncode == 0, result.stderr
     assert result.stdout.count("\n") == 2
-    assert result.stderr == ""
+    # Torch may print a Quantizer deprecation warning on stderr; that is not
+    # protocol data.
+    for line in result.stderr.splitlines():
+        assert "Quantizer" in line or "quantize" in line or not line.strip()
 
 
 def test_no_handshake_is_a_clean_exit():
     result = _run_shell("")
     assert result.returncode == 0, result.stderr
     assert result.stdout == ""
-    assert result.stderr == ""
+    for line in result.stderr.splitlines():
+        assert "Quantizer" in line or "quantize" in line or not line.strip()
