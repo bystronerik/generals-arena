@@ -1,0 +1,114 @@
+{
+  "part": "12-training-objective",
+  "description": "Explicit objective ablation grid. Every loss weight and exploration field is required. No candidate is selected for the main run until Part 13 records belief calibration, coverage, cycling, and held-out arena strength.",
+  "accounting": {
+    "a100_hours_charge_to": "13-modal-compute-gate"
+  },
+  "candidates": [
+    {
+      "name": "aux-off-explore-off",
+      "mode": "training",
+      "loss_weights": {
+        "policy": 1.0,
+        "wdl": 1.0,
+        "hidden_owner": 0.0,
+        "enemy_army_bins": 0.0,
+        "enemy_general": 0.0,
+        "hidden_castle": 0.0,
+        "land_margin": 0.0,
+        "army_margin": 0.0,
+        "castle_margin": 0.0,
+        "turns_to_termination": 0.0
+      },
+      "exploration": {
+        "root_noise_epsilon": 0.0,
+        "root_noise_alpha": 0.3,
+        "action_temperature": 1.0,
+        "deterministic_turn": 0
+      },
+      "scalar_normalization": {
+        "land_margin_scale": 1.0,
+        "army_margin_scale": 1.0,
+        "castle_margin_scale": 1.0,
+        "turns_to_termination_scale": 1200.0
+      },
+      "reward": {
+        "win": 1.0,
+        "draw": 0.0,
+        "loss": -1.0,
+        "discount": 1.0,
+        "nonterminal": 0.0
+      }
+    },
+    {
+      "name": "aux-light-explore-dirichlet",
+      "mode": "training",
+      "loss_weights": {
+        "policy": 1.0,
+        "wdl": 1.0,
+        "hidden_owner": 0.25,
+        "enemy_army_bins": 0.25,
+        "enemy_general": 0.25,
+        "hidden_castle": 0.1,
+        "land_margin": 0.05,
+        "army_margin": 0.05,
+        "castle_margin": 0.05,
+        "turns_to_termination": 0.05
+      },
+      "exploration": {
+        "root_noise_epsilon": 0.25,
+        "root_noise_alpha": 0.3,
+        "action_temperature": 1.0,
+        "deterministic_turn": 30
+      },
+      "scalar_normalization": {
+        "land_margin_scale": 1.0,
+        "army_margin_scale": 1.0,
+        "castle_margin_scale": 1.0,
+        "turns_to_termination_scale": 1200.0
+      },
+      "reward": {
+        "win": 1.0,
+        "draw": 0.0,
+        "loss": -1.0,
+        "discount": 1.0,
+        "nonterminal": 0.0
+      }
+    },
+    {
+      "name": "aux-full-explore-temp",
+      "mode": "training",
+      "loss_weights": {
+        "policy": 1.0,
+        "wdl": 1.0,
+        "hidden_owner": 0.5,
+        "enemy_army_bins": 0.5,
+        "enemy_general": 0.5,
+        "hidden_castle": 0.25,
+        "land_margin": 0.1,
+        "army_margin": 0.1,
+        "castle_margin": 0.1,
+        "turns_to_termination": 0.1
+      },
+      "exploration": {
+        "root_noise_epsilon": 0.25,
+        "root_noise_alpha": 0.3,
+        "action_temperature": 1.5,
+        "deterministic_turn": 50
+      },
+      "scalar_normalization": {
+        "land_margin_scale": 1.0,
+        "army_margin_scale": 1.0,
+        "castle_margin_scale": 1.0,
+        "turns_to_termination_scale": 1200.0
+      },
+      "reward": {
+        "win": 1.0,
+        "draw": 0.0,
+        "loss": -1.0,
+        "discount": 1.0,
+        "nonterminal": 0.0
+      }
+    }
+  ]
+}
