@@ -64,5 +64,6 @@ visible and rejects configs that hide collapse behind a fast reply.
 
 ## Next action
 
-Re-run on a Linux judge-like CPU, or reduce selection cost, before treating any
-configuration as Part 09 accepted.
+Follow [Part 09a: Complete-turn cost reduction](../../morpheus-implementation/09a-complete-turn-cost.md).
+Belief work comes first. Then re-run Part 09 on a Linux judge-like CPU before
+treating any configuration as accepted.

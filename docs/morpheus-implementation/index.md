@@ -35,6 +35,7 @@ promotion, and must not enter a rating decision.
 5. [Simultaneous search](06-simultaneous-search.md)
 6. [Runtime controller](07-runtime-controller.md)
 7. [Online qualification](09-online-qualification.md)
+8. [Complete-turn cost reduction](09a-complete-turn-cost.md)
 
 ### Phase 2: training inputs and self-play
 

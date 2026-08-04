@@ -117,3 +117,7 @@ completes at least the current minimum search target of 8 simulations.
 Answer `no` if belief plus root cannot fit, any measured normal move misses the
 minimum search target, an estimator field remains undefined, or the submission
 harness rejects the bundle.
+
+After a recorded `no`, follow
+[Part 09a: Complete-turn cost reduction](09a-complete-turn-cost.md) before a
+re-qualification attempt.
