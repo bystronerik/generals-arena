@@ -52,9 +52,17 @@ submission-shaped check. That check measures first response within 10 seconds,
 normal responses within 150 ms, peak memory below 2 GB, malformed or missing
 replies, crashes, and voluntary exit after stdin closes.
 
-No such harness exists in the repository. Its owner, path, and enforcement
-method are an explicit [open question](open-questions.md). Morpheus cannot
-promote until that question is resolved and the check exists.
+The check lives in `arena.matches.submission`. It runs an extracted submission
+zip under the judge process contract and never writes `data/games/` or ratings.
+Controlled failure fixtures live under `tests/fixtures/submission_bots/`. See
+[Part 08](../../morpheus-implementation/08-submission-harness.md).
+
+```bash
+python -m arena.matches.submission \
+  data/bundles/morpheus-<content_hash>.zip \
+  --opponent bots/smoke/run.sh \
+  --mode competition --seed 0
+```
 
 Any timing, format, missing-reply, memory, crash, or EOF failure rejects the
 artifact.

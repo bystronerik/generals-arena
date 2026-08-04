@@ -99,14 +99,13 @@ actions within the same deadline.
 
 ## Submission-shaped harness
 
-**Unknown:** Which repository component owns the 150 ms, first-move, 2 GB,
-fault, and EOF acceptance check.
+**Resolved:** `arena.matches.submission` owns the 150 ms, first-move, 2 GB,
+fault, and EOF acceptance check. Judged runs stay out of `data/games/` and
+ratings. See [Part 08](../../morpheus-implementation/08-submission-harness.md).
 
-**Current default:** No harness is assumed to exist.
-
-**Evidence:** Choose `arena/` or `scripts/` from reuse requirements, then prove
-the check can reject controlled timeout, memory, malformed-output, crash, and
-EOF failures. Morpheus cannot promote before this is resolved.
+**Evidence:** `tests/test_submission_harness.py` rejects each controlled
+failure under `tests/fixtures/submission_bots/` for the matching reason and
+accepts the good fixture.
 
 ## ResBot castle evidence
 
