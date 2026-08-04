@@ -21,4 +21,5 @@ def extras(agent) -> dict:
         "cost_root_ms": int(getattr(agent, "cost_root_ms", 0)),
         "cost_search_ms": int(getattr(agent, "cost_search_ms", 0)),
         "cost_reply_ms": int(getattr(agent, "cost_reply_ms", 0)),
+        "belief_plus_root_ok": int(getattr(agent, "belief_plus_root_ok", 0)),
     }

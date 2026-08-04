@@ -118,15 +118,17 @@ def propose_enemy_actions(
     *,
     policy: Optional[PolicyFn] = None,
     top_k_force: int = 0,
+    max_proposal_batch: int = MAX_PROPOSAL_BATCH,
 ) -> list[Action5]:
     """Sample one enemy action per particle.
 
     When ``policy`` is None, each particle draws uniformly from its legal mask.
-    When ``policy`` is set, tensors are deduplicated and evaluated in one batch
-    of at most 64 unique inputs.
+    When ``policy`` is set, tensors are deduplicated and evaluated in batches of
+    at most ``max_proposal_batch`` unique inputs.
     """
     if belief.n == 0:
         return []
+    batch_cap = max(1, int(max_proposal_batch))
 
     # Build enemy obs + memory + legal probs per particle.
     enemy_obs_list = []
@@ -148,8 +150,8 @@ def propose_enemy_actions(
     unique, mapping = dedupe_enemy_tensors(tensors)
     # Cap batch; if somehow larger, evaluate in chunks.
     all_logits: list[Array] = []
-    for start in range(0, len(unique), MAX_PROPOSAL_BATCH):
-        batch = np.stack(unique[start : start + MAX_PROPOSAL_BATCH], axis=0)
+    for start in range(0, len(unique), batch_cap):
+        batch = np.stack(unique[start : start + batch_cap], axis=0)
         logits = np.asarray(policy(batch), dtype=np.float64)
         if logits.ndim == 1:
             logits = logits[None, :]

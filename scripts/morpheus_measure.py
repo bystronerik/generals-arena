@@ -173,6 +173,37 @@ def cmd_search_resources(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_online_runtime(args: argparse.Namespace) -> int:
+    from training.morpheus.measure_online import measure_online_runtime
+
+    report = measure_online_runtime(
+        Path(args.config),
+        single_core=bool(args.single_core),
+        core=int(args.core),
+        write_runtime=not bool(args.dry_run),
+        runtime_out=Path(args.runtime_out) if args.runtime_out else None,
+        bot_deployment_out=Path(args.bot_deployment_out)
+        if args.bot_deployment_out
+        else None,
+    )
+    out = Path(args.output)
+    _write_report(out, report)
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "output": str(out),
+                "verdict": report["verdict"],
+                "survivor_count": report["survivor_count"],
+                "selected": report.get("selected"),
+                "reasons_no": report.get("reasons_no"),
+            },
+            indent=2,
+        )
+    )
+    return 0 if report["verdict"] == "yes" else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -255,6 +286,43 @@ def main(argv: list[str] | None = None) -> int:
     )
     search.add_argument("--live-sims", type=int, default=16)
     search.set_defaults(func=cmd_search_resources)
+
+    online = sub.add_parser(
+        "online-runtime",
+        help="Coupled one-core complete-turn p50/p99 deployment selection",
+    )
+    online.add_argument(
+        "--config",
+        type=Path,
+        default=REPO / "scripts" / "configs" / "morpheus" / "online-sweep.json",
+    )
+    online.add_argument(
+        "--output",
+        type=Path,
+        default=meas_dir / "morpheus-online-runtime.json",
+    )
+    online.add_argument(
+        "--single-core",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    online.add_argument("--core", type=int, default=0)
+    online.add_argument(
+        "--runtime-out",
+        type=Path,
+        default=REPO / "scripts" / "configs" / "morpheus" / "online-runtime.json",
+    )
+    online.add_argument(
+        "--bot-deployment-out",
+        type=Path,
+        default=REPO / "bots" / "morpheus" / "deployment.json",
+    )
+    online.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Measure and report without writing online-runtime.json",
+    )
+    online.set_defaults(func=cmd_online_runtime)
 
     args = parser.parse_args(argv)
     return int(args.func(args))

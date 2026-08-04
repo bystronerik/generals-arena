@@ -1,13 +1,14 @@
 """
-Morpheus agent — runtime controller with deadline degradation.
+Morpheus agent — deployment-configured runtime with network leaf budget.
 
-Part 01 kept a pass-only shell. Part 07 owns the turn work order through
-``RuntimeController``. The frozen export still loads on startup.
+Part 09 couples the measured deployment.json fields, NetworkEvaluator, and
+belief-proposal policy. Probe counters stay passive.
 """
 
-from inference import load_default_session, warm_export_batches
-from runtime import PASS, RuntimeConfig, RuntimeController
-from search import UniformEvaluator
+from deployment import try_load_deployment
+from evaluator import NetworkEvaluator
+from inference import load_default_session
+from runtime import RuntimeController
 
 
 class Agent:
@@ -17,16 +18,28 @@ class Agent:
         self.player_id = player_id
         self.H = H
         self.W = W
+        self._deployment = try_load_deployment()
         self._session = load_default_session()
-        warm_export_batches(self._session)
-        # Search uses the uniform evaluator until Part 09 couples the measured
-        # network leaf budget. The export session stays warm for later parts.
+        shapes = tuple(self._deployment.warmup_batch_shapes) or (1, 4, 64)
+        # warm_export_batches uses fixed (1,4,64); exercise configured shapes.
+        import torch
+        from network import IN_CHANNELS, BOARD
+
+        gen = torch.Generator(device="cpu")
+        gen.manual_seed(0)
+        for batch in shapes:
+            x = torch.randn(int(batch), IN_CHANNELS, BOARD, BOARD, generator=gen)
+            self._session.forward(x)
+        self._evaluator = NetworkEvaluator(self._session)
+        runtime_cfg = self._deployment.to_runtime_config()
+        runtime_cfg.max_proposal_batch = int(self._deployment.max_proposal_batch)
         self._controller = RuntimeController(
             seat=int(player_id),
             H=int(H),
             W=int(W),
-            evaluator=UniformEvaluator(0.0),
-            config=RuntimeConfig(),
+            evaluator=self._evaluator,
+            config=runtime_cfg,
+            proposal_policy=self._evaluator.policy_logits,
         )
         self._mirror_metrics()
 
@@ -44,6 +57,9 @@ class Agent:
         self.cost_root_ms = c.cost_root_ms
         self.cost_search_ms = c.cost_search_ms
         self.cost_reply_ms = c.cost_reply_ms
+        self.belief_plus_root_ok = c.belief_plus_root_ok
+        # Expose named component timings for the instrumented unbundled path.
+        self.component_ms = dict(c.metrics.component_ms)
 
     def act(self, obs):
         action = self._controller.decide(obs)

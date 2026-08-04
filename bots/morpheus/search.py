@@ -491,33 +491,65 @@ class SearchController:
         path: PendingPath,
         belief: BeliefState,
     ) -> float:
-        if path.terminal_value is not None:
-            return float(path.terminal_value)
-        state = path.leaf_state
-        if state.winner == self.seat:
-            return 1.0
-        if state.winner >= 0:
-            return -1.0
-        obs = emit_observation(state, self.seat)
-        mem = update_memory(self.memory, obs) if self.memory is not None else self.memory
-        assert mem is not None
-        leaf_belief = BeliefState(
-            seat=self.seat,
-            particles=[path.particle],
-            config=belief.config,
-        )
-        _, value = self.evaluator.evaluate(
-            obs, mem, leaf_belief, from_root=True
-        )
-        if path.leaf_node is not None and path.needs_expand:
-            path.leaf_node.network_value = float(value)
-            if not path.leaf_node.actions:
-                prior, _ = self.evaluator.evaluate(
-                    obs, mem, leaf_belief, from_root=True
-                )
-                self._expand_self_candidates(path.leaf_node, obs, mem, prior)
-                path.leaf_node.expanded = True
-        return float(value)
+        return self.evaluate_leaves([path], belief)[0]
+
+    def evaluate_leaves(
+        self,
+        paths: Sequence[PendingPath],
+        belief: BeliefState,
+    ) -> list[float]:
+        """Evaluate many leaves; batches network forwards when the evaluator allows."""
+        values: list[Optional[float]] = [None] * len(paths)
+        pending_idx: list[int] = []
+        pending_items: list[tuple[object, VisibleMemory, BeliefState, bool]] = []
+        pending_paths: list[PendingPath] = []
+
+        for i, path in enumerate(paths):
+            if path.terminal_value is not None:
+                values[i] = float(path.terminal_value)
+                continue
+            state = path.leaf_state
+            if state.winner == self.seat:
+                values[i] = 1.0
+                continue
+            if state.winner >= 0:
+                values[i] = -1.0
+                continue
+            obs = emit_observation(state, self.seat)
+            mem = update_memory(self.memory, obs) if self.memory is not None else self.memory
+            assert mem is not None
+            leaf_belief = BeliefState(
+                seat=self.seat,
+                particles=[path.particle],
+                config=belief.config,
+            )
+            pending_idx.append(i)
+            pending_items.append((obs, mem, leaf_belief, True))
+            pending_paths.append(path)
+
+        if pending_items:
+            batch_fn = getattr(self.evaluator, "evaluate_many", None)
+            if callable(batch_fn):
+                results = batch_fn(pending_items)
+            else:
+                results = [
+                    self.evaluator.evaluate(obs, mem, blf, from_root=fr)
+                    for obs, mem, blf, fr in pending_items
+                ]
+            for local_j, (i, path, (prior, value)) in enumerate(
+                zip(pending_idx, pending_paths, results)
+            ):
+                values[i] = float(value)
+                if path.leaf_node is not None and path.needs_expand:
+                    path.leaf_node.network_value = float(value)
+                    if not path.leaf_node.actions:
+                        obs, mem, _leaf_belief, _ = pending_items[local_j]
+                        self._expand_self_candidates(
+                            path.leaf_node, obs, mem, np.asarray(prior, dtype=np.float64)
+                        )
+                        path.leaf_node.expanded = True
+
+        return [float(v) for v in values]  # type: ignore[arg-type]
 
     def backup_path(self, path: PendingPath, leaf_value: float) -> None:
         """Backup from leaf to root. Only fully completed paths call this."""

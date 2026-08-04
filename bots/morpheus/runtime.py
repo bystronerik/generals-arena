@@ -23,6 +23,7 @@ from belief import (
     initialize_belief,
 )
 from memory import VisibleMemory, empty_memory, update_memory
+from proposal import PolicyFn
 from recovery import update_belief
 from search import SearchConfig, SearchController, SearchEvaluator, UniformEvaluator
 
@@ -55,6 +56,8 @@ DEFAULT_ADMISSION_GUARD_MS = 10.0
 DEFAULT_MAX_TREE_NODES = 4096
 DEFAULT_RESIDENT_MEMORY_TARGET_MB = 256.0
 DEFAULT_P99_WINDOW = 64
+DEFAULT_MAX_PROPOSAL_BATCH = 64
+DEFAULT_SEARCH_DEPTH = 16
 
 # Offline qualification p99 placeholders (ms) until Part 09 measures them.
 DEFAULT_OFFLINE_P99_MS: dict[str, float] = {
@@ -111,6 +114,8 @@ class RuntimeConfig:
         default_factory=lambda: dict(DEFAULT_OFFLINE_P99_MS)
     )
     n_particles: int = 64
+    max_proposal_batch: int = DEFAULT_MAX_PROPOSAL_BATCH
+    search_depth: int = DEFAULT_SEARCH_DEPTH
     widen_freeze_below: int = 16  # stop widening when forecast sims < this
 
 
@@ -166,6 +171,7 @@ class TurnMetrics:
     cost_root_ms: int = 0
     cost_search_ms: int = 0
     cost_reply_ms: int = 0
+    belief_plus_root_ok: int = 0  # 1 when belief update and root both finished
     component_ms: dict[str, float] = field(default_factory=dict)
 
 
@@ -184,6 +190,7 @@ class RuntimeController:
         fixed_forecasts_ms: Optional[Mapping[str, float]] = None,
         rng: Optional[np.random.Generator] = None,
         charge_fixed_forecasts: bool = False,
+        proposal_policy: Optional[PolicyFn] = None,
     ) -> None:
         self.seat = int(seat)
         self.H = int(H)
@@ -197,6 +204,7 @@ class RuntimeController:
         # When True, each admitted component advances the injected clock by its
         # forecast. Production uses real elapsed time instead.
         self.charge_fixed_forecasts = bool(charge_fixed_forecasts)
+        self.proposal_policy = proposal_policy
 
         self._estimators: dict[str, NearestRankP99Estimator] = {
             name: NearestRankP99Estimator(
@@ -218,6 +226,7 @@ class RuntimeController:
                 pending_batch=self.config.pending_leaf_batch,
                 max_nodes=self.config.max_tree_nodes,
                 n_particles=self.config.n_particles,
+                depth=self.config.search_depth,
             ),
             rng=self.rng,
         )
@@ -241,6 +250,7 @@ class RuntimeController:
         self.cost_root_ms = 0
         self.cost_search_ms = 0
         self.cost_reply_ms = 0
+        self.belief_plus_root_ok = 0
 
     # ------------------------------------------------------------------ clock
 
@@ -342,6 +352,7 @@ class RuntimeController:
         action: Action5 = PASS
         self._policy_fallback: Optional[Action5] = None
         has_root_result = False
+        belief_update_ok = first_move  # first move allocates; later turns track update
         self.search.tree.completed_simulations = 0
         self.forward_equivalents = 0
         self.metrics = TurnMetrics()
@@ -353,6 +364,7 @@ class RuntimeController:
             )
             if not admitted:
                 self.first_move_setup(obs)  # must still allocate; first frame
+            belief_update_ok = True
             deadline = self._deadline_for_turn(first_move=True)
         else:
             assert self.memory is not None
@@ -362,8 +374,6 @@ class RuntimeController:
                 if self.can_admit("belief_proposal", deadline) and self.can_admit(
                     "particle_transitions", deadline
                 ):
-                    prev = self.belief
-
                     def _upd():
                         return update_belief(
                             self.belief,
@@ -371,6 +381,8 @@ class RuntimeController:
                             obs,
                             self.memory,
                             self.rng,
+                            policy=self.proposal_policy,
+                            max_proposal_batch=self.config.max_proposal_batch,
                         )
 
                     admitted, nxt = self._run_admitted(
@@ -378,6 +390,7 @@ class RuntimeController:
                     )
                     if admitted and nxt is not None:
                         self.belief = nxt  # type: ignore[assignment]
+                        belief_update_ok = True
                         self._observe(
                             "particle_transitions",
                             self.forecast_ms("particle_transitions")
@@ -460,9 +473,13 @@ class RuntimeController:
                 self._charge("reply")
 
         self._last_action = action
+        set_prev = getattr(self.evaluator, "set_previous_action", None)
+        if callable(set_prev):
+            set_prev(action)
         self._publish_metrics(
             action_level=level,
             recovery_flag=recovery_flag,
+            belief_plus_root_ok=int(belief_update_ok and has_root_result),
         )
         return action
 
@@ -519,7 +536,7 @@ class RuntimeController:
 
             t0 = self._now()
             self._charge("leaf_batch")
-            values = [self.search.evaluate_leaf(p, belief) for p in paths]
+            values = self.search.evaluate_leaves(paths, belief)
             elapsed = (self._now() - t0) * 1000.0
             if self.charge_fixed_forecasts:
                 elapsed = self.forecast_ms("leaf_batch")
@@ -543,6 +560,7 @@ class RuntimeController:
         *,
         action_level: FallbackLevel,
         recovery_flag: int,
+        belief_plus_root_ok: int = 0,
     ) -> None:
         move_ms = int(round((self._now() - self._turn_start) * 1000.0))
         ess_milli = 0
@@ -558,6 +576,7 @@ class RuntimeController:
         self.recovery = int(recovery_flag)
         self.belief_ess = ess_milli
         self.move_ms = move_ms
+        self.belief_plus_root_ok = int(belief_plus_root_ok)
         self.cost_belief_ms = int(
             round(
                 self.metrics.component_ms.get("belief_proposal", 0.0)
@@ -581,6 +600,7 @@ class RuntimeController:
         self.metrics.cost_root_ms = self.cost_root_ms
         self.metrics.cost_search_ms = self.cost_search_ms
         self.metrics.cost_reply_ms = self.cost_reply_ms
+        self.metrics.belief_plus_root_ok = self.belief_plus_root_ok
 
 
 def highest_prior_legal(prior: Array, mask: Array) -> Action5:

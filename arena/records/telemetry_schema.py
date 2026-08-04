@@ -452,6 +452,14 @@ _PROBE_KEYS = (
         MEAN,
         MAX,
     ),
+    _key(
+        "belief_plus_root_ok",
+        Kind.BOOL01,
+        "morpheus: belief update and root inference both completed this turn",
+        F,
+        MEAN,
+        FIRST,
+    ),
 )
 
 # Engine keys: ground truth, recorded per turn by the trajectory recorder.

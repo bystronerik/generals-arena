@@ -16,6 +16,13 @@ batches, transitions, hashing, backup, and reply at p50 and p99. Compare joint
 configurations such as 32/64/128 particles with several simulation targets.
 Zero faults is required; no component is tuned in isolation.
 
+**Part 09 status (2026-08-04, Apple M3 Pro):** verdict **no**. See
+[`docs/research/measurements/morpheus-online-runtime.md`](../../research/measurements/morpheus-online-runtime.md).
+Belief plus root fits only for small particle counts on this host; no trial
+completed 8 simulations on every warm normal move. The written
+`scripts/configs/morpheus/online-runtime.json` is best-effort play config, not
+an accepted deployment.
+
 ## Army normalization
 
 **Unknown:** Whether the `4096` log scale clips important late-game stacks.

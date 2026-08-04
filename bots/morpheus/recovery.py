@@ -514,6 +514,7 @@ def update_belief(
     *,
     policy: Optional[PolicyFn] = None,
     enemy_actions: Optional[Sequence[Action5]] = None,
+    max_proposal_batch: int = 64,
 ) -> BeliefState:
     """One real-turn update: propose (unless injected), filter, recover if empty.
 
@@ -524,7 +525,12 @@ def update_belief(
     from proposal import propose_enemy_actions
 
     if enemy_actions is None:
-        enemy_actions = propose_enemy_actions(belief, rng, policy=policy)
+        enemy_actions = propose_enemy_actions(
+            belief,
+            rng,
+            policy=policy,
+            max_proposal_batch=max_proposal_batch,
+        )
     nxt = filter_step(belief, my_action, real_obs, enemy_actions, rng)
     if any(p.weight > 0.0 for p in nxt.particles):
         return nxt
