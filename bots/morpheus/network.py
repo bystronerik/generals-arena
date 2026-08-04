@@ -116,6 +116,22 @@ class MorpheusNet(nn.Module):
             h = block(h)
         return h, mask
 
+    def forward_policy(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Policy + pass only — belief proposal and enemy-prior online path."""
+        h, mask = self.trunk_forward(x)
+        feat = masked_global_features(h, mask)
+        return self.policy(h), self.pass_fc(feat)
+
+    def forward_policy_wdl(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Policy + pass + WDL — root and leaf online path (no auxiliary heads)."""
+        h, mask = self.trunk_forward(x)
+        feat = masked_global_features(h, mask)
+        return self.policy(h), self.pass_fc(feat), self.wdl(feat)
+
     def forward(self, x: torch.Tensor) -> MorpheusOutput:
         h, mask = self.trunk_forward(x)
         feat = masked_global_features(h, mask)

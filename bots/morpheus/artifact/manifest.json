@@ -71,6 +71,14 @@
   "army_scale": 4096.0,
   "artifact_file": "model.pt",
   "manifest_version": "1",
+  "online_entry_points": {
+    "policy": "model_policy.pt",
+    "policy_wdl": "model_policy_wdl.pt"
+  },
+  "online_weights_sha256": {
+    "policy": "5708fef3cc057116e1d94bdc0e2c523cd0c290518fe4f8eff106230c053c32aa",
+    "policy_wdl": "a70ddb3b8feaf271a00e21f7f22e7ed413c910780ae4d34c486f3245f60957bd"
+  },
   "quantization": {
     "engine": "qnnpack",
     "float_to_export_mae": {
@@ -89,6 +97,17 @@
     "format": "static_ptq_fx_qnnpack_int8",
     "group_norm_float_fallback": true,
     "host": "macOS-26.5.2-arm64-arm-64bit",
+    "online_float_to_export_mae": {
+      "policy": {
+        "pass_logit_mae": 0.3799259662628174,
+        "policy_mae": 1.1869503259658813
+      },
+      "policy_wdl": {
+        "pass_logit_mae": 0.587623119354248,
+        "policy_mae": 1.1881043910980225,
+        "wdl_mae": 0.18510358035564423
+      }
+    },
     "runtime": "torch.jit.trace+fx_static_qnnpack"
   },
   "runtime": "torch.jit.trace+fx_static_qnnpack",
@@ -97,5 +116,5 @@
     "checkpoint_id": "tiny",
     "run_id": "fixture"
   },
-  "weights_sha256": "c3231fcb4ac887af4a71be68fc394e01efec09c4c0336bde40eb98c830efd8a9"
+  "weights_sha256": "3bab52769de0623ebebcbc243278a2de51d69936f83bdeda6fef7198a2e6eac4"
 }

@@ -1,33 +1,42 @@
-# Morpheus complete-turn cost (Part 09a, Phases 0–4)
+# Morpheus complete-turn cost (Part 09a, Phases 0–5)
 
 Continuation of
 [`09a-complete-turn-cost.md`](../../morpheus-implementation/09a-complete-turn-cost.md).
 
-## Phase 4 changes
+## Phase 5 changes
 
-- Reuse observation, memory, and digests within one search depth step.
-- Add `info_state_key_prehashed` / `enemy_info_hash_prehashed`.
-- Cache particle enemy-info hashes by reservoir `version` in `backup_node`.
-- Skip full 3970-entry prior arrays when widening is frozen.
-- Sort only legal candidate indices in `policy_ordered_candidates`.
+- Export dedicated online TorchScript entry points:
+  - `model_policy.pt` — policy + pass for belief and enemy priors;
+  - `model_policy_wdl.pt` — policy + pass + WDL for root and leaves.
+- Keep the full-head `model.pt` for recovery and diagnostics.
+- Online search does not evaluate auxiliary heads.
+- Soft parity limits: `ONLINE_PARITY_LIMITS` in `bots/morpheus/export.py`.
 
 ## Gate
 
-`bots/morpheus/tests/test_hash_backup_parity.py` checks fixed-seed root
-statistics and actions against the Phase-3 baseline after the same completed
-simulations.
+`bots/morpheus/tests/test_online_entry_points.py` checks:
 
-## Phase 3 (committed)
+- float online methods match full-head policy / WDL;
+- qnnpack export MAE within existing soft limits;
+- fbgemm / x86 when the host provides those engines (skip on Darwin
+  qnnpack-only).
 
-Selection performs zero network calls; enemy priors stage outside selection.
-See commit message for Part 09a Phase 3.
+Modal Linux CPU seat
+(`scripts/morpheus_modal_online_entry_points.py`) recorded **yes** for both
+`fbgemm` and `x86`. Report:
+[`morpheus-online-entry-points.md`](morpheus-online-entry-points.md).
+
+## Phase 4 (committed)
+
+Reuse observation digests; cache enemy-info weights; skip full prior arrays
+when frozen; sort only legal candidates.
 
 ## Earlier phases
 
 Warm 32-particle belief plus root fits a 140 ms deadline. Part 09 remains `no`
-pending Phases 5–6.
+pending Phase 6 re-qualification.
 
 ## Next
 
-Start Phase 5 (network export entry points). Do not lower the 8-simulation
+Start Phase 6 (Part 09 re-qualification). Do not lower the 8-simulation
 minimum or promote 8 particles.

@@ -49,8 +49,14 @@ def main() -> int:
     )
     print(f"exported to {result.output_dir}")
     print(f"qengine={result.qengine}")
+    print("full float_to_export_mae:")
     for key, value in sorted(result.float_to_export_mae.items()):
         print(f"  {key}: {value:.6f}")
+    print("online float_to_export_mae:")
+    for entry, mae in sorted(result.online_float_to_export_mae.items()):
+        print(f"  {entry}:")
+        for key, value in sorted(mae.items()):
+            print(f"    {key}: {value:.6f}")
     return 0
 
 

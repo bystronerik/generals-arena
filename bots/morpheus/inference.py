@@ -8,7 +8,15 @@ from typing import Any, Optional
 
 import torch
 
-from export import DEFAULT_ARTIFACT_FILE, MANIFEST_NAME, forward_exported
+from export import (
+    DEFAULT_ARTIFACT_FILE,
+    MANIFEST_NAME,
+    POLICY_ARTIFACT_FILE,
+    POLICY_WDL_ARTIFACT_FILE,
+    forward_exported,
+    forward_policy_exported,
+    forward_policy_wdl_exported,
+)
 from network import BOARD, IN_CHANNELS, N_ARMY_BINS, N_BLOCKS, MorpheusOutput
 from schema import (
     ACTION_SCHEMA_VERSION,
@@ -25,17 +33,49 @@ ARTIFACT_DIRNAME = "artifact"
 
 @dataclass
 class InferenceSession:
-    """Loaded TorchScript session plus manifest metadata."""
+    """Loaded TorchScript session plus manifest metadata.
+
+    Online search uses dedicated entry points:
+    - ``forward_policy`` for belief proposal and enemy priors;
+    - ``forward_policy_wdl`` for root and leaf evaluation.
+
+    ``forward`` keeps the full-head artifact for recovery and diagnostics.
+    """
 
     manifest: dict[str, Any]
     module: torch.jit.ScriptModule
     device: torch.device
+    policy_module: Optional[torch.jit.ScriptModule] = None
+    policy_wdl_module: Optional[torch.jit.ScriptModule] = None
 
     def forward(self, x: torch.Tensor) -> MorpheusOutput:
         self.module.eval()
         with torch.no_grad():
             x = x.to(self.device)
             return forward_exported(self.module, x)
+
+    def forward_policy(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Policy + pass only. Does not evaluate auxiliary heads."""
+        x = x.to(self.device)
+        with torch.no_grad():
+            if self.policy_module is not None:
+                self.policy_module.eval()
+                return forward_policy_exported(self.policy_module, x)
+            # Legacy artifact fallback: use full export, drop aux outputs.
+            out = self.forward(x)
+            return out.policy, out.pass_logit
+
+    def forward_policy_wdl(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Policy + pass + WDL. Does not evaluate auxiliary heads."""
+        x = x.to(self.device)
+        with torch.no_grad():
+            if self.policy_wdl_module is not None:
+                self.policy_wdl_module.eval()
+                return forward_policy_wdl_exported(self.policy_wdl_module, x)
+            out = self.forward(x)
+            return out.policy, out.pass_logit, out.wdl_logits
 
 
 def default_artifact_dir(bot_dir: Optional[Path] = None) -> Path:
@@ -124,12 +164,34 @@ def _require_qengine(engine: str) -> None:
     torch.backends.quantized.engine = engine
 
 
+def _load_online_module(
+    artifact_dir: Path,
+    *,
+    filename: str,
+    expected_digest: Optional[str],
+    device: torch.device,
+) -> torch.jit.ScriptModule:
+    path = artifact_dir / filename
+    if not path.is_file():
+        raise FileNotFoundError(f"missing online entry artifact: {path}")
+    if expected_digest is not None:
+        digest = sha256_file(path)
+        if digest != expected_digest:
+            raise ValueError(
+                f"online weights SHA-256 mismatch for {filename}: "
+                f"manifest {expected_digest} != file {digest}"
+            )
+    module = torch.jit.load(str(path), map_location=device)
+    module.eval()
+    return module
+
+
 def load_session(
     artifact_dir: Path,
     *,
     device: Optional[torch.device] = None,
 ) -> InferenceSession:
-    """Load ``manifest.json`` and the traced model from ``artifact_dir``."""
+    """Load ``manifest.json`` and traced models from ``artifact_dir``."""
     manifest_path = artifact_dir / MANIFEST_NAME
     if not manifest_path.is_file():
         raise FileNotFoundError(f"missing manifest: {manifest_path}")
@@ -143,7 +205,34 @@ def load_session(
     dev = device or torch.device("cpu")
     module = torch.jit.load(str(artifact_path), map_location=dev)
     module.eval()
-    return InferenceSession(manifest=manifest, module=module, device=dev)
+
+    entry_points = manifest.get("online_entry_points") or {}
+    digests = manifest.get("online_weights_sha256") or {}
+    policy_module = None
+    policy_wdl_module = None
+    if entry_points:
+        policy_name = str(entry_points.get("policy", POLICY_ARTIFACT_FILE))
+        policy_wdl_name = str(entry_points.get("policy_wdl", POLICY_WDL_ARTIFACT_FILE))
+        policy_module = _load_online_module(
+            artifact_dir,
+            filename=policy_name,
+            expected_digest=digests.get("policy"),
+            device=dev,
+        )
+        policy_wdl_module = _load_online_module(
+            artifact_dir,
+            filename=policy_wdl_name,
+            expected_digest=digests.get("policy_wdl"),
+            device=dev,
+        )
+
+    return InferenceSession(
+        manifest=manifest,
+        module=module,
+        device=dev,
+        policy_module=policy_module,
+        policy_wdl_module=policy_wdl_module,
+    )
 
 
 def load_default_session(
@@ -155,13 +244,14 @@ def load_default_session(
 
 
 def warm_export_batches(session: InferenceSession, *, seed: int = 0) -> None:
-    """Exercise root, leaf, and enemy-proposal batch shapes on the loaded export."""
+    """Exercise root, leaf, and enemy-proposal batch shapes on online entry points."""
     gen = torch.Generator(device="cpu")
     gen.manual_seed(seed)
     batches = (1, 4, 64)
     for batch in batches:
         x = torch.randn(batch, IN_CHANNELS, BOARD, BOARD, generator=gen)
-        session.forward(x)
+        session.forward_policy(x)
+        session.forward_policy_wdl(x)
 
 
 def write_session_meta(session: InferenceSession, path: Path) -> None:

@@ -1,0 +1,107 @@
+{
+  "decision": {
+    "criterion": "fbgemm and x86 online policy / policy+WDL exports reload and pass ONLINE_PARITY_LIMITS on pinned Linux CPU cores",
+    "failed_engines": [],
+    "passed_engines": [
+      "fbgemm",
+      "x86"
+    ],
+    "verdict": "yes"
+  },
+  "engines": [
+    {
+      "engine": "fbgemm",
+      "error": null,
+      "exported": true,
+      "full_float_to_export_mae": {
+        "army_margin_mae": 0.16998791694641113,
+        "castle_margin_mae": 0.5174980163574219,
+        "enemy_army_bins_mae": 0.14105506241321564,
+        "enemy_general_mae": 0.13475950062274933,
+        "hidden_castle_mae": 0.14043039083480835,
+        "hidden_owner_mae": 0.14257223904132843,
+        "land_margin_mae": 0.6403315663337708,
+        "pass_logit_mae": 1.0152614116668701,
+        "policy_mae": 0.13433775305747986,
+        "turns_to_termination_mae": 0.05279529094696045,
+        "wdl_mae": 0.7667680382728577
+      },
+      "host": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+      "online_float_to_export_mae": {
+        "policy": {
+          "pass_logit_mae": 0.11969733238220215,
+          "policy_mae": 0.14108844101428986
+        },
+        "policy_wdl": {
+          "pass_logit_mae": 0.1189117431640625,
+          "policy_mae": 0.1336280256509781,
+          "wdl_mae": 0.7909323573112488
+        }
+      },
+      "parity_limits": {
+        "pass_logit_mae": 1.0,
+        "policy_mae": 2.0,
+        "wdl_mae": 1.0
+      },
+      "parity_ok": true,
+      "qengine": "fbgemm",
+      "reloaded": true,
+      "supported": true
+    },
+    {
+      "engine": "x86",
+      "error": null,
+      "exported": true,
+      "full_float_to_export_mae": {
+        "army_margin_mae": 0.16998791694641113,
+        "castle_margin_mae": 0.5174980163574219,
+        "enemy_army_bins_mae": 0.1421477496623993,
+        "enemy_general_mae": 0.13587862253189087,
+        "hidden_castle_mae": 0.1409362554550171,
+        "hidden_owner_mae": 0.1430157870054245,
+        "land_margin_mae": 0.2086198478937149,
+        "pass_logit_mae": 0.5969388484954834,
+        "policy_mae": 0.13477501273155212,
+        "turns_to_termination_mae": 0.05279529094696045,
+        "wdl_mae": 0.43283987045288086
+      },
+      "host": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+      "online_float_to_export_mae": {
+        "policy": {
+          "pass_logit_mae": 0.11969733238220215,
+          "policy_mae": 0.14108844101428986
+        },
+        "policy_wdl": {
+          "pass_logit_mae": 0.1189117431640625,
+          "policy_mae": 0.1336280256509781,
+          "wdl_mae": 0.7909323573112488
+        }
+      },
+      "parity_limits": {
+        "pass_logit_mae": 1.0,
+        "policy_mae": 2.0,
+        "wdl_mae": 1.0
+      },
+      "parity_ok": true,
+      "qengine": "x86",
+      "reloaded": true,
+      "supported": true
+    }
+  ],
+  "host": {
+    "modal_wall_s": 37.665297999978065,
+    "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+    "python": "3.12.10",
+    "supported_qengines": [
+      "qnnpack",
+      "onednn",
+      "x86",
+      "fbgemm"
+    ],
+    "torch": "2.13.0+cpu"
+  },
+  "n_blocks": 12,
+  "part": "09a-phase5-online-entry-points",
+  "seat": "modal-cpu",
+  "seed": 0
+}

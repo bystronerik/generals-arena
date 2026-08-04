@@ -548,7 +548,8 @@ def measure_online_runtime(
         gen.manual_seed(0)
         for batch in (1, 4, 8, 16, 32, 64):
             x = torch.randn(int(batch), IN_CHANNELS, BOARD, BOARD, generator=gen)
-            session.forward(x)
+            session.forward_policy(x)
+            session.forward_policy_wdl(x)
     except Exception as exc:  # noqa: BLE001
         scheduler = dict(scheduler)
         scheduler["warmup_error"] = str(exc)

@@ -66,6 +66,8 @@ margin, final castle margin, and turns to termination.
 These heads use engine truth during training. They do not change game reward.
 At match time, the hidden-state heads are used only to propose particles after
 belief collapse. The margin and termination heads are not used by search.
+Online search loads dedicated policy and policy+WDL entry points so auxiliary
+heads are not evaluated on the belief or leaf path.
 
 ## Inference budget
 
@@ -76,6 +78,14 @@ Belief propagation uses one large enemy-proposal batch with up to 64 unique
 information tensors. Search uses batches of up to 4 pending leaf evaluations.
 Root and new enemy-table priors join a compatible search batch when possible.
 The batch sizes are **initial guesses**.
+
+Online match-time inference uses dedicated export entry points so auxiliary
+heads are not evaluated during search:
+
+- policy + pass for belief proposal and enemy priors;
+- policy + pass + WDL for root and leaf evaluation.
+
+The full-head graph remains available for recovery and diagnostics.
 
 The deployment gate measures both batch shapes, total forward-equivalents,
 tensor construction, belief transition, and search on one CPU core. A parameter

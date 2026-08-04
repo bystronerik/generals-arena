@@ -1,6 +1,7 @@
 """Export Morpheus float checkpoints to sandbox static 8-bit TorchScript artifacts."""
 from __future__ import annotations
 
+import copy
 import json
 import platform
 import warnings
@@ -24,11 +25,21 @@ from schema import (
     ARMY_SCALE_DEFAULT,
     N_ARMY_BINS,
     build_manifest,
+    sha256_file,
     write_manifest,
 )
 
 MANIFEST_NAME = "manifest.json"
 DEFAULT_ARTIFACT_FILE = "model.pt"
+POLICY_ARTIFACT_FILE = "model_policy.pt"
+POLICY_WDL_ARTIFACT_FILE = "model_policy_wdl.pt"
+
+# Soft upper bounds from recorded Part 04 / Part 00b qnnpack MAE (with margin).
+ONLINE_PARITY_LIMITS: dict[str, float] = {
+    "policy_mae": 2.0,
+    "pass_logit_mae": 1.0,
+    "wdl_mae": 1.0,
+}
 
 EXPORT_OUTPUT_NAMES = (
     "policy",
@@ -44,9 +55,12 @@ EXPORT_OUTPUT_NAMES = (
     "turns_to_termination",
 )
 
+POLICY_OUTPUT_NAMES = ("policy", "pass_logit")
+POLICY_WDL_OUTPUT_NAMES = ("policy", "pass_logit", "wdl")
+
 
 def expected_export_shapes(batch: int) -> list[list[int]]:
-    """Canonical TorchScript output shapes for one batch size."""
+    """Canonical TorchScript output shapes for one batch size (full heads)."""
     return [
         [batch, 9, BOARD, BOARD],
         [batch, 1],
@@ -60,6 +74,14 @@ def expected_export_shapes(batch: int) -> list[list[int]]:
         [batch, 1],
         [batch, 1],
     ]
+
+
+def expected_policy_shapes(batch: int) -> list[list[int]]:
+    return [[batch, 9, BOARD, BOARD], [batch, 1]]
+
+
+def expected_policy_wdl_shapes(batch: int) -> list[list[int]]:
+    return [[batch, 9, BOARD, BOARD], [batch, 1], [batch, 3]]
 
 
 def _supported_qengines() -> list[str]:
@@ -84,7 +106,7 @@ def _set_qengine(engine: str) -> None:
 
 
 class MorpheusExportWrapper(nn.Module):
-    """Tuple outputs for FX quantization and TorchScript trace."""
+    """Full-head tuple outputs for FX quantization and TorchScript trace."""
 
     def __init__(self, model: MorpheusNet) -> None:
         super().__init__()
@@ -119,6 +141,30 @@ class MorpheusExportWrapper(nn.Module):
             out.castle_margin,
             out.turns_to_termination,
         )
+
+
+class MorpheusPolicyExportWrapper(nn.Module):
+    """Policy + pass only — online belief proposal and enemy priors."""
+
+    def __init__(self, model: MorpheusNet) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        return self.model.forward_policy(x)
+
+
+class MorpheusPolicyWdlExportWrapper(nn.Module):
+    """Policy + pass + WDL — online root and leaf evaluation."""
+
+    def __init__(self, model: MorpheusNet) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        return self.model.forward_policy_wdl(x)
 
 
 def load_checkpoint_state(path: Path) -> dict[str, Any]:
@@ -165,8 +211,11 @@ class ExportResult:
     output_dir: Path
     manifest_path: Path
     artifact_path: Path
+    policy_artifact_path: Path
+    policy_wdl_artifact_path: Path
     qengine: str
     float_to_export_mae: dict[str, float]
+    online_float_to_export_mae: dict[str, dict[str, float]]
 
 
 def _mae(a: torch.Tensor, b: torch.Tensor) -> float:
@@ -176,11 +225,64 @@ def _mae(a: torch.Tensor, b: torch.Tensor) -> float:
 def _parity_errors(
     float_out: tuple[torch.Tensor, ...],
     export_out: tuple[torch.Tensor, ...],
+    names: tuple[str, ...] = EXPORT_OUTPUT_NAMES,
 ) -> dict[str, float]:
     return {
         f"{name}_mae": _mae(f, e)
-        for name, f, e in zip(EXPORT_OUTPUT_NAMES, float_out, export_out, strict=True)
+        for name, f, e in zip(names, float_out, export_out, strict=True)
     }
+
+
+def assert_online_parity(
+    mae: dict[str, float],
+    *,
+    limits: dict[str, float] = ONLINE_PARITY_LIMITS,
+) -> None:
+    """Raise if policy / pass / WDL MAE exceed recorded soft bounds."""
+    for key, limit in limits.items():
+        if key not in mae:
+            continue
+        value = float(mae[key])
+        if value != value:  # NaN
+            raise ValueError(f"online parity {key} is NaN")
+        if value > limit:
+            raise ValueError(
+                f"online parity {key}={value:.6f} exceeds limit {limit:.6f}"
+            )
+
+
+def _quantize_and_trace(
+    wrapper: nn.Module,
+    example: torch.Tensor,
+    artifact_path: Path,
+    *,
+    engine: str,
+) -> torch.jit.ScriptModule:
+    from torch.ao.quantization import get_default_qconfig_mapping
+    from torch.ao.quantization.quantize_fx import convert_fx, prepare_fx
+
+    wrapper.eval()
+    _set_qengine(engine)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        warnings.simplefilter("ignore", UserWarning)
+        qconfig_mapping = get_default_qconfig_mapping(engine)
+        prepared = prepare_fx(wrapper, qconfig_mapping, example_inputs=(example,))
+        with torch.no_grad():
+            for batch in (1, 4, 64):
+                prepared(torch.randn(batch, IN_CHANNELS, BOARD, BOARD))
+        quantized = convert_fx(prepared)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        warnings.simplefilter("ignore", DeprecationWarning)
+        with torch.no_grad():
+            traced = torch.jit.trace(quantized, example, check_trace=False, strict=False)
+        torch.jit.save(traced, str(artifact_path))
+
+    loaded = torch.jit.load(str(artifact_path))
+    loaded.eval()
+    return loaded
 
 
 def export_static_int8(
@@ -192,7 +294,7 @@ def export_static_int8(
     example_batch: int = 1,
     seed: int = 0,
 ) -> ExportResult:
-    """FX static PTQ export to ``output_dir`` with manifest and traced ``model.pt``."""
+    """FX static PTQ export with full + online policy / policy+WDL entry points."""
     output_dir.mkdir(parents=True, exist_ok=True)
     engine = qengine or _pick_qengine()
     supported = _supported_qengines()
@@ -202,40 +304,48 @@ def export_static_int8(
         )
     _set_qengine(engine)
 
-    wrapper = MorpheusExportWrapper(model)
-    wrapper.eval()
     torch.manual_seed(seed)
     example = torch.randn(example_batch, IN_CHANNELS, BOARD, BOARD)
 
+    # Separate float copies so FX prepare/convert cannot mutate a shared trunk.
+    full_wrapper = MorpheusExportWrapper(copy.deepcopy(model))
+    policy_wrapper = MorpheusPolicyExportWrapper(copy.deepcopy(model))
+    policy_wdl_wrapper = MorpheusPolicyWdlExportWrapper(copy.deepcopy(model))
     with torch.no_grad():
-        float_ref = wrapper(example)
-
-    from torch.ao.quantization import get_default_qconfig_mapping
-    from torch.ao.quantization.quantize_fx import convert_fx, prepare_fx
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", DeprecationWarning)
-        warnings.simplefilter("ignore", UserWarning)
-        qconfig_mapping = get_default_qconfig_mapping(engine)
-        prepared = prepare_fx(wrapper, qconfig_mapping, example_inputs=(example,))
-        with torch.no_grad():
-            for batch in (1, 4, 64):
-                prepared(torch.randn(batch, IN_CHANNELS, BOARD, BOARD))
-        quantized = convert_fx(prepared)
+        float_full = full_wrapper(example)
+        float_policy = policy_wrapper(example)
+        float_policy_wdl = policy_wdl_wrapper(example)
 
     artifact_path = output_dir / DEFAULT_ARTIFACT_FILE
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        warnings.simplefilter("ignore", DeprecationWarning)
-        with torch.no_grad():
-            traced = torch.jit.trace(quantized, example, check_trace=False, strict=False)
-        torch.jit.save(traced, str(artifact_path))
+    policy_path = output_dir / POLICY_ARTIFACT_FILE
+    policy_wdl_path = output_dir / POLICY_WDL_ARTIFACT_FILE
 
-    loaded = torch.jit.load(str(artifact_path))
-    loaded.eval()
+    loaded_full = _quantize_and_trace(
+        full_wrapper, example, artifact_path, engine=engine
+    )
+    loaded_policy = _quantize_and_trace(
+        policy_wrapper, example, policy_path, engine=engine
+    )
+    loaded_policy_wdl = _quantize_and_trace(
+        policy_wdl_wrapper, example, policy_wdl_path, engine=engine
+    )
+
     with torch.no_grad():
-        export_out = loaded(example)
-    parity = _parity_errors(float_ref, export_out)
+        export_full = loaded_full(example)
+        export_policy = loaded_policy(example)
+        export_policy_wdl = loaded_policy_wdl(example)
+
+    parity = _parity_errors(float_full, export_full)
+    online_parity = {
+        "policy": _parity_errors(
+            float_policy, export_policy, names=POLICY_OUTPUT_NAMES
+        ),
+        "policy_wdl": _parity_errors(
+            float_policy_wdl, export_policy_wdl, names=POLICY_WDL_OUTPUT_NAMES
+        ),
+    }
+    assert_online_parity(online_parity["policy"])
+    assert_online_parity(online_parity["policy_wdl"])
 
     arch = architecture_summary(model)
     quantization = {
@@ -244,6 +354,7 @@ def export_static_int8(
         "runtime": f"torch.jit.trace+fx_static_{engine}",
         "group_norm_float_fallback": True,
         "float_to_export_mae": parity,
+        "online_float_to_export_mae": online_parity,
         "host": platform.platform(),
     }
     run_meta = training_run or {
@@ -261,6 +372,15 @@ def export_static_int8(
         army_scale=ARMY_SCALE_DEFAULT,
         army_bin_edges=ARMY_BIN_EDGES,
     )
+    manifest["online_entry_points"] = {
+        "policy": POLICY_ARTIFACT_FILE,
+        "policy_wdl": POLICY_WDL_ARTIFACT_FILE,
+    }
+    # Digests for online artifacts (full weights_sha256 already in build_manifest).
+    manifest["online_weights_sha256"] = {
+        "policy": sha256_file(policy_path),
+        "policy_wdl": sha256_file(policy_wdl_path),
+    }
     manifest_path = output_dir / MANIFEST_NAME
     write_manifest(manifest_path, manifest)
 
@@ -268,8 +388,11 @@ def export_static_int8(
         output_dir=output_dir,
         manifest_path=manifest_path,
         artifact_path=artifact_path,
+        policy_artifact_path=policy_path,
+        policy_wdl_artifact_path=policy_wdl_path,
         qengine=engine,
         float_to_export_mae=parity,
+        online_float_to_export_mae=online_parity,
     )
 
 
@@ -297,10 +420,38 @@ def forward_exported(
     session: torch.jit.ScriptModule,
     x: torch.Tensor,
 ) -> MorpheusOutput:
-    """Run a traced export and rebuild the named output tuple."""
+    """Run a traced full export and rebuild the named output tuple."""
     outputs = session(x)
     if len(outputs) != len(EXPORT_OUTPUT_NAMES):
         raise ValueError(
             f"export returned {len(outputs)} tensors; expected {len(EXPORT_OUTPUT_NAMES)}"
         )
     return MorpheusOutput(*outputs)
+
+
+def forward_policy_exported(
+    session: torch.jit.ScriptModule,
+    x: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Run a traced policy-only online export."""
+    outputs = session(x)
+    if len(outputs) != len(POLICY_OUTPUT_NAMES):
+        raise ValueError(
+            f"policy export returned {len(outputs)} tensors; "
+            f"expected {len(POLICY_OUTPUT_NAMES)}"
+        )
+    return outputs[0], outputs[1]
+
+
+def forward_policy_wdl_exported(
+    session: torch.jit.ScriptModule,
+    x: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Run a traced policy+WDL online export."""
+    outputs = session(x)
+    if len(outputs) != len(POLICY_WDL_OUTPUT_NAMES):
+        raise ValueError(
+            f"policy_wdl export returned {len(outputs)} tensors; "
+            f"expected {len(POLICY_WDL_OUTPUT_NAMES)}"
+        )
+    return outputs[0], outputs[1], outputs[2]

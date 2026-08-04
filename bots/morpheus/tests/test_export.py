@@ -12,6 +12,10 @@ pytestmark = pytest.mark.morpheus
 from export import (
     DEFAULT_ARTIFACT_FILE,
     MANIFEST_NAME,
+    ONLINE_PARITY_LIMITS,
+    POLICY_ARTIFACT_FILE,
+    POLICY_WDL_ARTIFACT_FILE,
+    assert_online_parity,
     export_from_checkpoint,
     load_checkpoint_state,
 )
@@ -49,6 +53,8 @@ def test_export_writes_manifest_and_loads(tiny_checkpoint: Path, tmp_path: Path)
     result = export_from_checkpoint(tiny_checkpoint, out)
     assert result.manifest_path.is_file()
     assert result.artifact_path.is_file()
+    assert result.policy_artifact_path.is_file()
+    assert result.policy_wdl_artifact_path.is_file()
     manifest = read_manifest(result.manifest_path)
     assert manifest["manifest_version"] == MANIFEST_VERSION
     assert manifest["tensor_schema"] == TENSOR_SCHEMA_VERSION
@@ -58,8 +64,17 @@ def test_export_writes_manifest_and_loads(tiny_checkpoint: Path, tmp_path: Path)
     assert manifest["weights_sha256"] == sha256_file(result.artifact_path)
     assert "engine" in manifest["quantization"]
     assert manifest["architecture"]["n_army_bins"] == N_ARMY_BINS
+    assert manifest["online_entry_points"]["policy"] == POLICY_ARTIFACT_FILE
+    assert manifest["online_entry_points"]["policy_wdl"] == POLICY_WDL_ARTIFACT_FILE
+    assert manifest["online_weights_sha256"]["policy"] == sha256_file(
+        result.policy_artifact_path
+    )
+    assert_online_parity(result.online_float_to_export_mae["policy"])
+    assert_online_parity(result.online_float_to_export_mae["policy_wdl"])
 
     session = load_session(out)
+    assert session.policy_module is not None
+    assert session.policy_wdl_module is not None
     x = torch.randn(1, IN_CHANNELS, BOARD, BOARD)
     out_fwd = session.forward(x)
     assert out_fwd.policy.shape == (1, 9, BOARD, BOARD)
@@ -72,10 +87,18 @@ def test_export_writes_manifest_and_loads(tiny_checkpoint: Path, tmp_path: Path)
     assert out_fwd.army_margin.shape == (1, 1)
     assert out_fwd.castle_margin.shape == (1, 1)
     assert out_fwd.turns_to_termination.shape == (1, 1)
-    # Aux heads must come from the export, not silent zeros.
+    # Aux heads must come from the full export, not silent zeros.
     assert float(out_fwd.hidden_owner.abs().sum()) + float(
         out_fwd.enemy_army_bins.abs().sum()
     ) > 0.0
+
+    policy, pass_logit = session.forward_policy(x)
+    assert policy.shape == (1, 9, BOARD, BOARD)
+    assert pass_logit.shape == (1, 1)
+    policy2, pass2, wdl = session.forward_policy_wdl(x)
+    assert policy2.shape == (1, 9, BOARD, BOARD)
+    assert pass2.shape == (1, 1)
+    assert wdl.shape == (1, 3)
 
 
 def test_manifest_validation_rejects_bad_digest(tmp_path: Path, tiny_checkpoint: Path):
@@ -132,3 +155,10 @@ def test_checkpoint_round_trip(tmp_path: Path):
     x = torch.randn(2, IN_CHANNELS, BOARD, BOARD)
     with torch.no_grad():
         assert torch.allclose(model(x).policy, restored(x).policy)
+
+
+def test_online_parity_limits_reject_excess():
+    with pytest.raises(ValueError, match="policy_mae"):
+        assert_online_parity(
+            {"policy_mae": ONLINE_PARITY_LIMITS["policy_mae"] + 0.1},
+        )

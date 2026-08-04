@@ -24,7 +24,12 @@ Array = np.ndarray
 
 @dataclass
 class NetworkEvaluator:
-    """``SearchEvaluator`` that runs the loaded static 8-bit export."""
+    """``SearchEvaluator`` that runs dedicated online export entry points.
+
+    Belief proposal and enemy priors use policy-only inference. Root and leaf
+    evaluation use policy plus WDL. Auxiliary heads are not computed on the
+    online search path.
+    """
 
     session: InferenceSession
     previous_action: Optional[tuple[int, int, int, int, int]] = None
@@ -58,11 +63,11 @@ class NetworkEvaluator:
         from_root: bool,
     ) -> tuple[Array, float]:
         x = self._tensor(obs, memory, belief)
-        out = self.session.forward(x)
+        policy, pass_logit, wdl_logits = self.session.forward_policy_wdl(x)
         mask = torch.from_numpy(np.asarray(legal_mask(obs, memory), dtype=bool)).unsqueeze(0)
-        prior_t = legal_normalized_policy(out.policy, out.pass_logit, mask)
+        prior_t = legal_normalized_policy(policy, pass_logit, mask)
         prior = prior_t.squeeze(0).detach().cpu().numpy().astype(np.float64)
-        value_t = backup_value(out.wdl_logits, from_root=from_root)
+        value_t = backup_value(wdl_logits, from_root=from_root)
         return prior, float(value_t.squeeze(0).item())
 
     def evaluate_many(
@@ -83,10 +88,10 @@ class NetworkEvaluator:
             masks.append(np.asarray(legal_mask(obs, memory), dtype=bool))
             from_roots.append(bool(from_root))
         x = torch.stack(tensors, dim=0)
-        out = self.session.forward(x)
+        policy, pass_logit, wdl_logits = self.session.forward_policy_wdl(x)
         mask_t = torch.from_numpy(np.stack(masks, axis=0))
-        prior_t = legal_normalized_policy(out.policy, out.pass_logit, mask_t)
-        values_t = backup_value(out.wdl_logits, from_root=True)
+        prior_t = legal_normalized_policy(policy, pass_logit, mask_t)
+        values_t = backup_value(wdl_logits, from_root=True)
         results: list[tuple[Array, float]] = []
         for i, from_root in enumerate(from_roots):
             prior = prior_t[i].detach().cpu().numpy().astype(np.float64)
@@ -102,6 +107,6 @@ class NetworkEvaluator:
         if batch.ndim == 3:
             batch = batch[None, ...]
         x = torch.from_numpy(batch)
-        out = self.session.forward(x)
-        logits = flatten_policy_logits(out.policy, out.pass_logit)
+        policy, pass_logit = self.session.forward_policy(x)
+        logits = flatten_policy_logits(policy, pass_logit)
         return logits.detach().cpu().numpy().astype(np.float64)

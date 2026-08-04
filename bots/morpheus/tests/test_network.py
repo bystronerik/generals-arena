@@ -89,6 +89,22 @@ def test_parameter_budget_near_initial_guess():
     assert 200_000 <= count <= 450_000
 
 
+def test_online_entry_methods_skip_auxiliary_computation():
+    model = make_model(seed=1, n_blocks=3)
+    x = torch.randn(1, IN_CHANNELS, BOARD, BOARD)
+    with torch.no_grad():
+        policy, pass_logit = model.forward_policy(x)
+        p2, pass2, wdl = model.forward_policy_wdl(x)
+        full = model(x)
+    assert policy.shape == full.policy.shape
+    assert pass_logit.shape == full.pass_logit.shape
+    assert torch.allclose(policy, full.policy)
+    assert torch.allclose(pass_logit, full.pass_logit)
+    assert torch.allclose(p2, full.policy)
+    assert torch.allclose(wdl, full.wdl_logits)
+    assert pass2.shape == full.pass_logit.shape
+
+
 def test_army_bin_edges_versioned():
     assert len(ARMY_BIN_EDGES) == SCHEMA_BINS + 1
     assert ARMY_BIN_EDGES[0] == 0.0

@@ -29,7 +29,8 @@ class Agent:
         gen.manual_seed(0)
         for batch in shapes:
             x = torch.randn(int(batch), IN_CHANNELS, BOARD, BOARD, generator=gen)
-            self._session.forward(x)
+            self._session.forward_policy(x)
+            self._session.forward_policy_wdl(x)
         self._evaluator = NetworkEvaluator(self._session)
         runtime_cfg = self._deployment.to_runtime_config()
         runtime_cfg.max_proposal_batch = int(self._deployment.max_proposal_batch)
