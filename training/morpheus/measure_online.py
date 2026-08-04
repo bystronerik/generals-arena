@@ -155,7 +155,7 @@ def _grid_positions(side: int) -> np.ndarray:
 
 def _percentile(samples: list[float], q: float) -> float:
     if not samples:
-        return float("nan")
+        return 0.0
     if q >= 0.99:
         return nearest_rank_p99(samples)
     ordered = sorted(float(x) for x in samples)
@@ -289,9 +289,14 @@ def _summarize_scenario(rows: list[dict[str, Any]]) -> dict[str, Any]:
         name: (
             nearest_rank_p99(values)
             if values
-            else float("nan")
+            else 0.0
         )
         for name, values in components.items()
+    }
+    # Keep every component finite for strict JSON and admission calibration.
+    offline = {
+        name: (0.0 if value != value else float(value))
+        for name, value in offline.items()
     }
     return {
         "first_p50_ms": _percentile(first, 0.50),
@@ -333,26 +338,40 @@ def _calibrate_offline_p99(
         target_simulations=max(4, int(deployment.min_simulations)),
         p99_window=max(8, int(deployment.p99_window)),
     )
+    # Cold-start rehearsal: discard estimator samples after a short warm pass.
+    warm = _run_scenario(
+        session=session,
+        deployment=dep,
+        side=side,
+        turns=4,
+        seed=seed,
+    )
+    del warm
     row = _run_scenario(
         session=session,
         deployment=dep,
         side=side,
-        turns=max(6, dep.min_simulations + 2),
-        seed=seed,
+        turns=max(8, dep.min_simulations + 4),
+        seed=seed + 1,
     )
     offline: dict[str, float] = {}
     for name in COST_COMPONENTS:
         samples = row["components"].get(name, [])
+        if name == "belief_proposal" and len(samples) >= 6:
+            # Early turns keep many unique enemy infos; that spike must not
+            # lock admission forever. Seed offline p99 from the warmer half.
+            samples = list(samples[len(samples) // 2 :])
         if len(samples) >= 3:
             # Drop the coldest sample, then take nearest-rank p99 of the rest.
-            warm = sorted(float(x) for x in samples)[1:]
-            offline[name] = float(nearest_rank_p99(warm))
+            warm_s = sorted(float(x) for x in samples)[1:]
+            offline[name] = float(nearest_rank_p99(warm_s))
         elif samples:
             offline[name] = float(max(samples))
         else:
             offline[name] = float(deployment.offline_p99_ms.get(name, 1.0))
         if offline[name] != offline[name]:  # NaN guard
             offline[name] = float(deployment.offline_p99_ms.get(name, 1.0))
+        offline[name] = max(0.0, float(offline[name]))
     return offline
 
 
@@ -502,10 +521,37 @@ def measure_online_runtime(
     runtime_out: Optional[Path] = None,
     bot_deployment_out: Optional[Path] = None,
 ) -> dict[str, Any]:
+    import hashlib
+    import subprocess
+
+    sweep_path = Path(sweep_path)
     sweep = load_sweep(sweep_path)
+    sweep_bytes = sweep_path.read_bytes()
+    sweep_digest = hashlib.sha256(sweep_bytes).hexdigest()
+    try:
+        commit_hash = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=_REPO,
+            text=True,
+        ).strip()
+    except Exception:  # noqa: BLE001
+        commit_hash = ""
     cpu = _cpu_identity()
     scheduler = pin_single_core(core) if single_core else {"single_core": False}
     session = load_default_session()
+    # Warm proposal / leaf batch shapes so cold FX quantize is not the offline p99.
+    try:
+        import torch
+        from network import BOARD, IN_CHANNELS
+
+        gen = torch.Generator(device="cpu")
+        gen.manual_seed(0)
+        for batch in (1, 4, 8, 16, 32, 64):
+            x = torch.randn(int(batch), IN_CHANNELS, BOARD, BOARD, generator=gen)
+            session.forward(x)
+    except Exception as exc:  # noqa: BLE001
+        scheduler = dict(scheduler)
+        scheduler["warmup_error"] = str(exc)
     manifest = session.manifest
     artifact_runtime = str(manifest.get("runtime", ""))
     widths = _part04_widths(sweep)
@@ -572,6 +618,11 @@ def measure_online_runtime(
                                     dep.offline_p99_ms = dict(calib_cache[cache_key])
                                     belief_root = (
                                         float(dep.offline_p99_ms.get("belief_proposal", 0.0))
+                                        + float(
+                                            dep.offline_p99_ms.get(
+                                                "particle_transitions", 0.0
+                                            )
+                                        )
                                         + float(dep.offline_p99_ms.get("root_inference", 0.0))
                                         + float(dep.admission_guard_ms)
                                     )
@@ -585,7 +636,11 @@ def measure_online_runtime(
                                         "search_depth": depth,
                                         "normal_deadline_ms": deadline_ms,
                                     }
-                                    if belief_root > dep.normal_deadline_ms:
+                                    # Skip only configs whose calibrated belief+root
+                                    # is far past the deadline (2x). Early-turn
+                                    # uniqueness spikes inflate p99; those configs
+                                    # still need a full scenario measurement.
+                                    if belief_root > 2.0 * dep.normal_deadline_ms:
                                         trials.append(
                                             {
                                                 "config": cfg_key,
@@ -626,6 +681,7 @@ def measure_online_runtime(
                                         for seed in seeds
                                     ]
                                     summary = _summarize_scenario(rows)
+                                    summary["belief_plus_root_forecast_ms"] = belief_root
                                     ok, reasons = _passes_gates(summary, dep)
                                     trial = {
                                         "config": cfg_key,
@@ -794,6 +850,9 @@ def measure_online_runtime(
         "part": "09-online-qualification",
         "verdict": verdict,
         "reasons_no": reasons_no,
+        "sweep_config_path": str(sweep_path),
+        "sweep_config_digest": sweep_digest,
+        "commit_hash": commit_hash,
         "cpu": cpu,
         "scheduler": scheduler,
         "artifact_runtime": artifact_runtime,

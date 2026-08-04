@@ -189,6 +189,101 @@ def test_proposal_dedupe_and_injectable_actions():
     assert all(len(a) == 5 for a in actions)
 
 
+def test_proposal_pre_tensor_dedupe_and_policy_parity():
+    """Phase 2: dedupe before tensors; logits, masks, and fixed-seed samples match."""
+    from action import legal_mask
+    from memory import update_memory
+    from proposal import (
+        dedupe_proposal_keys,
+        enemy_info_tensor,
+        proposal_info_key,
+        sample_from_probs,
+        _softmax_masked,
+    )
+
+    state = create_initial_state(_open_board(12, 12))
+    obs = emit_observation(state, 0)
+    rng = np.random.default_rng(11)
+    belief = initialize_belief(
+        obs,
+        seat=0,
+        rng=rng,
+        config=BeliefConfig(n_particles=8, min_general_distance=5),
+    )
+
+    enemy_obs_list = []
+    enemy_mem_list = []
+    keys = []
+    for particle in belief.particles:
+        enemy_obs = emit_observation(
+            particle.state, belief.enemy_seat, as_arrays=True
+        )
+        enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
+        enemy_obs_list.append(enemy_obs)
+        enemy_mem_list.append(enemy_mem)
+        keys.append(
+            proposal_info_key(enemy_obs, enemy_mem, particle.enemy_prev_action)
+        )
+    unique_indices, mapping = dedupe_proposal_keys(keys)
+    assert len(unique_indices) <= belief.n
+    assert len(mapping) == belief.n
+    assert max(mapping) == len(unique_indices) - 1
+
+    # Deterministic fake policy: logits proportional to action index.
+    def fake_policy(batch):
+        batch = np.asarray(batch)
+        B = batch.shape[0]
+        logits = np.tile(np.arange(3970, dtype=np.float64), (B, 1))
+        return logits
+
+    unique_tensors = []
+    unique_masks = []
+    for p_idx in unique_indices:
+        particle = belief.particles[p_idx]
+        e_obs = enemy_obs_list[p_idx]
+        e_mem = enemy_mem_list[p_idx]
+        unique_tensors.append(
+            enemy_info_tensor(particle, belief, enemy_obs=e_obs, enemy_mem=e_mem)
+        )
+        unique_masks.append(legal_mask(e_obs, e_mem))
+    stacked = fake_policy(np.stack(unique_tensors, axis=0))
+
+    expected = []
+    rng_a = np.random.default_rng(42)
+    for u_idx in mapping:
+        probs = _softmax_masked(stacked[u_idx], unique_masks[u_idx])
+        expected.append(sample_from_probs(probs, rng_a))
+
+    rng_b = np.random.default_rng(42)
+    got = propose_enemy_actions(belief, rng_b, policy=fake_policy)
+    assert got == expected
+
+    # Belief survival / ESS still hold after a pass update with injected actions.
+    next_state, _ = transition(state, np.stack([PASS_ACTION, PASS_ACTION]))
+    real = emit_observation(next_state, 0)
+    mem = update_memory(empty_memory(obs.H, obs.W), obs)
+    mem = update_memory(mem, real)
+    nxt = update_belief(
+        belief,
+        pass_action(),
+        real,
+        mem,
+        np.random.default_rng(7),
+        enemy_actions=[pass_action()] * belief.n,
+    )
+    assert any(p.weight > 0 for p in nxt.particles)
+    weights = [p.weight for p in nxt.particles if p.weight > 0]
+    assert ess(weights) > 0.0
+
+
+def test_array_observation_matches_wire():
+    state = create_initial_state(_open_board(8, 8))
+    wire = emit_observation(state, 0, as_arrays=False)
+    arr = emit_observation(state, 0, as_arrays=True)
+    assert observations_match(wire, arr)
+    assert observations_match(arr, wire)
+
+
 def test_reservoir_replace_and_sample():
     state = create_initial_state(_open_board(12, 12))
     obs = emit_observation(state, 0)

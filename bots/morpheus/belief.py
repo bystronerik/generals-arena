@@ -413,7 +413,7 @@ def filter_step(
         actions[belief.seat] = np.asarray(my_action, dtype=np.int32)
         actions[belief.enemy_seat] = np.asarray(enemy_action, dtype=np.int32)
         next_state, _info = transition(particle.state, actions)
-        sim = emit_observation(next_state, belief.seat)
+        sim = emit_observation(next_state, belief.seat, as_arrays=True)
         if not observations_match(sim, real_obs):
             survivors.append(
                 Particle(
@@ -426,7 +426,9 @@ def filter_step(
             )
             continue
 
-        enemy_obs = emit_observation(next_state, belief.enemy_seat)
+        enemy_obs = emit_observation(
+            next_state, belief.enemy_seat, as_arrays=True
+        )
         enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
         frame = HistoryFrame(
             state=particle.state,

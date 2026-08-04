@@ -35,7 +35,9 @@ DEFAULT_OUT = (
 
 def _write_report(out: Path, report: dict) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    out.write_text(
+        json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+    )
 
 
 def cmd_army_normalization(args: argparse.Namespace) -> int:

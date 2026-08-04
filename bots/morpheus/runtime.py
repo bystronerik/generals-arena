@@ -20,11 +20,12 @@ from belief import (
     BeliefState,
     Action5,
     ess,
+    filter_step,
     initialize_belief,
 )
 from memory import VisibleMemory, empty_memory, update_memory
-from proposal import PolicyFn
-from recovery import update_belief
+from proposal import PolicyFn, propose_enemy_actions
+from recovery import recover_belief
 from search import SearchConfig, SearchController, SearchEvaluator, UniformEvaluator
 
 ClockFn = Callable[[], float]
@@ -74,6 +75,13 @@ DEFAULT_OFFLINE_P99_MS: dict[str, float] = {
 }
 
 PASS: Action5 = (1, 0, 0, 0, 0)
+
+FORWARD_CONSUMERS = (
+    "belief_proposal",
+    "root",
+    "enemy_prior",
+    "leaf_batch",
+)
 
 
 class FallbackLevel(str, Enum):
@@ -163,6 +171,7 @@ class TurnMetrics:
     move_ms: int = 0
     completed_simulations: int = 0
     forward_equivalents: int = 0
+    forward_by_consumer: dict[str, int] = field(default_factory=dict)
     belief_ess: int = 0  # ess * 1000
     recovery: int = 0  # 0/1
     tree_size: int = 0
@@ -241,6 +250,7 @@ class RuntimeController:
         # Per-turn scratch (also mirrored onto Agent for probe.py).
         self.completed_simulations = 0
         self.forward_equivalents = 0
+        self.forward_by_consumer: dict[str, int] = {name: 0 for name in FORWARD_CONSUMERS}
         self.belief_ess = 0
         self.recovery = 0
         self.tree_size = 0
@@ -355,6 +365,7 @@ class RuntimeController:
         belief_update_ok = first_move  # first move allocates; later turns track update
         self.search.tree.completed_simulations = 0
         self.forward_equivalents = 0
+        self.forward_by_consumer = {name: 0 for name in FORWARD_CONSUMERS}
         self.metrics = TurnMetrics()
         recovery_flag = 0
 
@@ -371,37 +382,73 @@ class RuntimeController:
             # 2. Update visible memory and particle belief.
             self.memory = update_memory(self.memory, obs)
             if self.belief is not None and self.belief.n > 0:
-                if self.can_admit("belief_proposal", deadline) and self.can_admit(
-                    "particle_transitions", deadline
-                ):
-                    def _upd():
-                        return update_belief(
+                remaining_ms = (deadline - self._now()) * 1000.0
+                guard = self.config.admission_guard_ms
+                admit_belief = self.can_admit(
+                    "belief_proposal", deadline
+                ) and self.can_admit("particle_transitions", deadline)
+                if not admit_belief:
+                    # Warm-up lockout: one high-diversity spike makes forecast
+                    # = max(sample) until the window fills, so belief never
+                    # remeasures. Probe again while offline p99 still fits.
+                    prop_est = self._estimators["belief_proposal"]
+                    tr_est = self._estimators["particle_transitions"]
+                    offline_fit = (
+                        not prop_est.warmed_up
+                        and remaining_ms
+                        >= float(prop_est.offline_p99_ms) + guard
+                        and remaining_ms
+                        >= float(tr_est.offline_p99_ms) + guard
+                    )
+                    admit_belief = offline_fit
+                if admit_belief:
+                    policy = self.proposal_policy
+                    if policy is not None:
+                        def _counting_policy(batch, _policy=policy):
+                            n = int(np.asarray(batch).shape[0])
+                            self.forward_by_consumer["belief_proposal"] += n
+                            self.forward_equivalents += n
+                            return _policy(batch)
+
+                        policy = _counting_policy
+
+                    t0 = self._now()
+                    self._charge("belief_proposal")
+                    enemy_actions = propose_enemy_actions(
+                        self.belief,
+                        self.rng,
+                        policy=policy,
+                        max_proposal_batch=self.config.max_proposal_batch,
+                    )
+                    propose_ms = (self._now() - t0) * 1000.0
+                    if self.charge_fixed_forecasts:
+                        propose_ms = self.forecast_ms("belief_proposal")
+                    self._observe("belief_proposal", propose_ms)
+
+                    t1 = self._now()
+                    self._charge("particle_transitions")
+                    nxt = filter_step(
+                        self.belief,
+                        self._last_action,
+                        obs,
+                        enemy_actions,
+                        self.rng,
+                    )
+                    if not any(p.weight > 0.0 for p in nxt.particles):
+                        nxt = recover_belief(
                             self.belief,
                             self._last_action,
                             obs,
                             self.memory,
                             self.rng,
                             policy=self.proposal_policy,
-                            max_proposal_batch=self.config.max_proposal_batch,
                         )
-
-                    admitted, nxt = self._run_admitted(
-                        "belief_proposal", deadline, _upd
-                    )
-                    if admitted and nxt is not None:
-                        self.belief = nxt  # type: ignore[assignment]
-                        belief_update_ok = True
-                        self._observe(
-                            "particle_transitions",
-                            self.forecast_ms("particle_transitions")
-                            if self.charge_fixed_forecasts
-                            else 0.0,
-                        )
-                        if self.charge_fixed_forecasts:
-                            self._charge("particle_transitions")
-                    else:
-                        recovery_flag = 1
-                        self._pending_recovery = True
+                    filter_ms = (self._now() - t1) * 1000.0
+                    if self.charge_fixed_forecasts:
+                        filter_ms = self.forecast_ms("particle_transitions")
+                    self._observe("particle_transitions", filter_ms)
+                    self.belief = nxt
+                    belief_update_ok = True
                 else:
                     # Keep last valid set; lower reported ESS; defer recovery.
                     recovery_flag = 1
@@ -435,18 +482,25 @@ class RuntimeController:
             if admitted and root is not None:
                 has_root_result = True
                 self.forward_equivalents += 1
+                self.forward_by_consumer["root"] += 1
                 prior_full = self.search.last_root_prior
                 if prior_full is None:
                     prior_full, _ = self.evaluator.evaluate(
                         obs, self.memory, belief, from_root=True
                     )
                     self.forward_equivalents += 1
+                    self.forward_by_consumer["root"] += 1
                 mask = legal_mask(obs, self.memory)
                 self._policy_fallback = highest_prior_legal(prior_full, mask)
                 action = self._policy_fallback
-                self._observe("hashing", self.forecast_ms("hashing"))
+                # Hashing already ran inside ensure_root / reuse_or_reset.
+                # Record elapsed (not a forecast) so estimators stay finite.
+                t_hash = self._now()
+                self._charge("hashing")
+                hash_ms = (self._now() - t_hash) * 1000.0
                 if self.charge_fixed_forecasts:
-                    self._charge("hashing")
+                    hash_ms = self.forecast_ms("hashing")
+                self._observe("hashing", hash_ms)
 
         # 6–7. Search in batches of up to pending_leaf_batch.
         search_t0 = self._now()
@@ -466,16 +520,22 @@ class RuntimeController:
             search=self.search,
         )
 
-        # Reply cost accounting (serialization is cheap; still recorded).
+        # Reply cost accounting: wall elapsed (serialization is at the caller).
         if self.can_admit("reply", deadline):
-            self._observe("reply", self.forecast_ms("reply"))
+            t_reply = self._now()
+            self._charge("reply")
+            reply_ms = (self._now() - t_reply) * 1000.0
             if self.charge_fixed_forecasts:
-                self._charge("reply")
+                reply_ms = self.forecast_ms("reply")
+            self._observe("reply", reply_ms)
 
         self._last_action = action
         set_prev = getattr(self.evaluator, "set_previous_action", None)
         if callable(set_prev):
             set_prev(action)
+        # Finite samples for components that may not run every turn.
+        if "enemy_prior_batch" not in self.metrics.component_ms:
+            self._observe("enemy_prior_batch", 0.0)
         self._publish_metrics(
             action_level=level,
             recovery_flag=recovery_flag,
@@ -521,9 +581,21 @@ class RuntimeController:
                     belief, freeze_snapshot=True, freeze_widening=freeze_widening
                 )
                 elapsed = (self._now() - t0) * 1000.0
+                prior_ms = float(self.search.last_select_enemy_prior_ms)
+                prior_n = int(self.search.last_select_enemy_prior_forwards)
                 if self.charge_fixed_forecasts:
-                    elapsed = self.forecast_ms("selection")
-                self._observe("selection", elapsed)
+                    # Injected clocks keep selection as one forecast; still
+                    # record a finite enemy-prior sample (0 when unused).
+                    selection_ms = self.forecast_ms("selection")
+                    prior_ms = 0.0
+                else:
+                    selection_ms = max(0.0, elapsed - prior_ms)
+                self._observe("selection", selection_ms)
+                # Always record enemy-prior (including 0) so offline p99 stays finite.
+                self._observe("enemy_prior_batch", prior_ms)
+                if prior_n > 0:
+                    self.forward_equivalents += prior_n
+                    self.forward_by_consumer["enemy_prior"] += prior_n
                 paths.append(path)
 
             if not paths:
@@ -542,6 +614,7 @@ class RuntimeController:
                 elapsed = self.forecast_ms("leaf_batch")
             self._observe("leaf_batch", elapsed)
             self.forward_equivalents += len(paths)
+            self.forward_by_consumer["leaf_batch"] += len(paths)
 
             for path, value in zip(paths, values):
                 if not self.can_admit("backup", deadline):
@@ -592,6 +665,7 @@ class RuntimeController:
         self.metrics.move_ms = self.move_ms
         self.metrics.completed_simulations = self.completed_simulations
         self.metrics.forward_equivalents = self.forward_equivalents
+        self.metrics.forward_by_consumer = dict(self.forward_by_consumer)
         self.metrics.belief_ess = self.belief_ess
         self.metrics.recovery = self.recovery
         self.metrics.tree_size = self.tree_size

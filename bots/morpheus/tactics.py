@@ -91,9 +91,16 @@ def visible_enemy_source_interaction_indices(
     return out
 
 
-def mandatory_action_indices(obs, memory: VisibleMemory) -> list[int]:
+def mandatory_action_indices(
+    obs,
+    memory: VisibleMemory,
+    *,
+    mask: Optional[Array] = None,
+    cost_grid: Optional[Array] = None,
+) -> list[int]:
     """Pass + legal general captures + visible enemy-source interactions."""
-    mask = legal_mask(obs, memory)
+    if mask is None:
+        mask = legal_mask(obs, memory, cost_grid=cost_grid)
     out: list[int] = []
     seen: set[int] = set()
     for idx in (

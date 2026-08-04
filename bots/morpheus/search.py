@@ -94,6 +94,9 @@ class SearchController:
         default_factory=lambda: np.random.default_rng(0)
     )
     last_root_prior: Optional[Array] = field(default=None, init=False)
+    # Phase 0 measurement: enemy-prior network time charged outside selection.
+    last_select_enemy_prior_ms: float = field(default=0.0, init=False)
+    last_select_enemy_prior_forwards: int = field(default=0, init=False)
 
     def __post_init__(self) -> None:
         self.tree = SearchTree(
@@ -102,6 +105,8 @@ class SearchController:
             seat=self.seat,
         )
         self.last_root_prior = None
+        self.last_select_enemy_prior_ms = 0.0
+        self.last_select_enemy_prior_forwards = 0
 
     def ensure_root(
         self,
@@ -181,9 +186,14 @@ class SearchController:
         memory: VisibleMemory,
         prior: Array,
     ) -> None:
-        mask = legal_mask(obs, memory)
+        from action import live_build_cost
+
+        cost_grid = live_build_cost(obs, memory)
+        mask = legal_mask(obs, memory, cost_grid=cost_grid)
         limit = self_widening_limit(node.N)
-        mandatory = mandatory_action_indices(obs, memory)
+        mandatory = mandatory_action_indices(
+            obs, memory, mask=mask, cost_grid=cost_grid
+        )
         candidates = policy_ordered_candidates(
             prior, mask, mandatory=mandatory, limit=limit
         )
@@ -197,8 +207,12 @@ class SearchController:
         particle: Particle,
         belief: BeliefState,
     ) -> tuple[bytes, object]:
+        import time
+
         enemy_seat = 1 - self.seat
-        enemy_obs = emit_observation(particle.state, enemy_seat)
+        enemy_obs = emit_observation(
+            particle.state, enemy_seat, as_arrays=True
+        )
         enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
         h = enemy_info_hash(enemy_obs, enemy_mem)
         if h in node.enemy_tables:
@@ -212,12 +226,20 @@ class SearchController:
             particles=[particle],
             config=belief.config,
         )
+        t0 = time.perf_counter()
         prior_e, _ = self.evaluator.evaluate(
             enemy_obs, enemy_mem, enemy_belief, from_root=False
         )
-        mask = legal_mask(enemy_obs, enemy_mem)
+        self.last_select_enemy_prior_ms += (time.perf_counter() - t0) * 1000.0
+        self.last_select_enemy_prior_forwards += 1
+        from action import live_build_cost
+
+        cost_grid = live_build_cost(enemy_obs, enemy_mem)
+        mask = legal_mask(enemy_obs, enemy_mem, cost_grid=cost_grid)
         limit = enemy_widening_limit(node.N)
-        mandatory = mandatory_action_indices(enemy_obs, enemy_mem)
+        mandatory = mandatory_action_indices(
+            enemy_obs, enemy_mem, mask=mask, cost_grid=cost_grid
+        )
         candidates = policy_ordered_candidates(
             prior_e, mask, mandatory=mandatory, limit=limit
         )
@@ -246,8 +268,13 @@ class SearchController:
             limit = enemy_widening_limit(node.N)
             if len(table.actions) >= limit:
                 return
-            mask = legal_mask(enemy_obs, enemy_mem)
-            mandatory = mandatory_action_indices(enemy_obs, enemy_mem)
+            from action import live_build_cost
+
+            cost_grid = live_build_cost(enemy_obs, enemy_mem)
+            mask = legal_mask(enemy_obs, enemy_mem, cost_grid=cost_grid)
+            mandatory = mandatory_action_indices(
+                enemy_obs, enemy_mem, mask=mask, cost_grid=cost_grid
+            )
             p = enemy_prior if enemy_prior is not None else table.prior
             # Rebuild a full-length prior vector for ordering.
             full = np.zeros(len(mask), dtype=np.float64)
@@ -284,6 +311,8 @@ class SearchController:
         When ``freeze_widening`` is True, progressive widening is skipped so
         the matrix width stays fixed (runtime forecast below 16 simulations).
         """
+        self.last_select_enemy_prior_ms = 0.0
+        self.last_select_enemy_prior_forwards = 0
         assert self.tree.root is not None and self.memory is not None
         node = self.tree.root
         particle = node.reservoir.sample(self.rng)
@@ -305,7 +334,7 @@ class SearchController:
                     terminal_value=seat_win,
                 )
 
-            my_obs = emit_observation(state, self.seat)
+            my_obs = emit_observation(state, self.seat, as_arrays=True)
             my_mem = (
                 self.memory
                 if node is self.tree.root
@@ -340,7 +369,7 @@ class SearchController:
             # freeze_snapshot is True we still allow widening based on N
             # observed at selection start for this node.
             enemy_seat = 1 - self.seat
-            enemy_obs = emit_observation(state, enemy_seat)
+            enemy_obs = emit_observation(state, enemy_seat, as_arrays=True)
             enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
             if not freeze_widening:
                 self._widen_if_needed(
@@ -379,7 +408,7 @@ class SearchController:
                 # Draw when both lose? winner stays -1 with is_done from mutual.
                 if info.is_done and next_state.winner < 0:
                     term = 0.0
-                edge = child_edge_key(a, observation_hash(emit_observation(next_state, self.seat)))
+                edge = child_edge_key(a, observation_hash(emit_observation(next_state, self.seat, as_arrays=True)))
                 edges.append((h, a_idx, b_idx, edge))
                 return PendingPath(
                     nodes=nodes,
@@ -389,7 +418,7 @@ class SearchController:
                         weight=particle.weight,
                         enemy_memory=update_memory(
                             particle.enemy_memory,
-                            emit_observation(next_state, enemy_seat),
+                            emit_observation(next_state, enemy_seat, as_arrays=True),
                         ),
                         enemy_prev_action=b,
                         history=particle.history,
@@ -400,7 +429,7 @@ class SearchController:
                     terminal_value=term,
                 )
 
-            child_obs = emit_observation(next_state, self.seat)
+            child_obs = emit_observation(next_state, self.seat, as_arrays=True)
             child_obs_h = observation_hash(child_obs)
             edge = child_edge_key(a, child_obs_h)
             edges.append((h, a_idx, b_idx, edge))
@@ -442,7 +471,7 @@ class SearchController:
                     weight=1.0,
                     enemy_memory=update_memory(
                         particle.enemy_memory,
-                        emit_observation(next_state, enemy_seat),
+                        emit_observation(next_state, enemy_seat, as_arrays=True),
                     ),
                     enemy_prev_action=b,
                     history=particle.history,
@@ -464,7 +493,7 @@ class SearchController:
                 weight=particle.weight,
                 enemy_memory=update_memory(
                     particle.enemy_memory,
-                    emit_observation(next_state, enemy_seat),
+                    emit_observation(next_state, enemy_seat, as_arrays=True),
                 ),
                 enemy_prev_action=b,
                 history=particle.history,
@@ -515,7 +544,7 @@ class SearchController:
             if state.winner >= 0:
                 values[i] = -1.0
                 continue
-            obs = emit_observation(state, self.seat)
+            obs = emit_observation(state, self.seat, as_arrays=True)
             mem = update_memory(self.memory, obs) if self.memory is not None else self.memory
             assert mem is not None
             leaf_belief = BeliefState(

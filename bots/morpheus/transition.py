@@ -9,6 +9,8 @@ No competition-module import. Truncation at turn 1200 is a driver check
 """
 from __future__ import annotations
 
+from typing import Optional
+
 import numpy as np
 
 from state import GameInfo, GameState
@@ -52,10 +54,18 @@ def build_cost_grid(state: GameState, player_idx: int) -> np.ndarray:
     return cost
 
 
-def _apply_one_build(state: GameState, player_idx: int, action: np.ndarray) -> GameState:
-    H, W = state.armies.shape
+def _apply_one_build(
+    state: GameState,
+    player_idx: int,
+    action: np.ndarray,
+    *,
+    cost_grid: Optional[np.ndarray] = None,
+) -> GameState:
     action = np.asarray(action, dtype=np.int32)
-    is_build = int(action[0]) == BUILD
+    if int(action[0]) != BUILD:
+        return state
+
+    H, W = state.armies.shape
     r, c = int(action[1]), int(action[2])
     in_bounds = 0 <= r < H and 0 <= c < W
     rs = min(max(r, 0), H - 1)
@@ -63,10 +73,11 @@ def _apply_one_build(state: GameState, player_idx: int, action: np.ndarray) -> G
 
     owns = bool(state.ownership[player_idx, rs, cs])
     plain = (not bool(state.generals[rs, cs])) and (not bool(state.castles[rs, cs]))
-    cost = int(build_cost_grid(state, player_idx)[rs, cs])
+    grid = cost_grid if cost_grid is not None else build_cost_grid(state, player_idx)
+    cost = int(grid[rs, cs])
     affords = int(state.armies[rs, cs]) >= cost
     alive = state.winner < 0
-    valid = is_build and in_bounds and owns and plain and affords and alive
+    valid = in_bounds and owns and plain and affords and alive
 
     if not valid:
         return state
@@ -83,8 +94,9 @@ def apply_build_actions(
 ) -> tuple[GameState, np.ndarray]:
     """Resolve both builds; rewrite every BUILD action to pass."""
     actions = np.asarray(actions, dtype=np.int32)
-    state = _apply_one_build(state, 0, actions[0])
-    state = _apply_one_build(state, 1, actions[1])
+    for player_idx in (0, 1):
+        if int(actions[player_idx, 0]) == BUILD:
+            state = _apply_one_build(state, player_idx, actions[player_idx])
 
     out = actions.copy()
     for i in range(2):
@@ -375,7 +387,13 @@ def transition(
     """Exact competition transition: builds, then deathtouch-wrapped step.
 
     Truncation is not applied here — call ``at_truncation`` at the driver.
+    Pass and move turns skip castle-cost grids. Turns before deathtouch call
+    ``step_base`` directly.
     """
     actions = np.asarray(actions, dtype=np.int32)
-    state, actions = apply_build_actions(state, actions)
-    return step_deathtouch(state, actions, DEATHTOUCH_TURN)
+    has_build = int(actions[0, 0]) == BUILD or int(actions[1, 0]) == BUILD
+    if has_build:
+        state, actions = apply_build_actions(state, actions)
+    if state.winner < 0 and state.time >= DEATHTOUCH_TURN:
+        return step_deathtouch(state, actions, DEATHTOUCH_TURN)
+    return step_base(state, actions)

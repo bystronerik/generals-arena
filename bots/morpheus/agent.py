@@ -60,6 +60,7 @@ class Agent:
         self.belief_plus_root_ok = c.belief_plus_root_ok
         # Expose named component timings for the instrumented unbundled path.
         self.component_ms = dict(c.metrics.component_ms)
+        self.forward_by_consumer = dict(c.forward_by_consumer)
 
     def act(self, obs):
         action = self._controller.decide(obs)

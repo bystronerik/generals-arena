@@ -1,0 +1,130 @@
+{
+  "part": "09-online-qualification",
+  "verdict": "no",
+  "reasons_no": [
+    "belief_plus_root_cannot_fit",
+    "min_search_target_missed",
+    "no_zero_fault_configuration"
+  ],
+  "sweep_config_path": "scripts/configs/morpheus/online-sweep-32-belief-root.json",
+  "sweep_config_digest": "5a68c0ba8c6adf931235a5caefd2457ebe80f241e488d5c0315c0f1610187319",
+  "commit_hash": "9401d3888298434d72f029c740d6ea5daf100a5d",
+  "cpu": {
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "machine": "arm64",
+    "processor": "arm",
+    "python": "3.12.11",
+    "cpu_count": 11,
+    "cpu_brand": "Apple M3 Pro"
+  },
+  "scheduler": {
+    "requested_core": 0,
+    "torch_num_threads": 1,
+    "affinity": null,
+    "affinity_supported": false,
+    "scheduler_note": "sched_setaffinity unavailable; Torch threads set to 1 only"
+  },
+  "artifact_runtime": "torch.jit.trace+fx_static_qnnpack",
+  "artifact_quantization": {
+    "engine": "qnnpack",
+    "float_to_export_mae": {
+      "army_margin_mae": 0.3932209014892578,
+      "castle_margin_mae": 0.8586301803588867,
+      "enemy_army_bins_mae": 1.4210108518600464,
+      "enemy_general_mae": 1.0559444427490234,
+      "hidden_castle_mae": 1.0538197755813599,
+      "hidden_owner_mae": 1.130753755569458,
+      "land_margin_mae": 0.423628032207489,
+      "pass_logit_mae": 0.04449462890625,
+      "policy_mae": 1.1903561353683472,
+      "turns_to_termination_mae": 1.626566767692566,
+      "wdl_mae": 0.28664568066596985
+    },
+    "format": "static_ptq_fx_qnnpack_int8",
+    "group_norm_float_fallback": true,
+    "host": "macOS-26.5.2-arm64-arm-64bit",
+    "runtime": "torch.jit.trace+fx_static_qnnpack"
+  },
+  "part04_widths": [
+    64
+  ],
+  "runtimes_swept": [
+    "torch_fx_static_qnnpack"
+  ],
+  "trial_count": 1,
+  "survivor_count": 0,
+  "trials": [
+    {
+      "config": {
+        "width": 64,
+        "runtime": "torch_fx_static_qnnpack",
+        "n_particles": 32,
+        "target_simulations": 8,
+        "pending_leaf_batch": 4,
+        "max_proposal_batch": 32,
+        "search_depth": 2,
+        "normal_deadline_ms": 140.0
+      },
+      "summary": {
+        "first_p50_ms": 177.5556659558788,
+        "first_p99_ms": 177.5556659558788,
+        "normal_p50_ms": 109.98645797371864,
+        "normal_p99_ms": 290.4867499601096,
+        "normal_samples": 11,
+        "mean_completed_simulations": 1.0909090909090908,
+        "min_completed_simulations": 0,
+        "deadline_faults": 4,
+        "min_sims_misses": 9,
+        "belief_plus_root_ok_rate": 0.5454545454545454,
+        "recovery_rate": 0.0,
+        "collapsed_rate": 0.0,
+        "peak_rss_bytes": 348585984,
+        "offline_p99_ms": {
+          "belief_tensor": 5.332374945282936,
+          "belief_proposal": 284.930458990857,
+          "particle_transitions": 14.25266603473574,
+          "hashing": 0.0015828991308808327,
+          "root_inference": 76.71350007876754,
+          "leaf_batch": 21.40695892740041,
+          "enemy_prior_batch": 16.153582953847945,
+          "backup": 11.014500050805509,
+          "reply": 0.0009170034900307655,
+          "selection": 7.981332950294018
+        },
+        "hides_belief_collapse": false,
+        "belief_plus_root_forecast_ms": 83.35025002714247
+      },
+      "accepted": false,
+      "reject_reasons": [
+        "deadline_faults",
+        "normal_internal_deadline",
+        "belief_plus_root_incomplete",
+        "min_sims_misses",
+        "mean_sims_below_minimum"
+      ]
+    }
+  ],
+  "estimator_notes": {},
+  "selected": null,
+  "best_effort": null,
+  "written_deployment": null,
+  "runtime_config_path": null,
+  "bot_deployment_path": null,
+  "judge_limits": {
+    "first_reply_s": 10.0,
+    "normal_reply_s": 0.15,
+    "memory_cap_bytes": 2147483648
+  },
+  "specification_gaps": {
+    "judge_cpu_model": "unpublished; local latency conditional on recorded host",
+    "belief_quality_threshold": null,
+    "acceptable_quantization_error": "not defined; artifact MAE recorded only",
+    "p99_estimator": {
+      "type": "nearest_rank_empirical",
+      "warmup_rule": "max_of_offline_p99_and_local_samples_until_window_full",
+      "selected_window": null,
+      "admission_guard_ms": null
+    }
+  },
+  "belief_limitation_note": "No belief-quality threshold is defined. Qualification rejects a config that hides belief collapse behind a fast reply; recovery and ESS stay visible in probe metrics."
+}

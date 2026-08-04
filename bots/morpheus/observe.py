@@ -5,6 +5,8 @@ encoding without importing the submodule.
 """
 from __future__ import annotations
 
+from typing import NamedTuple, Union
+
 import numpy as np
 
 from _common.wire import Observation
@@ -20,6 +22,29 @@ from state import GameState
 from transition import get_info
 
 Array = np.ndarray
+
+
+class ArrayObservation(NamedTuple):
+    """Internal fogged observation that keeps grids as arrays (no ``.tolist()``).
+
+    Field names match the wire ``Observation`` so legal masks, memory updates,
+    tensors, and exact-match checks accept either shape. Stdio still uses the
+    list-grid ``Observation`` from ``_common.wire``.
+    """
+
+    H: int
+    W: int
+    turn: int
+    my_land: int
+    my_army: int
+    opp_land: int
+    opp_army: int
+    type_grid: Array
+    owner_grid: Array
+    army_grid: Array
+
+
+AnyObservation = Union[Observation, ArrayObservation]
 
 
 def visibility_mask(ownership: Array) -> Array:
@@ -44,8 +69,9 @@ def visibility_mask(ownership: Array) -> Array:
     return stacked.max(axis=0) > 0
 
 
-def emit_observation(state: GameState, player_idx: int) -> Observation:
-    """Perspective-relative wire observation with competition fog."""
+def _emit_grids(
+    state: GameState, player_idx: int
+) -> tuple[int, int, int, int, int, int, int, Array, Array, Array]:
     player_idx = int(player_idx)
     opponent_idx = 1 - player_idx
     visible = visibility_mask(state.ownership[player_idx])
@@ -69,15 +95,52 @@ def emit_observation(state: GameState, player_idx: int) -> Observation:
     owner_grid[visible & state.ownership[opponent_idx]] = 2
 
     army_grid = np.where(visible, state.armies, 0).astype(np.int32)
+    return (
+        H,
+        W,
+        int(state.time),
+        int(info.land[player_idx]),
+        int(info.army[player_idx]),
+        int(info.land[opponent_idx]),
+        int(info.army[opponent_idx]),
+        type_grid,
+        owner_grid,
+        army_grid,
+    )
 
+
+def emit_observation(
+    state: GameState, player_idx: int, *, as_arrays: bool = False
+) -> AnyObservation:
+    """Perspective-relative observation with competition fog.
+
+    When ``as_arrays`` is True, grids stay as ``int32`` arrays for belief and
+    search hot paths. The default remains the wire ``Observation`` for stdio.
+    """
+    H, W, turn, my_land, my_army, opp_land, opp_army, type_grid, owner_grid, army_grid = (
+        _emit_grids(state, player_idx)
+    )
+    if as_arrays:
+        return ArrayObservation(
+            H=H,
+            W=W,
+            turn=turn,
+            my_land=my_land,
+            my_army=my_army,
+            opp_land=opp_land,
+            opp_army=opp_army,
+            type_grid=type_grid,
+            owner_grid=owner_grid,
+            army_grid=army_grid,
+        )
     return Observation(
         H=H,
         W=W,
-        turn=int(state.time),
-        my_land=int(info.land[player_idx]),
-        my_army=int(info.army[player_idx]),
-        opp_land=int(info.land[opponent_idx]),
-        opp_army=int(info.army[opponent_idx]),
+        turn=turn,
+        my_land=my_land,
+        my_army=my_army,
+        opp_land=opp_land,
+        opp_army=opp_army,
         type_grid=type_grid.tolist(),
         owner_grid=owner_grid.tolist(),
         army_grid=army_grid.tolist(),

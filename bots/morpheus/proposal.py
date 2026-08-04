@@ -7,12 +7,14 @@ legal enemy actions (plus pass).
 from __future__ import annotations
 
 import hashlib
+import struct
 from typing import Callable, Optional, Protocol, Sequence
 
 import numpy as np
 
-from action import decode_action, legal_mask
+from action import decode_action, encode_action, legal_mask
 from belief import Action5, BeliefState, Particle, as_action5, pass_action
+from hashing import memory_digest
 from memory import VisibleMemory, update_memory
 from observe import emit_observation, observation_hash
 from tensor import BeliefSummary, build_tensor, zero_belief
@@ -61,19 +63,47 @@ def enemy_info_tensor(
     particle: Particle,
     belief: BeliefState,
     *,
+    enemy_obs=None,
+    enemy_mem: Optional[VisibleMemory] = None,
     level_zero_belief: Optional[BeliefSummary] = None,
 ) -> Array:
-    """Build the enemy-perspective tensor for one particle (level-zero belief)."""
-    enemy_obs = emit_observation(particle.state, belief.enemy_seat)
-    mem = update_memory(particle.enemy_memory, enemy_obs)
+    """Build the enemy-perspective tensor for one particle (level-zero belief).
+
+    Callers that already built ``enemy_obs`` / ``enemy_mem`` must pass them so
+    observation and memory work is not repeated.
+    """
+    if enemy_obs is None:
+        enemy_obs = emit_observation(
+            particle.state, belief.enemy_seat, as_arrays=True
+        )
+    if enemy_mem is None:
+        enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
     H, W = int(enemy_obs.H), int(enemy_obs.W)
     summary = level_zero_belief if level_zero_belief is not None else zero_belief(H, W)
     return build_tensor(
         enemy_obs,
-        mem,
+        enemy_mem,
         belief=summary,
         previous_action=particle.enemy_prev_action,
     )
+
+
+def proposal_info_key(
+    enemy_obs,
+    enemy_mem: VisibleMemory,
+    previous_action: Optional[Action5],
+) -> bytes:
+    """Pre-tensor dedupe key: enemy observation, memory, previous enemy action."""
+    prev_idx = (
+        int(encode_action(previous_action))
+        if previous_action is not None
+        else -1
+    )
+    h = hashlib.sha256()
+    h.update(observation_hash(enemy_obs))
+    h.update(memory_digest(enemy_mem))
+    h.update(struct.pack("<i", prev_idx))
+    return h.digest()
 
 
 def dedupe_enemy_tensors(
@@ -91,6 +121,25 @@ def dedupe_enemy_tensors(
             unique.append(np.asarray(tensor, dtype=np.float32))
         mapping.append(index_of[digest])
     return unique, mapping
+
+
+def dedupe_proposal_keys(
+    keys: Sequence[bytes],
+) -> tuple[list[int], list[int]]:
+    """Map particle indices onto unique proposal keys.
+
+    Returns ``(unique_particle_indices, mapping)`` where ``mapping[p]`` is the
+    index into ``unique_particle_indices``.
+    """
+    unique_indices: list[int] = []
+    index_of: dict[bytes, int] = {}
+    mapping: list[int] = []
+    for p_idx, key in enumerate(keys):
+        if key not in index_of:
+            index_of[key] = len(unique_indices)
+            unique_indices.append(p_idx)
+        mapping.append(index_of[key])
+    return unique_indices, mapping
 
 
 def uniform_legal_probs(obs, memory: VisibleMemory) -> Array:
@@ -123,23 +172,24 @@ def propose_enemy_actions(
     """Sample one enemy action per particle.
 
     When ``policy`` is None, each particle draws uniformly from its legal mask.
-    When ``policy`` is set, tensors are deduplicated and evaluated in batches of
-    at most ``max_proposal_batch`` unique inputs.
+    When ``policy`` is set, enemy information keys are deduplicated before
+    tensor construction and evaluated in batches of at most
+    ``max_proposal_batch`` unique inputs.
     """
     if belief.n == 0:
         return []
     batch_cap = max(1, int(max_proposal_batch))
 
-    # Build enemy obs + memory + legal probs per particle.
+    # Build enemy obs + memory once per particle (array grids on the hot path).
     enemy_obs_list = []
     enemy_mem_list = []
-    tensors: list[Array] = []
     for particle in belief.particles:
-        enemy_obs = emit_observation(particle.state, belief.enemy_seat)
+        enemy_obs = emit_observation(
+            particle.state, belief.enemy_seat, as_arrays=True
+        )
         enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
         enemy_obs_list.append(enemy_obs)
         enemy_mem_list.append(enemy_mem)
-        tensors.append(enemy_info_tensor(particle, belief))
 
     if policy is None:
         actions: list[Action5] = []
@@ -147,11 +197,30 @@ def propose_enemy_actions(
             actions.append(sample_from_probs(uniform_legal_probs(obs, mem), rng))
         return actions
 
-    unique, mapping = dedupe_enemy_tensors(tensors)
-    # Cap batch; if somehow larger, evaluate in chunks.
+    keys = [
+        proposal_info_key(obs, mem, particle.enemy_prev_action)
+        for obs, mem, particle in zip(
+            enemy_obs_list, enemy_mem_list, belief.particles
+        )
+    ]
+    unique_indices, mapping = dedupe_proposal_keys(keys)
+
+    unique_tensors: list[Array] = []
+    unique_masks: list[Array] = []
+    for p_idx in unique_indices:
+        particle = belief.particles[p_idx]
+        obs = enemy_obs_list[p_idx]
+        mem = enemy_mem_list[p_idx]
+        unique_tensors.append(
+            enemy_info_tensor(
+                particle, belief, enemy_obs=obs, enemy_mem=mem
+            )
+        )
+        unique_masks.append(legal_mask(obs, mem))
+
     all_logits: list[Array] = []
-    for start in range(0, len(unique), batch_cap):
-        batch = np.stack(unique[start : start + batch_cap], axis=0)
+    for start in range(0, len(unique_tensors), batch_cap):
+        batch = np.stack(unique_tensors[start : start + batch_cap], axis=0)
         logits = np.asarray(policy(batch), dtype=np.float64)
         if logits.ndim == 1:
             logits = logits[None, :]
@@ -160,10 +229,7 @@ def propose_enemy_actions(
 
     actions = []
     for p_idx, u_idx in enumerate(mapping):
-        obs = enemy_obs_list[p_idx]
-        mem = enemy_mem_list[p_idx]
-        mask = legal_mask(obs, mem)
-        probs = _softmax_masked(stacked[u_idx], mask)
+        probs = _softmax_masked(stacked[u_idx], unique_masks[u_idx])
         if top_k_force > 0:
             # Optional: mix in top-k for recovery beam seeding (caller may ignore).
             pass
@@ -178,12 +244,16 @@ def policy_action_probs(
     policy: Optional[PolicyFn] = None,
 ) -> Array:
     """Return a length-3970 probability vector for one particle's enemy seat."""
-    enemy_obs = emit_observation(particle.state, belief.enemy_seat)
+    enemy_obs = emit_observation(
+        particle.state, belief.enemy_seat, as_arrays=True
+    )
     enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
     mask = legal_mask(enemy_obs, enemy_mem)
     if policy is None:
         return uniform_legal_probs(enemy_obs, enemy_mem)
-    tensor = enemy_info_tensor(particle, belief)[None, ...]
+    tensor = enemy_info_tensor(
+        particle, belief, enemy_obs=enemy_obs, enemy_mem=enemy_mem
+    )[None, ...]
     logits = np.asarray(policy(tensor), dtype=np.float64).reshape(-1)
     return _softmax_masked(logits, mask)
 
@@ -220,5 +290,7 @@ def top_legal_actions(
 
 def enemy_info_key(particle: Particle, belief: BeliefState) -> bytes:
     """Hash of the enemy observation for table / batch deduplication."""
-    enemy_obs = emit_observation(particle.state, belief.enemy_seat)
+    enemy_obs = emit_observation(
+        particle.state, belief.enemy_seat, as_arrays=True
+    )
     return observation_hash(enemy_obs)
