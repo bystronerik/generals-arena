@@ -36,8 +36,10 @@ Before Morpheus can win, classes 1-3 come from decisive competition
 trajectories made by the fixed heuristic and research panel. Class 4 uses all
 legal fixed-panel prefixes. Class 5 starts from new competition maps. Once
 Morpheus produces decisive games, immutable league and self-play trajectories
-join classes 1-4. Source labels detect one source taking over. ResBot replays
-are never curriculum states.
+join classes 1-4. Source labels detect one source taking over. Raw scraped
+leaderboard files are not curriculum states. Trajectories rebuilt by
+`scripts/morpheus_rebuild_scraped.py` may enter under
+`<player>_reconstructions` and must stay measurable by source.
 
 Every curriculum state comes from a legal trajectory produced by
 `GeneralsEnv(mode="competition")`. Training does not invent board states,
@@ -50,8 +52,9 @@ sampled continuation.
 
 The scheduler samples state classes that currently produce both wins and
 losses. It moves weight toward earlier classes only after later classes keep a
-non-degenerate WDL target. The exact promotion interval is an
-[open question](open-questions.md), not an invented threshold.
+non-degenerate WDL target. Classifiers, belief-seed derivation, and the pilot
+confidence rule live in [curriculum.md](curriculum.md). Threshold replacement
+evidence remains an [open question](open-questions.md#curriculum-promotion).
 
 ## Opponent mixture
 
@@ -92,8 +95,9 @@ field to the game-record schema.
 
 ## ResBot evidence
 
-ResBot data is not behavior-cloning data. The replays store states rather than
-unambiguous actions, and the opponents are selected with unknown strength.
+Raw ResBot (and other leaderboard) replays store states rather than unambiguous
+actions, and the opponents are selected with unknown strength. They are not
+behavior-cloning labels by themselves.
 
 The measured expansion, contact, gather, castle, and sight distributions in
 [resbot-evidence.md](resbot-evidence.md) serve two purposes:
@@ -101,12 +105,15 @@ The measured expansion, contact, gather, castle, and sight distributions in
 - behavioral diagnostics on held-out leaderboard replays;
 - curriculum coverage alarms that increase sampling of a weak state class.
 
-They do not add reward, policy labels, value labels, or hidden-state labels.
-Morpheus can depart from every ResBot range when arena results improve.
+Reconstructed trajectories written by
+`scripts/morpheus_rebuild_scraped.py` use source label
+`<player>_reconstructions`. Keep them separable in the manifest and decide
+keep versus drop from WDL-by-class, full-start decisive rate, and held-out
+arena strength — not from ResBot similarity alone.
 
 Direct shaping is rejected because it can optimize leaderboard correlations
-instead of wins. It can also freeze ResBot's unknown opponent mix into the
-policy and punish a better strategy that uses different timing.
+instead of wins. It can also freeze an unknown opponent mix into the policy
+and punish a better strategy that uses different timing.
 
 ## Search noise and exploration
 

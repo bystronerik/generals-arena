@@ -28,6 +28,7 @@ to `GameRecord`.
 ## Source specifications
 
 - [Sparse-reward curriculum](../bots/morpheus/training.md#sparse-reward-solution)
+- [Executable curriculum rules](../bots/morpheus/curriculum.md)
 - [Curriculum promotion open question](../bots/morpheus/open-questions.md#curriculum-promotion)
 - [Arena trajectories](../arena/trajectories.md)
 
@@ -81,12 +82,12 @@ seat observations at each sampled prefix.
 
 ## Specification gaps
 
-The five class descriptions are not executable classifiers. `One tactical
-sequence`, `contact`, and pre-contact distance need exact definitions.
+Resolved in [curriculum.md](../bots/morpheus/curriculum.md):
 
-Trajectory files do not store Morpheus particle RNG state. Deterministic belief
-reconstruction therefore needs a specified seed derivation from immutable item
-fields.
+- contact, sight, tactical sequence, exclusive class assignment;
+- pre-contact BFS distance between generals;
+- belief RNG seed from immutable item fields;
+- pilot Wilson confidence rule written into the manifest.
 
 ## Exit criterion
 

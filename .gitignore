@@ -41,3 +41,7 @@ competition-replays/*
 # Volumes are primary for remote runs). Keep the directory.
 data/morpheus/*
 !data/morpheus/.gitkeep
+
+# Curriculum manifests are rebuilt from trajectories; keep the directory.
+training/morpheus/manifests/*
+!training/morpheus/manifests/.gitkeep

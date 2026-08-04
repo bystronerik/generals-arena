@@ -26,6 +26,7 @@ legality, the competition transition, and the reply deadline.
 - [Search](search.md) defines simultaneous information-set MCTS.
 - [Runtime](runtime.md) defines deadline control and degraded operation.
 - [Training](training.md) defines reward, curriculum, and opponent sampling.
+- [Curriculum](curriculum.md) defines executable class and confidence rules.
 - [Evaluation](evaluation.md) defines artifact identity and arena entry.
 - [Diversity](diversity.md) defines the research axis.
 - [Open questions](open-questions.md) lists only deliberately deferred choices.

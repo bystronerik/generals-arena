@@ -123,9 +123,20 @@ def board_size_key(H: int, W: int) -> str:
 
 
 def _ownership_contact(ownership: np.ndarray) -> bool:
-    """True when seats 0 and 1 own orthogonally adjacent cells."""
-    own0 = ownership == 0
-    own1 = ownership == 1
+    """True when seats 0 and 1 own orthogonally adjacent cells.
+
+    Accepts engine ownership ``(2, H, W)`` bool stacks. A flat ``(H, W)``
+    player-index board (0/1) is also accepted for fixtures.
+    """
+    arr = np.asarray(ownership)
+    if arr.ndim == 3 and arr.shape[0] == 2:
+        own0 = arr[0].astype(bool)
+        own1 = arr[1].astype(bool)
+    elif arr.ndim == 2:
+        own0 = arr == 0
+        own1 = arr == 1
+    else:
+        raise ValueError(f"ownership shape {arr.shape} is not (2,H,W) or (H,W)")
     if not own0.any() or not own1.any():
         return False
     # Shift seat-0 mask and test overlap with seat-1.

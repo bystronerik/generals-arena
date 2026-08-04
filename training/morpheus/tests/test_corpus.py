@@ -128,6 +128,21 @@ def test_turn_band_for_boundaries():
     assert turn_band_for(0) is None
 
 
+def test_ownership_contact_accepts_engine_bool_stack():
+    import numpy as np
+
+    from training.morpheus.corpus.coverage import _ownership_contact
+
+    own = np.zeros((2, 3, 3), dtype=bool)
+    own[0, 0, 0] = True
+    own[1, 0, 1] = True
+    assert _ownership_contact(own) is True
+    far = np.zeros((2, 3, 3), dtype=bool)
+    far[0, 0, 0] = True
+    far[1, 2, 2] = True
+    assert _ownership_contact(far) is False
+
+
 def test_missing_classes_names_absent_events_not_as_zero():
     report = CoverageReport()
     missing = report.missing_classes()

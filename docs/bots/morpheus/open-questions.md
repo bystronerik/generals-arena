@@ -54,11 +54,12 @@ and deathtouch, plus table hit rate, eviction loss, memory, and arena contrast.
 
 ## Curriculum promotion
 
-**Unknown:** The confidence rule that shifts sampling toward earlier and
-full-start states.
+**Unknown:** Whether the Part 10 pilot thresholds stay after the first measured
+training runs.
 
-**Current default:** Advance only when each active class has a non-degenerate
-WDL target.
+**Current default:** The executable Wilson non-degenerate-WDL rule in
+[curriculum.md](curriculum.md#pilot-confidence-rule). Advance only when each
+active class passes that rule.
 
 **Evidence:** WDL intervals by class, full-start decisive rate, and held-out
 arena strength. Training loss alone is not evidence.
