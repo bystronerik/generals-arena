@@ -36,6 +36,7 @@ promotion, and must not enter a rating decision.
 6. [Runtime controller](07-runtime-controller.md)
 7. [Online qualification](09-online-qualification.md)
 8. [Complete-turn cost reduction](09a-complete-turn-cost.md)
+9. [Defer the normal latency gate](09b-defer-normal-deadline.md)
 
 ### Phase 2: training inputs and self-play
 

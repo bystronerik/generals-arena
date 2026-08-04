@@ -22,4 +22,25 @@ def extras(agent) -> dict:
         "cost_search_ms": int(getattr(agent, "cost_search_ms", 0)),
         "cost_reply_ms": int(getattr(agent, "cost_reply_ms", 0)),
         "belief_plus_root_ok": int(getattr(agent, "belief_plus_root_ok", 0)),
+        "proposal_n_unique_info_keys": int(
+            getattr(agent, "proposal_n_unique_info_keys", 0)
+        ),
+        "proposal_n_unique_policy_inputs": int(
+            getattr(agent, "proposal_n_unique_policy_inputs", 0)
+        ),
+        "proposal_n_singleton_particles": int(
+            getattr(agent, "proposal_n_singleton_particles", 0)
+        ),
+        "proposal_n_policy_batches": int(
+            getattr(agent, "proposal_n_policy_batches", 0)
+        ),
+        "search_selection_calls": int(
+            (getattr(agent, "component_calls", {}) or {}).get("selection", 0)
+        ),
+        "search_leaf_batch_calls": int(
+            (getattr(agent, "component_calls", {}) or {}).get("leaf_batch", 0)
+        ),
+        "search_enemy_prior_calls": int(
+            (getattr(agent, "component_calls", {}) or {}).get("enemy_prior_batch", 0)
+        ),
     }

@@ -62,6 +62,18 @@ floor, so Part 09 stays `no`.
 
 ## Next
 
-Reduce complete-turn cost further under Part 09a. Re-run Phase 6 only after a
-32-particle timed configuration finishes belief plus root and at least 8
-simulations on every warm normal move.
+**2026-08-05:** [defer the normal latency gate](../../morpheus-implementation/09b-defer-normal-deadline.md).
+Ignore local normal p99 as the shipping blocker. Get Morpheus working with
+complete belief and search, then measure how much reply delay matters in real
+competition.
+
+Post-Phase-6 speed work that remains useful without lowering output quality:
+
+- policy-only enemy priors (done in tree);
+- reuse search observation, memory, masks, and backup hashes;
+- optional cheaper trunk later, only after quality baselines exist.
+
+Focused measurement with pass-only proposal fast path, leaf batch 8, and
+telemetry:
+[`morpheus-complete-turn-cost-pass-leaf8.json`](morpheus-complete-turn-cost-pass-leaf8.json).
+Verdict still **no** on the latency gate; that gate is paused per 09b.

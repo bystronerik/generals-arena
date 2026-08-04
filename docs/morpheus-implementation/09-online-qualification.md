@@ -121,3 +121,9 @@ harness rejects the bundle.
 After a recorded `no`, follow
 [Part 09a: Complete-turn cost reduction](09a-complete-turn-cost.md) before a
 re-qualification attempt.
+
+**2026-08-05 pause:** the competition judge may allow normal replies slower
+than 150 ms. See
+[Part 09b: Defer the normal latency gate](09b-defer-normal-deadline.md).
+Until that note is revoked, prefer a working Morpheus over clearing the local
+normal p99 deadline.

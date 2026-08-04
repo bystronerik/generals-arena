@@ -1,0 +1,427 @@
+{
+  "part": "09-online-qualification",
+  "verdict": "no",
+  "reasons_no": [
+    "belief_plus_root_cannot_fit",
+    "min_search_target_missed",
+    "no_zero_fault_configuration"
+  ],
+  "sweep_config_path": "scripts/configs/morpheus/online-sweep-32-belief-root.json",
+  "sweep_config_digest": "6ebc8e639e5544f0e8bd69a3c0fefeab122cfc0d0f6d215291c30f943d629a99",
+  "commit_hash": "5a154cfdf21e2313278c7c02798790fe5707f8a3",
+  "cpu": {
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "machine": "arm64",
+    "processor": "arm",
+    "python": "3.12.11",
+    "cpu_count": 11,
+    "cpu_brand_error": "Command '['sysctl', '-n', 'machdep.cpu.brand_string']' returned non-zero exit status 1.",
+    "cpu_brand": ""
+  },
+  "scheduler": {
+    "requested_core": 0,
+    "torch_num_threads": 1,
+    "affinity": null,
+    "affinity_supported": false,
+    "scheduler_note": "sched_setaffinity unavailable; Torch threads set to 1 only"
+  },
+  "artifact_runtime": "torch.jit.trace+fx_static_qnnpack",
+  "artifact_quantization": {
+    "engine": "qnnpack",
+    "float_to_export_mae": {
+      "army_margin_mae": 0.3932209014892578,
+      "castle_margin_mae": 0.8586301803588867,
+      "enemy_army_bins_mae": 1.4210108518600464,
+      "enemy_general_mae": 1.0559444427490234,
+      "hidden_castle_mae": 1.0538197755813599,
+      "hidden_owner_mae": 1.130753755569458,
+      "land_margin_mae": 0.423628032207489,
+      "pass_logit_mae": 0.04449462890625,
+      "policy_mae": 1.1903561353683472,
+      "turns_to_termination_mae": 1.626566767692566,
+      "wdl_mae": 0.28664568066596985
+    },
+    "format": "static_ptq_fx_qnnpack_int8",
+    "group_norm_float_fallback": true,
+    "host": "macOS-26.5.2-arm64-arm-64bit",
+    "online_float_to_export_mae": {
+      "policy": {
+        "pass_logit_mae": 0.3799259662628174,
+        "policy_mae": 1.1869503259658813
+      },
+      "policy_wdl": {
+        "pass_logit_mae": 0.587623119354248,
+        "policy_mae": 1.1881043910980225,
+        "wdl_mae": 0.18510358035564423
+      }
+    },
+    "runtime": "torch.jit.trace+fx_static_qnnpack"
+  },
+  "part04_widths": [
+    64
+  ],
+  "runtimes_swept": [
+    "torch_fx_static_qnnpack"
+  ],
+  "trial_count": 2,
+  "survivor_count": 0,
+  "trials": [
+    {
+      "config": {
+        "width": 64,
+        "runtime": "torch_fx_static_qnnpack",
+        "n_particles": 32,
+        "target_simulations": 8,
+        "pending_leaf_batch": 4,
+        "max_proposal_batch": 32,
+        "search_depth": 2,
+        "normal_deadline_ms": 140.0
+      },
+      "summary": {
+        "first_p50_ms": 113.64266602322459,
+        "first_p99_ms": 113.64266602322459,
+        "normal_p50_ms": 116.86720896977931,
+        "normal_p99_ms": 145.25487495120615,
+        "normal_samples": 11,
+        "mean_completed_simulations": 5.818181818181818,
+        "min_completed_simulations": 0,
+        "deadline_faults": 2,
+        "min_sims_misses": 4,
+        "belief_plus_root_ok_rate": 0.8181818181818182,
+        "recovery_rate": 0.0,
+        "collapsed_rate": 0.0,
+        "peak_rss_bytes": 404111360,
+        "offline_p99_ms": {
+          "belief_tensor": 5.388709018006921,
+          "belief_proposal": 140.83783293608576,
+          "particle_transitions": 5.663957912474871,
+          "hashing": 0.00041711609810590744,
+          "root_inference": 6.5772500820457935,
+          "leaf_batch": 19.07174999359995,
+          "enemy_prior_batch": 19.17733298614621,
+          "backup": 3.0874169897288084,
+          "reply": 0.00029208604246377945,
+          "selection": 0.6336659425869584
+        },
+        "hides_belief_collapse": false,
+        "turn_component_total_p99_ms": {
+          "belief_tensor": 5.388709018006921,
+          "belief_proposal": 140.83783293608576,
+          "particle_transitions": 5.663957912474871,
+          "hashing": 0.00041711609810590744,
+          "root_inference": 6.5772500820457935,
+          "leaf_batch": 37.59145806543529,
+          "enemy_prior_batch": 58.60504100564867,
+          "backup": 5.311502027325332,
+          "reply": 0.00029208604246377945,
+          "selection": 6.821083836257458
+        },
+        "turn_component_total_mean_ms": {
+          "belief_tensor": 0.44905908483391005,
+          "belief_proposal": 46.49327780740956,
+          "particle_transitions": 3.5011318880909434,
+          "hashing": 0.0002640881575644016,
+          "root_inference": 5.1142499238873524,
+          "leaf_batch": 27.79366314643994,
+          "enemy_prior_batch": 22.88678824940386,
+          "backup": 3.3288542181253433,
+          "reply": 0.00014934145535031954,
+          "selection": 4.424180699667583
+        },
+        "turn_component_call_mean": {
+          "belief_tensor": 0.08333333333333333,
+          "belief_proposal": 0.9166666666666666,
+          "particle_transitions": 0.9166666666666666,
+          "hashing": 0.8333333333333334,
+          "root_inference": 0.8333333333333334,
+          "leaf_batch": 1.5,
+          "enemy_prior_batch": 2.75,
+          "backup": 6.0,
+          "reply": 0.8333333333333334,
+          "selection": 13.25
+        },
+        "proposal_unique_info_keys_mean": 13.272727272727273,
+        "proposal_unique_info_keys_max": 28,
+        "proposal_unique_policy_inputs_mean": 8.181818181818182,
+        "proposal_unique_policy_inputs_max": 28,
+        "proposal_singleton_particles_mean": 5.818181818181818,
+        "proposal_policy_batches_mean": 0.8181818181818182,
+        "search_ms_mean": 54.54545454545455,
+        "component_total_over_move_mean": 0.9956868090226786,
+        "by_board": {
+          "18": {
+            "first_p50_ms": 113.64266602322459,
+            "first_p99_ms": 113.64266602322459,
+            "normal_p50_ms": 116.86720896977931,
+            "normal_p99_ms": 145.25487495120615,
+            "normal_samples": 11,
+            "mean_completed_simulations": 5.818181818181818,
+            "min_completed_simulations": 0,
+            "deadline_faults": 2,
+            "min_sims_misses": 4,
+            "belief_plus_root_ok_rate": 0.8181818181818182,
+            "recovery_rate": 0.0,
+            "collapsed_rate": 0.0,
+            "peak_rss_bytes": 404111360,
+            "offline_p99_ms": {
+              "belief_tensor": 5.388709018006921,
+              "belief_proposal": 140.83783293608576,
+              "particle_transitions": 5.663957912474871,
+              "hashing": 0.00041711609810590744,
+              "root_inference": 6.5772500820457935,
+              "leaf_batch": 19.07174999359995,
+              "enemy_prior_batch": 19.17733298614621,
+              "backup": 3.0874169897288084,
+              "reply": 0.00029208604246377945,
+              "selection": 0.6336659425869584
+            },
+            "hides_belief_collapse": false,
+            "turn_component_total_p99_ms": {
+              "belief_tensor": 5.388709018006921,
+              "belief_proposal": 140.83783293608576,
+              "particle_transitions": 5.663957912474871,
+              "hashing": 0.00041711609810590744,
+              "root_inference": 6.5772500820457935,
+              "leaf_batch": 37.59145806543529,
+              "enemy_prior_batch": 58.60504100564867,
+              "backup": 5.311502027325332,
+              "reply": 0.00029208604246377945,
+              "selection": 6.821083836257458
+            },
+            "turn_component_total_mean_ms": {
+              "belief_tensor": 0.44905908483391005,
+              "belief_proposal": 46.49327780740956,
+              "particle_transitions": 3.5011318880909434,
+              "hashing": 0.0002640881575644016,
+              "root_inference": 5.1142499238873524,
+              "leaf_batch": 27.79366314643994,
+              "enemy_prior_batch": 22.88678824940386,
+              "backup": 3.3288542181253433,
+              "reply": 0.00014934145535031954,
+              "selection": 4.424180699667583
+            },
+            "turn_component_call_mean": {
+              "belief_tensor": 0.08333333333333333,
+              "belief_proposal": 0.9166666666666666,
+              "particle_transitions": 0.9166666666666666,
+              "hashing": 0.8333333333333334,
+              "root_inference": 0.8333333333333334,
+              "leaf_batch": 1.5,
+              "enemy_prior_batch": 2.75,
+              "backup": 6.0,
+              "reply": 0.8333333333333334,
+              "selection": 13.25
+            },
+            "proposal_unique_info_keys_mean": 13.272727272727273,
+            "proposal_unique_info_keys_max": 28,
+            "proposal_unique_policy_inputs_mean": 8.181818181818182,
+            "proposal_unique_policy_inputs_max": 28,
+            "proposal_singleton_particles_mean": 5.818181818181818,
+            "proposal_policy_batches_mean": 0.8181818181818182,
+            "search_ms_mean": 54.54545454545455,
+            "component_total_over_move_mean": 0.9956868090226786
+          }
+        },
+        "belief_plus_root_forecast_ms": 50.43658206239343
+      },
+      "accepted": false,
+      "reject_reasons": [
+        "deadline_faults",
+        "normal_internal_deadline",
+        "belief_plus_root_incomplete",
+        "min_sims_misses",
+        "mean_sims_below_minimum"
+      ]
+    },
+    {
+      "config": {
+        "width": 64,
+        "runtime": "torch_fx_static_qnnpack",
+        "n_particles": 32,
+        "target_simulations": 8,
+        "pending_leaf_batch": 8,
+        "max_proposal_batch": 32,
+        "search_depth": 2,
+        "normal_deadline_ms": 140.0
+      },
+      "summary": {
+        "first_p50_ms": 77.68241607118398,
+        "first_p99_ms": 77.68241607118398,
+        "normal_p50_ms": 107.76970791630447,
+        "normal_p99_ms": 143.84820801205933,
+        "normal_samples": 11,
+        "mean_completed_simulations": 6.545454545454546,
+        "min_completed_simulations": 0,
+        "deadline_faults": 1,
+        "min_sims_misses": 2,
+        "belief_plus_root_ok_rate": 0.9090909090909091,
+        "recovery_rate": 0.0,
+        "collapsed_rate": 0.0,
+        "peak_rss_bytes": 404242432,
+        "offline_p99_ms": {
+          "belief_tensor": 5.148667027242482,
+          "belief_proposal": 139.9888750165701,
+          "particle_transitions": 4.67895797919482,
+          "hashing": 0.000459025613963604,
+          "root_inference": 6.544125033542514,
+          "leaf_batch": 37.24350000265986,
+          "enemy_prior_batch": 29.239875031635165,
+          "backup": 2.4932919768616557,
+          "reply": 0.0002080341801047325,
+          "selection": 0.42958406265825033
+        },
+        "hides_belief_collapse": false,
+        "turn_component_total_p99_ms": {
+          "belief_tensor": 5.148667027242482,
+          "belief_proposal": 139.9888750165701,
+          "particle_transitions": 4.67895797919482,
+          "hashing": 0.000459025613963604,
+          "root_inference": 6.544125033542514,
+          "leaf_batch": 37.24350000265986,
+          "enemy_prior_batch": 29.239875031635165,
+          "backup": 3.0555841512978077,
+          "reply": 0.0002080341801047325,
+          "selection": 3.456168109551072
+        },
+        "turn_component_total_mean_ms": {
+          "belief_tensor": 0.4290555856035401,
+          "belief_proposal": 43.28482982236892,
+          "particle_transitions": 3.5725518925270685,
+          "hashing": 0.00027792217830816907,
+          "root_inference": 5.555097275646403,
+          "leaf_batch": 30.62203816565064,
+          "enemy_prior_batch": 18.746791921633605,
+          "backup": 2.361371589358896,
+          "reply": 0.00015950839345653853,
+          "selection": 2.9346984423076115
+        },
+        "turn_component_call_mean": {
+          "belief_tensor": 0.08333333333333333,
+          "belief_proposal": 0.9166666666666666,
+          "particle_transitions": 0.9166666666666666,
+          "hashing": 0.9166666666666666,
+          "root_inference": 0.9166666666666666,
+          "leaf_batch": 0.8333333333333334,
+          "enemy_prior_batch": 0.9166666666666666,
+          "backup": 6.666666666666667,
+          "reply": 0.9166666666666666,
+          "selection": 14.666666666666666
+        },
+        "proposal_unique_info_keys_mean": 13.636363636363637,
+        "proposal_unique_info_keys_max": 28,
+        "proposal_unique_policy_inputs_mean": 8.545454545454545,
+        "proposal_unique_policy_inputs_max": 28,
+        "proposal_singleton_particles_mean": 5.818181818181818,
+        "proposal_policy_batches_mean": 0.8181818181818182,
+        "search_ms_mean": 53.72727272727273,
+        "component_total_over_move_mean": 0.9954919153297371,
+        "by_board": {
+          "18": {
+            "first_p50_ms": 77.68241607118398,
+            "first_p99_ms": 77.68241607118398,
+            "normal_p50_ms": 107.76970791630447,
+            "normal_p99_ms": 143.84820801205933,
+            "normal_samples": 11,
+            "mean_completed_simulations": 6.545454545454546,
+            "min_completed_simulations": 0,
+            "deadline_faults": 1,
+            "min_sims_misses": 2,
+            "belief_plus_root_ok_rate": 0.9090909090909091,
+            "recovery_rate": 0.0,
+            "collapsed_rate": 0.0,
+            "peak_rss_bytes": 404242432,
+            "offline_p99_ms": {
+              "belief_tensor": 5.148667027242482,
+              "belief_proposal": 139.9888750165701,
+              "particle_transitions": 4.67895797919482,
+              "hashing": 0.000459025613963604,
+              "root_inference": 6.544125033542514,
+              "leaf_batch": 37.24350000265986,
+              "enemy_prior_batch": 29.239875031635165,
+              "backup": 2.4932919768616557,
+              "reply": 0.0002080341801047325,
+              "selection": 0.42958406265825033
+            },
+            "hides_belief_collapse": false,
+            "turn_component_total_p99_ms": {
+              "belief_tensor": 5.148667027242482,
+              "belief_proposal": 139.9888750165701,
+              "particle_transitions": 4.67895797919482,
+              "hashing": 0.000459025613963604,
+              "root_inference": 6.544125033542514,
+              "leaf_batch": 37.24350000265986,
+              "enemy_prior_batch": 29.239875031635165,
+              "backup": 3.0555841512978077,
+              "reply": 0.0002080341801047325,
+              "selection": 3.456168109551072
+            },
+            "turn_component_total_mean_ms": {
+              "belief_tensor": 0.4290555856035401,
+              "belief_proposal": 43.28482982236892,
+              "particle_transitions": 3.5725518925270685,
+              "hashing": 0.00027792217830816907,
+              "root_inference": 5.555097275646403,
+              "leaf_batch": 30.62203816565064,
+              "enemy_prior_batch": 18.746791921633605,
+              "backup": 2.361371589358896,
+              "reply": 0.00015950839345653853,
+              "selection": 2.9346984423076115
+            },
+            "turn_component_call_mean": {
+              "belief_tensor": 0.08333333333333333,
+              "belief_proposal": 0.9166666666666666,
+              "particle_transitions": 0.9166666666666666,
+              "hashing": 0.9166666666666666,
+              "root_inference": 0.9166666666666666,
+              "leaf_batch": 0.8333333333333334,
+              "enemy_prior_batch": 0.9166666666666666,
+              "backup": 6.666666666666667,
+              "reply": 0.9166666666666666,
+              "selection": 14.666666666666666
+            },
+            "proposal_unique_info_keys_mean": 13.636363636363637,
+            "proposal_unique_info_keys_max": 28,
+            "proposal_unique_policy_inputs_mean": 8.545454545454545,
+            "proposal_unique_policy_inputs_max": 28,
+            "proposal_singleton_particles_mean": 5.818181818181818,
+            "proposal_policy_batches_mean": 0.8181818181818182,
+            "search_ms_mean": 53.72727272727273,
+            "component_total_over_move_mean": 0.9954919153297371
+          }
+        },
+        "belief_plus_root_forecast_ms": 50.43658206239343
+      },
+      "accepted": false,
+      "reject_reasons": [
+        "deadline_faults",
+        "normal_internal_deadline",
+        "belief_plus_root_incomplete",
+        "min_sims_misses",
+        "mean_sims_below_minimum"
+      ]
+    }
+  ],
+  "estimator_notes": {},
+  "selected": null,
+  "best_effort": null,
+  "written_deployment": null,
+  "runtime_config_path": null,
+  "bot_deployment_path": null,
+  "judge_limits": {
+    "first_reply_s": 10.0,
+    "normal_reply_s": 0.15,
+    "memory_cap_bytes": 2147483648
+  },
+  "specification_gaps": {
+    "judge_cpu_model": "unpublished; local latency conditional on recorded host",
+    "belief_quality_threshold": null,
+    "acceptable_quantization_error": "not defined; artifact MAE recorded only",
+    "p99_estimator": {
+      "type": "nearest_rank_empirical",
+      "warmup_rule": "max_of_offline_p99_and_local_samples_until_window_full",
+      "selected_window": null,
+      "admission_guard_ms": null
+    }
+  },
+  "belief_limitation_note": "No belief-quality threshold is defined. Qualification rejects a config that hides belief collapse behind a fast reply; recovery and ESS stay visible in probe metrics."
+}

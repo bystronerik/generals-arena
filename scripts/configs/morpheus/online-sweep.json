@@ -11,7 +11,7 @@
   "part00b_runtime_source": "docs/research/measurements/morpheus-export-preflight.md viable static 8-bit candidates",
   "particle_counts": [8, 32, 64, 128],
   "target_simulations": [8, 32],
-  "pending_leaf_batches": [4],
+  "pending_leaf_batches": [4, 8],
   "max_proposal_batches": [4, 16, 64],
   "search_depths": [2],
   "search_depth_default": 2,

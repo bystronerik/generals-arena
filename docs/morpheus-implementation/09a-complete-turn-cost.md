@@ -9,6 +9,11 @@ The work keeps Part 09 semantics. It does not lower the minimum of 8
 simulations, select a zero admission guard, or accept an 8-particle
 configuration as the qualified deployment.
 
+**2026-08-05:** latency clearance is deferred. See
+[Part 09b: Defer the normal latency gate](09b-defer-normal-deadline.md).
+Continue quality-safe search and belief work; do not treat local normal p99 as
+the current blocker.
+
 **Touches**
 
 - `bots/`: belief proposal, transition fast paths, search selection, hashing,

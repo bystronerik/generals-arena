@@ -282,13 +282,69 @@ def test_probe_is_passive_and_keys_are_declared():
         cost_root_ms = 2
         cost_search_ms = 6
         cost_reply_ms = 1
+        belief_plus_root_ok = 1
+        proposal_n_unique_info_keys = 30
+        proposal_n_unique_policy_inputs = 0
+        proposal_n_singleton_particles = 32
+        proposal_n_policy_batches = 0
+        component_calls = {
+            "selection": 4,
+            "leaf_batch": 2,
+            "enemy_prior_batch": 1,
+        }
 
     extras = probe_extras(probe, _Stub())
     validated = validate_extras(extras)
     assert validated["completed_simulations"] == 3
     assert validated["fallback_level"] == "visit"
+    assert validated["proposal_n_unique_info_keys"] == 30
+    assert validated["proposal_n_unique_policy_inputs"] == 0
+    assert validated["search_selection_calls"] == 4
     # Probe must not import into the agent closure (fingerprint rule).
     agent_src = (bot_dir / "agent.py").read_text(encoding="utf-8")
     runtime_src = (bot_dir / "runtime.py").read_text(encoding="utf-8")
     assert "import probe" not in agent_src
     assert "import probe" not in runtime_src
+
+
+def test_turn_metrics_record_proposal_and_component_calls():
+    """Per-turn proposal counters and component call counts stay passive."""
+    from transition import PASS_ACTION, transition
+
+    clock = FakeClock(0.0)
+    forecasts = {name: 0.1 for name in COST_COMPONENTS}
+    state, obs, _mem, _belief, rng = _board_obs(0)
+    ctl = RuntimeController(
+        seat=0,
+        H=8,
+        W=8,
+        config=RuntimeConfig(
+            n_particles=4,
+            target_simulations=2,
+            pending_leaf_batch=2,
+            normal_deadline_ms=1000.0,
+            first_move_limit_ms=5000.0,
+            admission_guard_ms=0.0,
+        ),
+        evaluator=UniformEvaluator(0.0),
+        clock=clock,
+        fixed_forecasts_ms=forecasts,
+        charge_fixed_forecasts=True,
+        rng=rng,
+        proposal_policy=lambda batch: np.zeros(
+            (np.asarray(batch).shape[0], 3970), dtype=np.float64
+        ),
+    )
+    ctl.decide(obs)
+    actions = np.stack([PASS_ACTION, PASS_ACTION])
+    state, _ = transition(state, actions)
+    obs2 = emit_observation(state, 0)
+    ctl.decide(obs2)
+    assert "belief_proposal" in ctl.component_calls
+    assert ctl.component_calls["belief_proposal"] >= 1
+    assert ctl.proposal_n_particles == 4
+    assert ctl.proposal_n_unique_info_keys >= 1
+    # Early post-pass turn remains pass-only for the enemy → no policy inputs.
+    assert ctl.proposal_n_unique_policy_inputs == 0
+    assert ctl.proposal_n_singleton_particles == 4
+    assert ctl.metrics.component_ms.get("belief_proposal", 0.0) >= 0.0

@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import hashlib
 import struct
+from dataclasses import dataclass
 from typing import Callable, Optional, Protocol, Sequence
 
 import numpy as np
 
-from action import decode_action, encode_action, legal_mask
+from action import PASS_INDEX, decode_action, encode_action, legal_mask
 from belief import Action5, BeliefState, Particle, as_action5, pass_action
 from hashing import memory_digest
 from memory import VisibleMemory, update_memory
@@ -23,6 +24,27 @@ Array = np.ndarray
 
 # Batch ceiling matches the runtime enemy-proposal budget.
 MAX_PROPOSAL_BATCH = 64
+# Legal masks with this many (or fewer) actions skip tensor + policy work.
+# Pass is always legal, so early turns are typically a single legal action.
+SINGLETON_LEGAL_MAX = 1
+
+
+@dataclass
+class ProposalTelemetry:
+    """Passive counters for one ``propose_enemy_actions`` call."""
+
+    n_particles: int = 0
+    n_singleton_particles: int = 0
+    n_unique_info_keys: int = 0
+    n_unique_policy_inputs: int = 0
+    n_policy_batches: int = 0
+
+    def clear(self) -> None:
+        self.n_particles = 0
+        self.n_singleton_particles = 0
+        self.n_unique_info_keys = 0
+        self.n_unique_policy_inputs = 0
+        self.n_policy_batches = 0
 
 
 class PolicyModel(Protocol):
@@ -42,8 +64,6 @@ def _softmax_masked(logits: Array, mask: Array) -> Array:
     out = np.zeros_like(logits, dtype=np.float64)
     if not np.any(mask):
         # Pass only.
-        from action import PASS_INDEX
-
         out[PASS_INDEX] = 1.0
         return out
     clipped = np.where(mask, logits, -1e9)
@@ -52,11 +72,20 @@ def _softmax_masked(logits: Array, mask: Array) -> Array:
     exp = np.where(mask, exp, 0.0)
     total = exp.sum()
     if total <= 0.0:
-        from action import PASS_INDEX
-
         out[PASS_INDEX] = 1.0
         return out
     return exp / total
+
+
+def _singleton_probs(mask: Array) -> Array:
+    """One-hot over the sole legal action (pass if the mask is empty)."""
+    probs = np.zeros(np.asarray(mask).shape, dtype=np.float64)
+    idxs = np.flatnonzero(mask)
+    if len(idxs) == 0:
+        probs[PASS_INDEX] = 1.0
+    else:
+        probs[int(idxs[0])] = 1.0
+    return probs
 
 
 def enemy_info_tensor(
@@ -148,8 +177,6 @@ def uniform_legal_probs(obs, memory: VisibleMemory) -> Array:
     n = int(mask.sum())
     probs = np.zeros(mask.shape, dtype=np.float64)
     if n == 0:
-        from action import PASS_INDEX
-
         probs[PASS_INDEX] = 1.0
         return probs
     probs[mask] = 1.0 / float(n)
@@ -168,14 +195,24 @@ def propose_enemy_actions(
     policy: Optional[PolicyFn] = None,
     top_k_force: int = 0,
     max_proposal_batch: int = MAX_PROPOSAL_BATCH,
+    telemetry: Optional[ProposalTelemetry] = None,
 ) -> list[Action5]:
     """Sample one enemy action per particle.
 
     When ``policy`` is None, each particle draws uniformly from its legal mask.
-    When ``policy`` is set, enemy information keys are deduplicated before
+    When ``policy`` is set, particles with at most ``SINGLETON_LEGAL_MAX`` legal
+    actions skip tensor construction and the network (the action is
+    deterministic). Remaining enemy information keys are deduplicated before
     tensor construction and evaluated in batches of at most
-    ``max_proposal_batch`` unique inputs.
+    ``max_proposal_batch`` unique inputs. Sampling still walks particles in
+    order so the RNG stream matches the full-policy path.
+
+    When ``telemetry`` is set, fill proposal counters for the measurement path.
+    Telemetry never changes sampled actions.
     """
+    if telemetry is not None:
+        telemetry.clear()
+
     if belief.n == 0:
         return []
     batch_cap = max(1, int(max_proposal_batch))
@@ -191,49 +228,88 @@ def propose_enemy_actions(
         enemy_obs_list.append(enemy_obs)
         enemy_mem_list.append(enemy_mem)
 
-    if policy is None:
-        actions: list[Action5] = []
-        for obs, mem in zip(enemy_obs_list, enemy_mem_list):
-            actions.append(sample_from_probs(uniform_legal_probs(obs, mem), rng))
-        return actions
-
     keys = [
         proposal_info_key(obs, mem, particle.enemy_prev_action)
         for obs, mem, particle in zip(
             enemy_obs_list, enemy_mem_list, belief.particles
         )
     ]
-    unique_indices, mapping = dedupe_proposal_keys(keys)
+    if telemetry is not None:
+        telemetry.n_particles = int(belief.n)
+        telemetry.n_unique_info_keys = len(set(keys))
 
-    unique_tensors: list[Array] = []
-    unique_masks: list[Array] = []
-    for p_idx in unique_indices:
-        particle = belief.particles[p_idx]
-        obs = enemy_obs_list[p_idx]
-        mem = enemy_mem_list[p_idx]
-        unique_tensors.append(
-            enemy_info_tensor(
-                particle, belief, enemy_obs=obs, enemy_mem=mem
+    if policy is None:
+        actions: list[Action5] = []
+        n_singleton = 0
+        for obs, mem in zip(enemy_obs_list, enemy_mem_list):
+            probs = uniform_legal_probs(obs, mem)
+            if int(np.count_nonzero(probs > 0.0)) <= SINGLETON_LEGAL_MAX:
+                n_singleton += 1
+            actions.append(sample_from_probs(probs, rng))
+        if telemetry is not None:
+            telemetry.n_singleton_particles = n_singleton
+        return actions
+
+    masks = [
+        legal_mask(obs, mem)
+        for obs, mem in zip(enemy_obs_list, enemy_mem_list)
+    ]
+    multi_indices = [
+        p_idx
+        for p_idx, mask in enumerate(masks)
+        if int(mask.sum()) > SINGLETON_LEGAL_MAX
+    ]
+    if telemetry is not None:
+        telemetry.n_singleton_particles = int(belief.n) - len(multi_indices)
+
+    multi_logits: dict[int, Array] = {}
+    n_policy_batches = 0
+    n_unique_policy_inputs = 0
+    if multi_indices:
+        multi_keys = [keys[p_idx] for p_idx in multi_indices]
+        unique_local, mapping_local = dedupe_proposal_keys(multi_keys)
+        n_unique_policy_inputs = len(unique_local)
+
+        unique_tensors: list[Array] = []
+        for local_u in unique_local:
+            p_idx = multi_indices[local_u]
+            particle = belief.particles[p_idx]
+            unique_tensors.append(
+                enemy_info_tensor(
+                    particle,
+                    belief,
+                    enemy_obs=enemy_obs_list[p_idx],
+                    enemy_mem=enemy_mem_list[p_idx],
+                )
             )
-        )
-        unique_masks.append(legal_mask(obs, mem))
 
-    all_logits: list[Array] = []
-    for start in range(0, len(unique_tensors), batch_cap):
-        batch = np.stack(unique_tensors[start : start + batch_cap], axis=0)
-        logits = np.asarray(policy(batch), dtype=np.float64)
-        if logits.ndim == 1:
-            logits = logits[None, :]
-        all_logits.append(logits)
-    stacked = np.concatenate(all_logits, axis=0)
+        all_logits: list[Array] = []
+        for start in range(0, len(unique_tensors), batch_cap):
+            batch = np.stack(unique_tensors[start : start + batch_cap], axis=0)
+            logits = np.asarray(policy(batch), dtype=np.float64)
+            if logits.ndim == 1:
+                logits = logits[None, :]
+            all_logits.append(logits)
+            n_policy_batches += 1
+        stacked = np.concatenate(all_logits, axis=0)
+
+        for local_p, u_idx in enumerate(mapping_local):
+            multi_logits[multi_indices[local_p]] = stacked[u_idx]
+
+    if telemetry is not None:
+        telemetry.n_unique_policy_inputs = n_unique_policy_inputs
+        telemetry.n_policy_batches = n_policy_batches
 
     actions = []
-    for p_idx, u_idx in enumerate(mapping):
-        probs = _softmax_masked(stacked[u_idx], unique_masks[u_idx])
-        if top_k_force > 0:
-            # Optional: mix in top-k for recovery beam seeding (caller may ignore).
-            pass
-        actions.append(sample_from_probs(probs, rng))
+    for p_idx, mask in enumerate(masks):
+        if p_idx in multi_logits:
+            probs = _softmax_masked(multi_logits[p_idx], mask)
+            if top_k_force > 0:
+                # Optional: mix in top-k for recovery beam seeding (caller may ignore).
+                pass
+            actions.append(sample_from_probs(probs, rng))
+        else:
+            actions.append(sample_from_probs(_singleton_probs(mask), rng))
     return actions
 
 
@@ -264,8 +340,6 @@ def top_legal_actions(
     k: int,
 ) -> list[Action5]:
     """Highest-prior legal actions, always including pass when legal."""
-    from action import PASS_INDEX
-
     scores = np.where(mask, probs, -1.0)
     order = np.argsort(-scores)
     out: list[Action5] = []

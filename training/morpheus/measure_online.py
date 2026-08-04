@@ -200,6 +200,7 @@ def _run_scenario(
     normal_ms: list[float] = []
     normal_sims: list[int] = []
     components: dict[str, list[float]] = {name: [] for name in COST_COMPONENTS}
+    turn_rows: list[dict[str, Any]] = []
     belief_root_ok = 0
     belief_root_n = 0
     recovery_n = 0
@@ -241,6 +242,38 @@ def _run_scenario(
             ):
                 min_sims_misses += 1
 
+        turn_rows.append(
+            {
+                "turn": int(turn),
+                "first": bool(first),
+                "move_ms": float(elapsed_ms),
+                "completed_simulations": int(ctl.completed_simulations),
+                "belief_plus_root_ok": int(ctl.belief_plus_root_ok),
+                "component_ms": {
+                    name: float(ctl.metrics.component_ms.get(name, 0.0))
+                    for name in COST_COMPONENTS
+                },
+                "component_calls": {
+                    name: int(ctl.component_calls.get(name, 0))
+                    for name in COST_COMPONENTS
+                },
+                "proposal_n_particles": int(ctl.proposal_n_particles),
+                "proposal_n_singleton_particles": int(
+                    ctl.proposal_n_singleton_particles
+                ),
+                "proposal_n_unique_info_keys": int(ctl.proposal_n_unique_info_keys),
+                "proposal_n_unique_policy_inputs": int(
+                    ctl.proposal_n_unique_policy_inputs
+                ),
+                "proposal_n_policy_batches": int(ctl.proposal_n_policy_batches),
+                "forward_by_consumer": {
+                    key: int(value)
+                    for key, value in dict(ctl.forward_by_consumer).items()
+                },
+                "cost_search_ms": int(ctl.cost_search_ms),
+            }
+        )
+
         # Advance with pass vs pass so the game stays nonterminal for a while.
         actions = np.zeros((2, 5), dtype=np.int32)
         actions[0] = np.asarray(action, dtype=np.int32)
@@ -260,6 +293,7 @@ def _run_scenario(
         "normal_move_ms": normal_ms,
         "normal_sims": normal_sims,
         "components": components,
+        "turns": turn_rows,
         "belief_plus_root_ok_rate": (
             belief_root_ok / belief_root_n if belief_root_n else 0.0
         ),
@@ -271,7 +305,89 @@ def _run_scenario(
     }
 
 
-def _summarize_scenario(rows: list[dict[str, Any]]) -> dict[str, Any]:
+def _mean_or_zero(values: list[float]) -> float:
+    return float(np.mean(values)) if values else 0.0
+
+
+def _summarize_turn_telemetry(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Aggregate per-turn component totals, call counts, and proposal stats."""
+    turn_component_totals: dict[str, list[float]] = {
+        name: [] for name in COST_COMPONENTS
+    }
+    turn_component_calls: dict[str, list[float]] = {
+        name: [] for name in COST_COMPONENTS
+    }
+    proposal_unique_info: list[float] = []
+    proposal_unique_policy: list[float] = []
+    proposal_singleton: list[float] = []
+    proposal_batches: list[float] = []
+    search_ms: list[float] = []
+    component_total_vs_move: list[float] = []
+
+    for row in rows:
+        for turn in row.get("turns", []):
+            totals = turn.get("component_ms") or {}
+            calls = turn.get("component_calls") or {}
+            total_ms = 0.0
+            for name in COST_COMPONENTS:
+                ms = float(totals.get(name, 0.0))
+                turn_component_totals[name].append(ms)
+                turn_component_calls[name].append(float(calls.get(name, 0)))
+                total_ms += ms
+            move_ms = float(turn.get("move_ms", 0.0))
+            if move_ms > 0.0:
+                component_total_vs_move.append(total_ms / move_ms)
+            if not turn.get("first", False):
+                proposal_unique_info.append(
+                    float(turn.get("proposal_n_unique_info_keys", 0))
+                )
+                proposal_unique_policy.append(
+                    float(turn.get("proposal_n_unique_policy_inputs", 0))
+                )
+                proposal_singleton.append(
+                    float(turn.get("proposal_n_singleton_particles", 0))
+                )
+                proposal_batches.append(float(turn.get("proposal_n_policy_batches", 0)))
+                search_ms.append(float(turn.get("cost_search_ms", 0)))
+
+    turn_total_p99 = {
+        name: (
+            nearest_rank_p99(values)
+            if values
+            else 0.0
+        )
+        for name, values in turn_component_totals.items()
+    }
+    turn_total_p99 = {
+        name: (0.0 if value != value else float(value))
+        for name, value in turn_total_p99.items()
+    }
+    return {
+        "turn_component_total_p99_ms": turn_total_p99,
+        "turn_component_total_mean_ms": {
+            name: _mean_or_zero(values)
+            for name, values in turn_component_totals.items()
+        },
+        "turn_component_call_mean": {
+            name: _mean_or_zero(values)
+            for name, values in turn_component_calls.items()
+        },
+        "proposal_unique_info_keys_mean": _mean_or_zero(proposal_unique_info),
+        "proposal_unique_info_keys_max": (
+            int(max(proposal_unique_info)) if proposal_unique_info else 0
+        ),
+        "proposal_unique_policy_inputs_mean": _mean_or_zero(proposal_unique_policy),
+        "proposal_unique_policy_inputs_max": (
+            int(max(proposal_unique_policy)) if proposal_unique_policy else 0
+        ),
+        "proposal_singleton_particles_mean": _mean_or_zero(proposal_singleton),
+        "proposal_policy_batches_mean": _mean_or_zero(proposal_batches),
+        "search_ms_mean": _mean_or_zero(search_ms),
+        "component_total_over_move_mean": _mean_or_zero(component_total_vs_move),
+    }
+
+
+def _summarize_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     first = [ms for row in rows for ms in row["first_move_ms"]]
     normal = [ms for row in rows for ms in row["normal_move_ms"]]
     sims = [s for row in rows for s in row["normal_sims"]]
@@ -284,7 +400,7 @@ def _summarize_scenario(rows: list[dict[str, Any]]) -> dict[str, Any]:
     br_rates = [float(row["belief_plus_root_ok_rate"]) for row in rows]
     recovery = [float(row["recovery_rate"]) for row in rows]
     collapsed = [float(row["collapsed_rate"]) for row in rows]
-    peak = max(int(row["peak_rss_bytes"]) for row in rows)
+    peak = max(int(row["peak_rss_bytes"]) for row in rows) if rows else 0
     offline = {
         name: (
             nearest_rank_p99(values)
@@ -298,7 +414,7 @@ def _summarize_scenario(rows: list[dict[str, Any]]) -> dict[str, Any]:
         name: (0.0 if value != value else float(value))
         for name, value in offline.items()
     }
-    return {
+    out = {
         "first_p50_ms": _percentile(first, 0.50),
         "first_p99_ms": _percentile(first, 0.99),
         "normal_p50_ms": _percentile(normal, 0.50),
@@ -318,6 +434,21 @@ def _summarize_scenario(rows: list[dict[str, Any]]) -> dict[str, Any]:
             and _percentile(normal, 0.50) < 40.0
         ),
     }
+    out.update(_summarize_turn_telemetry(rows))
+    return out
+
+
+def _summarize_scenario(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    summary = _summarize_rows(rows)
+    sides = sorted({int(row["side"]) for row in rows})
+    if sides:
+        summary["by_board"] = {
+            str(side): _summarize_rows(
+                [row for row in rows if int(row["side"]) == side]
+            )
+            for side in sides
+        }
+    return summary
 
 
 def _calibrate_offline_p99(

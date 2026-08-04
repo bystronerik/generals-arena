@@ -167,3 +167,30 @@ def test_enemy_weight_cache_stable_across_backups():
     assert root._enemy_hash_version == version
     # Second call must reuse the cache (same list object).
     assert root._enemy_hash_cache is not None
+
+
+def test_pending_leaf_batch_eight_fixed_seed_stable():
+    """Pending leaf batch 8 completes the floor and repeats under a fixed seed."""
+
+    def _run():
+        obs, mem, belief = _ctx(9)
+        ctl = SearchController(
+            seat=0,
+            evaluator=UniformEvaluator(0.0),
+            config=SearchConfig(depth=4, pending_batch=8, n_particles=4),
+            rng=np.random.default_rng(9),
+        )
+        ctl.ensure_root(obs, mem, belief)
+        while ctl.tree.completed_simulations < 8:
+            remaining = 8 - ctl.tree.completed_simulations
+            ctl.run_batch(belief, n_sims=remaining)
+        return {
+            "completed": int(ctl.tree.completed_simulations),
+            "best_action": list(ctl.best_action_or_pass()),
+            "N": int(ctl.tree.root.N),
+        }
+
+    first = _run()
+    second = _run()
+    assert first["completed"] == 8
+    assert first == second

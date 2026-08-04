@@ -194,11 +194,13 @@ def test_proposal_pre_tensor_dedupe_and_policy_parity():
     from action import legal_mask
     from memory import update_memory
     from proposal import (
+        SINGLETON_LEGAL_MAX,
+        _singleton_probs,
+        _softmax_masked,
         dedupe_proposal_keys,
         enemy_info_tensor,
         proposal_info_key,
         sample_from_probs,
-        _softmax_masked,
     )
 
     state = create_initial_state(_open_board(12, 12))
@@ -210,10 +212,16 @@ def test_proposal_pre_tensor_dedupe_and_policy_parity():
         rng=rng,
         config=BeliefConfig(n_particles=8, min_general_distance=5),
     )
+    # Give the enemy general enough army for real moves so the policy path runs.
+    for particle in belief.particles:
+        er, ec = particle.state.general_positions[belief.enemy_seat]
+        armies = np.array(particle.state.armies, copy=True)
+        armies[int(er), int(ec)] = 5
+        particle.state = particle.state._replace(armies=armies)
 
     enemy_obs_list = []
     enemy_mem_list = []
-    keys = []
+    masks = []
     for particle in belief.particles:
         enemy_obs = emit_observation(
             particle.state, belief.enemy_seat, as_arrays=True
@@ -221,13 +229,26 @@ def test_proposal_pre_tensor_dedupe_and_policy_parity():
         enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
         enemy_obs_list.append(enemy_obs)
         enemy_mem_list.append(enemy_mem)
-        keys.append(
-            proposal_info_key(enemy_obs, enemy_mem, particle.enemy_prev_action)
+        masks.append(legal_mask(enemy_obs, enemy_mem))
+    multi_indices = [
+        p_idx
+        for p_idx, mask in enumerate(masks)
+        if int(mask.sum()) > SINGLETON_LEGAL_MAX
+    ]
+    assert multi_indices, "fixture must exercise the multi-legal policy path"
+
+    keys = [
+        proposal_info_key(
+            enemy_obs_list[p_idx],
+            enemy_mem_list[p_idx],
+            belief.particles[p_idx].enemy_prev_action,
         )
-    unique_indices, mapping = dedupe_proposal_keys(keys)
-    assert len(unique_indices) <= belief.n
-    assert len(mapping) == belief.n
-    assert max(mapping) == len(unique_indices) - 1
+        for p_idx in multi_indices
+    ]
+    unique_local, mapping_local = dedupe_proposal_keys(keys)
+    assert len(unique_local) <= len(multi_indices)
+    assert len(mapping_local) == len(multi_indices)
+    assert max(mapping_local) == len(unique_local) - 1
 
     # Deterministic fake policy: logits proportional to action index.
     def fake_policy(batch):
@@ -237,43 +258,71 @@ def test_proposal_pre_tensor_dedupe_and_policy_parity():
         return logits
 
     unique_tensors = []
-    unique_masks = []
-    for p_idx in unique_indices:
+    for local_u in unique_local:
+        p_idx = multi_indices[local_u]
         particle = belief.particles[p_idx]
         e_obs = enemy_obs_list[p_idx]
         e_mem = enemy_mem_list[p_idx]
         unique_tensors.append(
             enemy_info_tensor(particle, belief, enemy_obs=e_obs, enemy_mem=e_mem)
         )
-        unique_masks.append(legal_mask(e_obs, e_mem))
     stacked = fake_policy(np.stack(unique_tensors, axis=0))
+
+    multi_logits = {}
+    for local_p, u_idx in enumerate(mapping_local):
+        multi_logits[multi_indices[local_p]] = stacked[u_idx]
 
     expected = []
     rng_a = np.random.default_rng(42)
-    for u_idx in mapping:
-        probs = _softmax_masked(stacked[u_idx], unique_masks[u_idx])
-        expected.append(sample_from_probs(probs, rng_a))
+    for p_idx, mask in enumerate(masks):
+        if p_idx in multi_logits:
+            probs = _softmax_masked(multi_logits[p_idx], mask)
+            expected.append(sample_from_probs(probs, rng_a))
+        else:
+            expected.append(sample_from_probs(_singleton_probs(mask), rng_a))
 
     rng_b = np.random.default_rng(42)
     got = propose_enemy_actions(belief, rng_b, policy=fake_policy)
     assert got == expected
 
-    # Belief survival / ESS still hold after a pass update with injected actions.
-    next_state, _ = transition(state, np.stack([PASS_ACTION, PASS_ACTION]))
-    real = emit_observation(next_state, 0)
-    mem = update_memory(empty_memory(obs.H, obs.W), obs)
-    mem = update_memory(mem, real)
-    nxt = update_belief(
-        belief,
-        pass_action(),
-        real,
-        mem,
-        np.random.default_rng(7),
-        enemy_actions=[pass_action()] * belief.n,
+
+def test_proposal_singleton_legal_skips_policy():
+    """Pass-only / singleton legal masks skip tensor construction and policy."""
+    from proposal import ProposalTelemetry
+
+    calls = {"n": 0, "rows": 0}
+
+    def fake_policy(batch):
+        batch = np.asarray(batch)
+        calls["n"] += 1
+        calls["rows"] += int(batch.shape[0])
+        return np.zeros((batch.shape[0], 3970), dtype=np.float64)
+
+    state = create_initial_state(_open_board(12, 12))
+    obs = emit_observation(state, 0)
+    rng = np.random.default_rng(3)
+    belief = initialize_belief(
+        obs,
+        seat=0,
+        rng=rng,
+        config=BeliefConfig(n_particles=8, min_general_distance=5),
     )
-    assert any(p.weight > 0 for p in nxt.particles)
-    weights = [p.weight for p in nxt.particles if p.weight > 0]
-    assert ess(weights) > 0.0
+    telem = ProposalTelemetry()
+    got = propose_enemy_actions(
+        belief,
+        np.random.default_rng(42),
+        policy=fake_policy,
+        telemetry=telem,
+    )
+    assert calls["n"] == 0
+    assert calls["rows"] == 0
+    assert len(got) == belief.n
+    assert all(a == pass_action() for a in got)
+    assert telem.n_particles == belief.n
+    assert telem.n_singleton_particles == belief.n
+    assert telem.n_unique_info_keys >= 1
+    assert telem.n_unique_policy_inputs == 0
+    assert telem.n_policy_batches == 0
 
 
 def test_array_observation_matches_wire():

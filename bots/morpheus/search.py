@@ -288,28 +288,36 @@ class SearchController:
 
         enemy_seat = 1 - self.seat
         ordered = list(unique.values())
-        items: list[tuple[object, VisibleMemory, BeliefState, bool]] = []
+        prior_items: list[tuple[object, VisibleMemory, BeliefState]] = []
         for req in ordered:
             enemy_belief = BeliefState(
                 seat=enemy_seat,
                 particles=[req.particle],
                 config=belief.config,
             )
-            items.append((req.enemy_obs, req.enemy_mem, enemy_belief, False))
+            prior_items.append((req.enemy_obs, req.enemy_mem, enemy_belief))
 
         t0 = time.perf_counter()
-        batch_fn = getattr(self.evaluator, "evaluate_many", None)
-        if callable(batch_fn):
-            results = batch_fn(items)
+        # Prefer policy-only priors: enemy tables discard value.
+        prior_fn = getattr(self.evaluator, "policy_priors_many", None)
+        if callable(prior_fn):
+            priors = prior_fn(prior_items)
         else:
-            results = [
-                self.evaluator.evaluate(obs, mem, blf, from_root=fr)
-                for obs, mem, blf, fr in items
-            ]
+            batch_fn = getattr(self.evaluator, "evaluate_many", None)
+            if callable(batch_fn):
+                results = batch_fn(
+                    [(obs, mem, blf, False) for obs, mem, blf in prior_items]
+                )
+            else:
+                results = [
+                    self.evaluator.evaluate(obs, mem, blf, from_root=False)
+                    for obs, mem, blf in prior_items
+                ]
+            priors = [prior for prior, _value in results]
         self.last_select_enemy_prior_ms = (time.perf_counter() - t0) * 1000.0
-        self.last_select_enemy_prior_forwards = len(results)
+        self.last_select_enemy_prior_forwards = len(priors)
 
-        for req, (prior, _value) in zip(ordered, results):
+        for req, prior in zip(ordered, priors):
             node = req.node
             if req.info_hash in node.enemy_tables:
                 continue

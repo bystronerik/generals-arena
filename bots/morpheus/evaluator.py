@@ -101,6 +101,27 @@ class NetworkEvaluator:
             results.append((prior, value))
         return results
 
+    def policy_priors_many(
+        self,
+        items: list[tuple[object, VisibleMemory, BeliefState]],
+    ) -> list[Array]:
+        """Batched policy-only priors for enemy tables. Does not compute WDL."""
+        if not items:
+            return []
+        tensors = []
+        masks = []
+        for obs, memory, belief in items:
+            tensors.append(self._tensor(obs, memory, belief).squeeze(0))
+            masks.append(np.asarray(legal_mask(obs, memory), dtype=bool))
+        x = torch.stack(tensors, dim=0)
+        policy, pass_logit = self.session.forward_policy(x)
+        mask_t = torch.from_numpy(np.stack(masks, axis=0))
+        prior_t = legal_normalized_policy(policy, pass_logit, mask_t)
+        return [
+            prior_t[i].detach().cpu().numpy().astype(np.float64)
+            for i in range(prior_t.shape[0])
+        ]
+
     def policy_logits(self, tensors: Array) -> Array:
         """Belief-proposal PolicyFn: ``(B,49,21,21) -> (B,3970)`` logits."""
         batch = np.asarray(tensors, dtype=np.float32)

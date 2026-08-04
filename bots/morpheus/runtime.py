@@ -24,7 +24,7 @@ from belief import (
     initialize_belief,
 )
 from memory import VisibleMemory, empty_memory, update_memory
-from proposal import PolicyFn, propose_enemy_actions
+from proposal import PolicyFn, ProposalTelemetry, propose_enemy_actions
 from recovery import recover_belief
 from search import SearchConfig, SearchController, SearchEvaluator, UniformEvaluator
 
@@ -182,6 +182,13 @@ class TurnMetrics:
     cost_reply_ms: int = 0
     belief_plus_root_ok: int = 0  # 1 when belief update and root both finished
     component_ms: dict[str, float] = field(default_factory=dict)
+    # How many real component runs this turn (excludes estimator padding).
+    component_calls: dict[str, int] = field(default_factory=dict)
+    proposal_n_particles: int = 0
+    proposal_n_singleton_particles: int = 0
+    proposal_n_unique_info_keys: int = 0
+    proposal_n_unique_policy_inputs: int = 0
+    proposal_n_policy_batches: int = 0
 
 
 class RuntimeController:
@@ -261,6 +268,13 @@ class RuntimeController:
         self.cost_search_ms = 0
         self.cost_reply_ms = 0
         self.belief_plus_root_ok = 0
+        self.component_calls: dict[str, int] = {}
+        self.proposal_n_particles = 0
+        self.proposal_n_singleton_particles = 0
+        self.proposal_n_unique_info_keys = 0
+        self.proposal_n_unique_policy_inputs = 0
+        self.proposal_n_policy_batches = 0
+        self._proposal_telemetry = ProposalTelemetry()
 
     # ------------------------------------------------------------------ clock
 
@@ -286,12 +300,18 @@ class RuntimeController:
         need = self.forecast_ms(component) + self.config.admission_guard_ms
         return remaining_ms >= need
 
-    def _observe(self, component: str, ms: float) -> None:
+    def _observe(
+        self, component: str, ms: float, *, count_call: bool = True
+    ) -> None:
         if component in self._estimators:
             self._estimators[component].observe(ms)
         self.metrics.component_ms[component] = (
             self.metrics.component_ms.get(component, 0.0) + float(ms)
         )
+        if count_call:
+            self.metrics.component_calls[component] = (
+                self.metrics.component_calls.get(component, 0) + 1
+            )
 
     def _charge(self, component: str) -> None:
         """Advance an injected clock by the component forecast (test mode)."""
@@ -419,11 +439,27 @@ class RuntimeController:
                         self.rng,
                         policy=policy,
                         max_proposal_batch=self.config.max_proposal_batch,
+                        telemetry=self._proposal_telemetry,
                     )
                     propose_ms = (self._now() - t0) * 1000.0
                     if self.charge_fixed_forecasts:
                         propose_ms = self.forecast_ms("belief_proposal")
                     self._observe("belief_proposal", propose_ms)
+                    self.metrics.proposal_n_particles = (
+                        self._proposal_telemetry.n_particles
+                    )
+                    self.metrics.proposal_n_singleton_particles = (
+                        self._proposal_telemetry.n_singleton_particles
+                    )
+                    self.metrics.proposal_n_unique_info_keys = (
+                        self._proposal_telemetry.n_unique_info_keys
+                    )
+                    self.metrics.proposal_n_unique_policy_inputs = (
+                        self._proposal_telemetry.n_unique_policy_inputs
+                    )
+                    self.metrics.proposal_n_policy_batches = (
+                        self._proposal_telemetry.n_policy_batches
+                    )
 
                     t1 = self._now()
                     self._charge("particle_transitions")
@@ -535,7 +571,7 @@ class RuntimeController:
             set_prev(action)
         # Finite samples for components that may not run every turn.
         if "enemy_prior_batch" not in self.metrics.component_ms:
-            self._observe("enemy_prior_batch", 0.0)
+            self._observe("enemy_prior_batch", 0.0, count_call=False)
         self._publish_metrics(
             action_level=level,
             recovery_flag=recovery_flag,
@@ -735,6 +771,18 @@ class RuntimeController:
             round(self.metrics.component_ms.get("root_inference", 0.0))
         )
         self.cost_reply_ms = int(round(self.metrics.component_ms.get("reply", 0.0)))
+        self.component_calls = dict(self.metrics.component_calls)
+        self.proposal_n_particles = int(self.metrics.proposal_n_particles)
+        self.proposal_n_singleton_particles = int(
+            self.metrics.proposal_n_singleton_particles
+        )
+        self.proposal_n_unique_info_keys = int(
+            self.metrics.proposal_n_unique_info_keys
+        )
+        self.proposal_n_unique_policy_inputs = int(
+            self.metrics.proposal_n_unique_policy_inputs
+        )
+        self.proposal_n_policy_batches = int(self.metrics.proposal_n_policy_batches)
 
         self.metrics.move_ms = self.move_ms
         self.metrics.completed_simulations = self.completed_simulations
