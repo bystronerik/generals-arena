@@ -146,3 +146,115 @@ because marginal values miss chasing and contested-cell interactions.
 
 Low visit counts make regrets noisy and can omit a low-prior enemy tactic.
 Benchmark the opponent cap and exploration floor on tactical counterexamples.
+
+## Part 06 executable definitions
+
+These definitions close the specification gaps that Part 06 requires before
+implementation. They are deliberate choices, not competition-module APIs.
+
+### Observable-history hash
+
+An information-set node key is the SHA-256 digest of the concatenation of:
+
+1. `turn` as a little-endian `int32`;
+2. the persistent-memory digest (below);
+3. the current observation hash from `observation_hash`;
+4. the rolling history digest.
+
+The rolling history digest starts as 32 zero bytes. After each real or
+simulated Morpheus action `a` and resulting observation hash `o`, it becomes
+`SHA-256(prev || encode_action(a) as int32 || o)`.
+
+The node is never keyed by a hidden particle state.
+
+### Persistent-memory digest
+
+`memory_digest(m)` is the SHA-256 of every `VisibleMemory` array in field
+declaration order, each as a contiguous C-order byte buffer, followed by
+`H` and `W` as little-endian `int32` values.
+
+### Collision policy
+
+Dict keys are the full 32-byte digests. A second write with the same digest
+reuses the existing node or enemy table. Content is not re-hashed to a shorter
+key. If two distinct payloads ever produced the same digest, the first stored
+entry wins and the second is treated as the same information state (birthday
+collision). No secondary probe table is kept.
+
+### Enemy information hash
+
+For a sampled particle, `enemy_info_hash` is
+`SHA-256(observation_hash(enemy_obs) || memory_digest(enemy_memory))`, where
+`enemy_obs` is the fogged observation from the enemy seat and `enemy_memory` is
+that particle's updated enemy-perspective `VisibleMemory`. Hash deduplication
+reuses one enemy table per digest inside a node.
+
+### Particle-reservoir replacement
+
+- **New child during search.** The arriving simulation particle is admitted
+  with weight `1`. When the reservoir is at capacity, weighted reservoir
+  sampling replaces one existing particle with probability
+  `1 / (1 + admitted_count)` after each admission beyond capacity (standard
+  Algorithm R on the weighted stream, using normalized particle weights as
+  the stream measure).
+- **Real observation / tree reuse.** The reused child's reservoir is fully
+  replaced by a resample of the filtered root belief
+  (`ParticleReservoir.replace_from_belief`). Search statistics are kept only
+  when turn, memory digest, and observation hash all match.
+
+### Weighted-LRU score for enemy tables
+
+Each enemy table stores `last_used` (the node's visit count `N` at last
+selection or backup that touched the table) and `touch_count` (how many times
+it was touched). Retention score:
+
+```text
+score(h) = last_used + 0.25 * log(1 + touch_count)
+```
+
+Eviction removes the lowest-score table that is not pinned by a pending
+simulation. The pin set is cleared after the pending batch backs up.
+
+### Eviction-loss metric
+
+When a table `h` is evicted, add
+
+```text
+loss(h) = sum_{a,b} N[a,h,b] * |Q[a,h,b]|
+```
+
+to the tree's cumulative `eviction_loss`. The measurement report also records
+`eviction_loss / max(1, total_joint_visits)` as `eviction_loss_rate`.
+
+### Information-set network value (first-play urgency)
+
+At node creation (and whenever the reservoir is replaced from a real belief),
+Morpheus evaluates one root-perspective tensor built from the current
+observation, memory, and `BeliefSummary` over the node's reservoir. Softmax of
+the WDL head gives `p_win`, `p_draw`, and `p_loss`. The node stores
+
+```text
+V_node = p_win - p_loss
+```
+
+Every unvisited joint entry uses this single `V_node` as first-play urgency.
+Particle-dependent leaf values are not stored per particle on the node.
+
+Leaf bootstrap on expansion uses the same formula from the child's root-
+perspective evaluation. Values never flip sign during backup.
+
+### Particle-weighted aggregation across enemy hashes
+
+Let `w(h)` be the normalized total particle weight in the node's reservoir
+whose `enemy_info_hash` equals `h` (hashes with no particles get weight `0`;
+if all are zero, use uniform over tables present). During matrix backup after
+sampling hash `h*`:
+
+```text
+u_self(a) = sum_h w(h) * sum_b sigma_{B,h}(b) * Q_eff[a,h,b]
+u_enemy(b) = sum_a sigma_A(a) * Q_eff[a,h*,b]
+v = sum_a sigma_A(a) * u_self(a)
+```
+
+`Q_eff` equals `Q` when `N[a,h,b] > 0`, else `V_node`. Self regret and `S_A`
+use `u_self` and `v`. Enemy regret and `S_{B,h*}` update only table `h*`.

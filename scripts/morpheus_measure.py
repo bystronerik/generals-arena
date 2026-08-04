@@ -147,6 +147,32 @@ def cmd_ess_threshold(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_search_resources(args: argparse.Namespace) -> int:
+    from training.morpheus.measure_search import measure_search_resources
+
+    report = measure_search_resources(
+        suite=Path(args.suite) if args.suite else None,
+        live_sims=args.live_sims,
+    )
+    out = Path(args.output)
+    _write_report(out, report)
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "output": str(out),
+                "suite_pass": report["suite_pass"],
+                "table_hit_rate": report["table_hit_rate"],
+                "eviction_loss_rate": report["eviction_loss_rate"],
+                "completed_simulations": report["completed_simulations"],
+                "approx_tree_bytes": report["approx_tree_bytes"],
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -212,6 +238,23 @@ def main(argv: list[str] | None = None) -> int:
     ess.add_argument("--n-particles", type=int, default=16)
     ess.add_argument("--max-turns", type=int, default=30)
     ess.set_defaults(func=cmd_ess_threshold)
+
+    search = sub.add_parser(
+        "search-resources",
+        help="Tactical suite plus table hit rate, eviction loss, and memory",
+    )
+    search.add_argument(
+        "--suite",
+        type=Path,
+        default=REPO / "bots" / "morpheus" / "tests" / "fixtures" / "tactical-suite.json",
+    )
+    search.add_argument(
+        "--output",
+        type=Path,
+        default=meas_dir / "morpheus-search-resources.json",
+    )
+    search.add_argument("--live-sims", type=int, default=16)
+    search.set_defaults(func=cmd_search_resources)
 
     args = parser.parse_args(argv)
     return int(args.func(args))

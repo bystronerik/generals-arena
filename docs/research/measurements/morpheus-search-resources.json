@@ -1,0 +1,46 @@
+{
+  "suite": "bots/morpheus/tests/fixtures/tactical-suite.json",
+  "suite_cases": [
+    {
+      "name": "chase",
+      "ok": true
+    },
+    {
+      "name": "reinforcement",
+      "ok": true
+    },
+    {
+      "name": "castle",
+      "ok": true
+    },
+    {
+      "name": "mutual_capture",
+      "ok": true
+    },
+    {
+      "name": "deathtouch",
+      "ok": true
+    }
+  ],
+  "suite_pass": true,
+  "table_hit_rate": 0.4626865671641791,
+  "table_hits": 31,
+  "table_misses": 36,
+  "eviction_loss": 0.0,
+  "eviction_loss_rate": 0.0,
+  "completed_simulations": 16,
+  "tree_nodes": 7,
+  "max_tree_nodes": 4096,
+  "max_enemy_tables": 8,
+  "approx_tree_bytes": 4216,
+  "live_search_ms": 153.50554208271205,
+  "defaults": {
+    "self_widening_cap": 16,
+    "enemy_widening_cap": 12,
+    "depth": 16,
+    "enemy_tables": 8,
+    "tree_nodes": 4096,
+    "exploration_floor": 0.05,
+    "pending_leaf_batch": 4
+  }
+}

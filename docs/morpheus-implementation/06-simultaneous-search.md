@@ -80,16 +80,19 @@ python competition-module/competition/matchup.py \
 
 ## Specification gaps
 
-The specs do not define the exact observable-history hash, collision policy,
-particle-reservoir replacement rule, weighted-LRU score, or eviction-loss
-metric.
+Resolved in this part and recorded in
+[search.md](../bots/morpheus/search.md#part-06-executable-definitions):
 
-First-play urgency uses a node network value, but the specs do not define how
-particle-dependent values become one information-set value.
-
-The particle-weighted aggregation across enemy information hashes is described
-without an exact estimator. These definitions must be recorded before code
-uses them.
+- observable-history hash (turn + memory digest + observation hash + rolling
+  history digest);
+- collision policy (full SHA-256 digests; first entry wins);
+- particle-reservoir replacement (Algorithm R in search; full replace on real
+  reuse);
+- weighted-LRU score `last_used + 0.25 * log(1 + touch_count)`;
+- eviction-loss metric `sum N|Q|` with rate against total joint visits;
+- information-set `V_node = p_win - p_loss` from one reservoir summary tensor;
+- particle-weighted `u_self` over enemy hashes; enemy regret only on sampled
+  `h*`.
 
 ## Exit criterion
 
