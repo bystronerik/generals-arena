@@ -1,0 +1,10 @@
+{
+  "measurement": "opponent-belief",
+  "game_count": 2,
+  "sample_count": 38,
+  "mean_enemy_action_log_loss": 19.781592910794913,
+  "p50_enemy_action_log_loss": 27.631021115928547,
+  "mean_particle_survival": 1.0,
+  "recursive_opponent_particles": false,
+  "recommendation": "keep_level_zero"
+}

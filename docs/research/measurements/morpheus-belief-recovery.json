@@ -1,0 +1,17 @@
+{
+  "measurement": "belief-recovery",
+  "game_count": 2,
+  "attempts": 38,
+  "recoveries": 38,
+  "recovery_rate": 1.0,
+  "force_proposal_mismatch": true,
+  "n_particles": 8,
+  "p50_cost_ms": 4.413479007780552,
+  "p99_cost_ms": 4.697102154605091,
+  "selected_recovery_bounds": {
+    "recovery_lag": 8,
+    "beam_width": 8,
+    "max_completed_histories": 16,
+    "max_replayed_transitions": 128
+  }
+}

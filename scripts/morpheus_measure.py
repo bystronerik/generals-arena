@@ -5,6 +5,11 @@ Usage:
     python scripts/morpheus_measure.py army-normalization \\
       --trajectories data/trajectories/morpheus-bootstrap \\
       --output docs/research/measurements/morpheus-army-normalization.json
+
+    python scripts/morpheus_measure.py belief-recovery \\
+      --trajectories data/trajectories/morpheus-bootstrap \\
+      --force-proposal-mismatch \\
+      --output docs/research/measurements/morpheus-belief-recovery.json
 """
 from __future__ import annotations
 
@@ -16,11 +21,21 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
+_BOT = REPO / "bots" / "morpheus"
+for entry in (REPO / "bots", _BOT):
+    s = str(entry)
+    if s not in sys.path:
+        sys.path.insert(0, s)
 
 DEFAULT_TRAJ = REPO / "data" / "trajectories" / "morpheus-bootstrap"
 DEFAULT_OUT = (
     REPO / "docs" / "research" / "measurements" / "morpheus-army-normalization.json"
 )
+
+
+def _write_report(out: Path, report: dict) -> None:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
 
 def cmd_army_normalization(args: argparse.Namespace) -> int:
@@ -32,12 +47,103 @@ def cmd_army_normalization(args: argparse.Namespace) -> int:
         max_games=args.max_games,
     )
     out = Path(args.output)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"ok": True, "output": str(out), **{
-        k: report[k] for k in ("game_count", "sample_count", "selected_scale", "recommendation")
-        if k in report
-    }}, indent=2))
+    _write_report(out, report)
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "output": str(out),
+                **{
+                    k: report[k]
+                    for k in (
+                        "game_count",
+                        "sample_count",
+                        "selected_scale",
+                        "recommendation",
+                    )
+                    if k in report
+                },
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def cmd_belief_recovery(args: argparse.Namespace) -> int:
+    from training.morpheus.measure_belief import measure_belief_recovery
+
+    report = measure_belief_recovery(
+        trajectories_dir=Path(args.trajectories),
+        max_games=args.max_games,
+        n_particles=args.n_particles,
+        force_proposal_mismatch=bool(args.force_proposal_mismatch),
+        max_turns=args.max_turns,
+    )
+    out = Path(args.output)
+    _write_report(out, report)
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "output": str(out),
+                "recovery_rate": report["recovery_rate"],
+                "p99_cost_ms": report["p99_cost_ms"],
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def cmd_opponent_belief(args: argparse.Namespace) -> int:
+    from training.morpheus.measure_belief import measure_opponent_belief
+
+    report = measure_opponent_belief(
+        trajectories_dir=Path(args.trajectories),
+        max_games=args.max_games,
+        n_particles=args.n_particles,
+        max_turns=args.max_turns,
+    )
+    out = Path(args.output)
+    _write_report(out, report)
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "output": str(out),
+                "mean_enemy_action_log_loss": report["mean_enemy_action_log_loss"],
+                "mean_particle_survival": report["mean_particle_survival"],
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def cmd_ess_threshold(args: argparse.Namespace) -> int:
+    from training.morpheus.measure_belief import measure_ess_threshold
+
+    report = measure_ess_threshold(
+        trajectories_dir=Path(args.trajectories),
+        max_games=args.max_games,
+        n_particles=args.n_particles,
+        max_turns=args.max_turns,
+    )
+    out = Path(args.output)
+    _write_report(out, report)
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "output": str(out),
+                "selected_ess_threshold_fraction": report[
+                    "selected_ess_threshold_fraction"
+                ],
+            },
+            indent=2,
+        )
+    )
     return 0
 
 
@@ -54,6 +160,58 @@ def main(argv: list[str] | None = None) -> int:
     army.add_argument("--army-scale", type=float, default=4096.0)
     army.add_argument("--max-games", type=int, default=0, help="0 = all games")
     army.set_defaults(func=cmd_army_normalization)
+
+    meas_dir = REPO / "docs" / "research" / "measurements"
+
+    recovery = sub.add_parser(
+        "belief-recovery",
+        help="Exact recovery rate and p99 cost after forced proposal mismatch",
+    )
+    recovery.add_argument("--trajectories", type=Path, default=DEFAULT_TRAJ)
+    recovery.add_argument(
+        "--output",
+        type=Path,
+        default=meas_dir / "morpheus-belief-recovery.json",
+    )
+    recovery.add_argument(
+        "--force-proposal-mismatch",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    recovery.add_argument("--max-games", type=int, default=4)
+    recovery.add_argument("--n-particles", type=int, default=16)
+    recovery.add_argument("--max-turns", type=int, default=40)
+    recovery.set_defaults(func=cmd_belief_recovery)
+
+    opponent = sub.add_parser(
+        "opponent-belief",
+        help="Enemy-action log loss and real-observation particle survival",
+    )
+    opponent.add_argument("--trajectories", type=Path, default=DEFAULT_TRAJ)
+    opponent.add_argument(
+        "--output",
+        type=Path,
+        default=meas_dir / "morpheus-opponent-belief.json",
+    )
+    opponent.add_argument("--max-games", type=int, default=4)
+    opponent.add_argument("--n-particles", type=int, default=16)
+    opponent.add_argument("--max-turns", type=int, default=40)
+    opponent.set_defaults(func=cmd_opponent_belief)
+
+    ess = sub.add_parser(
+        "ess-threshold",
+        help="ESS resample threshold sweep with uniqueness and survival",
+    )
+    ess.add_argument("--trajectories", type=Path, default=DEFAULT_TRAJ)
+    ess.add_argument(
+        "--output",
+        type=Path,
+        default=meas_dir / "morpheus-ess-threshold.json",
+    )
+    ess.add_argument("--max-games", type=int, default=2)
+    ess.add_argument("--n-particles", type=int, default=16)
+    ess.add_argument("--max-turns", type=int, default=30)
+    ess.set_defaults(func=cmd_ess_threshold)
 
     args = parser.parse_args(argv)
     return int(args.func(args))

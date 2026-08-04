@@ -1,0 +1,32 @@
+{
+  "measurement": "ess-threshold",
+  "n_particles": 8,
+  "sweep": [
+    {
+      "ess_threshold_fraction": 0.25,
+      "steps": 14,
+      "mean_unique_particles": 5.785714285714286,
+      "mean_survival": 1.0,
+      "recovery_frequency": 0.35714285714285715,
+      "p99_update_cost_ms": 86.48590146447532
+    },
+    {
+      "ess_threshold_fraction": 0.5,
+      "steps": 14,
+      "mean_unique_particles": 5.571428571428571,
+      "mean_survival": 1.0,
+      "recovery_frequency": 0.2857142857142857,
+      "p99_update_cost_ms": 97.19578702002762
+    },
+    {
+      "ess_threshold_fraction": 0.75,
+      "steps": 14,
+      "mean_unique_particles": 5.428571428571429,
+      "mean_survival": 1.0,
+      "recovery_frequency": 0.35714285714285715,
+      "p99_update_cost_ms": 92.30047032586299
+    }
+  ],
+  "selected_ess_threshold_fraction": 0.5,
+  "deployment_note": "Record selected_ess_threshold_fraction in the deployment configuration; default remains half the particle count."
+}

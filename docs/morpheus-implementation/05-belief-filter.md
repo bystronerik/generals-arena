@@ -99,15 +99,15 @@ python competition-module/competition/matchup.py \
 
 ## Specification gaps
 
-The conditioned initial-general prior has no repository API. The design does
-not define its sampling algorithm or its probability weights.
+Resolved in this part and recorded in
+[belief-state.md](../bots/morpheus/belief-state.md#part-05-executable-definitions):
 
-The terms `vision-changing action` and `maximum-entropy hidden allocation` are
-not executable definitions. Particle importance weighting and acceptance
-weights after policy-guided proposals are also not fully specified.
-
-This part must record those definitions before implementation. It must not use
-an unconstrained random fill as a silent substitute.
+- conditioned initial-general prior (uniform over legal candidates);
+- vision-changing action (visibility-mask difference vs enemy pass);
+- maximum-entropy hidden allocation (uniform general and land cells; even army
+  split; minimum `belief_ess`);
+- filter importance ratio `1` under the shared-policy proposal; rejuvenation
+  acceptance weight is the product of policy probabilities.
 
 ## Exit criterion
 
