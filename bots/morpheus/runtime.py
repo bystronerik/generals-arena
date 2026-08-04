@@ -544,11 +544,12 @@ class RuntimeController:
         return action
 
     def _run_search(self, belief: BeliefState, deadline: float) -> None:
+        from search import EnemyPriorRequest, PendingPath
+
         cfg = self.config
         target = cfg.target_simulations
         while self.search.tree.completed_simulations < target:
             remaining = target - self.search.tree.completed_simulations
-            # Forecast how many sims we can still finish.
             per_sim = max(
                 self.forecast_ms("selection")
                 + self.forecast_ms("leaf_batch") / max(cfg.pending_leaf_batch, 1)
@@ -569,34 +570,107 @@ class RuntimeController:
                 break
 
             batch_n = min(cfg.pending_leaf_batch, remaining)
-            paths = []
-            for _ in range(batch_n):
+            paths: list[PendingPath] = []
+            to_resume: list[EnemyPriorRequest] = []
+
+            def _select_once(
+                resume: EnemyPriorRequest | None = None,
+            ) -> PendingPath | EnemyPriorRequest | None:
                 if not self.can_admit("selection", deadline):
-                    break
+                    return None
                 if self.search.tree.completed_simulations + len(paths) >= target:
-                    break
+                    return None
                 t0 = self._now()
                 self._charge("selection")
-                path = self.search.select_path(
-                    belief, freeze_snapshot=True, freeze_widening=freeze_widening
+                outcome = self.search.select_path(
+                    belief,
+                    freeze_snapshot=True,
+                    freeze_widening=freeze_widening,
+                    resume=resume,
                 )
                 elapsed = (self._now() - t0) * 1000.0
-                prior_ms = float(self.search.last_select_enemy_prior_ms)
-                prior_n = int(self.search.last_select_enemy_prior_forwards)
-                if self.charge_fixed_forecasts:
-                    # Injected clocks keep selection as one forecast; still
-                    # record a finite enemy-prior sample (0 when unused).
-                    selection_ms = self.forecast_ms("selection")
-                    prior_ms = 0.0
-                else:
-                    selection_ms = max(0.0, elapsed - prior_ms)
+                selection_ms = (
+                    self.forecast_ms("selection")
+                    if self.charge_fixed_forecasts
+                    else elapsed
+                )
                 self._observe("selection", selection_ms)
-                # Always record enemy-prior (including 0) so offline p99 stays finite.
+                return outcome
+
+            def _materialize(reqs: list[EnemyPriorRequest]) -> bool:
+                if not reqs:
+                    return True
+                if not self.can_admit("enemy_prior_batch", deadline):
+                    return False
+                if self.forward_equivalents >= cfg.max_forward_equivalents:
+                    return False
+                t0 = self._now()
+                self._charge("enemy_prior_batch")
+                prior_n = self.search.materialize_enemy_priors(reqs, belief)
+                prior_ms = (self._now() - t0) * 1000.0
+                if self.charge_fixed_forecasts:
+                    prior_ms = (
+                        self.forecast_ms("enemy_prior_batch") if prior_n > 0 else 0.0
+                    )
                 self._observe("enemy_prior_batch", prior_ms)
                 if prior_n > 0:
                     self.forward_equivalents += prior_n
                     self.forward_by_consumer["enemy_prior"] += prior_n
-                paths.append(path)
+                return True
+
+            while len(paths) < batch_n:
+                resume = to_resume.pop(0) if to_resume else None
+                outcome = _select_once(resume=resume)
+                if outcome is None:
+                    break
+
+                if isinstance(outcome, EnemyPriorRequest):
+                    missing = [outcome]
+                    # Collect more missing priors before one batched forward.
+                    while (
+                        len(paths) + len(to_resume) + len(missing) < batch_n
+                    ):
+                        nxt = _select_once()
+                        if nxt is None:
+                            break
+                        if isinstance(nxt, EnemyPriorRequest):
+                            missing.append(nxt)
+                        else:
+                            paths.append(nxt)
+                            break
+                    if not _materialize(missing):
+                        # Discard partial selections — no statistics change.
+                        for req in missing:
+                            req.node.pending_pins.discard(req.info_hash)
+                        for req in to_resume:
+                            req.node.pending_pins.discard(req.info_hash)
+                        to_resume.clear()
+                        break
+                    to_resume.extend(missing)
+                    continue
+
+                paths.append(outcome)
+
+            # Finish any remaining resumed paths that fit the batch.
+            while to_resume and len(paths) < batch_n:
+                outcome = _select_once(resume=to_resume.pop(0))
+                if outcome is None:
+                    break
+                if isinstance(outcome, EnemyPriorRequest):
+                    if not _materialize([outcome]):
+                        outcome.node.pending_pins.discard(outcome.info_hash)
+                        for req in to_resume:
+                            req.node.pending_pins.discard(req.info_hash)
+                        to_resume.clear()
+                        break
+                    to_resume.insert(0, outcome)
+                    continue
+                paths.append(outcome)
+
+            # Drop unfinished prior requests; keep pins only for paths we keep.
+            for req in to_resume:
+                req.node.pending_pins.discard(req.info_hash)
+            to_resume.clear()
 
             if not paths:
                 break

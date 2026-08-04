@@ -81,6 +81,27 @@ class PendingPath:
 
 
 @dataclass
+class EnemyPriorRequest:
+    """Selection paused until an enemy-table prior is materialised."""
+
+    nodes: list[InfoNode]
+    edges: list[tuple[bytes, int, int, bytes]]
+    particle: Particle
+    state: object  # GameState
+    depth: int
+    freeze_widening: bool
+    info_hash: bytes
+    enemy_obs: object
+    enemy_mem: VisibleMemory
+    my_obs: object
+    my_mem: VisibleMemory
+
+    @property
+    def node(self) -> InfoNode:
+        return self.nodes[-1]
+
+
+@dataclass
 class SearchController:
     """Owns the tree and runs batched simulations."""
 
@@ -94,7 +115,7 @@ class SearchController:
         default_factory=lambda: np.random.default_rng(0)
     )
     last_root_prior: Optional[Array] = field(default=None, init=False)
-    # Phase 0 measurement: enemy-prior network time charged outside selection.
+    # Enemy-prior network time from materialize_enemy_priors (never select_path).
     last_select_enemy_prior_ms: float = field(default=0.0, init=False)
     last_select_enemy_prior_forwards: int = field(default=0, init=False)
 
@@ -201,37 +222,22 @@ class SearchController:
             mass = float(prior[idx]) if idx < len(prior) else 0.0
             node.widen_self(idx, mass)
 
-    def _ensure_enemy_table(
-        self,
-        node: InfoNode,
-        particle: Particle,
-        belief: BeliefState,
-    ) -> tuple[bytes, object]:
-        import time
-
+    def _enemy_view(self, particle: Particle) -> tuple[object, VisibleMemory, bytes]:
         enemy_seat = 1 - self.seat
-        enemy_obs = emit_observation(
-            particle.state, enemy_seat, as_arrays=True
-        )
+        enemy_obs = emit_observation(particle.state, enemy_seat, as_arrays=True)
         enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
         h = enemy_info_hash(enemy_obs, enemy_mem)
-        if h in node.enemy_tables:
-            table = self.tree.get_or_create_enemy_table(
-                node, h, node.enemy_tables[h].actions, node.enemy_tables[h].prior
-            )
-            return h, table
-        # Build enemy candidates from enemy-perspective prior.
-        enemy_belief = BeliefState(
-            seat=enemy_seat,
-            particles=[particle],
-            config=belief.config,
-        )
-        t0 = time.perf_counter()
-        prior_e, _ = self.evaluator.evaluate(
-            enemy_obs, enemy_mem, enemy_belief, from_root=False
-        )
-        self.last_select_enemy_prior_ms += (time.perf_counter() - t0) * 1000.0
-        self.last_select_enemy_prior_forwards += 1
+        return enemy_obs, enemy_mem, h
+
+    def _install_enemy_table(
+        self,
+        node: InfoNode,
+        info_hash: bytes,
+        enemy_obs,
+        enemy_mem: VisibleMemory,
+        prior_e: Array,
+    ) -> object:
+        """Create an enemy table from an already-evaluated prior (no network)."""
         from action import live_build_cost
 
         cost_grid = live_build_cost(enemy_obs, enemy_mem)
@@ -247,8 +253,70 @@ class SearchController:
             [float(prior_e[i]) if i < len(prior_e) else 0.0 for i in candidates],
             dtype=np.float64,
         )
-        table = self.tree.get_or_create_enemy_table(node, h, candidates, priors)
-        return h, table
+        return self.tree.get_or_create_enemy_table(node, info_hash, candidates, priors)
+
+    def materialize_enemy_priors(
+        self,
+        requests: Sequence[EnemyPriorRequest],
+        belief: BeliefState,
+    ) -> int:
+        """Batch-evaluate missing enemy priors and install tables.
+
+        Returns the number of network forwards. Selection must not call this.
+        """
+        import time
+
+        self.last_select_enemy_prior_ms = 0.0
+        self.last_select_enemy_prior_forwards = 0
+        if not requests:
+            return 0
+
+        unique: dict[tuple[int, bytes], EnemyPriorRequest] = {}
+        for req in requests:
+            node = req.node
+            if req.info_hash in node.enemy_tables:
+                continue
+            key = (id(node), req.info_hash)
+            if key not in unique:
+                unique[key] = req
+        if not unique:
+            return 0
+
+        enemy_seat = 1 - self.seat
+        ordered = list(unique.values())
+        items: list[tuple[object, VisibleMemory, BeliefState, bool]] = []
+        for req in ordered:
+            enemy_belief = BeliefState(
+                seat=enemy_seat,
+                particles=[req.particle],
+                config=belief.config,
+            )
+            items.append((req.enemy_obs, req.enemy_mem, enemy_belief, False))
+
+        t0 = time.perf_counter()
+        batch_fn = getattr(self.evaluator, "evaluate_many", None)
+        if callable(batch_fn):
+            results = batch_fn(items)
+        else:
+            results = [
+                self.evaluator.evaluate(obs, mem, blf, from_root=fr)
+                for obs, mem, blf, fr in items
+            ]
+        self.last_select_enemy_prior_ms = (time.perf_counter() - t0) * 1000.0
+        self.last_select_enemy_prior_forwards = len(results)
+
+        for req, (prior, _value) in zip(ordered, results):
+            node = req.node
+            if req.info_hash in node.enemy_tables:
+                continue
+            self._install_enemy_table(
+                node,
+                req.info_hash,
+                req.enemy_obs,
+                req.enemy_mem,
+                np.asarray(prior, dtype=np.float64),
+            )
+        return int(self.last_select_enemy_prior_forwards)
 
     def _widen_if_needed(
         self,
@@ -305,21 +373,35 @@ class SearchController:
         *,
         freeze_snapshot: bool = True,
         freeze_widening: bool = False,
-    ) -> PendingPath:
+        resume: Optional[EnemyPriorRequest] = None,
+    ) -> PendingPath | EnemyPriorRequest:
         """Select one simulation path from a frozen statistics snapshot.
+
+        Performs zero network calls. When an enemy table prior is missing,
+        returns an ``EnemyPriorRequest`` so the caller can batch-materialise
+        priors and resume. An unexpanded node stops for leaf evaluation.
 
         When ``freeze_widening`` is True, progressive widening is skipped so
         the matrix width stays fixed (runtime forecast below 16 simulations).
         """
-        self.last_select_enemy_prior_ms = 0.0
-        self.last_select_enemy_prior_forwards = 0
+        del freeze_snapshot  # snapshot freeze is enforced by the caller batching
         assert self.tree.root is not None and self.memory is not None
-        node = self.tree.root
-        particle = node.reservoir.sample(self.rng)
-        state = particle.state
-        nodes = [node]
-        edges: list[tuple[bytes, int, int, bytes]] = []
-        depth = 0
+
+        if resume is not None:
+            node = resume.node
+            particle = resume.particle
+            state = resume.state
+            nodes = list(resume.nodes)
+            edges = list(resume.edges)
+            depth = int(resume.depth)
+            freeze_widening = bool(resume.freeze_widening)
+        else:
+            node = self.tree.root
+            particle = node.reservoir.sample(self.rng)
+            state = particle.state
+            nodes = [node]
+            edges = []
+            depth = 0
 
         while depth < self.config.depth:
             if state.winner >= 0:
@@ -334,43 +416,52 @@ class SearchController:
                     terminal_value=seat_win,
                 )
 
+            # Unexpanded node: stop for leaf evaluation (no network here).
+            if not node.actions:
+                return PendingPath(
+                    nodes=nodes,
+                    edges=edges,
+                    particle=particle,
+                    leaf_state=state,
+                    leaf_node=node,
+                    needs_expand=True,
+                    terminal_value=None,
+                )
+
             my_obs = emit_observation(state, self.seat, as_arrays=True)
             my_mem = (
                 self.memory
                 if node is self.tree.root
-                else update_memory(
-                    # Use root memory only at root; deeper nodes use updated
-                    # memory from the simulated observation path via particle.
-                    self.memory,
-                    my_obs,
-                )
+                else update_memory(self.memory, my_obs)
             )
-            # Prefer node-local expansion using current legal mask.
             prior_full = np.zeros(3970, dtype=np.float64)
             for i, act in enumerate(node.actions):
                 if i < len(node.prior):
                     prior_full[act] = node.prior[i]
-            if not node.actions:
-                prior_eval, value = self.evaluator.evaluate(
-                    my_obs,
-                    my_mem,
-                    belief,
-                    from_root=True,
-                )
-                node.network_value = float(value)
-                self._expand_self_candidates(node, my_obs, my_mem, prior_eval)
-                prior_full = prior_eval
 
-            h, table = self._ensure_enemy_table(node, particle, belief)
+            enemy_obs, enemy_mem, h = self._enemy_view(particle)
+            table = node.enemy_tables.get(h)
+            if table is None:
+                # Pin before materialisation so a later install cannot evict it.
+                self.tree.pin_enemy(node, h)
+                return EnemyPriorRequest(
+                    nodes=nodes,
+                    edges=edges,
+                    particle=particle,
+                    state=state,
+                    depth=depth,
+                    freeze_widening=freeze_widening,
+                    info_hash=h,
+                    enemy_obs=enemy_obs,
+                    enemy_mem=enemy_mem,
+                    my_obs=my_obs,
+                    my_mem=my_mem,
+                )
+            table = self.tree.get_or_create_enemy_table(
+                node, h, table.actions, table.prior
+            )
             self.tree.pin_enemy(node, h)
 
-            # Optional progressive widening under frozen snapshot: only add
-            # candidates when the node's visit count warrants it. When
-            # freeze_snapshot is True we still allow widening based on N
-            # observed at selection start for this node.
-            enemy_seat = 1 - self.seat
-            enemy_obs = emit_observation(state, enemy_seat, as_arrays=True)
-            enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
             if not freeze_widening:
                 self._widen_if_needed(
                     node, my_obs, my_mem, prior_full, enemy=False
@@ -398,6 +489,7 @@ class SearchController:
             actions[1 - self.seat] = np.asarray(b, dtype=np.int32)
             next_state, info = transition(state, actions)
 
+            enemy_seat = 1 - self.seat
             if info.is_done or next_state.winner >= 0:
                 if next_state.winner == self.seat:
                     term = 1.0
@@ -405,10 +497,14 @@ class SearchController:
                     term = 0.0
                 else:
                     term = -1.0
-                # Draw when both lose? winner stays -1 with is_done from mutual.
                 if info.is_done and next_state.winner < 0:
                     term = 0.0
-                edge = child_edge_key(a, observation_hash(emit_observation(next_state, self.seat, as_arrays=True)))
+                edge = child_edge_key(
+                    a,
+                    observation_hash(
+                        emit_observation(next_state, self.seat, as_arrays=True)
+                    ),
+                )
                 edges.append((h, a_idx, b_idx, edge))
                 return PendingPath(
                     nodes=nodes,
@@ -418,7 +514,9 @@ class SearchController:
                         weight=particle.weight,
                         enemy_memory=update_memory(
                             particle.enemy_memory,
-                            emit_observation(next_state, enemy_seat, as_arrays=True),
+                            emit_observation(
+                                next_state, enemy_seat, as_arrays=True
+                            ),
                         ),
                         enemy_prev_action=b,
                         history=particle.history,
@@ -436,7 +534,6 @@ class SearchController:
 
             child = node.children.get(edge)
             if child is None:
-                # Expand one new child or stop at depth.
                 child_mem = update_memory(my_mem, child_obs)
                 child_hist = roll_history_digest(
                     node.history_digest, a, child_obs_h
@@ -455,7 +552,6 @@ class SearchController:
                         capacity=self.config.n_particles,
                     )
                 except MemoryError:
-                    # Bound hit: bootstrap here without a new node.
                     return PendingPath(
                         nodes=nodes,
                         edges=edges,
@@ -471,12 +567,15 @@ class SearchController:
                     weight=1.0,
                     enemy_memory=update_memory(
                         particle.enemy_memory,
-                        emit_observation(next_state, enemy_seat, as_arrays=True),
+                        emit_observation(
+                            next_state, enemy_seat, as_arrays=True
+                        ),
                     ),
                     enemy_prev_action=b,
                     history=particle.history,
                 )
                 child.reservoir.admit(arriving, self.rng)
+                # New child is unexpanded: stop for leaf evaluation.
                 return PendingPath(
                     nodes=nodes + [child],
                     edges=edges,
@@ -487,7 +586,6 @@ class SearchController:
                     terminal_value=None,
                 )
 
-            # Follow existing child.
             arriving = Particle(
                 state=next_state,
                 weight=particle.weight,
@@ -514,6 +612,29 @@ class SearchController:
             needs_expand=False,
             terminal_value=None,
         )
+
+    def complete_select_path(
+        self,
+        belief: BeliefState,
+        *,
+        freeze_snapshot: bool = True,
+        freeze_widening: bool = False,
+    ) -> PendingPath:
+        """Select one path, materialising enemy priors as needed (test helper)."""
+        outcome: PendingPath | EnemyPriorRequest = self.select_path(
+            belief,
+            freeze_snapshot=freeze_snapshot,
+            freeze_widening=freeze_widening,
+        )
+        while isinstance(outcome, EnemyPriorRequest):
+            self.materialize_enemy_priors([outcome], belief)
+            outcome = self.select_path(
+                belief,
+                freeze_snapshot=freeze_snapshot,
+                freeze_widening=freeze_widening,
+                resume=outcome,
+            )
+        return outcome
 
     def evaluate_leaf(
         self,
@@ -608,7 +729,7 @@ class SearchController:
         paths: list[PendingPath] = []
         for _ in range(batch_n):
             paths.append(
-                self.select_path(
+                self.complete_select_path(
                     belief,
                     freeze_snapshot=True,
                     freeze_widening=freeze_widening,

@@ -191,7 +191,7 @@ def test_partial_simulation_does_not_count():
         rng=rng,
     )
     ctl.ensure_root(obs, mem, belief)
-    path = ctl.select_path(belief)
+    path = ctl.complete_select_path(belief)
     assert ctl.tree.completed_simulations == 0
     assert ctl.tree.root is not None
     n_before = ctl.tree.root.N

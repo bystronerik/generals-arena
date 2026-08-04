@@ -1,50 +1,30 @@
-# Morpheus complete-turn cost (Part 09a, Phases 0–2)
+# Morpheus complete-turn cost (Part 09a, Phases 0–3)
 
-First implementation increment after
+Continuation of
 [`09a-complete-turn-cost.md`](../../morpheus-implementation/09a-complete-turn-cost.md).
 
-## Changes
+## Phase 3 changes
 
-- Phase 0: split propose vs particle-transition timing; record hashing/reply as
-  elapsed; charge enemy-prior outside `selection`; per-consumer forward
-  counters; strict JSON without `NaN`; sweep digest and commit hash; warm-up
-  belief remeasure so one proposal spike cannot lock admission forever.
-- Phase 1: skip castle-cost grids when neither action is BUILD; call
-  `step_base` before turn 800; reuse legal masks / cost grids in expand and
-  mandatory helpers.
-- Phase 2: build enemy obs/memory once; dedupe on
-  `(obs, memory, prev_action)` before tensors; array-backed internal
-  observations on belief and search hot paths.
+- `select_path` performs zero network calls.
+- An unexpanded node stops for leaf evaluation.
+- Missing enemy-table priors return `EnemyPriorRequest`.
+- Runtime batches enemy-prior tensors, resumes selection, then batches leaves.
+- Enemy-prior and leaf timing stay on their own components.
+- Frozen-batch and partial-simulation rules are preserved.
 
-## Remeasure (single Torch thread)
+## Gate
 
-Config: `scripts/configs/morpheus/online-sweep-32-belief-root.json`
-(32 particles, 8 sims, 140 ms, proposal batch 32).
+`bots/morpheus/tests/test_selection_no_network.py` proves `select_path` does not
+call the evaluator. Materialisation and leaf evaluation remain outside
+selection.
 
-Raw report:
-[`morpheus-complete-turn-cost.json`](morpheus-complete-turn-cost.json).
+## Earlier phases
 
-Isolated belief-plus-root microbench (no search, 18×18):
-
-| Component | Approx p99 |
-| --- | ---: |
-| `belief_proposal` (early unique-heavy) | ~70–140 ms |
-| `belief_proposal` (warm) | ~15–30 ms |
-| `particle_transitions` | ~4–5 ms |
-| `root_inference` | ~6 ms |
-| Belief + root (warm) | ~25–50 ms |
-
-Full coupled scenario (with search) still reports Part 09 verdict `no`:
-belief-plus-root ok rate improved above zero, but min simulations and normal
-p99 gates still fail. `enemy_prior_batch` is finite (no longer `NaN`).
-
-## Phase 2 gate
-
-Warm 32-particle belief plus root fits a 140 ms internal deadline with margin
-for search and a positive guard. Early turns with many unique enemy infos still
-consume most of the deadline on proposal under one Torch thread.
+Phases 0–2 remain as recorded in the previous revision of this note: warm
+32-particle belief plus root fits a 140 ms deadline; Part 09 is still `no`
+pending search cost work (Phases 4–6).
 
 ## Next
 
-Start Phase 3 (selection without network; staged enemy priors). Do not lower
-the 8-simulation minimum or promote 8 particles.
+Start Phase 4 (hashing and backup). Do not lower the 8-simulation minimum or
+promote 8 particles.
