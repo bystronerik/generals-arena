@@ -1,0 +1,27 @@
+{
+  "name": "self-play-smoke",
+  "seed": 0,
+  "games": 2,
+  "max_turns": 8,
+  "league_weight": 0.7,
+  "panel_weight": 0.3,
+  "panel_members": [
+    {
+      "bot_id": "smoke",
+      "role": "heuristic",
+      "weight": 1.0
+    }
+  ],
+  "n_particles": 4,
+  "target_simulations": 8,
+  "min_simulations": 4,
+  "search_depth": 4,
+  "pending_leaf_batch": 2,
+  "deadline_ms": 60000,
+  "recursive_opponent_particles": false,
+  "output": "data/morpheus/self_play/smoke",
+  "notes": [
+    "Part 11 smoke: stub league seats + smoke panel bot.",
+    "Replace mixture weights only from held-out exploitability evidence."
+  ]
+}
