@@ -75,14 +75,21 @@ def main(argv: list[str] | None = None) -> int:
         help=f"leaderboard player name(s) (default: {' '.join(DEFAULT_PLAYERS)})",
     )
     parser.add_argument("--concurrency", type=int, default=8, help="parallel downloads (default: 8)")
+    parser.add_argument(
+        "--rate",
+        type=float,
+        default=None,
+        help="max requests per second (default: the scraper's own cap; 0 disables pacing)",
+    )
     parser.add_argument("--out", type=Path, default=REPLAYS_DIR, help="output directory")
     args = parser.parse_args(argv)
 
     players = args.players or DEFAULT_PLAYERS
     scraper = load_scraper()
-    scraper_args = scraper.parse_args(
-        [*players, "--concurrency", str(args.concurrency), "--out", str(args.out)]
-    )
+    forwarded = ["--concurrency", str(args.concurrency), "--out", str(args.out)]
+    if args.rate is not None:
+        forwarded += ["--rate", str(args.rate)]
+    scraper_args = scraper.parse_args([*players, *forwarded])
     try:
         exit_code = asyncio.run(scraper.main_async(scraper_args))
     except KeyboardInterrupt:
