@@ -136,6 +136,9 @@ class InfoNode:
     network_value: float = 0.0
     pending_pins: set[bytes] = field(default_factory=set)
     expanded: bool = False
+    # Cache: particle enemy-info hashes for the current reservoir version.
+    _enemy_hash_version: int = -1
+    _enemy_hash_cache: list[tuple[float, bytes]] = field(default_factory=list)
 
     def widen_self(self, action: int, prior_mass: float) -> int:
         if action in self.actions:
@@ -260,14 +263,27 @@ class SearchTree:
         from memory import update_memory
         from observe import emit_observation
 
+        version = int(node.reservoir.version)
+        if (
+            node._enemy_hash_version != version
+            or len(node._enemy_hash_cache) != node.reservoir.n
+        ):
+            cache: list[tuple[float, bytes]] = []
+            enemy_seat = 1 - self.seat
+            for particle in node.reservoir.particles:
+                enemy_obs = emit_observation(
+                    particle.state, enemy_seat, as_arrays=True
+                )
+                enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
+                h = enemy_info_hash(enemy_obs, enemy_mem)
+                cache.append((max(float(particle.weight), 0.0), h))
+            node._enemy_hash_cache = cache
+            node._enemy_hash_version = version
+
         mass = {h: 0.0 for h in hashes}
-        enemy_seat = 1 - self.seat
-        for particle in node.reservoir.particles:
-            enemy_obs = emit_observation(particle.state, enemy_seat)
-            enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
-            h = enemy_info_hash(enemy_obs, enemy_mem)
+        for weight, h in node._enemy_hash_cache:
             if h in mass:
-                mass[h] += max(particle.weight, 0.0)
+                mass[h] += weight
         weights = np.asarray([mass[h] for h in hashes], dtype=np.float64)
         total = float(weights.sum())
         if total <= 0.0 and hashes:

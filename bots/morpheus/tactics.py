@@ -137,12 +137,18 @@ def policy_ordered_candidates(
         out.append(idx)
         if len(out) >= limit:
             return out
-    scores = np.where(mask, prior, -1.0)
-    for idx in np.argsort(-scores):
+    legal_idx = np.flatnonzero(mask)
+    if legal_idx.size == 0:
+        return out
+    remaining = np.asarray(
+        [int(i) for i in legal_idx if int(i) not in seen], dtype=np.int64
+    )
+    if remaining.size == 0:
+        return out
+    # Sort only legal remaining indices (stable for tied priors).
+    order = np.argsort(-prior[remaining], kind="stable")
+    for idx in remaining[order]:
         idx = int(idx)
-        if idx in seen or not mask[idx]:
-            continue
-        seen.add(idx)
         out.append(idx)
         if len(out) >= limit:
             break

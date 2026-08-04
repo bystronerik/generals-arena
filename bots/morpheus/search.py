@@ -15,8 +15,8 @@ from belief import BeliefState, Particle, as_action5, pass_action
 from hashing import (
     ZERO_DIGEST,
     child_edge_key,
-    enemy_info_hash,
-    info_state_key,
+    enemy_info_hash_prehashed,
+    info_state_key_prehashed,
     memory_digest,
     roll_history_digest,
 )
@@ -138,7 +138,9 @@ class SearchController:
         self.memory = memory
         obs_h = observation_hash(obs)
         mem_d = memory_digest(memory)
-        key = info_state_key(int(obs.turn), memory, obs_h, self.history_digest)
+        key = info_state_key_prehashed(
+            int(obs.turn), mem_d, obs_h, self.history_digest
+        )
         prior, value = self.evaluator.evaluate(
             obs, memory, belief, from_root=True
         )
@@ -226,7 +228,9 @@ class SearchController:
         enemy_seat = 1 - self.seat
         enemy_obs = emit_observation(particle.state, enemy_seat, as_arrays=True)
         enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
-        h = enemy_info_hash(enemy_obs, enemy_mem)
+        h = enemy_info_hash_prehashed(
+            observation_hash(enemy_obs), memory_digest(enemy_mem)
+        )
         return enemy_obs, enemy_mem, h
 
     def _install_enemy_table(
@@ -434,10 +438,6 @@ class SearchController:
                 if node is self.tree.root
                 else update_memory(self.memory, my_obs)
             )
-            prior_full = np.zeros(3970, dtype=np.float64)
-            for i, act in enumerate(node.actions):
-                if i < len(node.prior):
-                    prior_full[act] = node.prior[i]
 
             enemy_obs, enemy_mem, h = self._enemy_view(particle)
             table = node.enemy_tables.get(h)
@@ -463,6 +463,10 @@ class SearchController:
             self.tree.pin_enemy(node, h)
 
             if not freeze_widening:
+                prior_full = np.zeros(3970, dtype=np.float64)
+                for i, act in enumerate(node.actions):
+                    if i < len(node.prior):
+                        prior_full[act] = node.prior[i]
                 self._widen_if_needed(
                     node, my_obs, my_mem, prior_full, enemy=False
                 )
@@ -490,6 +494,14 @@ class SearchController:
             next_state, info = transition(state, actions)
 
             enemy_seat = 1 - self.seat
+            # One observation pair per depth step; reuse for hash, memory, edges.
+            child_obs = emit_observation(next_state, self.seat, as_arrays=True)
+            child_obs_h = observation_hash(child_obs)
+            enemy_next_obs = emit_observation(
+                next_state, enemy_seat, as_arrays=True
+            )
+            enemy_next_mem = update_memory(particle.enemy_memory, enemy_next_obs)
+
             if info.is_done or next_state.winner >= 0:
                 if next_state.winner == self.seat:
                     term = 1.0
@@ -499,12 +511,7 @@ class SearchController:
                     term = -1.0
                 if info.is_done and next_state.winner < 0:
                     term = 0.0
-                edge = child_edge_key(
-                    a,
-                    observation_hash(
-                        emit_observation(next_state, self.seat, as_arrays=True)
-                    ),
-                )
+                edge = child_edge_key(a, child_obs_h)
                 edges.append((h, a_idx, b_idx, edge))
                 return PendingPath(
                     nodes=nodes,
@@ -512,12 +519,7 @@ class SearchController:
                     particle=Particle(
                         state=next_state,
                         weight=particle.weight,
-                        enemy_memory=update_memory(
-                            particle.enemy_memory,
-                            emit_observation(
-                                next_state, enemy_seat, as_arrays=True
-                            ),
-                        ),
+                        enemy_memory=enemy_next_mem,
                         enemy_prev_action=b,
                         history=particle.history,
                     ),
@@ -527,25 +529,24 @@ class SearchController:
                     terminal_value=term,
                 )
 
-            child_obs = emit_observation(next_state, self.seat, as_arrays=True)
-            child_obs_h = observation_hash(child_obs)
             edge = child_edge_key(a, child_obs_h)
             edges.append((h, a_idx, b_idx, edge))
 
             child = node.children.get(edge)
             if child is None:
                 child_mem = update_memory(my_mem, child_obs)
+                child_mem_d = memory_digest(child_mem)
                 child_hist = roll_history_digest(
                     node.history_digest, a, child_obs_h
                 )
-                child_key = info_state_key(
-                    int(child_obs.turn), child_mem, child_obs_h, child_hist
+                child_key = info_state_key_prehashed(
+                    int(child_obs.turn), child_mem_d, child_obs_h, child_hist
                 )
                 try:
                     child = self.tree.make_node(
                         key=child_key,
                         turn=int(child_obs.turn),
-                        memory_digest=memory_digest(child_mem),
+                        memory_digest=child_mem_d,
                         obs_hash=child_obs_h,
                         history_digest=child_hist,
                         network_value=0.0,
@@ -565,12 +566,7 @@ class SearchController:
                 arriving = Particle(
                     state=next_state,
                     weight=1.0,
-                    enemy_memory=update_memory(
-                        particle.enemy_memory,
-                        emit_observation(
-                            next_state, enemy_seat, as_arrays=True
-                        ),
-                    ),
+                    enemy_memory=enemy_next_mem,
                     enemy_prev_action=b,
                     history=particle.history,
                 )
@@ -589,10 +585,7 @@ class SearchController:
             arriving = Particle(
                 state=next_state,
                 weight=particle.weight,
-                enemy_memory=update_memory(
-                    particle.enemy_memory,
-                    emit_observation(next_state, enemy_seat, as_arrays=True),
-                ),
+                enemy_memory=enemy_next_mem,
                 enemy_prev_action=b,
                 history=particle.history,
             )

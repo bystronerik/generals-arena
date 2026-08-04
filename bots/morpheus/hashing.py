@@ -57,6 +57,21 @@ def roll_history_digest(
     return _sha256(prev, action_i, obs_hash)
 
 
+def info_state_key_prehashed(
+    turn: int,
+    mem_digest: bytes,
+    obs_hash: bytes,
+    history_digest: bytes = ZERO_DIGEST,
+) -> bytes:
+    """Node key from already-computed digests (avoids re-hashing memory)."""
+    return _sha256(
+        struct.pack("<i", int(turn)),
+        mem_digest,
+        obs_hash,
+        history_digest,
+    )
+
+
 def info_state_key(
     turn: int,
     memory: VisibleMemory,
@@ -64,17 +79,21 @@ def info_state_key(
     history_digest: bytes = ZERO_DIGEST,
 ) -> bytes:
     """Node key: turn || memory digest || observation hash || history digest."""
-    return _sha256(
-        struct.pack("<i", int(turn)),
-        memory_digest(memory),
-        obs_hash,
-        history_digest,
+    return info_state_key_prehashed(
+        turn, memory_digest(memory), obs_hash, history_digest
     )
+
+
+def enemy_info_hash_prehashed(obs_hash: bytes, mem_digest: bytes) -> bytes:
+    """Enemy table key from already-computed observation and memory digests."""
+    return _sha256(obs_hash, mem_digest)
 
 
 def enemy_info_hash(enemy_obs, enemy_memory: VisibleMemory) -> bytes:
     """Enemy table key from fogged enemy observation and enemy memory."""
-    return _sha256(observation_hash(enemy_obs), memory_digest(enemy_memory))
+    return enemy_info_hash_prehashed(
+        observation_hash(enemy_obs), memory_digest(enemy_memory)
+    )
 
 
 def child_edge_key(action: Sequence[int], obs_hash: bytes) -> bytes:

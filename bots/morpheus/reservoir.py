@@ -20,6 +20,8 @@ class ParticleReservoir:
     capacity: int = N_PARTICLES
     particles: list[Particle] = field(default_factory=list)
     admitted_count: int = 0
+    # Bumped when the particle list changes; backup caches enemy hashes on this.
+    version: int = 0
 
     @property
     def n(self) -> int:
@@ -28,6 +30,7 @@ class ParticleReservoir:
     def clear(self) -> None:
         self.particles.clear()
         self.admitted_count = 0
+        self.version += 1
 
     def replace_from_belief(self, belief: BeliefState) -> None:
         """Copy the filtered belief into this reservoir (equal capacity)."""
@@ -35,11 +38,13 @@ class ParticleReservoir:
         if not positive:
             self.particles = []
             self.admitted_count = 0
+            self.version += 1
             return
         rng = np.random.default_rng(0)
         n = min(self.capacity, belief.config.n_particles)
         self.particles = resample(normalize_weights(positive), n, rng)
         self.admitted_count = len(self.particles)
+        self.version += 1
 
     def sample(self, rng: np.random.Generator) -> Particle:
         if not self.particles:
@@ -64,11 +69,13 @@ class ParticleReservoir:
         self.admitted_count += 1
         if self.n < self.capacity:
             self.particles.append(arriving)
+            self.version += 1
             return
         t = int(self.admitted_count)
         if float(rng.random()) < (self.capacity / float(t)):
             idx = int(rng.integers(0, self.capacity))
             self.particles[idx] = arriving
+            self.version += 1
 
     def as_belief(self, seat: int, config=None) -> BeliefState:
         from belief import BeliefConfig
