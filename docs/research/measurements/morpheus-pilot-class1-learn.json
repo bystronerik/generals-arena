@@ -1,0 +1,840 @@
+{
+  "a100_hours": 0.0016655954747046861,
+  "accounting_line": "learning_curve_pilot",
+  "bundle": {
+    "promotable_main_run": false,
+    "selected_candidate": "aux-light-explore-dirichlet",
+    "status": "provisional_pilot"
+  },
+  "checkpoint": "data/morpheus/pilot/local-smoke/checkpoint",
+  "checkpoint_reloadable": true,
+  "config": {
+    "batch_size": 2,
+    "device": "cpu",
+    "learning_rate": 0.001,
+    "manifest": "training/morpheus/manifests/pilot-class1-scraped.json",
+    "max_items": 8,
+    "n_blocks": 12,
+    "n_particles": 4,
+    "objective": "training/morpheus/configs/pilot-objective.json",
+    "seed": 0,
+    "steps": 50
+  },
+  "generated_at": "2026-08-04T20:26:36.268751+00:00",
+  "history": [
+    {
+      "loss": 13.128320693969727,
+      "step": 0,
+      "terms": {
+        "army_margin": 0.44391077756881714,
+        "castle_margin": 5.266535758972168,
+        "enemy_army_bins": 4.481159687042236,
+        "enemy_general": 6.327540397644043,
+        "hidden_castle": 0.2560102641582489,
+        "hidden_owner": 0.6871330142021179,
+        "land_margin": 0.5895905494689941,
+        "policy": 5.429978847503662,
+        "turns_to_termination": 0.7255308628082275,
+        "wdl": 4.447502136230469
+      }
+    },
+    {
+      "loss": 10.339865684509277,
+      "step": 1,
+      "terms": {
+        "army_margin": 0.00012901013542432338,
+        "castle_margin": 4.990078449249268,
+        "enemy_army_bins": 4.763956546783447,
+        "enemy_general": 6.024622917175293,
+        "hidden_castle": 0.29704076051712036,
+        "hidden_owner": 0.8259621858596802,
+        "land_margin": 0.12002526968717575,
+        "policy": 5.858458518981934,
+        "turns_to_termination": 0.6209326386451721,
+        "wdl": 1.2615084648132324
+      }
+    },
+    {
+      "loss": 6.078390598297119,
+      "step": 2,
+      "terms": {
+        "army_margin": 0.13913437724113464,
+        "castle_margin": 4.740496635437012,
+        "enemy_army_bins": 4.080697536468506,
+        "enemy_general": 5.846085548400879,
+        "hidden_castle": 0.368825763463974,
+        "hidden_owner": 0.8121774792671204,
+        "land_margin": 0.0490683987736702,
+        "policy": 2.9342687129974365,
+        "turns_to_termination": 0.42892810702323914,
+        "wdl": 0.15461835265159607
+      }
+    },
+    {
+      "loss": 5.584083080291748,
+      "step": 3,
+      "terms": {
+        "army_margin": 0.3362392783164978,
+        "castle_margin": 4.313741683959961,
+        "enemy_army_bins": 3.7993226051330566,
+        "enemy_general": 5.886025428771973,
+        "hidden_castle": 0.40970391035079956,
+        "hidden_owner": 0.8534876108169556,
+        "land_margin": 0.48115622997283936,
+        "policy": 2.623891830444336,
+        "turns_to_termination": 0.22930830717086792,
+        "wdl": 0.01648903265595436
+      }
+    },
+    {
+      "loss": 7.3206257820129395,
+      "step": 4,
+      "terms": {
+        "army_margin": 0.22816386818885803,
+        "castle_margin": 3.7844784259796143,
+        "enemy_army_bins": 3.782130002975464,
+        "enemy_general": 5.399374008178711,
+        "hidden_castle": 0.4460121989250183,
+        "hidden_owner": 0.8767409324645996,
+        "land_margin": 0.3397274911403656,
+        "policy": 4.528345108032227,
+        "turns_to_termination": 0.20232561230659485,
+        "wdl": 0.005383265670388937
+      }
+    },
+    {
+      "loss": 4.0904083251953125,
+      "step": 5,
+      "terms": {
+        "army_margin": 0.02206699177622795,
+        "castle_margin": 3.248418092727661,
+        "enemy_army_bins": 3.296674966812134,
+        "enemy_general": 5.527923107147217,
+        "hidden_castle": 0.4532678723335266,
+        "hidden_owner": 0.8053041100502014,
+        "land_margin": 0.17572857439517975,
+        "policy": 1.46285080909729,
+        "turns_to_termination": 0.010460758581757545,
+        "wdl": 0.00192147062625736
+      }
+    },
+    {
+      "loss": 4.467004776000977,
+      "step": 6,
+      "terms": {
+        "army_margin": 0.004911871626973152,
+        "castle_margin": 2.6865603923797607,
+        "enemy_army_bins": 2.858886957168579,
+        "enemy_general": 5.198890686035156,
+        "hidden_castle": 0.39760708808898926,
+        "hidden_owner": 0.7288151979446411,
+        "land_margin": 0.042585693299770355,
+        "policy": 2.0927517414093018,
+        "turns_to_termination": 0.0003837842377834022,
+        "wdl": 0.0011224998161196709
+      }
+    },
+    {
+      "loss": 3.0756802558898926,
+      "step": 7,
+      "terms": {
+        "army_margin": 0.01707322709262371,
+        "castle_margin": 2.0210490226745605,
+        "enemy_army_bins": 2.728227376937866,
+        "enemy_general": 5.0291032791137695,
+        "hidden_castle": 0.30590736865997314,
+        "hidden_owner": 0.69672691822052,
+        "land_margin": 0.010998843237757683,
+        "policy": 0.8277970552444458,
+        "turns_to_termination": 0.012650744058191776,
+        "wdl": 0.0006892685778439045
+      }
+    },
+    {
+      "loss": 7.277869701385498,
+      "step": 8,
+      "terms": {
+        "army_margin": 0.019231347367167473,
+        "castle_margin": 1.4913303852081299,
+        "enemy_army_bins": 2.2464797496795654,
+        "enemy_general": 4.987212657928467,
+        "hidden_castle": 0.23631957173347473,
+        "hidden_owner": 0.6204923987388611,
+        "land_margin": 0.09564920514822006,
+        "policy": 5.205601692199707,
+        "turns_to_termination": 0.08536754548549652,
+        "wdl": 0.0005105620948597789
+      }
+    },
+    {
+      "loss": 7.468379497528076,
+      "step": 9,
+      "terms": {
+        "army_margin": 0.0015277881175279617,
+        "castle_margin": 0.8206284046173096,
+        "enemy_army_bins": 2.322495222091675,
+        "enemy_general": 4.955384254455566,
+        "hidden_castle": 0.18961727619171143,
+        "hidden_owner": 0.663300096988678,
+        "land_margin": 0.1265653669834137,
+        "policy": 5.411954402923584,
+        "turns_to_termination": 0.08694546669721603,
+        "wdl": 0.0003852698137052357
+      }
+    },
+    {
+      "loss": 4.7399678230285645,
+      "step": 10,
+      "terms": {
+        "army_margin": 0.004429114982485771,
+        "castle_margin": 0.37057554721832275,
+        "enemy_army_bins": 2.4894649982452393,
+        "enemy_general": 4.818434715270996,
+        "hidden_castle": 0.13987472653388977,
+        "hidden_owner": 0.7322686314582825,
+        "land_margin": 0.10858957469463348,
+        "policy": 2.6836655139923096,
+        "turns_to_termination": 0.1547204554080963,
+        "wdl": 0.0003571465495042503
+      }
+    },
+    {
+      "loss": 5.479907512664795,
+      "step": 11,
+      "terms": {
+        "army_margin": 0.011529980227351189,
+        "castle_margin": 0.0017738010501489043,
+        "enemy_army_bins": 2.107036590576172,
+        "enemy_general": 4.573705673217773,
+        "hidden_castle": 0.11489669233560562,
+        "hidden_owner": 0.7465001344680786,
+        "land_margin": 0.08124303817749023,
+        "policy": 3.6017394065856934,
+        "turns_to_termination": 0.09737458825111389,
+        "wdl": 0.0002717006136663258
+      }
+    },
+    {
+      "loss": 3.560466766357422,
+      "step": 12,
+      "terms": {
+        "army_margin": 0.005447765812277794,
+        "castle_margin": 0.13342443108558655,
+        "enemy_army_bins": 2.112567901611328,
+        "enemy_general": 4.55120849609375,
+        "hidden_castle": 0.09116671979427338,
+        "hidden_owner": 0.748602032661438,
+        "land_margin": 0.01711328886449337,
+        "policy": 1.6819612979888916,
+        "turns_to_termination": 0.16477209329605103,
+        "wdl": 0.00025650454335846007
+      }
+    },
+    {
+      "loss": 3.2308566570281982,
+      "step": 13,
+      "terms": {
+        "army_margin": 0.008940703235566616,
+        "castle_margin": 0.2542194128036499,
+        "enemy_army_bins": 1.499582052230835,
+        "enemy_general": 4.2823076248168945,
+        "hidden_castle": 0.07055718451738358,
+        "hidden_owner": 0.6444032192230225,
+        "land_margin": 0.000821187044493854,
+        "policy": 1.596335768699646,
+        "turns_to_termination": 0.14867368340492249,
+        "wdl": 0.00025918701430782676
+      }
+    },
+    {
+      "loss": 2.4126322269439697,
+      "step": 14,
+      "terms": {
+        "army_margin": 0.0165115874260664,
+        "castle_margin": 0.4582281708717346,
+        "enemy_army_bins": 1.945075273513794,
+        "enemy_general": 4.082000732421875,
+        "hidden_castle": 0.06652504205703735,
+        "hidden_owner": 0.8001505732536316,
+        "land_margin": 0.0034309467300772667,
+        "policy": 0.6737915873527527,
+        "turns_to_termination": 0.026396870613098145,
+        "wdl": 0.00015287422866094857
+      }
+    },
+    {
+      "loss": 2.806796073913574,
+      "step": 15,
+      "terms": {
+        "army_margin": 0.029059728607535362,
+        "castle_margin": 0.5216466188430786,
+        "enemy_army_bins": 1.6063402891159058,
+        "enemy_general": 4.876395225524902,
+        "hidden_castle": 0.05641292408108711,
+        "hidden_owner": 0.7469297647476196,
+        "land_margin": 0.018816038966178894,
+        "policy": 0.9650101661682129,
+        "turns_to_termination": 0.0022196348290890455,
+        "wdl": 0.00014149125490803272
+      }
+    },
+    {
+      "loss": 2.8240060806274414,
+      "step": 16,
+      "terms": {
+        "army_margin": 0.04435890167951584,
+        "castle_margin": 0.5823273062705994,
+        "enemy_army_bins": 2.1699559688568115,
+        "enemy_general": 4.34199333190918,
+        "hidden_castle": 0.04962367191910744,
+        "hidden_owner": 0.8018872737884521,
+        "land_margin": 0.022441862151026726,
+        "policy": 0.9569514393806458,
+        "turns_to_termination": 0.02086922526359558,
+        "wdl": 0.0001330883096670732
+      }
+    },
+    {
+      "loss": 2.2356116771698,
+      "step": 17,
+      "terms": {
+        "army_margin": 0.10667183995246887,
+        "castle_margin": 0.5681504011154175,
+        "enemy_army_bins": 1.405526876449585,
+        "enemy_general": 3.4213900566101074,
+        "hidden_castle": 0.040711089968681335,
+        "hidden_owner": 0.6119087934494019,
+        "land_margin": 0.04026518017053604,
+        "policy": 0.835950493812561,
+        "turns_to_termination": 0.00014926235598977655,
+        "wdl": 0.00012200325727462769
+      }
+    },
+    {
+      "loss": 1.8257193565368652,
+      "step": 18,
+      "terms": {
+        "army_margin": 0.0588609054684639,
+        "castle_margin": 0.40273797512054443,
+        "enemy_army_bins": 1.5128920078277588,
+        "enemy_general": 4.197976112365723,
+        "hidden_castle": 0.03540988638997078,
+        "hidden_owner": 0.7141950726509094,
+        "land_margin": 0.08457109332084656,
+        "policy": 0.18732261657714844,
+        "turns_to_termination": 0.0232514850795269,
+        "wdl": 0.00011884451669175178
+      }
+    },
+    {
+      "loss": 1.819262981414795,
+      "step": 19,
+      "terms": {
+        "army_margin": 0.066552072763443,
+        "castle_margin": 0.26639774441719055,
+        "enemy_army_bins": 1.487638235092163,
+        "enemy_general": 4.431638240814209,
+        "hidden_castle": 0.03503866493701935,
+        "hidden_owner": 0.6932250261306763,
+        "land_margin": 0.053031545132398605,
+        "policy": 0.14232343435287476,
+        "turns_to_termination": 0.01804899424314499,
+        "wdl": 0.00010877255408558995
+      }
+    },
+    {
+      "loss": 1.5354667901992798,
+      "step": 20,
+      "terms": {
+        "army_margin": 0.002659618156030774,
+        "castle_margin": 0.18507930636405945,
+        "enemy_army_bins": 1.4548636674880981,
+        "enemy_general": 3.531628131866455,
+        "hidden_castle": 0.030801713466644287,
+        "hidden_owner": 0.6787967085838318,
+        "land_margin": 0.03293682634830475,
+        "policy": 0.10420070588588715,
+        "turns_to_termination": 0.014249000698328018,
+        "wdl": 0.00011747376265702769
+      }
+    },
+    {
+      "loss": 1.283149003982544,
+      "step": 21,
+      "terms": {
+        "army_margin": 0.003480537561699748,
+        "castle_margin": 0.11545830965042114,
+        "enemy_army_bins": 1.2485597133636475,
+        "enemy_general": 2.869540214538574,
+        "hidden_castle": 0.03077094629406929,
+        "hidden_owner": 0.6197959780693054,
+        "land_margin": 0.007870087400078773,
+        "policy": 0.08898058533668518,
+        "turns_to_termination": 0.0035013523884117603,
+        "wdl": 0.00010173994087381288
+      }
+    },
+    {
+      "loss": 1.5229692459106445,
+      "step": 22,
+      "terms": {
+        "army_margin": 0.05185849219560623,
+        "castle_margin": 0.031172651797533035,
+        "enemy_army_bins": 1.687604308128357,
+        "enemy_general": 3.4700522422790527,
+        "hidden_castle": 0.028849368914961815,
+        "hidden_owner": 0.6595761179924011,
+        "land_margin": 0.0005248918896540999,
+        "policy": 0.05979299545288086,
+        "turns_to_termination": 0.0337715819478035,
+        "wdl": 0.000116758506919723
+      }
+    },
+    {
+      "loss": 1.2563462257385254,
+      "step": 23,
+      "terms": {
+        "army_margin": 0.017628641799092293,
+        "castle_margin": 0.0307054091244936,
+        "enemy_army_bins": 1.210078239440918,
+        "enemy_general": 2.2002363204956055,
+        "hidden_castle": 0.02641802653670311,
+        "hidden_owner": 0.5900746583938599,
+        "land_margin": 0.0014139660634100437,
+        "policy": 0.2510024905204773,
+        "turns_to_termination": 3.934101914637722e-05,
+        "wdl": 0.00011520914267748594
+      }
+    },
+    {
+      "loss": 1.0421968698501587,
+      "step": 24,
+      "terms": {
+        "army_margin": 0.021576862782239914,
+        "castle_margin": 0.006183520425111055,
+        "enemy_army_bins": 1.3233033418655396,
+        "enemy_general": 1.6161701679229736,
+        "hidden_castle": 0.024179544299840927,
+        "hidden_owner": 0.5712067484855652,
+        "land_margin": 0.01261210348457098,
+        "policy": 0.1599075347185135,
+        "turns_to_termination": 0.0013832494150847197,
+        "wdl": 0.00011354038724675775
+      }
+    },
+    {
+      "loss": 3.552546739578247,
+      "step": 25,
+      "terms": {
+        "army_margin": 0.069194495677948,
+        "castle_margin": 0.007071247324347496,
+        "enemy_army_bins": 1.5084482431411743,
+        "enemy_general": 3.107639789581299,
+        "hidden_castle": 0.027496885508298874,
+        "hidden_owner": 0.6339125633239746,
+        "land_margin": 0.012225440703332424,
+        "policy": 2.232576608657837,
+        "turns_to_termination": 0.003508263034746051,
+        "wdl": 0.00012003647134406492
+      }
+    },
+    {
+      "loss": 0.7399688959121704,
+      "step": 26,
+      "terms": {
+        "army_margin": 0.014191793277859688,
+        "castle_margin": 0.016845019534230232,
+        "enemy_army_bins": 1.2657692432403564,
+        "enemy_general": 0.7634917497634888,
+        "hidden_castle": 0.02096983976662159,
+        "hidden_owner": 0.5811834931373596,
+        "land_margin": 0.008423210121691227,
+        "policy": 0.08306756615638733,
+        "turns_to_termination": 0.0019331774674355984,
+        "wdl": 0.00012355275976005942
+      }
+    },
+    {
+      "loss": 0.8823795318603516,
+      "step": 27,
+      "terms": {
+        "army_margin": 0.08466392010450363,
+        "castle_margin": 0.022052422165870667,
+        "enemy_army_bins": 1.3952345848083496,
+        "enemy_general": 1.311166763305664,
+        "hidden_castle": 0.020349228754639626,
+        "hidden_owner": 0.6084022521972656,
+        "land_margin": 0.041586607694625854,
+        "policy": 0.04359795153141022,
+        "turns_to_termination": 0.009531045332551003,
+        "wdl": 0.00015412541688419878
+      }
+    },
+    {
+      "loss": 0.9977558255195618,
+      "step": 28,
+      "terms": {
+        "army_margin": 0.09558545053005219,
+        "castle_margin": 0.005800400860607624,
+        "enemy_army_bins": 1.5301867723464966,
+        "enemy_general": 1.6732829809188843,
+        "hidden_castle": 0.017682934179902077,
+        "hidden_owner": 0.6158238649368286,
+        "land_margin": 0.0524514764547348,
+        "policy": 0.03272559121251106,
+        "turns_to_termination": 0.010307036340236664,
+        "wdl": 0.00023129877808969468
+      }
+    },
+    {
+      "loss": 1.3893238306045532,
+      "step": 29,
+      "terms": {
+        "army_margin": 0.011185748502612114,
+        "castle_margin": 0.04092847928404808,
+        "enemy_army_bins": 1.2576982975006104,
+        "enemy_general": 1.0830070972442627,
+        "hidden_castle": 0.017574505880475044,
+        "hidden_owner": 0.5913525819778442,
+        "land_margin": 0.008382126688957214,
+        "policy": 0.6510843634605408,
+        "turns_to_termination": 0.005272303242236376,
+        "wdl": 0.00017897672660183161
+      }
+    },
+    {
+      "loss": 0.7032908201217651,
+      "step": 30,
+      "terms": {
+        "army_margin": 0.04892372339963913,
+        "castle_margin": 0.041195496916770935,
+        "enemy_army_bins": 1.2259721755981445,
+        "enemy_general": 0.7414041757583618,
+        "hidden_castle": 0.016183825209736824,
+        "hidden_owner": 0.5910965204238892,
+        "land_margin": 0.0009532632539048791,
+        "policy": 0.05580736696720123,
+        "turns_to_termination": 0.030055761337280273,
+        "wdl": 0.00019047825480811298
+      }
+    },
+    {
+      "loss": 1.018825888633728,
+      "step": 31,
+      "terms": {
+        "army_margin": 0.06574895977973938,
+        "castle_margin": 0.023804262280464172,
+        "enemy_army_bins": 1.636825680732727,
+        "enemy_general": 1.5206910371780396,
+        "hidden_castle": 0.015952816233038902,
+        "hidden_owner": 0.6067042350769043,
+        "land_margin": 0.013851584866642952,
+        "policy": 0.07053598761558533,
+        "turns_to_termination": 0.004245825577527285,
+        "wdl": 0.00025686208391562104
+      }
+    },
+    {
+      "loss": 0.9413689970970154,
+      "step": 32,
+      "terms": {
+        "army_margin": 0.08974972367286682,
+        "castle_margin": 0.04974997416138649,
+        "enemy_army_bins": 1.5050773620605469,
+        "enemy_general": 1.3603689670562744,
+        "hidden_castle": 0.016354374587535858,
+        "hidden_owner": 0.6210719347000122,
+        "land_margin": 0.012594083324074745,
+        "policy": 0.05817684158682823,
+        "turns_to_termination": 0.04232111573219299,
+        "wdl": 0.0002063299180008471
+      }
+    },
+    {
+      "loss": 0.5942338705062866,
+      "step": 33,
+      "terms": {
+        "army_margin": 0.06810305267572403,
+        "castle_margin": 0.04250432178378105,
+        "enemy_army_bins": 1.3397842645645142,
+        "enemy_general": 0.24662303924560547,
+        "hidden_castle": 0.012458364479243755,
+        "hidden_owner": 0.5504651665687561,
+        "land_margin": 0.04028778150677681,
+        "policy": 0.048146866261959076,
+        "turns_to_termination": 0.05571091175079346,
+        "wdl": 0.00029267551144585013
+      }
+    },
+    {
+      "loss": 0.7521123290061951,
+      "step": 34,
+      "terms": {
+        "army_margin": 0.11170509457588196,
+        "castle_margin": 0.010460009798407555,
+        "enemy_army_bins": 1.4884319305419922,
+        "enemy_general": 0.700411319732666,
+        "hidden_castle": 0.013467969372868538,
+        "hidden_owner": 0.5965765714645386,
+        "land_margin": 0.02170521579682827,
+        "policy": 0.045887481421232224,
+        "turns_to_termination": 0.021323496475815773,
+        "wdl": 0.00026341783814132214
+      }
+    },
+    {
+      "loss": 0.8020167946815491,
+      "step": 35,
+      "terms": {
+        "army_margin": 0.01776537112891674,
+        "castle_margin": 0.011948994360864162,
+        "enemy_army_bins": 1.46217679977417,
+        "enemy_general": 0.5361772775650024,
+        "hidden_castle": 0.013715775683522224,
+        "hidden_owner": 0.6186457872390747,
+        "land_margin": 0.014419479295611382,
+        "policy": 0.1424945890903473,
+        "turns_to_termination": 0.02794582024216652,
+        "wdl": 0.00029660819564014673
+      }
+    },
+    {
+      "loss": 0.5416281819343567,
+      "step": 36,
+      "terms": {
+        "army_margin": 0.01600552722811699,
+        "castle_margin": 0.0013378937728703022,
+        "enemy_army_bins": 1.3444262742996216,
+        "enemy_general": 0.13961274921894073,
+        "hidden_castle": 0.011380286887288094,
+        "hidden_owner": 0.5494887232780457,
+        "land_margin": 0.03559969365596771,
+        "policy": 0.028608806431293488,
+        "turns_to_termination": 0.010823125019669533,
+        "wdl": 0.00031114742159843445
+      }
+    },
+    {
+      "loss": 0.6506821513175964,
+      "step": 37,
+      "terms": {
+        "army_margin": 0.05761367827653885,
+        "castle_margin": 0.0014638736611232162,
+        "enemy_army_bins": 1.4092158079147339,
+        "enemy_general": 0.2514541745185852,
+        "hidden_castle": 0.011478419415652752,
+        "hidden_owner": 0.6022260189056396,
+        "land_margin": 0.010480423457920551,
+        "policy": 0.07991690933704376,
+        "turns_to_termination": 0.0007077194168232381,
+        "wdl": 0.0003800857812166214
+      }
+    },
+    {
+      "loss": 0.5446317195892334,
+      "step": 38,
+      "terms": {
+        "army_margin": 0.07689839601516724,
+        "castle_margin": 0.0028744759038090706,
+        "enemy_army_bins": 1.1437618732452393,
+        "enemy_general": 0.2005690038204193,
+        "hidden_castle": 0.0104597769677639,
+        "hidden_owner": 0.5755749940872192,
+        "land_margin": 0.009839351288974285,
+        "policy": 0.057704150676727295,
+        "turns_to_termination": 0.021830657497048378,
+        "wdl": 0.0003329553292132914
+      }
+    },
+    {
+      "loss": 0.5829928517341614,
+      "step": 39,
+      "terms": {
+        "army_margin": 0.09366615116596222,
+        "castle_margin": 0.004735045600682497,
+        "enemy_army_bins": 1.3704195022583008,
+        "enemy_general": 0.14083418250083923,
+        "hidden_castle": 0.009781241416931152,
+        "hidden_owner": 0.5895107984542847,
+        "land_margin": 0.012895068153738976,
+        "policy": 0.05043400079011917,
+        "turns_to_termination": 0.007746443152427673,
+        "wdl": 0.00043751904740929604
+      }
+    },
+    {
+      "loss": 0.48587098717689514,
+      "step": 40,
+      "terms": {
+        "army_margin": 0.025311585515737534,
+        "castle_margin": 0.00031003233743831515,
+        "enemy_army_bins": 1.1363906860351562,
+        "enemy_general": 0.08910985291004181,
+        "hidden_castle": 0.007962591014802456,
+        "hidden_owner": 0.5351911783218384,
+        "land_margin": 0.022163784131407738,
+        "policy": 0.03924646973609924,
+        "turns_to_termination": 0.05805160850286484,
+        "wdl": 0.00036346216802485287
+      }
+    },
+    {
+      "loss": 0.5322210192680359,
+      "step": 41,
+      "terms": {
+        "army_margin": 0.030392497777938843,
+        "castle_margin": 0.008935504592955112,
+        "enemy_army_bins": 1.331188678741455,
+        "enemy_general": 0.08193627744913101,
+        "hidden_castle": 0.008335975930094719,
+        "hidden_owner": 0.5778211951255798,
+        "land_margin": 0.029865700751543045,
+        "policy": 0.028244074434041977,
+        "turns_to_termination": 0.03009866364300251,
+        "wdl": 0.00044216535752639174
+      }
+    },
+    {
+      "loss": 0.5103062987327576,
+      "step": 42,
+      "terms": {
+        "army_margin": 0.010898822918534279,
+        "castle_margin": 0.014913065358996391,
+        "enemy_army_bins": 1.2738877534866333,
+        "enemy_general": 0.08016930520534515,
+        "hidden_castle": 0.008062569424510002,
+        "hidden_owner": 0.5411142706871033,
+        "land_margin": 0.0037283634301275015,
+        "policy": 0.03134097158908844,
+        "turns_to_termination": 0.050366975367069244,
+        "wdl": 0.0003707911819219589
+      }
+    },
+    {
+      "loss": 0.44202861189842224,
+      "step": 43,
+      "terms": {
+        "army_margin": 0.019064007326960564,
+        "castle_margin": 0.0032735606655478477,
+        "enemy_army_bins": 1.1035640239715576,
+        "enemy_general": 0.04621673375368118,
+        "hidden_castle": 0.007287190295755863,
+        "hidden_owner": 0.5347799062728882,
+        "land_margin": 0.002866345690563321,
+        "policy": 0.018210789188742638,
+        "turns_to_termination": 0.0051341550424695015,
+        "wdl": 0.0004320402513258159
+      }
+    },
+    {
+      "loss": 0.5004695057868958,
+      "step": 44,
+      "terms": {
+        "army_margin": 0.0008557757828384638,
+        "castle_margin": 0.00831702258437872,
+        "enemy_army_bins": 1.2950794696807861,
+        "enemy_general": 0.043162330985069275,
+        "hidden_castle": 0.007363114971667528,
+        "hidden_owner": 0.550058126449585,
+        "land_margin": 0.033494289964437485,
+        "policy": 0.024321209639310837,
+        "turns_to_termination": 0.014443987980484962,
+        "wdl": 0.0004814286658074707
+      }
+    },
+    {
+      "loss": 0.5067498683929443,
+      "step": 45,
+      "terms": {
+        "army_margin": 0.006993078161031008,
+        "castle_margin": 0.0011745784431695938,
+        "enemy_army_bins": 1.324575662612915,
+        "enemy_general": 0.05448161065578461,
+        "hidden_castle": 0.0072560785338282585,
+        "hidden_owner": 0.5546661019325256,
+        "land_margin": 0.01675877533853054,
+        "policy": 0.019397592172026634,
+        "turns_to_termination": 0.03029528632760048,
+        "wdl": 0.00043478081352077425
+      }
+    },
+    {
+      "loss": 0.5578984022140503,
+      "step": 46,
+      "terms": {
+        "army_margin": 0.02816716581583023,
+        "castle_margin": 0.004054135177284479,
+        "enemy_army_bins": 1.527872920036316,
+        "enemy_general": 0.05719577521085739,
+        "hidden_castle": 0.006992804352194071,
+        "hidden_owner": 0.5507304072380066,
+        "land_margin": 0.006195089314132929,
+        "policy": 0.019667774438858032,
+        "turns_to_termination": 0.025262417271733284,
+        "wdl": 0.0003976029984187335
+      }
+    },
+    {
+      "loss": 0.47169387340545654,
+      "step": 47,
+      "terms": {
+        "army_margin": 0.015523833222687244,
+        "castle_margin": 0.00244705006480217,
+        "enemy_army_bins": 1.2252501249313354,
+        "enemy_general": 0.03223711997270584,
+        "hidden_castle": 0.006731488276273012,
+        "hidden_owner": 0.5203732252120972,
+        "land_margin": 0.014300158247351646,
+        "policy": 0.024424470961093903,
+        "turns_to_termination": 0.001567310537211597,
+        "wdl": 0.000439188617747277
+      }
+    },
+    {
+      "loss": 0.44875603914260864,
+      "step": 48,
+      "terms": {
+        "army_margin": 0.044215671718120575,
+        "castle_margin": 0.0036880671977996826,
+        "enemy_army_bins": 1.144129753112793,
+        "enemy_general": 0.025580881163477898,
+        "hidden_castle": 0.005389643367379904,
+        "hidden_owner": 0.5243105292320251,
+        "land_margin": 0.0399862639605999,
+        "policy": 0.019516119733452797,
+        "turns_to_termination": 0.0074355145916342735,
+        "wdl": 0.0004293585370760411
+      }
+    },
+    {
+      "loss": 0.4495953619480133,
+      "step": 49,
+      "terms": {
+        "army_margin": 0.0009252597228623927,
+        "castle_margin": 0.0036482117138803005,
+        "enemy_army_bins": 1.1925309896469116,
+        "enemy_general": 0.017542995512485504,
+        "hidden_castle": 0.005911288782954216,
+        "hidden_owner": 0.5182575583457947,
+        "land_margin": 0.017092034220695496,
+        "policy": 0.015010036528110504,
+        "turns_to_termination": 0.006109024863690138,
+        "wdl": 0.0005225961213000119
+      }
+    }
+  ],
+  "loss_decreased": true,
+  "loss_final": 0.4495953619480133,
+  "loss_step0": 13.128320693969727,
+  "notes": [
+    "Thin pilot smoke only. Not Part 14. Not a Part 13 yes.",
+    "A100 wall time charges to learning_curve_pilot accounting notes."
+  ],
+  "ok": true,
+  "sample_count": 8,
+  "source_labels": [
+    "ResBot_reconstructions"
+  ],
+  "status": "pilot_learn",
+  "wall_s": 5.99614370893687
+}

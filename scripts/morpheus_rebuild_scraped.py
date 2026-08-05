@@ -41,7 +41,24 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="JSON report path",
     )
-    parser.add_argument("--max-games", type=int, default=None)
+    parser.add_argument(
+        "--max-games",
+        type=int,
+        default=None,
+        help="cap how many replay files are scanned",
+    )
+    parser.add_argument(
+        "--keep",
+        type=int,
+        default=None,
+        help="stop after N verify-ok trajectories (not N scanned files)",
+    )
+    parser.add_argument(
+        "--outcome",
+        choices=("win", "lose", "draw", "all"),
+        default="all",
+        help="filter by Replay.outcome for the queried player (not folder name)",
+    )
     parser.add_argument(
         "--force",
         action="store_true",
@@ -57,6 +74,8 @@ def main(argv: list[str] | None = None) -> int:
         output=args.output,
         report_path=args.report,
         max_games=args.max_games,
+        keep=args.keep,
+        outcome=args.outcome,
         force=args.force,
         repo_root=REPO,
     )

@@ -305,6 +305,37 @@ def load_objective_config(path: Path | str) -> ObjectiveConfig:
     return ObjectiveConfig.from_dict(data)
 
 
+def load_pilot_objective_bundle(path: Path | str) -> dict[str, Any]:
+    """Load provisional pilot freeze: training objective + rated twin + metadata."""
+    path = Path(path)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if "objective" not in data:
+        raise ObjectiveConfigError(
+            "pilot objective bundle requires an 'objective' object (fail closed)"
+        )
+    if "rated_objective" not in data:
+        raise ObjectiveConfigError(
+            "pilot objective bundle requires a 'rated_objective' object (fail closed)"
+        )
+    training = ObjectiveConfig.from_dict(data["objective"])
+    rated = ObjectiveConfig.from_dict(data["rated_objective"])
+    assert_rated_disables_exploration(rated)
+    if bool(data.get("promotable_main_run")):
+        raise ObjectiveConfigError(
+            "pilot bundle must set promotable_main_run=false until Part 13 "
+            "records the pending ablation measures"
+        )
+    return {
+        "status": str(data.get("status") or "provisional_pilot"),
+        "selected_candidate": str(data.get("selected_candidate") or training.name),
+        "promotable_main_run": False,
+        "selection_note": str(data.get("selection_note") or ""),
+        "evidence": dict(data.get("evidence") or {}),
+        "training": training,
+        "rated": rated,
+    }
+
+
 def load_ablation_candidates(path: Path | str) -> list[ObjectiveConfig]:
     """Load an ablation file with an explicit ``candidates`` list."""
     path = Path(path)

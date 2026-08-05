@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Literal, Mapping
 
 import jax.numpy as jnp
 import numpy as np
@@ -55,6 +56,8 @@ class DriverConfig:
     output: str = "data/morpheus/self_play"
     league_path: str | None = None
     recursive_opponent_particles: bool = False
+    # Part 13: "sequential" = one core, seat A then B; "parallel" = one seat per core.
+    seat_search: Literal["sequential", "parallel"] = "sequential"
 
     def runtime_kwargs(self) -> dict[str, Any]:
         return {
@@ -100,6 +103,11 @@ class DriverConfig:
             recursive_opponent_particles=bool(
                 data.get("recursive_opponent_particles", False)
             ),
+            seat_search=(
+                "parallel"
+                if str(data.get("seat_search", "sequential")).lower() == "parallel"
+                else "sequential"
+            ),
         )
 
     @classmethod
@@ -122,6 +130,26 @@ def _load_or_smoke_league(path: str | None) -> League:
     return smoke_league()
 
 
+def _act_both_seats(
+    players: list[Any],
+    obs0: Any,
+    obs1: Any,
+    *,
+    seat_search: Literal["sequential", "parallel"],
+) -> tuple[Any, Any, Any, Any]:
+    """Return (action_a, policy_a, action_b, policy_b)."""
+    if seat_search == "parallel":
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            fut_a = pool.submit(players[0].act, obs0)
+            fut_b = pool.submit(players[1].act, obs1)
+            action_a, policy_a = fut_a.result()
+            action_b, policy_b = fut_b.result()
+        return action_a, policy_a, action_b, policy_b
+    action_a, policy_a = players[0].act(obs0)
+    action_b, policy_b = players[1].act(obs1)
+    return action_a, policy_a, action_b, policy_b
+
+
 def play_matchup(
     matchup: Matchup,
     *,
@@ -131,6 +159,7 @@ def play_matchup(
     engine: str | None = None,
     recursive_opponent_particles: bool = False,
     seat_rng_salt: int = 0,
+    seat_search: Literal["sequential", "parallel"] = "sequential",
 ) -> SelfPlayShard:
     """Run one competition game in-process and return a replayable shard."""
     if recursive_opponent_particles:
@@ -138,6 +167,8 @@ def play_matchup(
             "Part 05/11 default forbids recursive opponent particles; "
             "set recursive_opponent_particles=false"
         )
+    if seat_search not in ("sequential", "parallel"):
+        raise ValueError(f"unknown seat_search={seat_search!r}")
 
     _ensure_morpheus_path()
     from generals import GeneralsEnv
@@ -174,8 +205,9 @@ def play_matchup(
         m_state = from_engine(state)
         obs0 = emit_observation(m_state, 0)
         obs1 = emit_observation(m_state, 1)
-        action_a, policy_a = players[0].act(obs0)
-        action_b, policy_b = players[1].act(obs1)
+        action_a, policy_a, action_b, policy_b = _act_both_seats(
+            players, obs0, obs1, seat_search=seat_search
+        )
         actions = jnp.stack(
             [
                 jnp.array(action_a, dtype=jnp.int32),
@@ -235,6 +267,7 @@ def play_matchup(
         notes=[
             f"max_turns={max_turns}",
             f"last_turn={last_turn}",
+            f"seat_search={seat_search}",
             "part=11",
         ],
     )
@@ -278,6 +311,7 @@ def run_batch(
             max_turns=config.max_turns,
             seat_rng_salt=i,
             recursive_opponent_particles=config.recursive_opponent_particles,
+            seat_search=config.seat_search,
         )
         paths.append(write_shard(shard, out))
 

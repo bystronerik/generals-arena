@@ -37,6 +37,7 @@ def verify_manifest(
     max_items: int | None = None,
     check_belief: bool = False,
     n_particles: int = 4,
+    require_sample_seat: bool = False,
 ) -> dict[str, Any]:
     """
     Reproduce trajectory digests and both-seat fog observations at each prefix.
@@ -55,6 +56,7 @@ def verify_manifest(
     fog_checked = 0
     belief_checked = 0
     traj_cache: dict[str, Any] = {}
+    source_labels: set[str] = set()
 
     # Confidence rule must be present and executable.
     rule = manifest.confidence_rule or {}
@@ -66,8 +68,15 @@ def verify_manifest(
         mismatches.append("confidence_rule.selected_before_main_run must be true")
 
     for item in items:
+        source_labels.add(item.source_label)
         if is_banned_source(item.source_label):
             mismatches.append(f"{item.item_id}: banned source {item.source_label}")
+            continue
+        if require_sample_seat and item.class_id != 5 and item.sample_seat is None:
+            mismatches.append(f"{item.item_id}: missing sample_seat")
+            continue
+        if item.sample_seat is not None and item.sample_seat not in (0, 1):
+            mismatches.append(f"{item.item_id}: invalid sample_seat {item.sample_seat}")
             continue
 
         traj = None
@@ -167,6 +176,7 @@ def verify_manifest(
         "mismatch_count": len(mismatches),
         "mismatches": mismatches,
         "confidence_rule": rule.get("name"),
+        "source_labels": sorted(source_labels),
         "class_counts": {
             str(cid): sum(1 for i in manifest.items if i.class_id == cid)
             for cid in sorted({i.class_id for i in manifest.items})

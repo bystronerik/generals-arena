@@ -1,0 +1,12 @@
+{
+  "kind": "provenance",
+  "name": "pilot-class1-scraped",
+  "selection_date": "2026-08-05",
+  "round_seed": 7,
+  "source_label": "scraped_class1_pilot",
+  "notes": [
+    "Provenance stub for the scraped class-1 learning smoke.",
+    "Data sources are ResBot_reconstructions wins and erik.bystron_reconstructions losses.",
+    "Not a heuristic match panel; members are intentionally empty."
+  ]
+}

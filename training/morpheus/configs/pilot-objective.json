@@ -1,0 +1,96 @@
+{
+  "status": "provisional_pilot",
+  "part": "12-training-objective",
+  "name": "pilot-objective",
+  "selected_candidate": "aux-light-explore-dirichlet",
+  "promotable_main_run": false,
+  "selection_note": "Provisional freeze for the Part 13 learning-curve pilot only. Not a promotable main-run selection. Replace after belief calibration, policy entropy/coverage, cycling, and held-out arena strength are measured on this candidate versus the ablation grid.",
+  "evidence": {
+    "ablation_grid": "training/morpheus/configs/objective-ablation.json",
+    "fixture_report": "docs/research/measurements/morpheus-objective-ablation.md",
+    "pending_measures": [
+      "belief_calibration",
+      "policy_entropy_vs_coverage",
+      "action_coverage",
+      "cycling",
+      "held_out_arena_strength"
+    ]
+  },
+  "rationale": [
+    "policy and wdl stay at weight 1.0 (primary AlphaZero terms).",
+    "Light auxiliary weights teach hidden-state heads without dominating the joint loss.",
+    "Training exploration uses Dirichlet root noise (epsilon 0.25, alpha 0.3) and temperature 1.0 until turn 30, then deterministic sampling.",
+    "Rejected aux-off-explore-off for the pilot because self-play needs root noise to diversify trajectories.",
+    "Rejected aux-full-explore-temp for the pilot because higher aux and temperature 1.5 add more free variables before the first cadence measure."
+  ],
+  "objective": {
+    "name": "aux-light-explore-dirichlet",
+    "mode": "training",
+    "loss_weights": {
+      "policy": 1.0,
+      "wdl": 1.0,
+      "hidden_owner": 0.25,
+      "enemy_army_bins": 0.25,
+      "enemy_general": 0.25,
+      "hidden_castle": 0.1,
+      "land_margin": 0.05,
+      "army_margin": 0.05,
+      "castle_margin": 0.05,
+      "turns_to_termination": 0.05
+    },
+    "exploration": {
+      "root_noise_epsilon": 0.25,
+      "root_noise_alpha": 0.3,
+      "action_temperature": 1.0,
+      "deterministic_turn": 30
+    },
+    "scalar_normalization": {
+      "land_margin_scale": 1.0,
+      "army_margin_scale": 1.0,
+      "castle_margin_scale": 1.0,
+      "turns_to_termination_scale": 1200.0
+    },
+    "reward": {
+      "win": 1.0,
+      "draw": 0.0,
+      "loss": -1.0,
+      "discount": 1.0,
+      "nonterminal": 0.0
+    }
+  },
+  "rated_objective": {
+    "name": "aux-light-explore-dirichlet-rated",
+    "mode": "rated",
+    "loss_weights": {
+      "policy": 1.0,
+      "wdl": 1.0,
+      "hidden_owner": 0.25,
+      "enemy_army_bins": 0.25,
+      "enemy_general": 0.25,
+      "hidden_castle": 0.1,
+      "land_margin": 0.05,
+      "army_margin": 0.05,
+      "castle_margin": 0.05,
+      "turns_to_termination": 0.05
+    },
+    "exploration": {
+      "root_noise_epsilon": 0.0,
+      "root_noise_alpha": 0.3,
+      "action_temperature": 1.0,
+      "deterministic_turn": 0
+    },
+    "scalar_normalization": {
+      "land_margin_scale": 1.0,
+      "army_margin_scale": 1.0,
+      "castle_margin_scale": 1.0,
+      "turns_to_termination_scale": 1200.0
+    },
+    "reward": {
+      "win": 1.0,
+      "draw": 0.0,
+      "loss": -1.0,
+      "discount": 1.0,
+      "nonterminal": 0.0
+    }
+  }
+}

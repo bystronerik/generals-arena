@@ -15,6 +15,7 @@ from training.morpheus.objective.config import (
     assert_rated_disables_exploration,
     load_ablation_candidates,
     load_objective_config,
+    load_pilot_objective_bundle,
 )
 from training.morpheus.objective.losses import (
     LossTerms,
@@ -68,6 +69,7 @@ __all__ = [
     "invert_symmetry",
     "load_ablation_candidates",
     "load_objective_config",
+    "load_pilot_objective_bundle",
     "reward_contract",
     "round_trip_ok",
     "sample_action_from_strategy",

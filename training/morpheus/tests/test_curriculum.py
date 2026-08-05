@@ -216,6 +216,7 @@ def test_manifest_round_trip(tmp_path: Path):
         map_seed=99,
         source_label="full_start",
         prefix_len=0,
+        sample_seat=0,
     )
     man = CurriculumManifest(
         panel_name="p",
@@ -230,6 +231,73 @@ def test_manifest_round_trip(tmp_path: Path):
     assert loaded.confidence_rule["interval_method"] == "wilson"
     assert loaded.items[0].belief_seed(0) == item.belief_seed(0)
     assert loaded.items[0].class_id == CLASS_FULL_START
+    assert loaded.items[0].sample_seat == 0
+
+
+def test_sample_seat_optional_on_old_manifests():
+    item = CurriculumItem.build(
+        class_id=CLASS_FULL_START,
+        engine_version="era",
+        map_seed=1,
+        source_label="full_start",
+        prefix_len=0,
+    )
+    assert item.sample_seat is None
+    data = item.to_dict()
+    assert data["sample_seat"] is None
+    round_trip = CurriculumItem.from_dict(data)
+    assert round_trip.sample_seat is None
+
+
+def test_reconstruction_label_accepted_raw_resbot_rejected():
+    ok = CurriculumItem.build(
+        class_id=CLASS_TACTICAL,
+        engine_version="e",
+        map_seed=1,
+        source_label="ResBot_reconstructions",
+        prefix_len=10,
+        sample_seat=0,
+        decisive=True,
+        outcome="a",
+    )
+    assert ok.source_label == "ResBot_reconstructions"
+    with pytest.raises(ValueError, match="banned"):
+        CurriculumItem.build(
+            class_id=CLASS_TACTICAL,
+            engine_version="e",
+            map_seed=1,
+            source_label="ResBot",
+            prefix_len=10,
+        )
+
+
+def test_resolve_sample_seat_from_corpus_meta():
+    from training.morpheus.curriculum.build import resolve_sample_seat
+
+    seat = resolve_sample_seat(
+        game_id="g",
+        traj_header={"bot_a": "ResBot", "bot_b": "Other"},
+        game_meta={"queried_player": "ResBot", "sample_seat": 0},
+        require_seat=True,
+    )
+    assert seat == 0
+    seat_b = resolve_sample_seat(
+        game_id="g2",
+        traj_header={"bot_a": "X", "bot_b": "erik.bystron"},
+        game_meta={"queried_player": "erik.bystron"},
+        require_seat=True,
+    )
+    assert seat_b == 1
+
+
+def test_provenance_panel_loads():
+    from training.morpheus.corpus.panel import load_panel
+
+    panel = load_panel(REPO / "scripts/configs/morpheus/pilot-class1-scraped.json")
+    assert panel["kind"] == "provenance"
+    assert panel["source_label"] == "scraped_class1_pilot"
+    assert is_banned_source(panel["source_label"]) is False
+
 
 
 @pytest.mark.skipif(not TRAJ_DIR.is_dir(), reason="bootstrap trajectories absent")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -140,6 +141,7 @@ def test_rebuild_one_kubic_game_or_skip(tmp_path: Path):
         + report.skipped_verify
         + report.skipped_forfeit
         + report.skipped_other
+        + report.skipped_outcome
         == report.scanned
     )
     assert report.kept >= 1, report.to_dict()
@@ -151,3 +153,58 @@ def test_rebuild_one_kubic_game_or_skip(tmp_path: Path):
         / f"{report.kept_game_ids[0]}.traj.jsonl.gz"
     )
     assert verify_trajectory(traj).ok
+
+
+@pytest.mark.skipif(
+    not (KUBIC_REPLAYS / "win").is_dir(),
+    reason="Kubic scraped replays absent",
+)
+def test_rebuild_outcome_filter_and_keep(tmp_path: Path):
+    from arena.instrument.replay.loader import iter_replay_paths, load_replay
+    from training.morpheus.scraped_rebuild.rebuild import rebuild_player
+
+    # Pick an outcome that exists for Kubic.
+    outcomes = set()
+    for folder, path in iter_replay_paths("Kubic", root=KUBIC_REPLAYS.parent):
+        replay = load_replay(path, "Kubic", folder)
+        if replay.is_forfeit or replay.seed is None:
+            continue
+        outcomes.add(replay.outcome)
+        if len(outcomes) >= 1:
+            break
+    assert outcomes
+    wanted = next(iter(outcomes))
+
+    report = rebuild_player(
+        player="Kubic",
+        replays=KUBIC_REPLAYS,
+        output=tmp_path / "kubic-filtered",
+        report_path=tmp_path / "report.json",
+        keep=1,
+        outcome=wanted,
+        force=True,
+        repo_root=REPO,
+    )
+    assert report.outcome_filter == wanted
+    assert report.keep_target == 1
+    assert report.kept == 1
+    assert report.scanned >= 1
+    # Outcome filter must not count folder-only skips as kept.
+    for game_id in report.kept_game_ids:
+        meta = json.loads(
+            (tmp_path / "kubic-filtered" / "corpus-index.json").read_text()
+        )["games"][game_id]
+        assert meta["queried_outcome"] == wanted
+        assert meta["sample_seat"] in (0, 1)
+
+
+def test_rebuild_rejects_bad_outcome():
+    from training.morpheus.scraped_rebuild.rebuild import rebuild_player
+
+    with pytest.raises(ValueError, match="outcome"):
+        rebuild_player(
+            player="Kubic",
+            output=REPO / "data" / "trajectories" / "_unused",
+            outcome="sideA",
+            keep=1,
+        )

@@ -1,0 +1,88 @@
+{
+  "name": "modal-qualification",
+  "budget_a100_hours": 48,
+  "workers_per_a100": 16,
+  "prior_a100_charges": {},
+  "self_play": {
+    "seed": 0,
+    "games": 2,
+    "max_turns": 8,
+    "league_weight": 1.0,
+    "panel_weight": 0.0,
+    "panel_members": [
+      {
+        "bot_id": "smoke",
+        "role": "heuristic",
+        "weight": 1.0
+      }
+    ],
+    "n_particles": 4,
+    "target_simulations": 8,
+    "min_simulations": 4,
+    "search_depth": 4,
+    "pending_leaf_batch": 2,
+    "deadline_ms": 60000,
+    "recursive_opponent_particles": false,
+    "seat_search": "sequential",
+    "output": "data/morpheus/compute_gate"
+  },
+  "layouts": [
+    {
+      "name": "cpu1-seq",
+      "backend": "cpu",
+      "physical_cores_per_game": 1,
+      "seat_search": "sequential",
+      "concurrent_games": 1,
+      "games": 2,
+      "notes": ["CPU baseline: one physical core, sequential seat searches"]
+    },
+    {
+      "name": "cpu2-par",
+      "backend": "cpu",
+      "physical_cores_per_game": 2,
+      "seat_search": "parallel",
+      "concurrent_games": 1,
+      "games": 2,
+      "notes": ["Two physical cores: one seat search per core"]
+    },
+    {
+      "name": "cpu2-par-x2",
+      "backend": "cpu",
+      "physical_cores_per_game": 2,
+      "seat_search": "parallel",
+      "concurrent_games": 2,
+      "games": 2,
+      "notes": ["Container concurrency probe: two games per container"]
+    },
+    {
+      "name": "hybrid-cpu-control",
+      "backend": "hybrid",
+      "physical_cores_per_game": 1,
+      "seat_search": "sequential",
+      "concurrent_games": 1,
+      "games": 2,
+      "notes": [
+        "Hybrid placeholder path: CPU tree/belief control with competition JAX engine (Part 00 GPU transitions permitted for batched engine work; particle/tree control stays on host)."
+      ]
+    }
+  ],
+  "schedule": {
+    "self_play_wall_hours": 24,
+    "workers_per_a100": 16,
+    "checkpoint_count_candidates": [4, 8, 16],
+    "positions_consume_per_hour": 0,
+    "main_training_a100_hours": 20,
+    "deployment_calibration_a100_hours": 2,
+    "deployment_calibration_fits": true,
+    "learning_curve_pilot_a100_hours": 2,
+    "gpu_self_play_a100_hours": 0
+  },
+  "cadence_pilot": {
+    "enabled": true,
+    "evidence": {},
+    "notes": [
+      "Cadence evidence (class WDL, belief calibration, pairwise improvement) is absent until a learning-curve pilot trains comparable checkpoints.",
+      "Without that evidence every candidate fails the useful-cadence rule and the gate returns no."
+    ]
+  }
+}

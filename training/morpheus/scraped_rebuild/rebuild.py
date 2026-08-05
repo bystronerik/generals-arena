@@ -22,6 +22,9 @@ from training.morpheus.scraped_rebuild.write_trajectory import (
 )
 
 
+VALID_OUTCOMES = frozenset({"win", "lose", "draw", "all"})
+
+
 @dataclass
 class RebuildReport:
     player: str
@@ -29,8 +32,11 @@ class RebuildReport:
     replays_root: str
     output: str
     engine_version: str
+    outcome_filter: str = "all"
+    keep_target: int | None = None
     scanned: int = 0
     kept: int = 0
+    skipped_outcome: int = 0
     skipped_forfeit: int = 0
     skipped_unresolved: int = 0
     skipped_verify: int = 0
@@ -56,6 +62,8 @@ def rebuild_player(
     output: Path,
     report_path: Path | None = None,
     max_games: int | None = None,
+    keep: int | None = None,
+    outcome: str = "all",
     force: bool = False,
     repo_root: Path | None = None,
 ) -> RebuildReport:
@@ -63,8 +71,18 @@ def rebuild_player(
     Reconstruct fully-resolved scraped games into arena trajectories.
 
     Games with any unresolved tick, missing seed, forfeit length, or failed
-    engine verify are skipped. Always returns a report.
+    engine verify are skipped. ``outcome`` filters by ``Replay.outcome`` for the
+    queried player (never by folder name). ``keep`` stops after N verify-ok
+    trajectories; ``max_games`` still caps how many files are scanned.
     """
+    outcome_filter = str(outcome).strip().lower()
+    if outcome_filter not in VALID_OUTCOMES:
+        raise ValueError(
+            f"outcome must be one of {sorted(VALID_OUTCOMES)}, got {outcome!r}"
+        )
+    if keep is not None and int(keep) < 1:
+        raise ValueError(f"keep must be >= 1, got {keep}")
+
     root = repo_root or REPO_ROOT
     replays_root = Path(replays) if replays is not None else REPLAYS_DIR / player
     # loader expects parent of win/lose/draw; allow either player dir or REPLAYS_DIR.
@@ -86,16 +104,27 @@ def rebuild_player(
         replays_root=str(replays_root),
         output=str(output),
         engine_version=engine,
+        outcome_filter=outcome_filter,
+        keep_target=int(keep) if keep is not None else None,
     )
     games_index: dict[str, dict[str, Any]] = {}
 
     paths = list(iter_replay_paths(player_name, folder="all", root=loader_root))
-    if max_games is not None:
+    # max_games caps scanned files; keep continues until N kept unless capped.
+    if max_games is not None and keep is None:
         paths = paths[: int(max_games)]
 
     for folder, path in paths:
+        if keep is not None and report.kept >= int(keep):
+            break
+        if max_games is not None and report.scanned >= int(max_games):
+            break
+
         report.scanned += 1
         replay = load_replay(path, queried_player=player_name, folder=folder)
+        if outcome_filter != "all" and replay.outcome != outcome_filter:
+            report.skipped_outcome += 1
+            continue
         if replay.is_forfeit:
             report.skipped_forfeit += 1
             continue
@@ -147,6 +176,9 @@ def rebuild_player(
             "match_id": replay.match_id,
             "bot_a": inference.players[0],
             "bot_b": inference.players[1],
+            "queried_player": player_name,
+            "sample_seat": int(replay.seat_of(player_name)),
+            "queried_outcome": replay.outcome,
             "seed": inference.seed,
             "mode": "competition",
             "engine_version": engine,

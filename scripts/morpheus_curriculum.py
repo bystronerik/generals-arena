@@ -33,12 +33,24 @@ DEFAULT_OUTPUT = REPO / "training" / "morpheus" / "manifests" / "curriculum.json
 def cmd_build(args: argparse.Namespace) -> int:
     from training.morpheus.curriculum.build import build_curriculum
 
+    traj_dirs = list(args.trajectories_dirs or [])
+    if args.trajectories is not None:
+        traj_dirs.append(args.trajectories)
+    if not traj_dirs:
+        traj_dirs = [DEFAULT_TRAJECTORIES]
+
+    class_ids = None
+    if args.classes:
+        class_ids = [int(x) for x in args.classes]
+
     result = build_curriculum(
         panel_path=args.panel,
-        trajectories_dir=args.trajectories,
+        trajectories_dirs=traj_dirs,
         output=args.output,
         full_start_count=args.full_start_count,
         max_games=args.max_games,
+        class_ids=class_ids,
+        require_sample_seat=bool(args.require_sample_seat),
         skip_verify=args.skip_verify,
         repo_root=REPO,
     )
@@ -104,6 +116,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         max_items=args.max_items,
         check_belief=args.belief,
         n_particles=args.n_particles,
+        require_sample_seat=bool(args.require_sample_seat),
     )
     print(json.dumps(result, indent=2))
     return 0 if result["ok"] else 1
@@ -115,10 +128,35 @@ def main(argv: list[str] | None = None) -> int:
 
     build_p = sub.add_parser("build", help="classify prefixes and write the manifest")
     build_p.add_argument("--panel", type=Path, default=DEFAULT_PANEL)
-    build_p.add_argument("--trajectories", type=Path, default=DEFAULT_TRAJECTORIES)
+    build_p.add_argument(
+        "--trajectories",
+        type=Path,
+        default=None,
+        help="one trajectory directory (repeat via --trajectories-dir)",
+    )
+    build_p.add_argument(
+        "--trajectories-dir",
+        dest="trajectories_dirs",
+        action="append",
+        type=Path,
+        default=None,
+        help="additional trajectory directory (repeatable)",
+    )
     build_p.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     build_p.add_argument("--full-start-count", type=int, default=8)
     build_p.add_argument("--max-games", type=int, default=None)
+    build_p.add_argument(
+        "--classes",
+        type=int,
+        nargs="+",
+        default=None,
+        help="keep only these class ids (e.g. --classes 1)",
+    )
+    build_p.add_argument(
+        "--require-sample-seat",
+        action="store_true",
+        help="fail if a trajectory item lacks sample_seat",
+    )
     build_p.add_argument(
         "--skip-verify",
         action="store_true",
@@ -152,6 +190,11 @@ def main(argv: list[str] | None = None) -> int:
         help="also reconstruct memory and belief for each item",
     )
     verify_p.add_argument("--n-particles", type=int, default=4)
+    verify_p.add_argument(
+        "--require-sample-seat",
+        action="store_true",
+        help="require sample_seat on every non-class-5 item",
+    )
     verify_p.set_defaults(func=cmd_verify)
 
     args = parser.parse_args(argv)

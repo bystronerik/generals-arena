@@ -174,3 +174,28 @@ def test_wdl_perfect_prediction_near_zero():
     logits = torch.tensor([[20.0, -20.0, -20.0]])
     target = torch.tensor([[1.0, 0.0, 0.0]])
     assert float(wdl_cross_entropy(logits, target)) < 1e-6
+
+
+def test_pilot_objective_bundle_loads_explicit_and_not_promotable():
+    from pathlib import Path
+
+    from training.morpheus.objective.config import load_pilot_objective_bundle
+
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "configs"
+        / "pilot-objective.json"
+    )
+    bundle = load_pilot_objective_bundle(path)
+    assert bundle["promotable_main_run"] is False
+    assert bundle["selected_candidate"] == "aux-light-explore-dirichlet"
+    assert bundle["training"].name == "aux-light-explore-dirichlet"
+    assert bundle["training"].mode == "training"
+    assert bundle["training"].exploration.root_noise_epsilon == 0.25
+    assert bundle["rated"].mode == "rated"
+    assert bundle["rated"].exploration.root_noise_epsilon == 0.0
+    assert bundle["rated"].exploration.action_temperature == 1.0
+    # Every loss key present and finite.
+    for key, value in bundle["training"].loss_weights.to_dict().items():
+        assert value == value  # not NaN
+        assert key  # non-empty

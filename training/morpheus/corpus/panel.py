@@ -32,8 +32,28 @@ def load_panel(path: Path | None = None) -> dict[str, Any]:
     data = json.loads(panel_path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise PanelError(f"panel root must be an object: {panel_path}")
-    _validate_schema(data, panel_path)
+    if str(data.get("kind") or "") == "provenance":
+        _validate_provenance(data, panel_path)
+    else:
+        _validate_schema(data, panel_path)
     return data
+
+
+def _validate_provenance(data: dict[str, Any], panel_path: Path) -> None:
+    """Thin stub used only for curriculum provenance (no match panel members)."""
+    for key in ("name", "source_label", "round_seed", "selection_date"):
+        if key not in data:
+            raise PanelError(f"{panel_path}: provenance stub missing field {key!r}")
+    if is_banned_source_label(str(data["source_label"])):
+        raise PanelError(
+            f"{panel_path}: provenance source_label is banned: {data['source_label']!r}"
+        )
+
+
+def is_banned_source_label(label: str) -> bool:
+    from training.morpheus.curriculum.definitions import is_banned_source
+
+    return is_banned_source(label)
 
 
 def _validate_schema(data: dict[str, Any], panel_path: Path) -> None:

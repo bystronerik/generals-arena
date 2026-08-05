@@ -1,0 +1,314 @@
+{
+  "a100_accounting": {
+    "budget_hours": 48.0,
+    "fits_budget": true,
+    "lines": {
+      "deployment_calibration": 2.0,
+      "gpu_self_play": 0.0,
+      "jax_preflight": 0.03235120986777778,
+      "learning_curve_pilot": 2.0,
+      "main_training": 20.0,
+      "objective_ablations": 0.0,
+      "throughput_qualification": 0.0037456870222222225
+    },
+    "remaining_hours": 23.96390310311,
+    "total_a100_hours": 24.03609689689
+  },
+  "cadence": {
+    "candidates": [
+      {
+        "belief_calibration": {
+          "ok": false,
+          "reason": "belief_calibration_not_measured",
+          "regressed": null
+        },
+        "checkpoint_count": 4,
+        "curriculum": {
+          "classes": {},
+          "ok": false,
+          "reason": "missing_class_wdl_or_active_classes"
+        },
+        "games_per_checkpoint": 54484,
+        "name": "ckpt-4",
+        "pairwise": {
+          "ok": false,
+          "reason": "pairwise_not_improvement_or_missing",
+          "verdict": null
+        },
+        "useful": false
+      },
+      {
+        "belief_calibration": {
+          "ok": false,
+          "reason": "belief_calibration_not_measured",
+          "regressed": null
+        },
+        "checkpoint_count": 8,
+        "curriculum": {
+          "classes": {},
+          "ok": false,
+          "reason": "missing_class_wdl_or_active_classes"
+        },
+        "games_per_checkpoint": 27242,
+        "name": "ckpt-8",
+        "pairwise": {
+          "ok": false,
+          "reason": "pairwise_not_improvement_or_missing",
+          "verdict": null
+        },
+        "useful": false
+      },
+      {
+        "belief_calibration": {
+          "ok": false,
+          "reason": "belief_calibration_not_measured",
+          "regressed": null
+        },
+        "checkpoint_count": 16,
+        "curriculum": {
+          "classes": {},
+          "ok": false,
+          "reason": "missing_class_wdl_or_active_classes"
+        },
+        "games_per_checkpoint": 13621,
+        "name": "ckpt-16",
+        "pairwise": {
+          "ok": false,
+          "reason": "pairwise_not_improvement_or_missing",
+          "verdict": null
+        },
+        "useful": false
+      }
+    ],
+    "reason": "no_tested_cadence_met_curriculum_calibration_and_pairwise_rules",
+    "selected": null,
+    "selected_name": null,
+    "useful_found": false
+  },
+  "config": "training/morpheus/configs/modal-qualification.json",
+  "cpu_hours_total": 0.03256753491472222,
+  "decision": {
+    "checks": {
+      "a100_fits_budget": true,
+      "checkpoint_count_positive": true,
+      "deployment_calibration_fits": true,
+      "exact_layout_stated": true,
+      "games_per_checkpoint_positive": true,
+      "learner_not_starved": true,
+      "useful_cadence_found": false,
+      "workers_per_a100_named": true
+    },
+    "fallback": {
+      "note": "No tested cadence passed curriculum confidence, held-out belief calibration, and arena pairwise improvement. Deployment-matched final phase remains required. Main training must not start.",
+      "order": [
+        "reduce_training_particles_sims_or_depth",
+        "fewer_checkpoints_more_games_per_checkpoint",
+        "narrower_non_promotable_research_scope"
+      ],
+      "preserve_deployment_matched_final_phase": true,
+      "selected": "narrower_non_promotable_research_scope"
+    },
+    "note": "Compute gate closed. No tested cadence passed curriculum confidence, held-out belief calibration, and arena pairwise improvement. Deployment-matched final phase remains required. Main training must not start.",
+    "pass": false,
+    "verdict": "no"
+  },
+  "deployment_calibration": {
+    "a100_hours": 2.0,
+    "fits": true,
+    "note": "Deployment-matched self-play and calibration phase is scheduled inside the A100 budget; Part 09 has no accepted online survivor, so settings stay training-semantics-preserving with a final deployment-matched phase (Part 09b defers the hard latency gate)."
+  },
+  "fallback_plan": {
+    "note": "No tested cadence passed curriculum confidence, held-out belief calibration, and arena pairwise improvement. Deployment-matched final phase remains required. Main training must not start.",
+    "order": [
+      "reduce_training_particles_sims_or_depth",
+      "fewer_checkpoints_more_games_per_checkpoint",
+      "narrower_non_promotable_research_scope"
+    ],
+    "preserve_deployment_matched_final_phase": true,
+    "selected": "narrower_non_promotable_research_scope"
+  },
+  "generated_at": "2026-08-04T19:13:23.858924+00:00",
+  "layout_measurements": [
+    {
+      "backend": "cpu",
+      "completed_games": 2,
+      "concurrent_games": 1,
+      "cpu_hours": 0.0035239369825,
+      "engine_version": "9e3b9d13cca51caa1bb07db48bb85c9e90ce0462",
+      "game_latencies_s": [
+        7.213440761,
+        5.471922096
+      ],
+      "games_per_worker_hour": 567.5470389885157,
+      "mean_game_latency_s": 6.342681428500001,
+      "name": "cpu1-seq",
+      "notes": [
+        "CPU baseline: one physical core, sequential seat searches"
+      ],
+      "output": "/vol/morpheus/compute_gate/qualify-20260805-021117/cpu1-seq",
+      "physical_cores_per_game": 1,
+      "positions_per_game": 16.0,
+      "positions_total": 32,
+      "remote_wall_s": 12.688163195000001,
+      "seat_search": "sequential",
+      "wall_s": 12.686173136999999,
+      "worker_hours": 0.0035239369825
+    },
+    {
+      "backend": "cpu",
+      "completed_games": 2,
+      "concurrent_games": 1,
+      "cpu_hours": 0.009442188351111111,
+      "engine_version": "9e3b9d13cca51caa1bb07db48bb85c9e90ce0462",
+      "game_latencies_s": [
+        10.006667976,
+        6.987987236
+      ],
+      "games_per_worker_hour": 423.6306088439021,
+      "mean_game_latency_s": 8.497327605999999,
+      "name": "cpu2-par",
+      "notes": [
+        "Two physical cores: one seat search per core"
+      ],
+      "output": "/vol/morpheus/compute_gate/qualify-20260805-021117/cpu2-par",
+      "physical_cores_per_game": 2,
+      "positions_per_game": 16.0,
+      "positions_total": 32,
+      "remote_wall_s": 16.997420022,
+      "seat_search": "parallel",
+      "wall_s": 16.995939032,
+      "worker_hours": 0.004721094175555556
+    },
+    {
+      "backend": "cpu",
+      "completed_games": 2,
+      "concurrent_games": 2,
+      "cpu_hours": 0.015856221684444442,
+      "engine_version": "9e3b9d13cca51caa1bb07db48bb85c9e90ce0462",
+      "game_latencies_s": [
+        14.142049945,
+        14.269134636
+      ],
+      "games_per_worker_hour": 504.53381386867875,
+      "mean_game_latency_s": 14.2055922905,
+      "name": "cpu2-par-x2",
+      "notes": [
+        "Container concurrency probe: two games per container"
+      ],
+      "output": "/vol/morpheus/compute_gate/qualify-20260805-021117/cpu2-par-x2",
+      "physical_cores_per_game": 2,
+      "positions_per_game": 16.0,
+      "positions_total": 32,
+      "remote_wall_s": 14.271646806000001,
+      "seat_search": "parallel",
+      "wall_s": 14.270599515999999,
+      "worker_hours": 0.003964055421111111
+    },
+    {
+      "a100_hours": 0.0037456870222222225,
+      "backend": "hybrid",
+      "completed_games": 2,
+      "concurrent_games": 1,
+      "cpu_hours": 0.0037451878966666663,
+      "engine_version": "9e3b9d13cca51caa1bb07db48bb85c9e90ce0462",
+      "game_latencies_s": [
+        7.710472001,
+        5.771434642000001
+      ],
+      "games_per_worker_hour": 534.0186007169526,
+      "mean_game_latency_s": 6.740953321500001,
+      "name": "hybrid-cpu-control",
+      "notes": [
+        "Hybrid placeholder path: CPU tree/belief control with competition JAX engine (Part 00 GPU transitions permitted for batched engine work; particle/tree control stays on host)."
+      ],
+      "output": "/vol/morpheus/compute_gate/qualify-20260805-021117/hybrid-cpu-control",
+      "physical_cores_per_game": 1,
+      "positions_per_game": 16.0,
+      "positions_total": 32,
+      "remote_wall_s": 13.484473280000001,
+      "seat_search": "sequential",
+      "wall_s": 13.482676428,
+      "worker_hours": 0.0037451878966666663
+    }
+  ],
+  "layout_ranking": [
+    {
+      "games_per_cpu_hour": 567.5470389885157,
+      "mean_game_latency_s": 6.342681428500001,
+      "name": "cpu1-seq"
+    },
+    {
+      "games_per_cpu_hour": 534.0186007169526,
+      "mean_game_latency_s": 6.740953321500001,
+      "name": "hybrid-cpu-control"
+    },
+    {
+      "games_per_cpu_hour": 211.81530442195105,
+      "mean_game_latency_s": 8.497327605999999,
+      "name": "cpu2-par"
+    },
+    {
+      "games_per_cpu_hour": 126.13345346716969,
+      "mean_game_latency_s": 14.2055922905,
+      "name": "cpu2-par-x2"
+    }
+  ],
+  "learner_starved": false,
+  "part": "13-modal-compute-gate",
+  "positions_consume_per_hour": 0.0,
+  "prerequisites": {
+    "curriculum_rule": "resolved",
+    "jax_preflight": "yes",
+    "measurement_corpus": "yes",
+    "online_qualification": "no_deferred_by_09b",
+    "self_play_league": "implemented",
+    "training_objective": "fixtures_yes_weights_unset"
+  },
+  "rates": {
+    "aggregate_games_per_hour": 9080.752623816252,
+    "checkpoint_count": 4,
+    "completed_games": 2,
+    "games_per_checkpoint": 54484,
+    "games_per_worker_hour": 567.5470389885157,
+    "positions_per_game": 16.0,
+    "positions_supply_per_hour": 145292.04198106003,
+    "self_play_wall_hours": 24.0,
+    "total_games": 217938.06297159003,
+    "worker_hours": 0.0035239369825,
+    "workers": 16
+  },
+  "selected_layout": {
+    "backend": "cpu",
+    "completed_games": 2,
+    "concurrent_games": 1,
+    "cpu_hours": 0.0035239369825,
+    "engine_version": "9e3b9d13cca51caa1bb07db48bb85c9e90ce0462",
+    "game_latencies_s": [
+      7.213440761,
+      5.471922096
+    ],
+    "games_per_worker_hour": 567.5470389885157,
+    "mean_game_latency_s": 6.342681428500001,
+    "name": "cpu1-seq",
+    "notes": [
+      "CPU baseline: one physical core, sequential seat searches"
+    ],
+    "output": "/vol/morpheus/compute_gate/qualify-20260805-021117/cpu1-seq",
+    "physical_cores_per_game": 1,
+    "positions_per_game": 16.0,
+    "positions_total": 32,
+    "remote_wall_s": 12.688163195000001,
+    "seat_search": "sequential",
+    "wall_s": 12.686173136999999,
+    "worker_hours": 0.0035239369825
+  },
+  "self_play_settings": {
+    "max_turns": 8,
+    "min_simulations": 4,
+    "n_particles": 4,
+    "note": "Throughput uses this qualification search budget. Full turn-1200 games rates will be lower; remeasure before locking a promotable run.",
+    "search_depth": 4,
+    "target_simulations": 8
+  },
+  "workers_per_a100": 16
+}

@@ -83,6 +83,12 @@ deterministic turn.
 **Evidence:** Controlled ablations for belief calibration, policy entropy,
 action coverage, cycling, and held-out arena strength.
 
+**Provisional pilot freeze (2026-08-05):**
+`training/morpheus/configs/pilot-objective.json` selects
+`aux-light-explore-dirichlet` for the learning-curve pilot only
+(`promotable_main_run: false`). Rated twin disables exploration. Replace after
+the pending ablation measures land.
+
 ## Training compute
 
 **Unknown:** Hardware, parallelism, self-play throughput, and games required per
@@ -94,6 +100,14 @@ deployment-matched self-play and calibration phase.
 **Evidence:** End-to-end games per hour, network forwards per game, checkpoint
 learning curves, and strength versus compute. A training design that cannot
 produce enough games is rejected before implementation.
+
+**Part 13 status (2026-08-05, Modal):** verdict **no**. Selected layout is
+CPU, 1 physical core per game, sequential seat searches, 16 workers per A100.
+Measured smoke throughput (`max_turns=8`) fits a 24 A100-hour schedule inside
+the 48-hour budget, but no cadence candidate had curriculum WDL, belief
+calibration, and pairwise `improvement` evidence. Fallback:
+`narrower_non_promotable_research_scope`. See
+[`docs/research/measurements/morpheus-modal-qualification.md`](../../research/measurements/morpheus-modal-qualification.md).
 
 ## Opponent belief approximation
 

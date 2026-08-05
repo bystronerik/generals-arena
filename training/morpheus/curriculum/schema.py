@@ -33,6 +33,7 @@ class CurriculumItem:
     first_sight_turn: int | None = None
     outcome: str | None = None
     decisive: bool | None = None
+    sample_seat: int | None = None
 
     def __post_init__(self) -> None:
         if self.class_id not in CLASS_NAMES:
@@ -43,6 +44,8 @@ class CurriculumItem:
             raise ValueError("prefix_len must be >= 0")
         if self.class_id == 5 and self.prefix_len != 0:
             raise ValueError("class 5 requires prefix_len == 0")
+        if self.sample_seat is not None and self.sample_seat not in (0, 1):
+            raise ValueError(f"sample_seat must be 0 or 1, got {self.sample_seat}")
 
     @property
     def class_name(self) -> str:
@@ -81,11 +84,14 @@ class CurriculumItem:
             "first_sight_turn",
             "outcome",
             "decisive",
+            "sample_seat",
         }
         payload = {k: data.get(k) for k in keys}
         payload["map_seed"] = int(payload["map_seed"])
         payload["prefix_len"] = int(payload["prefix_len"])
         payload["class_id"] = int(payload["class_id"])
+        if payload["sample_seat"] is not None:
+            payload["sample_seat"] = int(payload["sample_seat"])
         return cls(**payload)  # type: ignore[arg-type]
 
     @classmethod
@@ -104,6 +110,7 @@ class CurriculumItem:
         first_sight_turn: int | None = None,
         outcome: str | None = None,
         decisive: bool | None = None,
+        sample_seat: int | None = None,
     ) -> CurriculumItem:
         return cls(
             item_id=item_id_for(
@@ -126,6 +133,7 @@ class CurriculumItem:
             first_sight_turn=first_sight_turn,
             outcome=outcome,
             decisive=decisive,
+            sample_seat=sample_seat,
         )
 
 
