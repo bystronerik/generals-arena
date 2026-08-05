@@ -20,6 +20,7 @@ from training.morpheus.trainer.manifest import (
     load_run_manifest,
     write_run_manifest,
 )
+from training.morpheus.trainer.sample import TrainSample, build_train_sample
 
 __all__ = [
     "CheckpointError",
@@ -30,6 +31,8 @@ __all__ = [
     "RunManifest",
     "TrainResult",
     "TrainRunConfig",
+    "TrainSample",
+    "build_train_sample",
     "load_checkpoint",
     "load_run_manifest",
     "load_train_run_config",

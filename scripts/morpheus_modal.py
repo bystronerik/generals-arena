@@ -9,10 +9,6 @@ Part 13:
     modal run scripts/morpheus_modal.py::qualify_compute \\
       --config training/morpheus/configs/modal-qualification.json
 
-Pilot class-1 learn smoke:
-    modal run scripts/morpheus_modal.py::pilot_learn \\
-      --config training/morpheus/configs/pilot-class1-learn.json
-
 Part 14:
     modal run scripts/morpheus_modal.py::train \\
       --config training/morpheus/configs/promotable-run.json
@@ -22,8 +18,8 @@ Part 14:
     modal run scripts/morpheus_modal.py::download \\
       --run-id <run_id> --checkpoint <checkpoint_id> --dest /tmp/ckpt
 
-A100 time from ``ablate_objective``, compute qualification, ``pilot_learn``,
-and Part 14 ``train`` / ``resume`` charges to Part 13 accounting notes.
+A100 time from ``ablate_objective``, compute qualification, and Part 14
+``train`` / ``resume`` charges to Part 13 accounting notes.
 """
 from __future__ import annotations
 
@@ -98,19 +94,6 @@ GPU_IMAGE = (
     )
     .run_commands("pip install -e /root/competition-module --no-deps")
     .env({"PYTHONPATH": "/root"})
-)
-
-# Trajectories are gitignored; bake local pilot shards into the image when present.
-# Use CPU IMAGE (same as ablate_objective) to avoid jax[cuda12]/torch CUDA pin conflicts.
-_PILOT_TRAJ = REPO / "data" / "trajectories"
-PILOT_IMAGE = (
-    IMAGE.add_local_dir(
-        str(_PILOT_TRAJ),
-        remote_path="/root/data/trajectories",
-        copy=True,
-    )
-    if _PILOT_TRAJ.is_dir()
-    else IMAGE
 )
 
 app = modal.App("morpheus-training")
@@ -345,116 +328,7 @@ def qualify_compute(
 
 
 @app.function(
-    image=PILOT_IMAGE,
-    gpu="A100-80GB",
-    timeout=60 * 60,
-    volumes={"/vol": VOLUME},
-)
-def pilot_learn_remote(config_json: str, run_id: str) -> dict:
-    """Thin class-1 learning smoke; A100 wall charges to learning_curve_pilot."""
-    from training.morpheus.pilot.report import write_pilot_report
-    from training.morpheus.pilot.run import run_pilot_learn
-
-    print(f"[pilot_learn_remote] start run_id={run_id}", flush=True)
-    cfg_path = Path("/tmp/pilot-class1-learn.json")
-    cfg_path.write_text(config_json, encoding="utf-8")
-    out_dir = Path("/vol/morpheus/pilot") / run_id
-    out_dir.mkdir(parents=True, exist_ok=True)
-    print(f"[pilot_learn_remote] output_dir={out_dir}", flush=True)
-    import torch as _torch
-
-    device = "cuda" if _torch.cuda.is_available() else "cpu"
-    print(
-        f"[pilot_learn_remote] torch_cuda={_torch.cuda.is_available()} "
-        f"device={device} device_count={_torch.cuda.device_count()}",
-        flush=True,
-    )
-    report = run_pilot_learn(
-        cfg_path,
-        output_dir=out_dir,
-        repo_root=Path("/root"),
-        device=device,
-    )
-    print(
-        f"[pilot_learn_remote] write reports ok={report.get('ok')} "
-        f"wall_s={report.get('wall_s')}",
-        flush=True,
-    )
-    vol_json = out_dir / "morpheus-pilot-class1-learn.json"
-    vol_md = out_dir / "morpheus-pilot-class1-learn.md"
-    write_pilot_report(report, json_path=vol_json, md_path=vol_md)
-    repo_meas = Path("/root/docs/research/measurements")
-    if repo_meas.is_dir():
-        write_pilot_report(
-            report,
-            json_path=repo_meas / "morpheus-pilot-class1-learn.json",
-            md_path=repo_meas / "morpheus-pilot-class1-learn.md",
-        )
-    VOLUME.commit()
-    print(f"[pilot_learn_remote] done run_id={run_id}", flush=True)
-    return {
-        "ok": bool(report.get("ok")),
-        "loss_step0": report.get("loss_step0"),
-        "loss_final": report.get("loss_final"),
-        "loss_decreased": report.get("loss_decreased"),
-        "checkpoint_reloadable": report.get("checkpoint_reloadable"),
-        "a100_hours": report.get("a100_hours"),
-        "output": str(out_dir),
-        "report": report,
-    }
-
-
-@app.local_entrypoint()
-def pilot_learn(
-    config: str = "training/morpheus/configs/pilot-class1-learn.json",
-    run_id: str = "",
-    local: bool = False,
-) -> None:
-    """Scraped class-1 thin learning smoke (Modal A100 or local CPU)."""
-    from training.morpheus.pilot.report import write_pilot_report
-    from training.morpheus.pilot.run import run_pilot_learn
-
-    cfg_path = Path(config)
-    if not cfg_path.is_file():
-        cfg_path = REPO / config
-    rid = run_id or time.strftime("pilot-%Y%m%d-%H%M%S")
-    local_meas = REPO / "docs/research/measurements"
-    local_json = local_meas / "morpheus-pilot-class1-learn.json"
-    local_md = local_meas / "morpheus-pilot-class1-learn.md"
-    print(
-        f"[pilot_learn] entry local={local} run_id={rid} config={cfg_path}",
-        flush=True,
-    )
-
-    if local:
-        out = REPO / "data" / "morpheus" / "pilot" / rid
-        report = run_pilot_learn(cfg_path, output_dir=out, repo_root=REPO)
-        write_pilot_report(report, json_path=local_json, md_path=local_md)
-        summary = {
-            "ok": report.get("ok"),
-            "loss_step0": report.get("loss_step0"),
-            "loss_final": report.get("loss_final"),
-            "a100_hours": report.get("a100_hours"),
-            "run_id": rid,
-            "local": True,
-            "checkpoint": report.get("checkpoint"),
-        }
-    else:
-        print("[pilot_learn] dispatching pilot_learn_remote on Modal", flush=True)
-        result = pilot_learn_remote.remote(cfg_path.read_text(encoding="utf-8"), rid)
-        report = result.get("report") or {}
-        if report:
-            write_pilot_report(report, json_path=local_json, md_path=local_md)
-        summary = {k: v for k, v in result.items() if k != "report"}
-        summary["run_id"] = rid
-        summary["local"] = False
-
-    print(json.dumps(summary, indent=2), flush=True)
-    print(f"ok={summary.get('ok')}", flush=True)
-
-
-@app.function(
-    image=PILOT_IMAGE,
+    image=IMAGE,
     gpu="A100-80GB",
     timeout=60 * 60 * 6,
     volumes={"/vol": VOLUME},
@@ -531,7 +405,7 @@ def train(
 
 
 @app.function(
-    image=PILOT_IMAGE,
+    image=IMAGE,
     gpu="A100-80GB",
     timeout=60 * 60 * 6,
     volumes={"/vol": VOLUME},

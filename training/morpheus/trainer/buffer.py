@@ -16,7 +16,7 @@ from typing import Any, Iterator, Mapping, Sequence
 import numpy as np
 
 from training.morpheus.objective.targets import SeatTargets
-from training.morpheus.pilot.batch import PilotSample
+from training.morpheus.trainer.sample import TrainSample
 
 SAMPLE_SUFFIX = ".sample.npz"
 INDEX_NAME = "buffer_index.json"
@@ -53,9 +53,9 @@ class BufferCursor:
 
 @dataclass
 class ReplayBuffer:
-    """Ordered window of PilotSample rows with deterministic sampling."""
+    """Ordered window of TrainSample rows with deterministic sampling."""
 
-    samples: list[PilotSample]
+    samples: list[TrainSample]
     sample_ids: list[str]
     class_ids: list[str]
     window_size: int
@@ -75,7 +75,7 @@ class ReplayBuffer:
     def __len__(self) -> int:
         return len(self.samples)
 
-    def append(self, sample: PilotSample, *, sample_id: str, class_id: str) -> None:
+    def append(self, sample: TrainSample, *, sample_id: str, class_id: str) -> None:
         self.samples.append(sample)
         self.sample_ids.append(str(sample_id))
         self.class_ids.append(str(class_id))
@@ -91,7 +91,7 @@ class ReplayBuffer:
         *,
         batch_size: int,
         class_balance: Mapping[str, float] | None = None,
-    ) -> list[PilotSample]:
+    ) -> list[TrainSample]:
         if not self.samples:
             raise BufferError("replay buffer is empty")
         if batch_size < 1:
@@ -151,7 +151,7 @@ def _targets_from_arrays(arrays: Mapping[str, np.ndarray]) -> SeatTargets:
 
 def write_sample(
     directory: Path,
-    sample: PilotSample,
+    sample: TrainSample,
     *,
     sample_id: str | None = None,
     class_id: str = "1",
@@ -187,12 +187,12 @@ def write_sample(
     return path
 
 
-def read_sample(path: Path) -> tuple[PilotSample, str, str]:
+def read_sample(path: Path) -> tuple[TrainSample, str, str]:
     path = Path(path)
     with np.load(path, allow_pickle=False) as data:
         meta = json.loads(str(data["meta_json"][0]))
         targets = _targets_from_arrays(data)
-        sample = PilotSample(
+        sample = TrainSample(
             item_id=str(meta["item_id"]),
             sample_seat=int(meta["sample_seat"]),
             tensor=np.asarray(data["tensor"], dtype=np.float32),
@@ -220,7 +220,7 @@ def load_replay_buffer(
     paths = list(iter_sample_paths(directory))
     if max_samples is not None:
         paths = paths[: int(max_samples)]
-    samples: list[PilotSample] = []
+    samples: list[TrainSample] = []
     ids: list[str] = []
     classes: list[str] = []
     for path in paths:

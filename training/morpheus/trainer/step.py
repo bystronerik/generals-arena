@@ -15,7 +15,7 @@ import torch
 
 from training.morpheus.objective.config import ObjectiveConfig
 from training.morpheus.objective.losses import LossTerms, compute_objective_losses
-from training.morpheus.pilot.batch import PilotSample
+from training.morpheus.trainer.sample import TrainSample
 
 REPO = Path(__file__).resolve().parents[3]
 MORPHEUS_BOT = REPO / "bots" / "morpheus"
@@ -28,7 +28,7 @@ def _ensure_bot_path() -> None:
             sys.path.insert(0, s)
 
 
-def stack_batch(samples: Sequence[PilotSample], device: torch.device) -> dict[str, torch.Tensor]:
+def stack_batch(samples: Sequence[TrainSample], device: torch.device) -> dict[str, torch.Tensor]:
     x = torch.as_tensor(
         np.stack([s.tensor for s in samples], axis=0),
         dtype=torch.float32,
@@ -91,7 +91,7 @@ def trainer_step(
     *,
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
-    samples: Sequence[PilotSample],
+    samples: Sequence[TrainSample],
     objective: ObjectiveConfig,
     device: torch.device | None = None,
     scheduler: torch.optim.lr_scheduler._LRScheduler | None = None,

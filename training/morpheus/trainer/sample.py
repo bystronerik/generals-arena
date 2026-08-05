@@ -1,4 +1,8 @@
-"""Build one training sample from a class-1 curriculum item."""
+"""Build one seat-local training sample from a curriculum item.
+
+Reconstruction is a local prep step. Write samples to the replay buffer, then
+point Modal ``train`` at that buffer directory.
+"""
 
 from __future__ import annotations
 
@@ -29,8 +33,8 @@ def _ensure_bot_path() -> None:
 
 
 @dataclass
-class PilotSample:
-    """One seat-local training example for the thin pilot."""
+class TrainSample:
+    """One seat-local training example for the Part 14 trainer buffer."""
 
     item_id: str
     sample_seat: int
@@ -39,6 +43,10 @@ class PilotSample:
     targets: SeatTargets
     source_label: str
     outcome: str | None
+
+
+# Back-compat alias while callers migrate off the old pilot name.
+PilotSample = TrainSample
 
 
 def _terminal_metrics(traj: Trajectory) -> dict[str, Any]:
@@ -87,17 +95,17 @@ def _next_action_policy(traj: Trajectory, *, seat: int, prefix_len: int) -> Spar
     return SparsePolicy(indices=(idx,), probs=(1.0,))
 
 
-def build_pilot_sample(
+def build_train_sample(
     item: CurriculumItem,
     *,
     trajectories_root: Path | None = None,
     traj: Trajectory | None = None,
     n_particles: int = 4,
     terminal_cache: dict[str, dict[str, Any]] | None = None,
-) -> PilotSample:
+) -> TrainSample:
     """Reconstruct the prefix and assemble seat targets for ``sample_seat``."""
     if item.sample_seat is None:
-        raise ValueError(f"{item.item_id}: sample_seat is required for the pilot")
+        raise ValueError(f"{item.item_id}: sample_seat is required")
     seat = int(item.sample_seat)
     if seat not in (0, 1):
         raise ValueError(f"{item.item_id}: invalid sample_seat {seat}")
@@ -117,7 +125,7 @@ def build_pilot_sample(
         source = read_trajectory(path)
 
     if source is None:
-        raise ValueError(f"{item.item_id}: missing trajectory for pilot sample")
+        raise ValueError(f"{item.item_id}: missing trajectory for train sample")
 
     recon = reconstruct_prefix(
         item,
@@ -159,7 +167,7 @@ def build_pilot_sample(
         current_turn=int(recon.turn),
         terminal_turn=int(terminal["terminal_turn"]),
     )
-    return PilotSample(
+    return TrainSample(
         item_id=item.item_id,
         sample_seat=seat,
         tensor=np.asarray(tensor, dtype=np.float32),
@@ -168,3 +176,7 @@ def build_pilot_sample(
         source_label=item.source_label,
         outcome=item.outcome,
     )
+
+
+# Old name used by earlier pilot docs/call sites.
+build_pilot_sample = build_train_sample

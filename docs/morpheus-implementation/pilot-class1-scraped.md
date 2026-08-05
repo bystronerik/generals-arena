@@ -1,9 +1,8 @@
-# Scraped class-1 rebuild and Modal learning smoke
+# Scraped class-1 rebuild for Part 14 training
 
 Rebuild 50 ResBot true wins and 50 erik.bystron true losses into trajectories,
-build a class-1-only curriculum with explicit sample seats, then run a thin
-Modal learning-pipeline smoke (train steps + checkpoint) using the provisional
-pilot objective.
+build a class-1-only curriculum with explicit sample seats, then materialize
+seat samples into a local replay buffer for Modal Part 14 training.
 
 ## Defaults (locked for this slice)
 
@@ -14,8 +13,8 @@ pilot objective.
 - **Sample seats:** ResBot items train from ResBot’s seat; erik items train
   from erik’s seat (so the 50+50 mix is wins + losses for the confidence
   count).
-- **Learning test:** thin pilot trainer on Modal (forward + backward steps, 1
-  checkpoint, loss report). Not full Part 14.
+- **Training:** Part 14 trainer reads a pre-built `*.sample.npz` buffer. Do
+  not reconstruct prefixes on the Modal GPU host.
 
 ## Data flow
 
@@ -25,27 +24,14 @@ flowchart LR
   rebuild["rebuild filtered"]
   traj["trajectories + corpus-index"]
   class1["class-1 curriculum manifest"]
-  pilot["Modal thin trainer"]
+  buffer["local sample buffer"]
+  train["Modal Part 14 train"]
   ckpt["checkpoint + report"]
 
-  scrapes --> rebuild --> traj --> class1 --> pilot --> ckpt
+  scrapes --> rebuild --> traj --> class1 --> buffer --> train --> ckpt
 ```
 
 ## 1. Outcome-filtered rebuild
-
-Extend `training/morpheus/scraped_rebuild/rebuild.py` and
-`scripts/morpheus_rebuild_scraped.py`:
-
-- Add `--outcome {win,lose,draw,all}` filtered by `replay.outcome`
-  (queried-player result from `arena/instrument/replay/loader.py`), never by
-  folder name.
-- Add `--keep N`: continue scanning until `N` trajectories are **kept**
-  (verify-ok), not until `N` files are scanned (unresolved ticks are common).
-- Keep existing source labels: `ResBot_reconstructions`,
-  `erik.bystron_reconstructions` via `source_label_for` (raw `ResBot` stays
-  banned).
-
-Commands (local):
 
 ```bash
 python scripts/morpheus_rebuild_scraped.py \
@@ -61,82 +47,47 @@ python scripts/morpheus_rebuild_scraped.py \
   --report docs/research/measurements/morpheus-pilot-erik-losses-rebuild.json
 ```
 
-Inventory is enough locally (ResBot wins ≈1454, erik losses ≈371). Expect
-kept less than scanned if some ticks fail inference.
+Source labels stay `ResBot_reconstructions` and `erik.bystron_reconstructions`.
+Raw `ResBot` stays banned.
 
-## 2. Class-1 curriculum from those trajectories
+## 2. Class-1 curriculum
 
-Extend curriculum build so this pilot does not require the heuristic panel as
-the data source:
+Build options: `--classes 1`, `--full-start-count 0`, multi-root trajectories,
+and sample-seat resolution from corpus-index player names.
 
-- Add `sample_seat` (0/1) on `CurriculumItem` (optional for old manifests;
-  required for this pilot).
-- Add build options: `--classes 1`, `--full-start-count 0`, multi-root
-  trajectories or a merged dir, and sample-seat resolution from corpus-index
-  player names.
-- New thin panel/config stub for provenance only, e.g.
-  `scripts/configs/morpheus/pilot-class1-scraped.json`, with `source_label` not
-  banned.
-- Classifier already defines class 1; `sample_prefixes_for_build` keeps up to 2
-  class-1 prefixes per decisive game.
-- Write manifest to `training/morpheus/manifests/pilot-class1-scraped.json`
-  (committed path: manifest only; trajectories stay derived/gitignored).
-- Verify: no banned raw ResBot labels; every item `class_id==1`; `decisive`;
-  `sample_seat` set; both source tags present.
+Write manifest to `training/morpheus/manifests/pilot-class1-scraped.json`
+(committed path: manifest only; trajectories stay derived/gitignored).
 
-WDL expectation for the pilot pool: ResBot-seat wins + erik-seat losses →
-mixed outcomes for class 1 (confidence floor is 32 mixed samples; this pool
-overshoots).
+Verify: no banned raw ResBot labels; every item `class_id==1`; `decisive`;
+`sample_seat` set; both source tags present.
 
-## 3. Thin learning pipeline (Modal)
+## 3. Local materialize → Modal train
 
-There is no Part 14 trainer yet. Add a **pilot-only** path under
-`training/morpheus/pilot/` (training-only; not in bot closure):
+1. Reconstruct class-1 items locally with
+   `training.morpheus.trainer.sample.build_train_sample`.
+2. Write `*.sample.npz` under `data/morpheus/trainer/buffer/` via
+   `training.morpheus.trainer.buffer.write_sample`.
+3. Upload that buffer directory to Modal Volume `/vol/morpheus/buffer`.
+4. Run Part 14:
 
-- Load `training/morpheus/configs/pilot-objective.json` via
-  `load_pilot_objective_bundle`.
-- For a small batch of class-1 items: `reconstruct_prefix` → build seat targets
-  for `sample_seat` → apply objective losses → AdamW step on the float Morpheus
-  net (`training/morpheus/network.py` / bot model contract).
-- Cap: e.g. 50–200 steps, batch size small, timeout bounded; write one
-  checkpoint + JSON loss report under Modal Volume `/vol/morpheus/pilot/...`
-  and mirror summary to
-  `docs/research/measurements/morpheus-pilot-class1-learn.{json,md}`.
-- Wire `scripts/morpheus_modal.py::pilot_learn` (A100) charging wall time into
-  Part 13 accounting notes (not a Part 13 `yes`).
+```bash
+modal run scripts/morpheus_modal.py::train \
+  --config training/morpheus/configs/promotable-run.json
+```
 
-Success criteria for this smoke (not arena promotion):
-
-- rebuild keeps ≈50+50
-- class-1 manifest verifies
-- Modal run finishes without fault
-- loss finite and decreases vs step 0 on the pilot batch
-- checkpoint reloadable
-
-Explicit non-goals: pairwise `improvement`, belief-calibration gate, Part 13
-`yes`, full self-play league loop.
+Use the provisional objective freeze in
+`training/morpheus/configs/pilot-objective.json` until Part 12/13 replace it.
 
 ## 4. Tests
 
 - Rebuild filter: outcome uses `replay.outcome`; `--keep` stops at kept count.
 - Curriculum: `ResBot_reconstructions` accepted; raw `ResBot` rejected;
   class-1-only manifest; `sample_seat` round-trips.
-- Pilot step: one fake item / tiny checkpoint overfits or at least runs one
-  backward pass (mark `morpheus`).
+- Part 14 trainer: overfit + interrupt/resume under `-m morpheus`.
 
 ## 5. Operator sequence
 
 1. Rebuild ResBot wins + erik losses.
 2. Build + verify class-1 manifest.
-3. `modal run scripts/morpheus_modal.py::pilot_learn --config ...`
-4. Read measurement report; stop or iterate.
-
-## Implementation todos
-
-1. Add `--outcome` and `--keep` to scraped rebuild CLI/API; run 50 ResBot wins
-   + 50 erik losses.
-2. Add `sample_seat` + class-1-only curriculum build; write
-   `pilot-class1-scraped` manifest.
-3. Implement `training/morpheus/pilot/` reconstruct → loss → step → checkpoint.
-4. Add `morpheus_modal.py::pilot_learn` and measurement report.
-5. Add morpheus-marked tests for rebuild filter, class-1 manifest, pilot step.
+3. Materialize buffer locally; upload to the Modal volume.
+4. `modal run scripts/morpheus_modal.py::train --config ...`

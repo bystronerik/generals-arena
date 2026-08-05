@@ -12,7 +12,6 @@ pytestmark = pytest.mark.morpheus
 
 from training.morpheus.objective.config import load_pilot_objective_bundle
 from training.morpheus.objective.targets import build_seat_targets
-from training.morpheus.pilot.batch import PilotSample
 from training.morpheus.self_play.schema import SparsePolicy
 from training.morpheus.trainer.buffer import ReplayBuffer, write_sample
 from training.morpheus.trainer.checkpoint import build_model_and_optimizer
@@ -24,13 +23,14 @@ from training.morpheus.trainer.config import (
     SchedulerConfig,
     TrainRunConfig,
 )
+from training.morpheus.trainer.sample import TrainSample
 from training.morpheus.trainer.step import trainer_step
 
 REPO = Path(__file__).resolve().parents[3]
 OBJECTIVE = REPO / "training/morpheus/configs/pilot-objective.json"
 
 
-def _tiny_sample(*, item_id: str = "tiny-0") -> PilotSample:
+def _tiny_sample(*, item_id: str = "tiny-0") -> TrainSample:
     H = W = 4
     ownership = np.zeros((2, H, W), dtype=bool)
     ownership[0, 0, 0] = True
@@ -61,7 +61,7 @@ def _tiny_sample(*, item_id: str = "tiny-0") -> PilotSample:
     tensor[0] = targets.board_mask
     legal = (targets.policy > 0).astype(bool)
     legal[3969] = True
-    return PilotSample(
+    return TrainSample(
         item_id=item_id,
         sample_seat=0,
         tensor=tensor,
