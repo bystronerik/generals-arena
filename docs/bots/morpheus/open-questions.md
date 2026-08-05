@@ -109,6 +109,15 @@ calibration, and pairwise `improvement` evidence. Fallback:
 `narrower_non_promotable_research_scope`. See
 [`docs/research/measurements/morpheus-modal-qualification.md`](../../research/measurements/morpheus-modal-qualification.md).
 
+**Part 14 status (2026-08-05):** trainer / checkpoint / run-manifest modules
+and Modal `train` / `resume` / `inspect_run` / `download` entry points are
+implemented. Isolated resume tests pass. Config
+`training/morpheus/configs/promotable-run.json` stays
+`promotable_main_run: false` under the Part 13 research-scope fallback. Exit
+verdict **no** until Part 13 is `yes` and one candidate finishes
+deployment-matched calibration. See
+[`docs/research/measurements/morpheus-trainer-checkpoints.md`](../../research/measurements/morpheus-trainer-checkpoints.md).
+
 ## Opponent belief approximation
 
 **Unknown:** Whether level-zero last-seen belief is sufficient.

@@ -13,9 +13,17 @@ Pilot class-1 learn smoke:
     modal run scripts/morpheus_modal.py::pilot_learn \\
       --config training/morpheus/configs/pilot-class1-learn.json
 
-Later parts add train / resume / inspect on this app. A100 time from
-``ablate_objective``, compute qualification, and ``pilot_learn`` charges to
-Part 13 accounting notes.
+Part 14:
+    modal run scripts/morpheus_modal.py::train \\
+      --config training/morpheus/configs/promotable-run.json
+    modal run scripts/morpheus_modal.py::resume \\
+      --config training/morpheus/configs/promotable-run.json --run-id <run_id>
+    modal run scripts/morpheus_modal.py::inspect_run --run-id <run_id>
+    modal run scripts/morpheus_modal.py::download \\
+      --run-id <run_id> --checkpoint <checkpoint_id> --dest /tmp/ckpt
+
+A100 time from ``ablate_objective``, compute qualification, ``pilot_learn``,
+and Part 14 ``train`` / ``resume`` charges to Part 13 accounting notes.
 """
 from __future__ import annotations
 
@@ -443,3 +451,252 @@ def pilot_learn(
 
     print(json.dumps(summary, indent=2), flush=True)
     print(f"ok={summary.get('ok')}", flush=True)
+
+
+@app.function(
+    image=PILOT_IMAGE,
+    gpu="A100-80GB",
+    timeout=60 * 60 * 6,
+    volumes={"/vol": VOLUME},
+)
+def train_remote(config_json: str, run_id: str) -> dict:
+    """Part 14 training loop. A100 wall charges to main_training."""
+    from training.morpheus.trainer.config import load_train_run_config
+    from training.morpheus.trainer.loop import run_training
+
+    cfg_path = Path("/tmp/promotable-run.json")
+    cfg_path.write_text(config_json, encoding="utf-8")
+    cfg = load_train_run_config(cfg_path)
+    # Force volume-backed run root on Modal.
+    from dataclasses import replace
+
+    cfg = replace(cfg, run_root="/vol/morpheus/runs", buffer_dir="/vol/morpheus/buffer")
+    import torch as _torch
+
+    device = "cuda" if _torch.cuda.is_available() else "cpu"
+    print(
+        f"[train_remote] run_id={run_id} device={device} scope={cfg.scope} "
+        f"promotable={cfg.promotable_main_run}",
+        flush=True,
+    )
+    result = run_training(
+        cfg,
+        run_id=run_id,
+        repo_root=Path("/root"),
+        device=device,
+    )
+    VOLUME.commit()
+    return {
+        "ok": result.ok,
+        "run_id": result.run_id,
+        "global_step": result.global_step,
+        "last_checkpoint": result.last_checkpoint,
+        "a100_hours": result.a100_hours,
+        "scope": result.scope,
+        "promotable_main_run": result.promotable_main_run,
+        "run_dir": str(result.run_dir),
+        "calibration_ok": None
+        if result.calibration is None
+        else bool(result.calibration.get("ok")),
+    }
+
+
+@app.local_entrypoint()
+def train(
+    config: str = "training/morpheus/configs/promotable-run.json",
+    run_id: str = "",
+    local: bool = False,
+) -> None:
+    """Part 14 resumable trainer (Modal A100 or local CPU)."""
+    from training.morpheus.trainer.config import load_train_run_config
+    from training.morpheus.trainer.loop import run_training
+
+    cfg_path = Path(config)
+    if not cfg_path.is_file():
+        cfg_path = REPO / config
+    rid = run_id or time.strftime("train-%Y%m%d-%H%M%S")
+    cfg = load_train_run_config(cfg_path)
+    print(
+        f"[train] entry local={local} run_id={rid} scope={cfg.scope} "
+        f"promotable={cfg.promotable_main_run} part13={cfg.part13_verdict}",
+        flush=True,
+    )
+    if local:
+        result = run_training(cfg, run_id=rid, repo_root=REPO, device="cpu")
+        summary = result.to_dict()
+    else:
+        summary = train_remote.remote(cfg_path.read_text(encoding="utf-8"), rid)
+    print(json.dumps(summary, indent=2), flush=True)
+    print(f"ok={summary.get('ok')}", flush=True)
+
+
+@app.function(
+    image=PILOT_IMAGE,
+    gpu="A100-80GB",
+    timeout=60 * 60 * 6,
+    volumes={"/vol": VOLUME},
+)
+def resume_remote(
+    config_json: str, run_id: str, checkpoint_id: str = ""
+) -> dict:
+    """Resume Part 14 training from an immutable checkpoint on the volume."""
+    from dataclasses import replace
+
+    from training.morpheus.trainer.config import load_train_run_config
+    from training.morpheus.trainer.loop import resume_training
+
+    cfg_path = Path("/tmp/promotable-run.json")
+    cfg_path.write_text(config_json, encoding="utf-8")
+    cfg = load_train_run_config(cfg_path)
+    cfg = replace(cfg, run_root="/vol/morpheus/runs", buffer_dir="/vol/morpheus/buffer")
+    import torch as _torch
+
+    device = "cuda" if _torch.cuda.is_available() else "cpu"
+    result = resume_training(
+        cfg,
+        run_id=run_id,
+        checkpoint_id=(checkpoint_id or None),
+        repo_root=Path("/root"),
+        device=device,
+    )
+    VOLUME.commit()
+    return {
+        "ok": result.ok,
+        "run_id": result.run_id,
+        "global_step": result.global_step,
+        "last_checkpoint": result.last_checkpoint,
+        "a100_hours": result.a100_hours,
+        "run_dir": str(result.run_dir),
+    }
+
+
+@app.local_entrypoint()
+def resume(
+    config: str = "training/morpheus/configs/promotable-run.json",
+    run_id: str = "",
+    checkpoint: str = "",
+    local: bool = False,
+) -> None:
+    """Resume a Part 14 run from the latest or named checkpoint."""
+    from training.morpheus.trainer.config import load_train_run_config
+    from training.morpheus.trainer.loop import resume_training
+
+    if not run_id:
+        raise SystemExit("--run-id is required for resume")
+    cfg_path = Path(config)
+    if not cfg_path.is_file():
+        cfg_path = REPO / config
+    cfg = load_train_run_config(cfg_path)
+    if local:
+        result = resume_training(
+            cfg,
+            run_id=run_id,
+            checkpoint_id=(checkpoint or None),
+            repo_root=REPO,
+            device="cpu",
+        )
+        summary = result.to_dict()
+    else:
+        summary = resume_remote.remote(
+            cfg_path.read_text(encoding="utf-8"), run_id, checkpoint
+        )
+    print(json.dumps(summary, indent=2), flush=True)
+    print(f"ok={summary.get('ok')}", flush=True)
+
+
+@app.function(
+    image=IMAGE,
+    cpu=2,
+    memory=4096,
+    timeout=60 * 10,
+    volumes={"/vol": VOLUME},
+)
+def inspect_run_remote(run_id: str) -> dict:
+    from training.morpheus.trainer.report import write_inspect_report
+
+    run_dir = Path("/vol/morpheus/runs") / run_id
+    report = write_inspect_report(run_dir)
+    VOLUME.commit()
+    return report
+
+
+@app.local_entrypoint()
+def inspect_run(run_id: str = "", local_dir: str = "") -> None:
+    """Inspect an immutable run manifest and checkpoint list."""
+    from training.morpheus.trainer.report import write_inspect_report
+
+    if local_dir:
+        report = write_inspect_report(Path(local_dir))
+    else:
+        if not run_id:
+            raise SystemExit("--run-id or --local-dir is required")
+        report = inspect_run_remote.remote(run_id)
+    print(json.dumps(report, indent=2), flush=True)
+
+
+@app.function(
+    image=IMAGE,
+    cpu=2,
+    memory=8192,
+    timeout=60 * 30,
+    volumes={"/vol": VOLUME},
+)
+def download_remote(run_id: str, checkpoint_id: str) -> dict:
+    """Read checkpoint bytes from the volume and return a file map for local write."""
+    src = Path("/vol/morpheus/runs") / run_id / checkpoint_id
+    if not src.is_dir():
+        raise FileNotFoundError(f"checkpoint missing: {src}")
+    files: dict[str, bytes] = {}
+    for path in sorted(p for p in src.rglob("*") if p.is_file()):
+        rel = path.relative_to(src).as_posix()
+        files[rel] = path.read_bytes()
+    return {
+        "run_id": run_id,
+        "checkpoint_id": checkpoint_id,
+        "files": {k: v.hex() for k, v in files.items()},
+        "file_count": len(files),
+    }
+
+
+@app.local_entrypoint()
+def download(
+    run_id: str = "",
+    checkpoint: str = "",
+    dest: str = "",
+    local_dir: str = "",
+) -> None:
+    """Download one immutable checkpoint to a local directory."""
+    if not dest:
+        raise SystemExit("--dest is required")
+    dest_path = Path(dest)
+    if dest_path.exists():
+        raise SystemExit(f"refusing to overwrite {dest_path}")
+    if local_dir:
+        from training.morpheus.trainer.report import download_checkpoint
+
+        if not checkpoint:
+            raise SystemExit("--checkpoint is required with --local-dir")
+        out = download_checkpoint(Path(local_dir), checkpoint, dest_path)
+        print(json.dumps({"ok": True, "path": str(out)}, indent=2), flush=True)
+        return
+    if not run_id or not checkpoint:
+        raise SystemExit("--run-id and --checkpoint are required")
+    payload = download_remote.remote(run_id, checkpoint)
+    dest_path.mkdir(parents=True)
+    for rel, hex_bytes in payload["files"].items():
+        target = dest_path / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(bytes.fromhex(hex_bytes))
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "path": str(dest_path),
+                "file_count": payload["file_count"],
+                "run_id": run_id,
+                "checkpoint_id": checkpoint,
+            },
+            indent=2,
+        ),
+        flush=True,
+    )

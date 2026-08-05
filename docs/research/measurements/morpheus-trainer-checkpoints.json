@@ -1,0 +1,28 @@
+{
+  "status": "part14_trainer_checkpoints",
+  "verdict": "no",
+  "generated_at": "2026-08-05T09:33:53+00:00",
+  "isolated_tests": {
+    "command": "python -m pytest training/morpheus/tests/test_trainer_step.py training/morpheus/tests/test_checkpoint_resume.py -m morpheus -q",
+    "passed": 6,
+    "failed": 0
+  },
+  "config": "training/morpheus/configs/promotable-run.json",
+  "promotable_main_run": false,
+  "scope": "narrower_non_promotable_research_scope",
+  "part13_verdict": "no",
+  "part13_fallback": "narrower_non_promotable_research_scope",
+  "checks": {
+    "resume_deterministic": true,
+    "checkpoints_immutable": true,
+    "run_manifest_self_describing": true,
+    "event_names_distinct": true,
+    "schema_drift_rejected": true,
+    "deployment_calibration_candidate_complete": false,
+    "part13_yes": false
+  },
+  "notes": [
+    "Trainer package, immutable checkpoints, run manifest, replay buffer, and Modal train/resume/inspect/download entry points are implemented.",
+    "Exit remains no until Part 13 returns yes and one Modal candidate finishes deployment-matched calibration."
+  ]
+}
