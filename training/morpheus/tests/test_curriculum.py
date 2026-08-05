@@ -299,6 +299,22 @@ def test_provenance_panel_loads():
     assert is_banned_source(panel["source_label"]) is False
 
 
+def test_scraped_classes13_panel_and_config_load():
+    from training.morpheus.corpus.panel import load_panel
+    from training.morpheus.trainer.config import load_train_run_config
+
+    panel = load_panel(REPO / "scripts/configs/morpheus/scraped-classes13.json")
+    assert panel["kind"] == "provenance"
+    assert panel["top_win_players"] == ["ResBot", "Kubic", "thor"]
+    assert float(panel["top_win_fraction"]) == 0.5
+    cfg = load_train_run_config(
+        REPO / "training/morpheus/configs/scraped-classes13-run.json"
+    )
+    assert cfg.promotable_main_run is False
+    assert cfg.replay.class_balance == {"1": 1.0}
+    assert cfg.replay.window_size >= 65536
+
+
 
 @pytest.mark.skipif(not TRAJ_DIR.is_dir(), reason="bootstrap trajectories absent")
 def test_build_and_verify_on_bootstrap(tmp_path: Path):

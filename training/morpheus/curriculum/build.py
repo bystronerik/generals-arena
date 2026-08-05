@@ -27,6 +27,12 @@ from training.morpheus.curriculum.definitions import (
     is_banned_source,
 )
 from training.morpheus.curriculum.schema import CurriculumItem, CurriculumManifest
+from training.morpheus.curriculum.stratify import (
+    GameCandidate,
+    StratifyResult,
+    candidate_from_meta,
+    stratify_global_wdl,
+)
 
 
 def _relpath(path: Path, root: Path) -> str:
@@ -40,6 +46,28 @@ def iter_panel_trajectories(trajectories_dir: Path) -> list[Path]:
     return sorted(Path(trajectories_dir).glob("*.traj.jsonl.gz"))
 
 
+def discover_trajectory_dirs(
+    parent: Path,
+    *,
+    reconstructions_only: bool = True,
+) -> list[Path]:
+    """Child dirs under ``parent`` that hold trajectories or a corpus-index."""
+    parent = Path(parent)
+    if not parent.is_dir():
+        raise FileNotFoundError(f"trajectories parent missing: {parent}")
+    found: list[Path] = []
+    for child in sorted(parent.iterdir()):
+        if not child.is_dir():
+            continue
+        if reconstructions_only and not child.name.endswith("-reconstructions"):
+            continue
+        has_traj = any(child.glob("*.traj.jsonl.gz"))
+        has_index = (child / "corpus-index.json").is_file()
+        if has_traj or has_index:
+            found.append(child)
+    return found
+
+
 def load_corpus_game_meta(directory: Path) -> dict[str, dict[str, Any]]:
     """Per-game metadata from corpus-index.json (seat, player names, labels)."""
     path = Path(directory) / "corpus-index.json"
@@ -48,6 +76,47 @@ def load_corpus_game_meta(directory: Path) -> dict[str, dict[str, Any]]:
     data = json.loads(path.read_text(encoding="utf-8"))
     games = data.get("games") or {}
     return {str(gid): dict(meta) for gid, meta in games.items()}
+
+
+def load_corpus_round_meta(directory: Path) -> dict[str, Any]:
+    """Round-level fields from corpus-index.json."""
+    path = Path(directory) / "corpus-index.json"
+    if not path.is_file():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {
+        "player": data.get("player"),
+        "outcome": data.get("outcome"),
+        "source_label": data.get("source_label"),
+        "round": data.get("round"),
+    }
+
+
+def collect_game_candidates(trajectories_dirs: Sequence[Path]) -> list[GameCandidate]:
+    """Index reconstruction games from corpus-index without reading traj bodies."""
+    out: list[GameCandidate] = []
+    for traj_dir in trajectories_dirs:
+        traj_dir = Path(traj_dir)
+        round_meta = load_corpus_round_meta(traj_dir)
+        game_meta = load_corpus_game_meta(traj_dir)
+        paths = {p.name.replace(".traj.jsonl.gz", ""): p for p in iter_panel_trajectories(traj_dir)}
+        # Prefer index entries; fall back to path stems when index is partial.
+        ids = sorted(set(game_meta) | set(paths))
+        for gid in ids:
+            path = paths.get(gid) or (traj_dir / f"{gid}.traj.jsonl.gz")
+            if not path.is_file():
+                continue
+            meta = game_meta.get(gid) or {}
+            cand = candidate_from_meta(
+                path=path,
+                game_id=gid,
+                meta=meta,
+                round_player=str(round_meta.get("player") or "") or None,
+                round_outcome=str(round_meta.get("outcome") or "") or None,
+            )
+            if cand is not None:
+                out.append(cand)
+    return out
 
 
 def resolve_sample_seat(
@@ -128,6 +197,10 @@ def build_curriculum(
     class_ids: Sequence[int] | None = None,
     require_sample_seat: bool = False,
     skip_verify: bool = False,
+    stratify_global_wdl_flag: bool = False,
+    top_win_players: Sequence[str] | None = None,
+    top_win_fraction: float = 0.5,
+    max_pairs: int | None = None,
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
     """
@@ -136,6 +209,7 @@ def build_curriculum(
     Verifies each source trajectory's digests before extracting prefixes.
     ``class_ids`` keeps only those classes (e.g. ``[1]`` for the scraped pilot).
     ``require_sample_seat`` forces every non-class-5 item to carry a seat.
+    ``stratify_global_wdl_flag`` keeps equal wins/losses before classify.
     """
     root = repo_root or REPO_ROOT
     panel = load_panel(panel_path)
@@ -156,16 +230,50 @@ def build_curriculum(
     )
     engine = current_engine_version()
 
+    stratify_report: StratifyResult | None = None
+    path_filter: set[Path] | None = None
+    if stratify_global_wdl_flag:
+        players = list(top_win_players) if top_win_players else list(
+            panel.get("top_win_players") or []
+        )
+        if not players:
+            raise ValueError(
+                "stratify_global_wdl requires --top-win-players or panel.top_win_players"
+            )
+        if top_win_players is not None:
+            fraction = float(top_win_fraction)
+        elif panel.get("top_win_fraction") is not None:
+            fraction = float(panel["top_win_fraction"])
+        else:
+            fraction = float(top_win_fraction)
+        candidates = collect_game_candidates(dirs)
+        stratify_report = stratify_global_wdl(
+            candidates,
+            top_win_players=players,
+            top_win_fraction=fraction,
+            max_pairs=max_pairs,
+        )
+        path_filter = {c.path.resolve() for c in stratify_report.kept}
+
     items: list[CurriculumItem] = []
     verify_failures: list[str] = []
     skipped_banned = 0
     skipped_class = 0
+    skipped_stratify = 0
     trajectories_scanned = 0
 
     for traj_dir in dirs:
         index = load_source_index(traj_dir)
         game_meta = load_corpus_game_meta(traj_dir)
         paths = iter_panel_trajectories(traj_dir)
+        if path_filter is not None:
+            filtered: list[Path] = []
+            for path in paths:
+                if path.resolve() in path_filter:
+                    filtered.append(path)
+                else:
+                    skipped_stratify += 1
+            paths = filtered
         if max_games is not None:
             remaining = int(max_games) - trajectories_scanned
             if remaining <= 0:
@@ -174,6 +282,12 @@ def build_curriculum(
 
         for path in paths:
             trajectories_scanned += 1
+            if trajectories_scanned == 1 or trajectories_scanned % 50 == 0:
+                print(
+                    f"[curriculum build] scanned={trajectories_scanned} "
+                    f"items={len(items)} failures={len(verify_failures)}",
+                    flush=True,
+                )
             traj = read_trajectory(path)
             label = index.get(traj.game_id) or default_label
             if is_banned_source(label):
@@ -256,6 +370,8 @@ def build_curriculum(
         notes.append("sample_seat required on every trajectory item")
     if str(panel.get("kind") or "") == "provenance":
         notes.append("panel is a provenance stub (not a heuristic match panel)")
+    if stratify_report is not None:
+        notes.extend(stratify_report.notes)
 
     manifest = CurriculumManifest(
         panel_name=str(panel["name"]),
@@ -275,7 +391,7 @@ def build_curriculum(
         class_counts[str(item.class_id)] = class_counts.get(str(item.class_id), 0) + 1
 
     source_labels = sorted({i.source_label for i in items})
-    return {
+    result: dict[str, Any] = {
         "output": str(output),
         "item_count": len(items),
         "class_counts": class_counts,
@@ -284,7 +400,12 @@ def build_curriculum(
         "trajectories_dirs": [str(d) for d in dirs],
         "skipped_banned": skipped_banned,
         "skipped_class": skipped_class,
+        "skipped_stratify": skipped_stratify,
         "verify_failures": verify_failures,
         "confidence_rule": manifest.confidence_rule["name"],
         "ok": not verify_failures,
     }
+    if stratify_report is not None:
+        result["stratify"] = stratify_report.to_dict()
+    return result
+

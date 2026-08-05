@@ -1,0 +1,96 @@
+{
+  "name": "scraped-classes13-run",
+  "scope": "narrower_non_promotable_research_scope",
+  "promotable_main_run": false,
+  "part13_verdict": "no",
+  "part13_fallback": "narrower_non_promotable_research_scope",
+  "seed": 0,
+  "batch_size": 2,
+  "n_blocks": 12,
+  "objective_path": "training/morpheus/configs/pilot-objective.json",
+  "optimizer": {
+    "name": "adamw",
+    "learning_rate": 0.001,
+    "weight_decay": 0.0001,
+    "betas": [0.9, 0.999],
+    "eps": 1e-8
+  },
+  "scheduler": {
+    "name": "constant",
+    "step_size": 1000000,
+    "gamma": 1.0
+  },
+  "replay": {
+    "window_size": 65536,
+    "class_balance": {
+      "1": 1.0
+    },
+    "augment_symmetries": false
+  },
+  "cadence": {
+    "snapshot_every_steps": 50,
+    "max_steps": 200,
+    "games_per_checkpoint": 54484,
+    "checkpoint_count": 4,
+    "stopping_rule": "max_steps"
+  },
+  "budget": {
+    "main_training_a100_hours": 20.0,
+    "deployment_calibration_a100_hours": 2.0,
+    "prior_a100_hours": 2.03609689689,
+    "budget_a100_hours": 48.0
+  },
+  "layout": {
+    "name": "cpu1-seq",
+    "backend": "cpu",
+    "physical_cores_per_game": 1,
+    "seat_search": "sequential",
+    "workers_per_a100": 16,
+    "concurrent_games_per_container": 1,
+    "games_per_worker_measured_batch": 2
+  },
+  "deployment": {
+    "inference_runtime": "torch.jit.trace+fx_static_qnnpack",
+    "quantization_format": "static_ptq_fx_qnnpack_int8",
+    "quantization_engine": "qnnpack",
+    "n_particles": 32,
+    "target_simulations": 8,
+    "min_simulations": 8,
+    "pending_leaf_batch": 4,
+    "search_depth": 8,
+    "normal_deadline_ms": 125.0
+  },
+  "self_play": {
+    "seed": 0,
+    "games": 2,
+    "max_turns": 8,
+    "league_weight": 0.7,
+    "panel_weight": 0.3,
+    "panel_members": [
+      {
+        "bot_id": "smoke",
+        "role": "heuristic",
+        "weight": 1.0
+      }
+    ],
+    "n_particles": 4,
+    "target_simulations": 8,
+    "min_simulations": 4,
+    "search_depth": 4,
+    "pending_leaf_batch": 2,
+    "deadline_ms": 60000,
+    "recursive_opponent_particles": false,
+    "seat_search": "sequential",
+    "output": "data/morpheus/trainer/self_play"
+  },
+  "buffer_dir": "data/morpheus/trainer/buffer",
+  "run_root": "data/morpheus/runs",
+  "require_deployment_calibration": true,
+  "notes": [
+    "Research-scope Part 14 run on stratified scraped classes 1–3.",
+    "class_balance locks class 1 only; classes 2–3 remain in the buffer.",
+    "window_size 65536 must stay >= class-1 sample count after materialize.",
+    "Part 13 verdict remains no; promotable_main_run stays false.",
+    "Clone of promotable-run.json with scraped-classes13 buffer intent."
+  ]
+}
