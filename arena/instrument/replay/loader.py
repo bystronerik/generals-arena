@@ -4,12 +4,19 @@ Find and load one scraped replay into typed frames. Read-only.
 A replay lives at `competition-replays/<player>/{win,lose,draw}/<id>.json`, with
 the list-endpoint row beside it as `<id>.meta.json`.
 
-**The folder is not the queried player's result.** It is side A's, and the
-queried player is side A only about half the time — 846 of the 1680 pairs on
-disk at 2026-08-01 are side B, and 835 of those sit in a folder that states the
-opposite of what actually happened to them. So `Replay.folder` is provenance
-only and `Replay.outcome` is derived here from `winner` and `seat_of`, which is
-the one source that cannot be filed wrong. Never filter or count on the folder.
+**Derive the outcome; do not read it off the folder.** An early scraper filed
+by side A's result, and the queried player is side A only about half the time,
+so most side-B games sat under the folder that said the opposite. The scraper
+now files from the queried player's own point of view and can repair history
+offline (`scripts/scrape_replays.py --refile-only`), and as of 2026-08-05 all
+13,088 pairs on disk are filed correctly — verified twice over, once from each
+replay's `winner` against `seat_of`, once from the `.meta.json` sidecars.
+
+That makes the folder currently accurate, not authoritative. `Replay.folder`
+stays provenance only and `Replay.outcome` is derived here from `winner` and
+`seat_of`, which is the one source that cannot be filed wrong. Keep filtering
+and counting on the derived outcome, so a future scraper regression shows up as
+a `folder_disagrees` count rather than as quietly mislabeled training data.
 
 Two fields of the raw format are not usable as written:
 

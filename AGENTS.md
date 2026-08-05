@@ -90,9 +90,17 @@ the `competition-scraper` submodule:
 ```bash
 python scripts/scrape_replays.py                    # default player: erik.bystron
 python scripts/scrape_replays.py erik.bystron prady --concurrency 8
+python scripts/scrape_replays.py --refile-only      # offline: repair outcome folders
 ```
 
 Process rules:
+
+- `win/lose/draw` is the **queried player's** result. An early scraper filed by
+  side A's result instead; `--refile-only` repairs that offline and is safe to
+  re-run. Verified clean on 2026-08-05: 13,088 checked, 0 refiled.
+- Still derive outcomes from `Replay.outcome`, never the folder name — the
+  folder is provenance, so a scraper regression shows up as `folder_disagrees`
+  rather than as mislabeled training data.
 
 - Output goes to `competition-replays/<player>/{win,lose,draw}/` — gitignored
   except `.gitkeep`. Roughly 0.6 MB per replay; never commit them.

@@ -6,6 +6,12 @@ player are fixed here instead of retyped. Runs are incremental: replays already
 on disk are skipped, so re-running periodically is how history accumulates (the
 list endpoint returns only a recent window, with no pagination).
 
+`--refile-only` re-derives every saved replay's outcome from its `.meta.json`
+sidecar and moves mislabeled pairs into the right folder. It is offline and
+idempotent, and it is how history an older scraper filed under side A's result
+gets healed — the list endpoint serves only a recent window, so re-downloading
+cannot fix the past.
+
 Scraped replays are competition-rules games played by real leaderboard
 entrants. They are observational data, not arena matches: they never enter
 data/games/ or the rating fit. See docs/engine/leaderboard-replays.md.
@@ -82,10 +88,29 @@ def main(argv: list[str] | None = None) -> int:
         help="max requests per second (default: the scraper's own cap; 0 disables pacing)",
     )
     parser.add_argument("--out", type=Path, default=REPLAYS_DIR, help="output directory")
+    parser.add_argument(
+        "--refile-only",
+        action="store_true",
+        help=(
+            "offline: re-derive every saved replay's outcome from its sidecar and "
+            "move mislabeled pairs into the right folder; downloads nothing "
+            "(default: every player dir on disk)"
+        ),
+    )
     args = parser.parse_args(argv)
 
-    players = args.players or DEFAULT_PLAYERS
     scraper = load_scraper()
+    if args.refile_only:
+        # Repair defaults to the whole tree, not DEFAULT_PLAYERS: a misfiled
+        # folder is exactly the one you have not thought to name. Called
+        # directly because the repair path is synchronous and needs no httpx.
+        try:
+            return scraper.run_refile_only(args.out, list(args.players))
+        except KeyboardInterrupt:
+            print("interrupted", file=sys.stderr)
+            return 130
+
+    players = args.players or DEFAULT_PLAYERS
     forwarded = ["--concurrency", str(args.concurrency), "--out", str(args.out)]
     if args.rate is not None:
         forwarded += ["--rate", str(args.rate)]

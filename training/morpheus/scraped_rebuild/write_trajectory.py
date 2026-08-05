@@ -8,6 +8,7 @@ from typing import Any
 
 import jax.numpy as jnp
 
+from arena.instrument.replay.loader import OUTCOMES as OUTCOME_DIRS
 from arena.matches.loop import make_board, make_transition, winner_seat
 from arena.records.store import engine_version as current_engine_version
 from arena.records.trajectories import (
@@ -36,6 +37,37 @@ def game_id_for(player: str, match_id: str) -> str:
     return f"scraped_{safe_player}_{match_id}"
 
 
+def safe_player_name(player: str) -> str:
+    """Player name reduced to what a round name may contain.
+
+    Round names are restricted to letters, digits, ``.``, ``_`` and ``-`` (see
+    ``arena.records.trajectories.round_trajectory_dir``), so spaces and slashes
+    become underscores — ``Non-Linear Slob`` -> ``Non-Linear_Slob``. Matches the
+    sanitising already done by `game_id_for`.
+    """
+    name = str(player).strip()
+    if not name:
+        raise ValueError("player name must be non-empty")
+    return name.replace("/", "_").replace(" ", "_")
+
+
+def round_dir_name(player: str, outcome: str) -> str:
+    """``<player>-<outcome>-reconstructions`` — one round per player per result.
+
+    ``outcome`` must be the queried player's own result as derived by
+    ``Replay.outcome``, never the scraped folder name: the folder records the
+    result of whoever the list endpoint called side A.
+    """
+    if outcome not in OUTCOME_DIRS:
+        raise ValueError(f"outcome must be one of {OUTCOME_DIRS}, got {outcome!r}")
+    return f"{safe_player_name(player)}-{outcome}-reconstructions"
+
+
+def round_directory(root: Path, player: str, outcome: str) -> Path:
+    """``<root>/<player>-<outcome>-reconstructions`` — a self-contained corpus."""
+    return Path(root) / round_dir_name(player, outcome)
+
+
 def write_trajectory_from_inference(
     inference: InferenceResult,
     *,
@@ -43,12 +75,20 @@ def write_trajectory_from_inference(
     directory: Path,
     engine: str | None = None,
     force: bool = False,
+    round_name: str | None = None,
 ) -> WriteResult:
     """
     Step the real competition engine with inferred Action5 pairs and write
     a trajectory. Returns ``ok=False`` without keeping a file on failure.
+
+    ``directory`` is where the file lands, which under the nested layout is a
+    ``<player>/<outcome>`` leaf. ``round_name`` is what the trajectory header
+    records; pass the round root's name so nesting does not retitle the round
+    to ``"win"``.
     """
     game_id = game_id_for(player, inference.match_id)
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
     out_path = trajectory_path(game_id, directory)
     if out_path.is_file() and not force:
         return WriteResult(
@@ -90,7 +130,7 @@ def write_trajectory_from_inference(
         game_id=game_id,
         seed=int(inference.seed),
         mode="competition",
-        round_name=directory.name,
+        round_name=round_name or directory.name,
         engine_version=engine_ver,
         bot_a=bot_a,
         bot_b=bot_b,
@@ -184,8 +224,9 @@ def corpus_index_payload(
     round_name: str,
     engine_version: str,
     games: dict[str, dict[str, Any]],
+    outcome: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    payload = {
         "round": round_name,
         "player": player,
         "source_label": source_label,
@@ -193,3 +234,7 @@ def corpus_index_payload(
         "game_count": len(games),
         "games": games,
     }
+    if outcome is not None:
+        # Every game in this round is the queried player's `outcome`.
+        payload["outcome"] = outcome
+    return payload

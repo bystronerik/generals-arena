@@ -126,15 +126,15 @@ def test_rebuild_one_kubic_game_or_skip(tmp_path: Path):
     report = rebuild_player(
         player="Kubic",
         replays=KUBIC_REPLAYS,
-        output=tmp_path / "kubic-reconstructions",
+        output=tmp_path / "rounds",
         report_path=tmp_path / "report.json",
         max_games=1,
         force=True,
         repo_root=REPO,
     )
+    root = tmp_path / "rounds"
     assert report.scanned >= 1
     assert report.source_label == "Kubic_reconstructions"
-    assert (tmp_path / "kubic-reconstructions" / "corpus-index.json").is_file()
     assert (
         report.kept
         + report.skipped_unresolved
@@ -147,12 +147,31 @@ def test_rebuild_one_kubic_game_or_skip(tmp_path: Path):
     assert report.kept >= 1, report.to_dict()
     from arena.records.trajectories import read_trajectory, verify_trajectory
 
-    traj = read_trajectory(
-        tmp_path
-        / "kubic-reconstructions"
-        / f"{report.kept_game_ids[0]}.traj.jsonl.gz"
-    )
+    game_id = report.kept_game_ids[0]
+    assert sum(report.kept_by_outcome.values()) == report.kept
+    # Exactly the rounds that kept something, named per player and result.
+    assert set(report.rounds) == {
+        o for o, n in report.kept_by_outcome.items() if n
+    }
+    outcome = next(iter(report.rounds))
+    round_dir = root / f"Kubic-{outcome}-reconstructions"
+    assert Path(report.rounds[outcome]) == round_dir
+    assert (round_dir / "corpus-index.json").is_file()
+
+    index = json.loads((round_dir / "corpus-index.json").read_text())
+    assert index["outcome"] == outcome
+    assert index["round"] == round_dir.name
+    meta = index["games"][game_id]
+    assert meta["queried_outcome"] == outcome
+
+    # Rounds are flat, and the round root holds no stray index.
+    path = round_dir / f"{game_id}.traj.jsonl.gz"
+    assert path.is_file()
+    assert not (root / "corpus-index.json").exists()
+
+    traj = read_trajectory(path)
     assert verify_trajectory(traj).ok
+    assert traj.header["round"] == round_dir.name
 
 
 @pytest.mark.skipif(
@@ -178,7 +197,7 @@ def test_rebuild_outcome_filter_and_keep(tmp_path: Path):
     report = rebuild_player(
         player="Kubic",
         replays=KUBIC_REPLAYS,
-        output=tmp_path / "kubic-filtered",
+        output=tmp_path / "rounds",
         report_path=tmp_path / "report.json",
         keep=1,
         outcome=wanted,
@@ -189,13 +208,44 @@ def test_rebuild_outcome_filter_and_keep(tmp_path: Path):
     assert report.keep_target == 1
     assert report.kept == 1
     assert report.scanned >= 1
+    round_dir = tmp_path / "rounds" / f"Kubic-{wanted}-reconstructions"
+    # A filtered run writes that one round and no empty siblings.
+    assert set(report.rounds) == {wanted}
+    assert sorted(p.name for p in (tmp_path / "rounds").iterdir()) == [round_dir.name]
     # Outcome filter must not count folder-only skips as kept.
     for game_id in report.kept_game_ids:
-        meta = json.loads(
-            (tmp_path / "kubic-filtered" / "corpus-index.json").read_text()
-        )["games"][game_id]
+        meta = json.loads((round_dir / "corpus-index.json").read_text())["games"][game_id]
         assert meta["queried_outcome"] == wanted
         assert meta["sample_seat"] in (0, 1)
+        assert (round_dir / f"{game_id}.traj.jsonl.gz").is_file()
+    assert report.kept_by_outcome[wanted] == 1
+
+
+def test_round_dir_name_and_validation(tmp_path: Path):
+    from arena.records.trajectories import round_trajectory_dir
+    from training.morpheus.scraped_rebuild.write_trajectory import (
+        round_dir_name,
+        round_directory,
+        safe_player_name,
+    )
+
+    assert round_dir_name("Kubic", "win") == "Kubic-win-reconstructions"
+    assert round_directory(tmp_path, "Kubic", "draw") == (
+        tmp_path / "Kubic-draw-reconstructions"
+    )
+    # Spaces and slashes cannot appear in a round name.
+    assert safe_player_name("Non-Linear Slob") == "Non-Linear_Slob"
+    assert safe_player_name("a/b") == "a_b"
+    assert round_dir_name("Non-Linear Slob", "lose") == (
+        "Non-Linear_Slob-lose-reconstructions"
+    )
+    # Every generated name must satisfy the arena's own round-name rule.
+    for player in ("Non-Linear Slob", "erik.bystron", "__", "a/b"):
+        for outcome in ("win", "lose", "draw"):
+            round_trajectory_dir(round_dir_name(player, outcome))
+
+    with pytest.raises(ValueError, match="outcome"):
+        round_dir_name("Kubic", "loss")
 
 
 def test_rebuild_rejects_bad_outcome():

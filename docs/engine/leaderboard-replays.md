@@ -40,10 +40,24 @@ competition-replays/            # gitignored except .gitkeep
     └── draw/
 ```
 
-`win` / `lose` / `draw` come from the list row's `winner` field, which is
-**side A's** result. The queried player is *not* always side A, so the folder
-is not their outcome — see the caveat below. Treat it as provenance and derive
-the real result from the replay's `winner` and the player's seat.
+`win` / `lose` / `draw` are the **queried player's** result. An early scraper
+filed by the list row's `winner` field, which is *side A's* result, and the
+queried player is side A only about half the time; that history has since been
+repaired in place. Treat the folder as provenance anyway and derive the real
+result from the replay's `winner` and the player's seat — see the caveat below.
+
+### Repairing the sort
+
+```bash
+python scripts/scrape_replays.py --refile-only
+```
+
+Offline, idempotent, and downloads nothing: it re-derives each saved replay's
+outcome from its `.meta.json` sidecar and moves mislabeled pairs. This is the
+only way to heal history, because the list endpoint serves a recent window and
+deleted players return nothing at all. With no player named it repairs every
+directory on disk, which is the useful default — a misfiled folder is the one
+you have not thought to name.
 
 ## Match metadata (`<id>.meta.json`)
 
@@ -51,7 +65,7 @@ the real result from the replay's `winner` and the player's seat.
 | --- | --- |
 | `id` | match id; also the replay filename |
 | `a_name` / `b_name` | the two accounts; **either one** can be the queried player |
-| `a_side` | side A's seat index — agreed with the name-resolved seat in 1680/1680 replays |
+| `a_side` | side A's seat index — `a_name == players[a_side]` held in every replay sampled (3,000 of 13,088 at 2026-08-05) |
 | `created_at` | ISO timestamp |
 | `seed` | map seed |
 | `turns` | game length in ticks |
@@ -80,25 +94,29 @@ Coordinates are `[row, col]` throughout.
 - **The window is recent, not complete.** The list endpoint returns a fixed
   window (~300 matches for one player) with no pagination. History only
   accumulates by re-running the scrape periodically.
-- **The folder is side A's outcome, and half the games are side B.** Across the
-  1680 replay/meta pairs on disk at 2026-08-01, 846 have the queried player as
-  side `B`, and 835 of those sit in a folder that states the opposite of what
-  happened to them (`erik.bystron`: 30 side-B games — 22 real wins filed under
-  `lose/`, 8 real losses under `win/`). Counting outcomes by directory is
-  therefore wrong by roughly half the sample. Derive instead: the player's seat
-  from `players` in the replay (or `a_side` when the names cannot decide), then
-  compare with the replay's `winner`. `arena/instrument/replay/` does this and
-  exposes the directory separately as `folder`.
+- **Derive the outcome; do not read it off the folder.** The folders are
+  currently accurate — all 13,088 pairs across 14 players were verified filed
+  correctly on 2026-08-05, twice over: once from each replay's own `winner`
+  against the name-resolved seat, once from the `.meta.json` sidecars via
+  `--refile-only` (13,088 checked, 0 refiled). That makes them accurate, not
+  authoritative. An older scraper filed by side A's result and was wrong for
+  roughly half the sample, so keep deriving: the player's seat from `players`
+  in the replay (or `a_side` when the names cannot decide), then compare with
+  the replay's `winner`. `arena/instrument/replay/` does this and exposes the
+  directory separately as `folder`, so a future regression surfaces as a
+  `folder_disagrees` count instead of quietly mislabeled training data.
 - **No self-matches in the current pull.** An earlier version of this page
   reported "30 of 306 `erik.bystron` matches had the same account on both
   sides". That was the side-B count above, misread: no replay on disk has
   `players[0] == players[1]`. Should one appear, its name cannot resolve a
   seat and `a_side` has to.
-- **Forfeits look like 1-tick wins.** 6 of 306 games ended at `total_ticks == 1`.
-  Filter on length before treating a game as played.
+- **Forfeits look like 1-tick wins.** 132 of the 13,088 games on disk at
+  2026-08-05 ended at `total_ticks == 1`. Filter on length before treating a
+  game as played.
 - **`castles` was empty in all 306 replays** of that pull, so the field is not a
   reliable source of castle positions — read castle state from the tick grids.
-- Size is roughly 0.6 MB per replay, ~330 MB for one player's window.
+- Size is roughly 0.6 MB per replay — 12 GB for the 13,088 replays across 14
+  players held at 2026-08-05. Never commit them.
 
 ## Related
 

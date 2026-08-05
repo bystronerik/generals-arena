@@ -1,4 +1,20 @@
-"""Batch rebuild scraped replays into trajectories + corpus-index + report."""
+"""Batch rebuild scraped replays into trajectories + corpus-index + report.
+
+Each player-and-result pair becomes its own self-contained round under
+``--output``::
+
+    <output>/<player>-<win|lose|draw>-reconstructions/
+        corpus-index.json
+        <game_id>.traj.jsonl.gz
+
+The result is the queried player's own, from ``Replay.outcome`` — derived from
+the replay's ``winner`` and the player's seat — never the scraped folder name,
+which records the result of whoever the list endpoint called side A.
+
+One round per pair means rounds stay flat (what every trajectory consumer
+already expects) and no two concurrent rebuilds ever write the same directory,
+so players can be rebuilt fully in parallel.
+"""
 
 from __future__ import annotations
 
@@ -18,11 +34,13 @@ from training.morpheus.scraped_rebuild.infer import infer_joint_actions
 from training.morpheus.scraped_rebuild.source import source_label_for
 from training.morpheus.scraped_rebuild.write_trajectory import (
     corpus_index_payload,
+    round_directory,
     write_trajectory_from_inference,
 )
 
 
 VALID_OUTCOMES = frozenset({"win", "lose", "draw", "all"})
+OUTCOMES = ("win", "lose", "draw")
 
 
 @dataclass
@@ -42,6 +60,12 @@ class RebuildReport:
     skipped_verify: int = 0
     skipped_other: int = 0
     ambiguous_tick_total: int = 0
+    # Kept trajectories per queried-player outcome, i.e. per round written.
+    kept_by_outcome: dict[str, int] = field(
+        default_factory=lambda: {"win": 0, "lose": 0, "draw": 0}
+    )
+    # outcome -> round directory, for the rounds this run actually wrote.
+    rounds: dict[str, str] = field(default_factory=dict)
     failures: list[dict[str, Any]] = field(default_factory=list)
     kept_game_ids: list[str] = field(default_factory=list)
 
@@ -53,6 +77,14 @@ class RebuildReport:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n")
         return path
+
+
+def _write_index(path: Path, payload: dict[str, Any]) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return path
 
 
 def rebuild_player(
@@ -74,6 +106,11 @@ def rebuild_player(
     engine verify are skipped. ``outcome`` filters by ``Replay.outcome`` for the
     queried player (never by folder name). ``keep`` stops after N verify-ok
     trajectories; ``max_games`` still caps how many files are scanned.
+
+    ``output`` is the parent the rounds are created under, not a round itself:
+    each result gets its own flat, self-contained round directory
+    ``<output>/<player>-<outcome>-reconstructions/`` with its own
+    ``corpus-index.json``. Only rounds that actually kept a game are written.
     """
     outcome_filter = str(outcome).strip().lower()
     if outcome_filter not in VALID_OUTCOMES:
@@ -107,7 +144,8 @@ def rebuild_player(
         outcome_filter=outcome_filter,
         keep_target=int(keep) if keep is not None else None,
     )
-    games_index: dict[str, dict[str, Any]] = {}
+    # One index per round, keyed by the queried player's outcome.
+    games_index: dict[str, dict[str, dict[str, Any]]] = {o: {} for o in OUTCOMES}
 
     paths = list(iter_replay_paths(player_name, folder="all", root=loader_root))
     # max_games caps scanned files; keep continues until N kept unless capped.
@@ -142,12 +180,17 @@ def rebuild_player(
             )
             continue
 
+        # Route by the player's own derived result, not `folder`. `replay.folder`
+        # is provenance only; see arena.instrument.replay.loader.
+        game_outcome = replay.outcome
+        round_dir = round_directory(output, player_name, game_outcome)
         result = write_trajectory_from_inference(
             inference,
             player=player_name,
-            directory=output,
+            directory=round_dir,
             engine=engine,
             force=force,
+            round_name=round_dir.name,
         )
         if not result.ok:
             if result.reason == "verify_failed":
@@ -165,13 +208,14 @@ def rebuild_player(
             continue
 
         report.kept += 1
+        report.kept_by_outcome[game_outcome] += 1
         report.kept_game_ids.append(result.game_id)
         winner = "draw"
         if inference.winner == 0:
             winner = "a"
         elif inference.winner == 1:
             winner = "b"
-        games_index[result.game_id] = {
+        games_index[game_outcome][result.game_id] = {
             "source_label": label,
             "match_id": replay.match_id,
             "bot_a": inference.players[0],
@@ -188,17 +232,24 @@ def rebuild_player(
             "folder": folder,
         }
 
-    index = corpus_index_payload(
-        player=player_name,
-        source_label=label,
-        round_name=output.name,
-        engine_version=engine,
-        games=games_index,
-    )
-    (output / "corpus-index.json").write_text(
-        json.dumps(index, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    # Only write rounds this run produced, so an outcome-filtered run does not
+    # leave empty `<player>-lose-reconstructions/` directories behind.
+    for round_outcome, games in games_index.items():
+        if not games:
+            continue
+        round_dir = round_directory(output, player_name, round_outcome)
+        _write_index(
+            round_dir / "corpus-index.json",
+            corpus_index_payload(
+                player=player_name,
+                source_label=label,
+                round_name=round_dir.name,
+                engine_version=engine,
+                games=games,
+                outcome=round_outcome,
+            ),
+        )
+        report.rounds[round_outcome] = str(round_dir)
 
     if report_path is None:
         report_path = (

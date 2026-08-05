@@ -5,8 +5,20 @@ Usage:
     python scripts/morpheus_rebuild_scraped.py \\
       --player ResBot \\
       --replays competition-replays/ResBot \\
-      --output data/trajectories/resbot-reconstructions \\
+      --output data/trajectories \\
       --report docs/research/measurements/morpheus-resbot-rebuild.json
+
+`--output` is the parent the rounds are created under. Each result becomes its
+own self-contained round, flat inside:
+
+    <output>/<player>-win-reconstructions/corpus-index.json
+    <output>/<player>-win-reconstructions/<game_id>.traj.jsonl.gz
+    <output>/<player>-lose-reconstructions/...
+    <output>/<player>-draw-reconstructions/...
+
+Games are routed by the queried player's own result (`Replay.outcome`), not by
+the scraped folder name. Because no two players share a round directory, every
+player can be rebuilt in parallel.
 """
 from __future__ import annotations
 

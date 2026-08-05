@@ -50,6 +50,26 @@ python scripts/morpheus_rebuild_scraped.py \
 Source labels stay `ResBot_reconstructions` and `erik.bystron_reconstructions`.
 Raw `ResBot` stays banned.
 
+`--output` is the parent the rounds are created under. Each player-and-result
+pair is its own self-contained round, routed by the queried player's derived
+outcome (never the scraped folder name):
+
+```
+data/trajectories/
+├── ResBot-win-reconstructions/
+│   ├── corpus-index.json
+│   └── <game_id>.traj.jsonl.gz
+├── ResBot-lose-reconstructions/
+└── erik.bystron-lose-reconstructions/
+```
+
+Rounds stay flat, so every existing trajectory consumer reads them unchanged.
+Only rounds that kept a game are created, and no two players ever share a
+directory — so players can be rebuilt fully in parallel with no coordination.
+Player names are sanitised into valid round names (`Non-Linear Slob` →
+`Non-Linear_Slob-win-reconstructions`); source labels keep the raw name
+(`Non-Linear Slob_reconstructions`).
+
 ## 2. Class-1 curriculum
 
 Build options: `--classes 1`, `--full-start-count 0`, multi-root trajectories,
