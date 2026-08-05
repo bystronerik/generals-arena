@@ -54,16 +54,19 @@ def belief_rng_seed(
     engine_version: str,
     map_seed: int,
     source_label: str,
-    prefix_len: int,
     game_id: str | None,
     seat: int,
 ) -> int:
-    """Derive a deterministic particle RNG seed from immutable item fields."""
+    """Derive a deterministic particle RNG seed from immutable game+seat fields.
+
+    Seed is shared across all ``prefix_len`` values of the same game so
+    materialize can continue one belief history instead of restarting per item.
+    """
     if seat not in (0, 1):
         raise ValueError(f"seat must be 0 or 1, got {seat}")
     payload = (
         f"{engine_version}|{int(map_seed)}|{source_label}|"
-        f"{int(prefix_len)}|{game_id or ''}|{int(seat)}"
+        f"{game_id or ''}|{int(seat)}"
     ).encode("utf-8")
     digest = hashlib.sha256(payload).digest()
     return int.from_bytes(digest[:8], "big") % (2**63)

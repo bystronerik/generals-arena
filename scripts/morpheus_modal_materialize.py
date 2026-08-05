@@ -17,6 +17,9 @@ Smoke (2 shards, 32 items):
 
 Writes shard-private samples under ``/vol/morpheus/buffer_shards/<i>/``, then
 merges into ``/vol/morpheus/buffer`` for Part 14 train.
+
+Rematerialize after the per-game belief-seed contract; do not reuse samples
+built under the old per-prefix seed.
 """
 from __future__ import annotations
 

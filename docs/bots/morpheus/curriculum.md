@@ -71,10 +71,12 @@ maps that are not panel-trajectory replays. Source label: `full_start`.
 ### Belief RNG seed
 
 Trajectory files do not store particle RNG state. Deterministic reconstruction
-derives one seed per seat from immutable item fields:
+derives one seed per seat from immutable game fields (shared across all
+`prefix_len` values of that game so materialize can continue one belief
+history):
 
 ```text
-sha256("{engine_version}|{map_seed}|{source_label}|{prefix_len}|{game_id}|{seat}")
+sha256("{engine_version}|{map_seed}|{source_label}|{game_id}|{seat}")
 → first 8 bytes as big-endian uint64, then mod 2^63
 ```
 

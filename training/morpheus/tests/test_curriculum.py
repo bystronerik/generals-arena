@@ -64,13 +64,35 @@ def test_belief_seed_is_deterministic_and_seat_sensitive():
         engine_version="abc",
         map_seed=7,
         source_label="fixed_panel",
-        prefix_len=12,
         game_id="g1",
     )
     s0 = belief_rng_seed(**kwargs, seat=0)
     s1 = belief_rng_seed(**kwargs, seat=1)
     assert s0 == belief_rng_seed(**kwargs, seat=0)
     assert s0 != s1
+    # Shared across prefixes of the same game.
+    assert CurriculumItem.build(
+        class_id=CLASS_PRE_CONTACT,
+        engine_version="abc",
+        map_seed=7,
+        source_label="fixed_panel",
+        prefix_len=3,
+        game_id="g1",
+    ).belief_seed(0) == CurriculumItem.build(
+        class_id=CLASS_PRE_CONTACT,
+        engine_version="abc",
+        map_seed=7,
+        source_label="fixed_panel",
+        prefix_len=12,
+        game_id="g1",
+    ).belief_seed(0)
+    assert belief_rng_seed(**kwargs, seat=0) != belief_rng_seed(
+        engine_version="abc",
+        map_seed=7,
+        source_label="fixed_panel",
+        game_id="g2",
+        seat=0,
+    )
 
 
 def test_assign_class_priority():
@@ -374,6 +396,76 @@ def test_reconstruct_short_prefix_both_seats():
         assert len(seat_rec.action_history) == item.prefix_len
         assert seat_rec.belief_seed == item.belief_seed(seat)
         assert seat_rec.belief.n > 0
+
+
+def _belief_fingerprint(belief) -> tuple:
+    """Stable compare for incremental vs single-item reconstruct."""
+    parts = []
+    for p in belief.particles:
+        armies = tuple(np.asarray(p.state.armies, dtype=np.int32).reshape(-1).tolist())
+        own = tuple(np.asarray(p.state.ownership, dtype=np.uint8).reshape(-1).tolist())
+        parts.append((float(p.weight), armies, own))
+    return (int(belief.seat), bool(belief.collapsed), tuple(parts))
+
+
+@pytest.mark.skipif(not TRAJ_DIR.is_dir(), reason="bootstrap trajectories absent")
+def test_incremental_reconstruct_matches_single_and_bounds_updates(monkeypatch):
+    from arena.records.trajectories import read_trajectory
+    import recovery as recovery_mod
+    from training.morpheus.curriculum.reconstruct import (
+        reconstruct_prefix,
+        reconstruct_prefixes,
+    )
+
+    path = sorted(TRAJ_DIR.glob("*.traj.jsonl.gz"))[0]
+    traj = read_trajectory(path)
+    t1, t2 = 2, 5
+    assert len(traj.frames) >= t2
+    items = [
+        CurriculumItem.build(
+            class_id=CLASS_PRE_CONTACT,
+            engine_version=traj.engine_version,
+            map_seed=traj.seed,
+            source_label="fixed_panel",
+            prefix_len=t,
+            game_id=traj.game_id,
+            trajectory_relpath=str(path.relative_to(REPO)),
+            sample_seat=0,
+        )
+        for t in (t1, t2)
+    ]
+
+    single = reconstruct_prefix(
+        items[1], traj=traj, n_particles=4, update_belief_flag=True
+    )
+    multi = reconstruct_prefixes(
+        items, traj=traj, n_particles=4, update_belief_flag=True
+    )
+    assert set(multi) == {items[0].item_id, items[1].item_id}
+    incr = multi[items[1].item_id]
+    assert incr.turn == single.turn == t2
+    for seat in (0, 1):
+        assert len(incr.seats[seat].action_history) == t2
+        assert _belief_fingerprint(incr.seats[seat].belief) == _belief_fingerprint(
+            single.seats[seat].belief
+        )
+
+    calls = {"n": 0}
+    real_update = recovery_mod.update_belief
+
+    def counting_update(*args, **kwargs):
+        calls["n"] += 1
+        return real_update(*args, **kwargs)
+
+    monkeypatch.setattr(recovery_mod, "update_belief", counting_update)
+    # reconstruct imports update_belief by name; patch the reconstruct binding too.
+    import training.morpheus.curriculum.reconstruct as recon_mod
+
+    monkeypatch.setattr(recon_mod, "update_belief", counting_update)
+    reconstruct_prefixes(items, traj=traj, n_particles=4, update_belief_flag=True)
+    # Two seats × (max_prefix) belief updates for turns 1..max, not sum of prefixes.
+    assert calls["n"] <= 2 * t2
+    assert calls["n"] < 2 * (t1 + t2)
 
 
 def test_capture_or_defense_on_synthetic_state():

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Materialize curriculum items into a Part 14 *.sample.npz buffer.
 
+One reconstruct pass per game_id continues belief across prefixes (shared
+seat seed). Rematerialize after the seed contract change; do not reuse
+``*.sample.npz`` built under the old per-prefix seed.
+
 Usage:
     python scripts/morpheus_materialize.py \\
       --manifest training/morpheus/manifests/scraped-classes13.json \\
@@ -8,7 +12,7 @@ Usage:
 
     python scripts/morpheus_materialize.py \\
       --manifest training/morpheus/manifests/scraped-classes13.json \\
-      --output data/morpheus/trainer/buffer --max-items 32 --workers 1
+      --output data/morpheus/trainer/buffer --max-items 32
 """
 from __future__ import annotations
 
@@ -30,10 +34,11 @@ DEFAULT_OUTPUT = REPO / "data" / "morpheus" / "trainer" / "buffer"
 def _materialize_game_group(
     payload: dict[str, Any],
 ) -> dict[str, Any]:
-    """Worker: materialize all items that share one game_id."""
+    """Worker: materialize all items that share one game_id in one reconstruct pass."""
+    from training.morpheus.curriculum.reconstruct import iter_prefix_reconstructions
     from training.morpheus.curriculum.schema import CurriculumItem
-    from training.morpheus.trainer.buffer import write_sample
-    from training.morpheus.trainer.sample import build_train_sample
+    from training.morpheus.trainer.buffer import SAMPLE_SUFFIX, write_sample
+    from training.morpheus.trainer.sample import build_train_sample_from_recon
     from arena.records.trajectories import read_trajectory
 
     root = Path(payload["repo"])
@@ -53,6 +58,7 @@ def _materialize_game_group(
         if path.is_file():
             traj = read_trajectory(path)
 
+    pending: list[CurriculumItem] = []
     for item in items:
         if item.sample_seat is None and int(item.class_id) != 5:
             failures.append(f"{item.item_id}: missing sample_seat")
@@ -61,29 +67,64 @@ def _materialize_game_group(
             failures.append(f"{item.item_id}: class-5 full_start not supported here")
             continue
         sample_id = str(item.item_id)
-        out_path = output / f"{sample_id}.sample.npz"
+        out_path = output / f"{sample_id}{SAMPLE_SUFFIX}"
         if skip_existing and out_path.is_file():
             written.append(sample_id)
             skipped += 1
             continue
-        try:
-            sample = build_train_sample(
-                item,
-                trajectories_root=root,
-                traj=traj,
-                n_particles=n_particles,
-                terminal_cache=terminal_cache,
-            )
-            write_sample(
-                output,
-                sample,
-                sample_id=sample_id,
-                class_id=str(item.class_id),
-            )
-            written.append(sample_id)
-            newly += 1
-        except Exception as exc:  # noqa: BLE001
+        pending.append(item)
+
+    if not pending:
+        return {
+            "game_id": payload.get("game_id"),
+            "written": written,
+            "skipped": skipped,
+            "newly": newly,
+            "failures": failures,
+        }
+
+    if traj is None:
+        for item in pending:
+            failures.append(f"{item.item_id}: missing trajectory for train sample")
+        return {
+            "game_id": payload.get("game_id"),
+            "written": written,
+            "skipped": skipped,
+            "newly": newly,
+            "failures": failures,
+        }
+
+    try:
+        for item, recon in iter_prefix_reconstructions(
+            pending,
+            trajectories_root=root,
+            traj=traj,
+            n_particles=n_particles,
+            update_belief_flag=True,
+            engine=pending[0].engine_version,
+        ):
+            sample_id = str(item.item_id)
+            try:
+                sample = build_train_sample_from_recon(
+                    item,
+                    recon,
+                    traj=traj,
+                    terminal_cache=terminal_cache,
+                )
+                write_sample(
+                    output,
+                    sample,
+                    sample_id=sample_id,
+                    class_id=str(item.class_id),
+                )
+                written.append(sample_id)
+                newly += 1
+            except Exception as exc:  # noqa: BLE001
+                failures.append(f"{item.item_id}: {exc}")
+    except Exception as exc:  # noqa: BLE001
+        for item in pending:
             failures.append(f"{item.item_id}: {exc}")
+
     return {
         "game_id": payload.get("game_id"),
         "written": written,

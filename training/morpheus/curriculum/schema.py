@@ -56,7 +56,6 @@ class CurriculumItem:
             engine_version=self.engine_version,
             map_seed=self.map_seed,
             source_label=self.source_label,
-            prefix_len=self.prefix_len,
             game_id=self.game_id,
             seat=seat,
         )

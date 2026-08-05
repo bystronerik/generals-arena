@@ -13,6 +13,9 @@ sampling weight only.
 - **Other wins:** remaining 50% from all other reconstruction players.
 - **Seats:** `corpus-index.sample_seat` / queried player.
 - **Materialize:** `n_particles=4`; 64 Modal containers × `cpu=1` × `memory=512`.
+  One reconstruct pass per `game_id` continues belief across prefixes (seed is
+  per game+seat, not per `prefix_len`). Rematerialize the buffer after that
+  seed contract change; do not reuse `*.sample.npz` built under the old seed.
 - **Train:** `class_balance: {"1": 1.0}`; `promotable_main_run: false`.
 
 ## Operator sequence

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -155,40 +156,98 @@ def replay_prefix_states(
     return last_turn, last_state
 
 
-def reconstruct_prefix(
+def _snapshot(
     item: CurriculumItem,
+    *,
+    turn: int,
+    engine_state: Any,
+    seat_obs: dict[int, Any],
+    seat_mem: dict[int, VisibleMemory],
+    seat_belief: dict[int, BeliefState],
+    seat_hist: dict[int, list[Action5]],
+    seeds: dict[int, int],
+) -> PrefixReconstruction:
+    return PrefixReconstruction(
+        item=item,
+        turn=turn,
+        engine_state=engine_state,
+        seats={
+            seat: SeatReconstruction(
+                seat=seat,
+                observation=seat_obs[seat],
+                memory=seat_mem[seat],
+                belief=seat_belief[seat],
+                action_history=list(seat_hist[seat]),
+                belief_seed=seeds[seat],
+            )
+            for seat in (0, 1)
+        },
+    )
+
+
+def iter_prefix_reconstructions(
+    items: Sequence[CurriculumItem],
     *,
     trajectories_root: Path | None = None,
     traj: Trajectory | None = None,
     n_particles: int = 8,
     update_belief_flag: bool = True,
     engine: str | None = None,
-) -> PrefixReconstruction:
+) -> Iterator[tuple[CurriculumItem, PrefixReconstruction]]:
     """
-    Replay from turn 0 and rebuild both seats' obs, memory, belief, history.
+    Replay one game once and yield a reconstruction at each item's prefix.
 
-    Belief updates inject the recorded enemy action so particle RNG only
-    affects initialization and recovery resampling.
+    All items must share the same ``game_id`` / trajectory. Belief RNG is shared
+    per seat across prefixes. Yields in ascending ``prefix_len`` order; items
+    with equal ``prefix_len`` all receive the same turn snapshot.
     """
+    if not items:
+        return
+
+    ordered = sorted(items, key=lambda it: (int(it.prefix_len), it.item_id))
+    game_ids = {str(it.game_id or "") for it in ordered}
+    if len(game_ids) > 1:
+        raise ValueError(
+            f"iter_prefix_reconstructions requires one game_id, got {sorted(game_ids)}"
+        )
+
+    first = ordered[0]
     source = load_trajectory_for_item(
-        item, trajectories_root=trajectories_root, traj=traj
+        first, trajectories_root=trajectories_root, traj=traj
     )
     if source is not None:
-        require_same_era(source, engine=engine or item.engine_version)
+        require_same_era(source, engine=engine or first.engine_version)
+
+    # Shared seat seeds (prefix_len no longer enters the hash).
+    seeds = {0: first.belief_seed(0), 1: first.belief_seed(1)}
+    for it in ordered[1:]:
+        for seat in (0, 1):
+            if it.belief_seed(seat) != seeds[seat]:
+                raise ValueError(
+                    f"belief seed mismatch within game for {it.item_id} seat {seat}"
+                )
 
     cfg = BeliefConfig(n_particles=int(n_particles))
     seat_mem: dict[int, VisibleMemory] = {}
     seat_belief: dict[int, BeliefState] = {}
     seat_hist: dict[int, list[Action5]] = {0: [], 1: []}
     seat_obs: dict[int, Any] = {}
-    seeds = {0: item.belief_seed(0), 1: item.belief_seed(1)}
     rngs = {s: np.random.default_rng(seeds[s]) for s in (0, 1)}
     frames_by_turn = {f.turn: f for f in source.frames} if source is not None else {}
 
+    by_prefix: dict[int, list[CurriculumItem]] = {}
+    for it in ordered:
+        by_prefix.setdefault(int(it.prefix_len), []).append(it)
+    targets = sorted(by_prefix.keys())
+    max_prefix = targets[-1]
+    target_i = 0
+
     if source is None:
+        if max_prefix != 0:
+            raise ValueError("traj-less reconstruct requires all prefix_len == 0")
         turn, engine_state = replay_prefix_states(
             traj=None,
-            map_seed=item.map_seed,
+            map_seed=first.map_seed,
             prefix_len=0,
             engine=engine,
         )
@@ -205,22 +264,18 @@ def reconstruct_prefix(
                 seat_belief[seat] = BeliefState(
                     seat=seat, particles=[], config=cfg, collapsed=True
                 )
-        return PrefixReconstruction(
-            item=item,
-            turn=turn,
-            engine_state=engine_state,
-            seats={
-                seat: SeatReconstruction(
-                    seat=seat,
-                    observation=seat_obs[seat],
-                    memory=seat_mem[seat],
-                    belief=seat_belief[seat],
-                    action_history=list(seat_hist[seat]),
-                    belief_seed=seeds[seat],
-                )
-                for seat in (0, 1)
-            },
-        )
+        for it in by_prefix[0]:
+            yield it, _snapshot(
+                it,
+                turn=turn,
+                engine_state=engine_state,
+                seat_obs=seat_obs,
+                seat_mem=seat_mem,
+                seat_belief=seat_belief,
+                seat_hist=seat_hist,
+                seeds=seeds,
+            )
+        return
 
     last_turn = 0
     last_engine_state = None
@@ -261,32 +316,79 @@ def reconstruct_prefix(
                         enemy_actions=[enemy_action] * n,
                     )
 
-        if turn >= item.prefix_len:
+        while target_i < len(targets) and turn >= targets[target_i]:
+            for it in by_prefix[targets[target_i]]:
+                yield it, _snapshot(
+                    it,
+                    turn=last_turn,
+                    engine_state=last_engine_state,
+                    seat_obs=seat_obs,
+                    seat_mem=seat_mem,
+                    seat_belief=seat_belief,
+                    seat_hist=seat_hist,
+                    seeds=seeds,
+                )
+            target_i += 1
+
+        if turn >= max_prefix:
             break
 
     if last_engine_state is None:
-        raise RuntimeError(f"failed to replay {item.item_id}")
-    if last_turn < item.prefix_len:
+        raise RuntimeError(f"failed to replay {first.item_id}")
+    if target_i < len(targets):
+        missing = targets[target_i]
         raise ValueError(
-            f"prefix_len {item.prefix_len} exceeds trajectory length {last_turn}"
+            f"prefix_len {missing} exceeds trajectory length {last_turn}"
         )
 
-    return PrefixReconstruction(
-        item=item,
-        turn=last_turn,
-        engine_state=last_engine_state,
-        seats={
-            seat: SeatReconstruction(
-                seat=seat,
-                observation=seat_obs[seat],
-                memory=seat_mem[seat],
-                belief=seat_belief[seat],
-                action_history=list(seat_hist[seat]),
-                belief_seed=seeds[seat],
-            )
-            for seat in (0, 1)
-        },
+
+def reconstruct_prefixes(
+    items: Sequence[CurriculumItem],
+    *,
+    trajectories_root: Path | None = None,
+    traj: Trajectory | None = None,
+    n_particles: int = 8,
+    update_belief_flag: bool = True,
+    engine: str | None = None,
+) -> dict[str, PrefixReconstruction]:
+    """Reconstruct many prefixes of one game; map ``item_id`` → reconstruction."""
+    return {
+        it.item_id: recon
+        for it, recon in iter_prefix_reconstructions(
+            items,
+            trajectories_root=trajectories_root,
+            traj=traj,
+            n_particles=n_particles,
+            update_belief_flag=update_belief_flag,
+            engine=engine,
+        )
+    }
+
+
+def reconstruct_prefix(
+    item: CurriculumItem,
+    *,
+    trajectories_root: Path | None = None,
+    traj: Trajectory | None = None,
+    n_particles: int = 8,
+    update_belief_flag: bool = True,
+    engine: str | None = None,
+) -> PrefixReconstruction:
+    """
+    Replay from turn 0 and rebuild both seats' obs, memory, belief, history.
+
+    Belief updates inject the recorded enemy action so particle RNG only
+    affects initialization and recovery resampling.
+    """
+    results = reconstruct_prefixes(
+        [item],
+        trajectories_root=trajectories_root,
+        traj=traj,
+        n_particles=n_particles,
+        update_belief_flag=update_belief_flag,
+        engine=engine,
     )
+    return results[item.item_id]
 
 
 def fog_observations_at_prefix(
