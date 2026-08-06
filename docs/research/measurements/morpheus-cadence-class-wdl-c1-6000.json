@@ -1,0 +1,7071 @@
+{
+  "ok": false,
+  "active_classes": [
+    1
+  ],
+  "class_wdl": {
+    "1": {
+      "wins": 13,
+      "losses": 17,
+      "draws": 675
+    }
+  },
+  "games": 705,
+  "insufficient": true,
+  "details": [
+    {
+      "item_id": "00af6848e36b54db",
+      "game_id": "scraped_hiems_72981",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 922,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "00d7d549618ed844",
+      "game_id": "scraped____113372",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 879,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "019ae4854264b354",
+      "game_id": "scraped_Non-Linear_Slob_18956",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 385,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "01b0e11a6968b403",
+      "game_id": "scraped_thor_17538",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 231,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "02345a406e5337a2",
+      "game_id": "scraped_Nicholas_112881",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 283,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0264644bef564180",
+      "game_id": "scraped_ResBot_104236",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 1007,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "02da3f15c2cffc1c",
+      "game_id": "scraped_Non-Linear_Slob_11733",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 236,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "03b9e64853ee59f8",
+      "game_id": "scraped_Nicholas_97360",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 292,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0409d12422e4b20f",
+      "game_id": "scraped_erik.bystron_13634",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 655,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "04cf42f8649d5f48",
+      "game_id": "scraped_Non-Linear_Slob_19327",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 343,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "058dccd3ee179695",
+      "game_id": "scraped_candide_108116",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 508,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0607516b698dbb66",
+      "game_id": "scraped_bca_108935",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 697,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "062ef4b90cefbc37",
+      "game_id": "scraped_hiems_112177",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 396,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "06688e4debd97c4c",
+      "game_id": "scraped_bca_108642",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 574,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "066e461a8b1f874b",
+      "game_id": "scraped_tvojtatko_104991",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 542,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "067c7088378e06e8",
+      "game_id": "scraped_thor_108145",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 296,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "06d704ec7494e2cf",
+      "game_id": "scraped_Nicholas_96350",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 476,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "07235eef7c28e82c",
+      "game_id": "scraped_Nicholas_96509",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 350,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "081d5b1824b8ad73",
+      "game_id": "scraped_Nicholas_112877",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 341,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "083277e2dd150be5",
+      "game_id": "scraped_Kubic_20532",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 239,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "084b74b7a6a0e4f1",
+      "game_id": "scraped_Non-Linear_Slob_105238",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 356,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0946be9964bb8405",
+      "game_id": "scraped_nanomena_113269",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 502,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0b3c14613d1df9be",
+      "game_id": "scraped_Non-Linear_Slob_88627",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 282,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0b8d4d1bd3dc0670",
+      "game_id": "scraped_candide_58643",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 413,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0c2e8eac063b1c9a",
+      "game_id": "scraped_erik.bystron_13313",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 375,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0c2fef13e6a15d9a",
+      "game_id": "scraped_thor_70550",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 579,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0cee54c3f0548aca",
+      "game_id": "scraped_ResBot_101255",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 336,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0d41eb49f8212b3b",
+      "game_id": "scraped_hiems_94817",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 469,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0d58e37b836a2f1c",
+      "game_id": "scraped_hiems_91958",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 676,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0d8682eace24030a",
+      "game_id": "scraped_Non-Linear_Slob_11730",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 286,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0dbc8e027cd9f005",
+      "game_id": "scraped_tvojtatko_108355",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 637,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0e077de605f18b1f",
+      "game_id": "scraped_Nicholas_96902",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 237,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0f2d04e08b24433b",
+      "game_id": "scraped_hiems_70527",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 413,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0f56aa0fa2e65233",
+      "game_id": "scraped_Nicholas_11621",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 535,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "0fbded1dafc7fb35",
+      "game_id": "scraped_Non-Linear_Slob_111123",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 560,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "10ba552416bd192c",
+      "game_id": "scraped_BNZ94_111364",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 349,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "110ebd318d2f7dff",
+      "game_id": "scraped_hiems_61831",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 369,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "112cf9f15e97e93c",
+      "game_id": "scraped_hiems_112106",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 523,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1131776a848a296d",
+      "game_id": "scraped_Nicholas_97007",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 565,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1139bc14ab8d262d",
+      "game_id": "scraped_hiems_112382",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 601,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1154060199519c53",
+      "game_id": "scraped_Non-Linear_Slob_76458",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 561,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "123eea223f59f277",
+      "game_id": "scraped_ResBot_113351",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 599,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "12bdaa0fb3c5d2b0",
+      "game_id": "scraped_ResBot_108370",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 438,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "12fc8b66ab8c7aab",
+      "game_id": "scraped_Nicholas_11735",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 277,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "12ff0293068ce0c7",
+      "game_id": "scraped_candide_82337",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 242,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "134206fd71fd2e51",
+      "game_id": "scraped_ResBot_33171",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 177,
+      "steps": 14,
+      "result": "win",
+      "winner_player": 0
+    },
+    {
+      "item_id": "1368553ea776dfbc",
+      "game_id": "scraped____65830",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 381,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "13b63284cd099831",
+      "game_id": "scraped_Non-Linear_Slob_19326",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 384,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "13f478b1aae55526",
+      "game_id": "scraped_hiems_77573",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 684,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "14b7f173eaccb83d",
+      "game_id": "scraped_BNZ94_110196",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 189,
+      "steps": 7,
+      "result": "win",
+      "winner_player": 0
+    },
+    {
+      "item_id": "14dc380f879bfb1a",
+      "game_id": "scraped_thor_112840",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 186,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "14fa5bf2d6b696bb",
+      "game_id": "scraped_Nicholas_96901",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 352,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "152685a1013901eb",
+      "game_id": "scraped_Nicholas_11544",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 330,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "15d4478fe0ae1acd",
+      "game_id": "scraped_ResBot_32176",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 300,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "164aad95a107d46f",
+      "game_id": "scraped_Kubic_106211",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 182,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "16af14494023105d",
+      "game_id": "scraped_Non-Linear_Slob_105042",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 531,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "16d3ea881a52e6e1",
+      "game_id": "scraped_thor_100412",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 182,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1712f43cdd4b5985",
+      "game_id": "scraped____113376",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 372,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1762764dea5bc58f",
+      "game_id": "scraped_BNZ94_110976",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 177,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "17c355d9940beaa6",
+      "game_id": "scraped_bitterlessonpilled_80759",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 256,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "18032ec4a6df6f7e",
+      "game_id": "scraped_erik.bystron_36014",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 798,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1868b06a9c4cfd76",
+      "game_id": "scraped_tvojtatko_101582",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 1042,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "18833964f60b682a",
+      "game_id": "scraped_thor_17561",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 269,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "18999f1097f4c2b2",
+      "game_id": "scraped_Nicholas_10792",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 362,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "18e1198a57c537d5",
+      "game_id": "scraped_thor_112885",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 553,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "194bfc54bd3f6e74",
+      "game_id": "scraped_Kubic_100473",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 290,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "19efa4228aa5af2c",
+      "game_id": "scraped_candide_83760",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 568,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "19f9b8aa38ae9b0c",
+      "game_id": "scraped_thor_108147",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 347,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1a0ab48715cef0d1",
+      "game_id": "scraped_BNZ94_113256",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 377,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1a2ac8de5e3ee49e",
+      "game_id": "scraped_ResBot_32287",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 346,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1a74663c444c31ed",
+      "game_id": "scraped_Non-Linear_Slob_12578",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 234,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1aabcc1bf5ec0822",
+      "game_id": "scraped_BNZ94_111282",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 384,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1c8d80de7a8d8a7b",
+      "game_id": "scraped_candide_87965",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 164,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1cbfe1b21dc457b0",
+      "game_id": "scraped_hiems_82444",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 572,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1dc7d13946cb2929",
+      "game_id": "scraped_erik.bystron_12842",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 813,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1ea3aa640a69c831",
+      "game_id": "scraped____32317",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 816,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1f3457d950e4c17c",
+      "game_id": "scraped_hiems_103652",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 350,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "1f9572d4f5e4e4c2",
+      "game_id": "scraped_thor_112837",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 339,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "201b32c83672f2c9",
+      "game_id": "scraped_Non-Linear_Slob_108341",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 451,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2052c98d941c5643",
+      "game_id": "scraped_thor_17668",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 286,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2055523958911f11",
+      "game_id": "scraped_hiems_103654",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 289,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "20b43e45bf5b3b78",
+      "game_id": "scraped_Kubic_24186",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 168,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "20d52deb41b8ef04",
+      "game_id": "scraped_Non-Linear_Slob_10224",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 355,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "21a0471285b86d13",
+      "game_id": "scraped_erik.bystron_12839",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 484,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "21f2c185058ebcd6",
+      "game_id": "scraped_ResBot_45223",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 290,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "21fdfb545ff50fdf",
+      "game_id": "scraped_BNZ94_110991",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 380,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "223a36010ac51324",
+      "game_id": "scraped_Non-Linear_Slob_15806",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 624,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "225fc5a9f3e75f64",
+      "game_id": "scraped_bitterlessonpilled_88114",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 975,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "22639847e378e76e",
+      "game_id": "scraped_ResBot_32164",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 690,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "23133770edcf0395",
+      "game_id": "scraped_erik.bystron_31107",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 261,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "23180150bb69da0c",
+      "game_id": "scraped_Non-Linear_Slob_14366",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 346,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "23507884c1d5b152",
+      "game_id": "scraped_ResBot_101147",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 390,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "23b37d2c14c773df",
+      "game_id": "scraped_ResBot_113142",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 534,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "243a0d3526afc8c7",
+      "game_id": "scraped_nanomena_113260",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 238,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2471dd4981407700",
+      "game_id": "scraped_thor_108636",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 562,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "252cf75fe1e6de9b",
+      "game_id": "scraped_Kubic_108390",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 370,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "25497a754f27c462",
+      "game_id": "scraped_ResBot_32629",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 264,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2638a000e05ab70a",
+      "game_id": "scraped_ResBot_113287",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 890,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "26f44f189093ec02",
+      "game_id": "scraped_Non-Linear_Slob_19149",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 181,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "27d78b489fed86c5",
+      "game_id": "scraped_hiems_58783",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 456,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "281fdbdb0a5210eb",
+      "game_id": "scraped_tvojtatko_101562",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 231,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "28d2886ff02f2b83",
+      "game_id": "scraped_Nicholas_11587",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 396,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "291969ddfa568cdb",
+      "game_id": "scraped_bitterlessonpilled_79031",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 605,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2974bc8faa331f64",
+      "game_id": "scraped_hiems_88597",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 193,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2986e19ce064085c",
+      "game_id": "scraped_candide_108487",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 496,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "29cb5fe3f2d2e7e5",
+      "game_id": "scraped_ResBot_112760",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 200,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "29ce2abaf080f258",
+      "game_id": "scraped_thor_17659",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 78,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "29ee9986050a39f8",
+      "game_id": "scraped_bitterlessonpilled_96508",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 227,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "29f68fc8616c5680",
+      "game_id": "scraped_hiems_88598",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 462,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2af4ef3de610d1d4",
+      "game_id": "scraped____113316",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 348,
+      "steps": 32,
+      "result": "loss",
+      "winner_player": 1
+    },
+    {
+      "item_id": "2b32a182d7b62399",
+      "game_id": "scraped_thor_17581",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 452,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2b59296764fd21f8",
+      "game_id": "scraped_Nicholas_11764",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 676,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2b71807391090788",
+      "game_id": "scraped_candide_58696",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 389,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2b83eec227d3a4a4",
+      "game_id": "scraped_candide_78651",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 469,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2bf5f00a5afef6cd",
+      "game_id": "scraped_erik.bystron_27816",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 301,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2c5158a8fa2f9731",
+      "game_id": "scraped_BNZ94_108307",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 453,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2c522d644a340cf4",
+      "game_id": "scraped_ResBot_32293",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 691,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2c586b430599e7b2",
+      "game_id": "scraped_hiems_91956",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 828,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2c5918350785fb51",
+      "game_id": "scraped_Non-Linear_Slob_83284",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 1192,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2c6cd08633b3b4fa",
+      "game_id": "scraped_hiems_95427",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 537,
+      "steps": 56,
+      "result": "loss",
+      "winner_player": 1
+    },
+    {
+      "item_id": "2c8272d53cd4c730",
+      "game_id": "scraped_thor_70485",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 191,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2dd8dfe217abea01",
+      "game_id": "scraped_Kubic_100326",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 149,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2de1ef8e0eceb6eb",
+      "game_id": "scraped_thor_108155",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 1055,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2e244dc9779e26d6",
+      "game_id": "scraped_nanomena_113287",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 890,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2e5e1994e2b4b309",
+      "game_id": "scraped_hiems_68566",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 189,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2f4799cee266d4fd",
+      "game_id": "scraped_Non-Linear_Slob_53341",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 585,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "2f4e148a917da524",
+      "game_id": "scraped_hiems_83824",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 379,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "300a364e3f2337c2",
+      "game_id": "scraped_Kubic_105266",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 403,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "30693f5be4c68873",
+      "game_id": "scraped_Nicholas_100260",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 359,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3119c28aa993d4c8",
+      "game_id": "scraped_Nicholas_11411",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 514,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "318ba3d20419d819",
+      "game_id": "scraped_Non-Linear_Slob_87613",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 183,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "31b7b25e39f39e48",
+      "game_id": "scraped_Kubic_46826",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 653,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "31ce05a87566553c",
+      "game_id": "scraped_thor_100309",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 438,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "31d6bf2f15f31fca",
+      "game_id": "scraped_thor_70547",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 452,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "322a0df72ca1a2c8",
+      "game_id": "scraped_Kubic_100694",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 279,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3240a58793982ae1",
+      "game_id": "scraped_bitterlessonpilled_88522",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 540,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3243118a1139fc66",
+      "game_id": "scraped_ResBot_32119",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 220,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "32b252b4a7464f07",
+      "game_id": "scraped_ResBot_100132",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 909,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "333980013364f59d",
+      "game_id": "scraped_bitterlessonpilled_78947",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 644,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "333ec1fc1155e664",
+      "game_id": "scraped_thor_110666",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 218,
+      "steps": 4,
+      "result": "win",
+      "winner_player": 1
+    },
+    {
+      "item_id": "3449e488c7fa38ad",
+      "game_id": "scraped_Kubic_113119",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 236,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "352c3ced433ad6c6",
+      "game_id": "scraped_Kubic_101094",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 353,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "358a4af1ad88ca06",
+      "game_id": "scraped_erik.bystron_10981",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 763,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "35c7a4e50b9dbf3d",
+      "game_id": "scraped_erik.bystron_24941",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 170,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "35ececed4b516f00",
+      "game_id": "scraped_ResBot_101116",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 336,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "37dd728f2d480d87",
+      "game_id": "scraped_Kubic_101238",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 237,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "37e80c968ea27c98",
+      "game_id": "scraped_thor_109363",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 397,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "384a287943d44ac3",
+      "game_id": "scraped_candide_69962",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 333,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "38702cc2a010b406",
+      "game_id": "scraped_Non-Linear_Slob_19287",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 273,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3880ac9b7fad8eba",
+      "game_id": "scraped_Nicholas_11724",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 807,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3895f6ef778c03dd",
+      "game_id": "scraped_Kubic_21087",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 182,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3a87cd8db1d7d2a1",
+      "game_id": "scraped_Non-Linear_Slob_102479",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 225,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3aad522ca6d41824",
+      "game_id": "scraped_Kubic_88528",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 848,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3c4ea246732151cc",
+      "game_id": "scraped_thor_100210",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 250,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3c7bdda2bbfd5998",
+      "game_id": "scraped_Non-Linear_Slob_19146",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 240,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3ca4d0cff78a11b6",
+      "game_id": "scraped_thor_113215",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 404,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3d04034e7f3f8500",
+      "game_id": "scraped_ResBot_100127",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 148,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3d36dd885403cabc",
+      "game_id": "scraped_candide_101099",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 594,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3d43a630b4e664ba",
+      "game_id": "scraped_bitterlessonpilled_91675",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 188,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3d48882f6b63bd3c",
+      "game_id": "scraped_Non-Linear_Slob_10227",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 192,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3dab28bb468185e5",
+      "game_id": "scraped_BNZ94_110989",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 178,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3dea55d03879c26a",
+      "game_id": "scraped_ResBot_107166",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 298,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3f2852f04bc3a2cf",
+      "game_id": "scraped_Nicholas_97397",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 742,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "3faa51ba30abec86",
+      "game_id": "scraped_Nicholas_112910",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 416,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "400995f80634d6b1",
+      "game_id": "scraped_Non-Linear_Slob_19122",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 296,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "401d565f91877f35",
+      "game_id": "scraped_Non-Linear_Slob_19074",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 449,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "406af8ac24f93655",
+      "game_id": "scraped_Kubic_110957",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 174,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "408decf7443d316c",
+      "game_id": "scraped_thor_111243",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 261,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "40a16e46fc720999",
+      "game_id": "scraped_candide_96043",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 469,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "40d48cf441c705d9",
+      "game_id": "scraped____31861",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 140,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "41811ca776e27c77",
+      "game_id": "scraped_thor_17651",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 352,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "41bfb3afd0fe3d3b",
+      "game_id": "scraped_Nicholas_11490",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 292,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "423783445c213e5c",
+      "game_id": "scraped_Non-Linear_Slob_53338",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 302,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "426565e3413e3a14",
+      "game_id": "scraped_erik.bystron_10974",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 533,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "431f126b48559eaf",
+      "game_id": "scraped_hiems_91661",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 488,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4334d2e38efa92c4",
+      "game_id": "scraped_ResBot_108401",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 1019,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "43b2ce771557dc8e",
+      "game_id": "scraped_erik.bystron_35425",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 210,
+      "steps": 24,
+      "result": "loss",
+      "winner_player": 1
+    },
+    {
+      "item_id": "44abb61636ba15cf",
+      "game_id": "scraped_ResBot_32115",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 184,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "452a3222b94b4677",
+      "game_id": "scraped_Non-Linear_Slob_19782",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 183,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "452ca03402bf5a90",
+      "game_id": "scraped_erik.bystron_13095",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 193,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "459c28ed6a6d0ee6",
+      "game_id": "scraped_Non-Linear_Slob_19393",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 208,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "45a8adb52f86065c",
+      "game_id": "scraped_Non-Linear_Slob_102480",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 250,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "45d5df3f9ba7a476",
+      "game_id": "scraped_Kubic_101561",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 189,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "45db2757bb6dffa8",
+      "game_id": "scraped_candide_69958",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 185,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "460d670dca6af20a",
+      "game_id": "scraped_erik.bystron_10887",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 987,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "479f8a8c4200a0ef",
+      "game_id": "scraped_Non-Linear_Slob_84150",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 817,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "47afb4e101eb8dea",
+      "game_id": "scraped_thor_70512",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 449,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "47c501f562c38e17",
+      "game_id": "scraped_BNZ94_109792",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 126,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "47fa9a8a9405ce43",
+      "game_id": "scraped_ResBot_32112",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 294,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "482c5f71e36a1ad6",
+      "game_id": "scraped_Kubic_108394",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 185,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "485f8fa633edfa64",
+      "game_id": "scraped_BNZ94_108796",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 543,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4890e7cd5004e9bb",
+      "game_id": "scraped_Kubic_101210",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 585,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "48d2719e3fa44575",
+      "game_id": "scraped_Nicholas_113165",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 323,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "48d659290f401d42",
+      "game_id": "scraped_hiems_81909",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 444,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4994985872418af5",
+      "game_id": "scraped_bca_108677",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 707,
+      "steps": 10,
+      "result": "loss",
+      "winner_player": 0
+    },
+    {
+      "item_id": "49e52aee4a9cc906",
+      "game_id": "scraped_erik.bystron_36015",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 576,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "49f4b8d40b0cbd52",
+      "game_id": "scraped_bitterlessonpilled_96507",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 385,
+      "steps": 12,
+      "result": "loss",
+      "winner_player": 0
+    },
+    {
+      "item_id": "4a39f9e339192071",
+      "game_id": "scraped_hiems_73367",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 184,
+      "steps": 16,
+      "result": "loss",
+      "winner_player": 0
+    },
+    {
+      "item_id": "4a57491f7809662b",
+      "game_id": "scraped_Non-Linear_Slob_108852",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 530,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4b40d567b5a0a5b9",
+      "game_id": "scraped_Kubic_20533",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 147,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4b4ec4ff254ec6a4",
+      "game_id": "scraped_thor_70515",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 438,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4bb658cd26110c25",
+      "game_id": "scraped_Non-Linear_Slob_111701",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 301,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4be4949c535120b9",
+      "game_id": "scraped_Kubic_101098",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 347,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4bf9de7276085d1d",
+      "game_id": "scraped_hiems_88600",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 378,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4c0c40f1f492eea3",
+      "game_id": "scraped_thor_112028",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 200,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4c3eb5d9c362e437",
+      "game_id": "scraped____69976",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 403,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4cb6fa8b7fb4d26f",
+      "game_id": "scraped_Nicholas_96366",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 236,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4cb9e52142d7dcee",
+      "game_id": "scraped_hiems_111476",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 306,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4e69b94ca4f2d513",
+      "game_id": "scraped_erik.bystron_24977",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 225,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4ef75f83a848c2f8",
+      "game_id": "scraped_BNZ94_110990",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 180,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4f371ad2a02c80db",
+      "game_id": "scraped_Kubic_46283",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 200,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "4f80a934b8a6622c",
+      "game_id": "scraped_Non-Linear_Slob_105041",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 583,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "50274ab17adfcc16",
+      "game_id": "scraped_Kubic_100111",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 333,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "52222059266799d5",
+      "game_id": "scraped_erik.bystron_10983",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 722,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "526e8f715c4328f0",
+      "game_id": "scraped_ResBot_100279",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 346,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "528d0eeb4d52e344",
+      "game_id": "scraped_Kubic_20555",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 276,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "52951fe44ee3df58",
+      "game_id": "scraped_candide_58663",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 795,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "529922c719d13ee5",
+      "game_id": "scraped_Kubic_100472",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 194,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "53cd9340e24e3f31",
+      "game_id": "scraped_Non-Linear_Slob_76830",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 392,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "53d4f84fc27bd8a0",
+      "game_id": "scraped_Non-Linear_Slob_70002",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 489,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "53ea66fed286a4a4",
+      "game_id": "scraped_candide_88116",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 959,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "542da0e666679f73",
+      "game_id": "scraped_Non-Linear_Slob_100302",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 419,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5441c3fbd2d02d08",
+      "game_id": "scraped_BNZ94_108795",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 326,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "544dff0904103ba5",
+      "game_id": "scraped_Nicholas_99797",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 447,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "546a9982c4e857aa",
+      "game_id": "scraped_bitterlessonpilled_88518",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 596,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "54dad3c935d67cd3",
+      "game_id": "scraped_Kubic_108841",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 348,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5531b29013af8a6d",
+      "game_id": "scraped_bca_113248",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 752,
+      "steps": 20,
+      "result": "loss",
+      "winner_player": 0
+    },
+    {
+      "item_id": "55384dca540fb22d",
+      "game_id": "scraped_nanomena_113285",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 762,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "55442f69dd6f2401",
+      "game_id": "scraped_erik.bystron_27947",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 729,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "555ce37a4f39ab36",
+      "game_id": "scraped_Nicholas_14857",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 341,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "55bab34a1a11fb2f",
+      "game_id": "scraped_candide_17838",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 569,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "55ddde32f0c7733c",
+      "game_id": "scraped_Nicholas_11627",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 799,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5655be0de9c8c6b5",
+      "game_id": "scraped_BNZ94_111043",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 234,
+      "steps": 36,
+      "result": "loss",
+      "winner_player": 0
+    },
+    {
+      "item_id": "56939388dfba1a5c",
+      "game_id": "scraped_erik.bystron_27335",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 310,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "569c29beddf08b1e",
+      "game_id": "scraped_Nicholas_11290",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 324,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "56c3698eb1d1bdef",
+      "game_id": "scraped_Non-Linear_Slob_100056",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 702,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "577feeb6c3eee14c",
+      "game_id": "scraped_erik.bystron_36047",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 628,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "57b1dc9a69faaf40",
+      "game_id": "scraped_Kubic_20541",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 246,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "57e646cdf504a8d8",
+      "game_id": "scraped_Non-Linear_Slob_96432",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 400,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "58598eb8120788f8",
+      "game_id": "scraped_erik.bystron_13155",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 151,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5a30251904b49ecb",
+      "game_id": "scraped_erik.bystron_15721",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 536,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5a3fc9bfb03928b4",
+      "game_id": "scraped_Non-Linear_Slob_101703",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 546,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5a413e82e8095540",
+      "game_id": "scraped_Non-Linear_Slob_111720",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 335,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5a47c226b5dd21e3",
+      "game_id": "scraped_erik.bystron_41894",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 240,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5a5159d32f5f296f",
+      "game_id": "scraped_thor_112178",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 380,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5a640b84687bae6b",
+      "game_id": "scraped_thor_17578",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 234,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5a8ddda071d9f9d8",
+      "game_id": "scraped_Non-Linear_Slob_70534",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 450,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5aa77e7d9580d13e",
+      "game_id": "scraped_erik.bystron_13065",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 622,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5af58cfa2492e5bc",
+      "game_id": "scraped_candide_84111",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 530,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5b01c8d129961f78",
+      "game_id": "scraped_hiems_96444",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 632,
+      "steps": 37,
+      "result": "loss",
+      "winner_player": 1
+    },
+    {
+      "item_id": "5b4811ac59ba1657",
+      "game_id": "scraped_thor_17666",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 245,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5e3937aab780ce12",
+      "game_id": "scraped_hiems_94822",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 401,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5e6810e3849d4020",
+      "game_id": "scraped_candide_10919",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 781,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5e920e67b24c3098",
+      "game_id": "scraped_ResBot_109123",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 545,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5ea5ffd7ee43ed65",
+      "game_id": "scraped_thor_108104",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 331,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5ef040daff4ca848",
+      "game_id": "scraped_Nicholas_11545",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 594,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5f0958b8778c86d1",
+      "game_id": "scraped_Nicholas_97913",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 386,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "5f73875ccf242aa4",
+      "game_id": "scraped_Non-Linear_Slob_80929",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 971,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "607bb5a05e2c84f9",
+      "game_id": "scraped_Nicholas_11366",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 140,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "60957db4de701931",
+      "game_id": "scraped_Non-Linear_Slob_19267",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 246,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "60c7a0c07a3e71ef",
+      "game_id": "scraped_Nicholas_10784",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 229,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "61cf92a6b549cba0",
+      "game_id": "scraped_Kubic_102852",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 233,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "61cfa302a3be21fe",
+      "game_id": "scraped_thor_113272",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 380,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "624b86fb50f87477",
+      "game_id": "scraped_Non-Linear_Slob_105807",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 447,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "625b68b96764a538",
+      "game_id": "scraped_Kubic_112965",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 240,
+      "steps": 3,
+      "result": "win",
+      "winner_player": 0
+    },
+    {
+      "item_id": "62828aff20a837c3",
+      "game_id": "scraped_candide_101393",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 952,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6295ad690291a923",
+      "game_id": "scraped____113352",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 267,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "62c95784611c6e4c",
+      "game_id": "scraped_Non-Linear_Slob_19185",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 402,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "63f3becf467a6dd2",
+      "game_id": "scraped____113184",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 244,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "643dfe01d0341bc4",
+      "game_id": "scraped_Kubic_108362",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 230,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "64552c8133dba3ee",
+      "game_id": "scraped_Non-Linear_Slob_79071",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 437,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "64c7b91326d71b87",
+      "game_id": "scraped_Kubic_107231",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 325,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "64ea1721ba0a7eb9",
+      "game_id": "scraped_Non-Linear_Slob_10934",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 193,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6521ea49f122b6e6",
+      "game_id": "scraped_erik.bystron_28250",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 280,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6578c58a6fbb1c6f",
+      "game_id": "scraped_candide_69959",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 448,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "65ce99619c54a786",
+      "game_id": "scraped_Kubic_20552",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 284,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "670af8d43b439444",
+      "game_id": "scraped_erik.bystron_31923",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 231,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "672c54fd5eb89920",
+      "game_id": "scraped_Kubic_101564",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 426,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "67372e65a51ca760",
+      "game_id": "scraped_thor_110665",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 202,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "673ef61a9811dc7d",
+      "game_id": "scraped____113186",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 243,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "67543646fe7966ef",
+      "game_id": "scraped_hiems_99281",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 423,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6784ed05f91bce63",
+      "game_id": "scraped_candide_94846",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 860,
+      "steps": 32,
+      "result": "loss",
+      "winner_player": 0
+    },
+    {
+      "item_id": "67d1167823e1825d",
+      "game_id": "scraped____18529",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 581,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "684e5b5f5cd2cb56",
+      "game_id": "scraped_Kubic_104177",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 345,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "68cfa2a8a4af044f",
+      "game_id": "scraped_BNZ94_111281",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 128,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "68eafc169b1129b4",
+      "game_id": "scraped_Nicholas_112979",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 552,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6a9e221b37e345f9",
+      "game_id": "scraped_Nicholas_11334",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 396,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6af3192e6f601b01",
+      "game_id": "scraped_Nicholas_113067",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 682,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6b16a5c55abdd88d",
+      "game_id": "scraped_ResBot_32237",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 290,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6ba32237581935e0",
+      "game_id": "scraped_bca_108695",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 147,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6bb97a973f60dc2c",
+      "game_id": "scraped_thor_108115",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 522,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6c5a0ee5f3196f16",
+      "game_id": "scraped_Kubic_110958",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 186,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6c7e4af457616891",
+      "game_id": "scraped_Nicholas_97398",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 405,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6cb5119bfcb0c894",
+      "game_id": "scraped_ResBot_100481",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 336,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6d12b14cf6b0ef12",
+      "game_id": "scraped_tvojtatko_111954",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 523,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6dcbe4c7fb39ef63",
+      "game_id": "scraped_Non-Linear_Slob_94266",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 627,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6deade3bec5045a6",
+      "game_id": "scraped_Non-Linear_Slob_113380",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 564,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6df42ba5a8b8a58b",
+      "game_id": "scraped_thor_100062",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 570,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6dfe187ead370465",
+      "game_id": "scraped_Nicholas_11291",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 231,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6f076322c0048e48",
+      "game_id": "scraped_bca_113201",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 561,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "6ff871d87ce44dba",
+      "game_id": "scraped_Nicholas_10877",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 595,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7023bf3da7cd2f6e",
+      "game_id": "scraped_Nicholas_99634",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 197,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "704639da7ff37b90",
+      "game_id": "scraped_Kubic_110738",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 143,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "70864e44160d64dc",
+      "game_id": "scraped____113354",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 348,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "70bf35e545d9a7b9",
+      "game_id": "scraped_hiems_113383",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 489,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7107070151a0013e",
+      "game_id": "scraped_Non-Linear_Slob_10893",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 1103,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "71249e5d4bdc0a2d",
+      "game_id": "scraped_Kubic_108843",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 323,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7175af1586fa58be",
+      "game_id": "scraped_hiems_95264",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 906,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "72de7f1fb6e692e6",
+      "game_id": "scraped_hiems_104163",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 472,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "73a1209a30a45c4c",
+      "game_id": "scraped_Non-Linear_Slob_102688",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 190,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "73a6af02be4f112d",
+      "game_id": "scraped_bca_113205",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 665,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "74281e68a88a28e4",
+      "game_id": "scraped_ResBot_32249",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 648,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "74a68df1f3f53933",
+      "game_id": "scraped_candide_20381",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 139,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "74fab43a919cc7d5",
+      "game_id": "scraped_Nicholas_11528",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 422,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "75b2e986af8f058b",
+      "game_id": "scraped_thor_110663",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 294,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "761e08e3bb1c8a5f",
+      "game_id": "scraped_Non-Linear_Slob_108138",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 394,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "769f5eff98401409",
+      "game_id": "scraped_thor_100706",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 400,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "770ca9ca9d0710d4",
+      "game_id": "scraped_Non-Linear_Slob_65069",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 331,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "774e707975a4cc86",
+      "game_id": "scraped_Non-Linear_Slob_19144",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 335,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7818d41e9002447f",
+      "game_id": "scraped_candide_88118",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 969,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "78226976a082f202",
+      "game_id": "scraped_ResBot_100425",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 359,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7864bf07573b6aa2",
+      "game_id": "scraped_thor_17559",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 372,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "78c525f095a1a414",
+      "game_id": "scraped_tvojtatko_112897",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 511,
+      "steps": 24,
+      "result": "loss",
+      "winner_player": 0
+    },
+    {
+      "item_id": "799624a3ee429ff4",
+      "game_id": "scraped_tvojtatko_101595",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 701,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "79bf9c96da1a38cb",
+      "game_id": "scraped_ResBot_32829",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 248,
+      "steps": 25,
+      "result": "win",
+      "winner_player": 1
+    },
+    {
+      "item_id": "7a04cb8cb6374a6e",
+      "game_id": "scraped_ResBot_107903",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 461,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7a5ef8f6eb29facd",
+      "game_id": "scraped_Non-Linear_Slob_110588",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 182,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7a7cd1287a5966f2",
+      "game_id": "scraped_tvojtatko_108509",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 183,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7b57ded4a9a99e7f",
+      "game_id": "scraped_Non-Linear_Slob_101702",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 125,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7c073ffc602d3f16",
+      "game_id": "scraped_erik.bystron_35925",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 227,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7c4926dc068649ab",
+      "game_id": "scraped_erik.bystron_27970",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 724,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7d251d790ec223af",
+      "game_id": "scraped_ResBot_32909",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 545,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7d29dfbfc7157894",
+      "game_id": "scraped_Non-Linear_Slob_69004",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 191,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7d921088369e7254",
+      "game_id": "scraped_candide_78936",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 193,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7da2176db1445f51",
+      "game_id": "scraped_thor_108130",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 357,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7da6ffac0630df4e",
+      "game_id": "scraped_Nicholas_10780",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 655,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7eca41b415061197",
+      "game_id": "scraped_thor_17614",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 351,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7ee68f9c71aa565f",
+      "game_id": "scraped_Non-Linear_Slob_17954",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 280,
+      "steps": 2,
+      "result": "win",
+      "winner_player": 1
+    },
+    {
+      "item_id": "7f2fdc63e4488b13",
+      "game_id": "scraped_candide_58700",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 575,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "7fc00e28b8c7167c",
+      "game_id": "scraped_hiems_91758",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 538,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "80348b47f88be091",
+      "game_id": "scraped_erik.bystron_10906",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 384,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "803b66d6ba7d79e2",
+      "game_id": "scraped_hiems_58652",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 347,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "805c46313b2053b5",
+      "game_id": "scraped_thor_112883",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 418,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "807f4ee4bd5a1a1b",
+      "game_id": "scraped_Nicholas_112882",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 659,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "817c08f033b7753d",
+      "game_id": "scraped_thor_99849",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 390,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "81813a3cac837434",
+      "game_id": "scraped_Non-Linear_Slob_48099",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 686,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8237fa33750327cc",
+      "game_id": "scraped_BNZ94_109788",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 130,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8251f71c0e3069de",
+      "game_id": "scraped_Non-Linear_Slob_108632",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 568,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "82bf854d00f98e8d",
+      "game_id": "scraped_erik.bystron_26495",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 788,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "82f9ba3bf3798797",
+      "game_id": "scraped_erik.bystron_24949",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 448,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "83e0a21492d754c0",
+      "game_id": "scraped_Nicholas_10918",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 393,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8431129af19f1b13",
+      "game_id": "scraped_tvojtatko_5098",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 76,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "858b155452e7ce3d",
+      "game_id": "scraped_thor_111998",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 155,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "85e7aac435d3ce60",
+      "game_id": "scraped_Kubic_100114",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 275,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "86336f69be895027",
+      "game_id": "scraped_thor_108461",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 396,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "864e6a6fcd9b4940",
+      "game_id": "scraped_ResBot_32179",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 734,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "866ada3af4b34f88",
+      "game_id": "scraped_erik.bystron_12547",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 389,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "86962c2e42eee11d",
+      "game_id": "scraped_ResBot_32316",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 922,
+      "steps": 17,
+      "result": "win",
+      "winner_player": 1
+    },
+    {
+      "item_id": "86a8eb1bf6895c10",
+      "game_id": "scraped_BNZ94_108381",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 175,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8709be0cb8669139",
+      "game_id": "scraped_hiems_94820",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 378,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "870c3e0d91534890",
+      "game_id": "scraped_hiems_112104",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 233,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "872fa96df27ef005",
+      "game_id": "scraped_Nicholas_11385",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 508,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "887d02565bf6fa57",
+      "game_id": "scraped_Non-Linear_Slob_102685",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 306,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "891f971bc873b5ed",
+      "game_id": "scraped_Kubic_20553",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 287,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "89ba34867dec27db",
+      "game_id": "scraped_Nicholas_10856",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 489,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8a8dca7ea5fa8fe4",
+      "game_id": "scraped_thor_70524",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 254,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8a95a311d7d21bc8",
+      "game_id": "scraped_Non-Linear_Slob_105803",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 503,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8adf90d4c9231476",
+      "game_id": "scraped_Kubic_108494",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 348,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8adffd3c98a21756",
+      "game_id": "scraped_thor_108126",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 282,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8b821dc515e30ba6",
+      "game_id": "scraped_Nicholas_112963",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 290,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8ba6aa1843b5f56c",
+      "game_id": "scraped_tvojtatko_103508",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 295,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8bb05d2ab557c262",
+      "game_id": "scraped_hiems_87923",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 474,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8c8d73473379a5cd",
+      "game_id": "scraped____21677",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 241,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8cb8ffdce8e6fd25",
+      "game_id": "scraped_Non-Linear_Slob_94268",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 604,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8ce6221f787787c7",
+      "game_id": "scraped_Kubic_20992",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 184,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8cfa464d68abe102",
+      "game_id": "scraped_Nicholas_96355",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 309,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8d5937e19f8f856f",
+      "game_id": "scraped_ResBot_32257",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 405,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8e5bfbe4aecbe34c",
+      "game_id": "scraped_Nicholas_10779",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 502,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8e6dfebffaf53403",
+      "game_id": "scraped____113244",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 378,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8e74fb69399f9675",
+      "game_id": "scraped_BNZ94_108377",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 726,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8ed2f3880977d9f9",
+      "game_id": "scraped_candide_62293",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 84,
+      "steps": 12,
+      "result": "loss",
+      "winner_player": 0
+    },
+    {
+      "item_id": "8f0d04843882072a",
+      "game_id": "scraped_erik.bystron_15929",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 287,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8f7b470ed4a67831",
+      "game_id": "scraped_ResBot_111882",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 326,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "8f7d30a084a3f3b0",
+      "game_id": "scraped_ResBot_105067",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 565,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9022d0c136b818d6",
+      "game_id": "scraped_candide_108114",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 484,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "90a65c55d7d992c5",
+      "game_id": "scraped_BNZ94_108331",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 884,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "90e63bd48fbf2ed3",
+      "game_id": "scraped_hiems_99813",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 350,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9247cfc380b17186",
+      "game_id": "scraped_Kubic_21062",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 186,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9264fcf794b55b0f",
+      "game_id": "scraped_Kubic_108105",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 448,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "92859fe07aa6af14",
+      "game_id": "scraped_Kubic_100330",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 185,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "930688417b5639d1",
+      "game_id": "scraped_bitterlessonpilled_101390",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 473,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "936b9bd5cfb3c770",
+      "game_id": "scraped_hiems_79164",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 696,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "939c6696658f430f",
+      "game_id": "scraped_Non-Linear_Slob_10222",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 133,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "93d0be874ff129ae",
+      "game_id": "scraped_Kubic_20995",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 132,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "94499050b85a92e5",
+      "game_id": "scraped_ResBot_109367",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 298,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9520b72e35166897",
+      "game_id": "scraped_Non-Linear_Slob_12717",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 417,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "955340b796b7e18f",
+      "game_id": "scraped_erik.bystron_28251",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 750,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "95b543b2d7109a69",
+      "game_id": "scraped_BNZ94_110936",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 233,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9605ba4589dc4e56",
+      "game_id": "scraped_BNZ94_110510",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 291,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "968a4bcb2e934cd8",
+      "game_id": "scraped_ResBot_32908",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 378,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "96b06cb6bf4d8b56",
+      "game_id": "scraped_Non-Linear_Slob_11729",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 150,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "972ab83a7d8ea36c",
+      "game_id": "scraped_Non-Linear_Slob_111724",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 585,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "973e664689ecf6a4",
+      "game_id": "scraped_candide_62635",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 655,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "979aad3e90922ccf",
+      "game_id": "scraped_Non-Linear_Slob_105235",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 559,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "97f72f565cc6ab79",
+      "game_id": "scraped_Non-Linear_Slob_18786",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 183,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9821fbc78abfe977",
+      "game_id": "scraped_thor_73195",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 448,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "997072f1812c2cda",
+      "game_id": "scraped_Nicholas_100264",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 748,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "99b865ed4f19f99f",
+      "game_id": "scraped_thor_17669",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 545,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "99c2d4dd00835819",
+      "game_id": "scraped_ResBot_32124",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 234,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "99e34c52821a97f4",
+      "game_id": "scraped_hiems_83821",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 513,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9a55882569a41dc6",
+      "game_id": "scraped_Non-Linear_Slob_19395",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 349,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9a787ae262b196e8",
+      "game_id": "scraped_bca_108689",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 477,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9b2eaf1ec93928ce",
+      "game_id": "scraped_Nicholas_11885",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 1089,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9b5d19977da1b594",
+      "game_id": "scraped_thor_109089",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 495,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9c2917506eed88a8",
+      "game_id": "scraped_hiems_65006",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 349,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9ca49eb0b4c96b6d",
+      "game_id": "scraped_hiems_70525",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 248,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9cb5da41b36d72d7",
+      "game_id": "scraped_Kubic_107236",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 450,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9d03e2b4af023e6a",
+      "game_id": "scraped_thor_70511",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 549,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9d334fc58114f7dc",
+      "game_id": "scraped_Nicholas_97315",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 719,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9d6b4547847398f6",
+      "game_id": "scraped_Nicholas_97401",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 583,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9debd1b2affddec8",
+      "game_id": "scraped_Nicholas_98692",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 348,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9dfe25938f07fea8",
+      "game_id": "scraped_Non-Linear_Slob_19239",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 600,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9f107c849a1a2a43",
+      "game_id": "scraped_erik.bystron_30471",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 653,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9f1d21f73e39bc31",
+      "game_id": "scraped_ResBot_105287",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 296,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9f491a9c36811346",
+      "game_id": "scraped_thor_100065",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 258,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9f6b593e77761581",
+      "game_id": "scraped_Nicholas_112962",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 397,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "9fed8a0c86e2cbe0",
+      "game_id": "scraped_bitterlessonpilled_108697",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 645,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a05067945ccb19d5",
+      "game_id": "scraped_candide_6951",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 469,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a0da3ebf93fde52e",
+      "game_id": "scraped_ResBot_108011",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 422,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a1a21328e0449f40",
+      "game_id": "scraped_Nicholas_113387",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 475,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a1ba1cc23780982c",
+      "game_id": "scraped_Non-Linear_Slob_84153",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 1140,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a1bbc8aabf2e03de",
+      "game_id": "scraped_Nicholas_11454",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 232,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a2f269b6c25abc0e",
+      "game_id": "scraped_erik.bystron_24999",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 396,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a31a18b840137d3a",
+      "game_id": "scraped_thor_100310",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 136,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a37c4b9d51d4ef17",
+      "game_id": "scraped_hiems_79002",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 250,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a3cd33c8cc606967",
+      "game_id": "scraped_Non-Linear_Slob_10294",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 322,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a41c3beea48d23fd",
+      "game_id": "scraped_BNZ94_110198",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 370,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a45987784d216ef5",
+      "game_id": "scraped_Nicholas_96514",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 278,
+      "steps": 9,
+      "result": "loss",
+      "winner_player": 1
+    },
+    {
+      "item_id": "a46556677ff79803",
+      "game_id": "scraped_Non-Linear_Slob_105043",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 530,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a4798742418e33a7",
+      "game_id": "scraped_candide_20600",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 336,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a4dcf0459ed7dfe9",
+      "game_id": "scraped_Kubic_113319",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 386,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a50379dc44a648ac",
+      "game_id": "scraped_thor_17540",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 282,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a5644c65166b85e4",
+      "game_id": "scraped_thor_17665",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 284,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a5ff19262dff79a9",
+      "game_id": "scraped_erik.bystron_13640",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 492,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a6010c5b0d5cf363",
+      "game_id": "scraped_Nicholas_97303",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 572,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a6dcd7aa3f06b476",
+      "game_id": "scraped_BNZ94_108312",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 291,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a6dd43114dbcad84",
+      "game_id": "scraped____113351",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 600,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a7e4f436344c7423",
+      "game_id": "scraped_bca_108638",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 458,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a806ed2a8a8e71d2",
+      "game_id": "scraped_BNZ94_108401",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 1018,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a87a6a3b9ba3b4d4",
+      "game_id": "scraped_thor_70500",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 236,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a881a7f746a19f5e",
+      "game_id": "scraped_Non-Linear_Slob_18092",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 202,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a8c5441da9a243e2",
+      "game_id": "scraped_Non-Linear_Slob_90809",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 282,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a8f99a4e3673d82a",
+      "game_id": "scraped_erik.bystron_27950",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 552,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "a9583f76c1e53375",
+      "game_id": "scraped_ResBot_32169",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 269,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "abc86a0751200c10",
+      "game_id": "scraped_Kubic_20993",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 209,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "abd2a1b996376c7c",
+      "game_id": "scraped_BNZ94_111184",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 331,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ac940a1776179e99",
+      "game_id": "scraped_Nicholas_112969",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 327,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "acad17621c28bc88",
+      "game_id": "scraped_Non-Linear_Slob_108634",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 457,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "acd6b4f342a4e420",
+      "game_id": "scraped_Non-Linear_Slob_93887",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 567,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "acf695fdf739b0f0",
+      "game_id": "scraped_nanomena_113288",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 739,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ad7488c0829149ed",
+      "game_id": "scraped_ResBot_100483",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 434,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "add07e25e16e2784",
+      "game_id": "scraped_Non-Linear_Slob_12716",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 403,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ade88eb941368347",
+      "game_id": "scraped_BNZ94_110309",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 239,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ae296eb2eac46aa4",
+      "game_id": "scraped_hiems_105337",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 139,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ae7283c4635b634f",
+      "game_id": "scraped_Non-Linear_Slob_18789",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 228,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "af21be7e6b474a89",
+      "game_id": "scraped_BNZ94_108387",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 207,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "afdaa6632c8b2e13",
+      "game_id": "scraped_Non-Linear_Slob_15071",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 185,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b038f71522fa3f86",
+      "game_id": "scraped_hiems_95345",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 152,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b06d40068687e693",
+      "game_id": "scraped_erik.bystron_29091",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 276,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b0a4e0ee8718db9a",
+      "game_id": "scraped_hiems_87676",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 387,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b0b1ea1e1210cf76",
+      "game_id": "scraped_candide_21592",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 784,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b0bcf11eecad38e2",
+      "game_id": "scraped_bitterlessonpilled_78939",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 194,
+      "steps": 33,
+      "result": "loss",
+      "winner_player": 0
+    },
+    {
+      "item_id": "b0dea9548b4b2777",
+      "game_id": "scraped_bitterlessonpilled_99789",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 197,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b0df7c37a0a39b09",
+      "game_id": "scraped_Nicholas_11734",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 693,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b11ffb7a463c78fe",
+      "game_id": "scraped_Kubic_102856",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 179,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b154bdac54f9a24e",
+      "game_id": "scraped_thor_109848",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 181,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b203407b55de50df",
+      "game_id": "scraped_erik.bystron_36100",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 612,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b233a771b6913004",
+      "game_id": "scraped_BNZ94_111438",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 136,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b250f59bd8a4c224",
+      "game_id": "scraped_Non-Linear_Slob_94270",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 599,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b2de4e2ff88c00b4",
+      "game_id": "scraped_erik.bystron_28397",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 331,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b3196763d8eb2096",
+      "game_id": "scraped_thor_112839",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 249,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b325d529c76048e0",
+      "game_id": "scraped_ResBot_105288",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 1020,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b32974f0ab13d980",
+      "game_id": "scraped_Kubic_102853",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 154,
+      "steps": 5,
+      "result": "win",
+      "winner_player": 0
+    },
+    {
+      "item_id": "b34789dbddd02e38",
+      "game_id": "scraped_Nicholas_10979",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 972,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b3787db68d7b5b0a",
+      "game_id": "scraped_hiems_77537",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 325,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b37d4c13c2e11013",
+      "game_id": "scraped_Kubic_108844",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 306,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b385ed3c5df578d5",
+      "game_id": "scraped_ResBot_32285",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 1060,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b472b39b48423c80",
+      "game_id": "scraped_Non-Linear_Slob_19376",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 191,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b48520d00c6557bd",
+      "game_id": "scraped_Non-Linear_Slob_20396",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 247,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b4a508c924946058",
+      "game_id": "scraped_Non-Linear_Slob_108503",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 246,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b4a59b31b63d119d",
+      "game_id": "scraped_ResBot_100484",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 447,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b4a79e06976aca01",
+      "game_id": "scraped_Nicholas_11660",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 345,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b58e935894ba1b92",
+      "game_id": "scraped_ResBot_100129",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 609,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b596f45ec4b4d2e8",
+      "game_id": "scraped_hiems_77205",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 367,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b5b2c02c6ecb2ec4",
+      "game_id": "scraped_bitterlessonpilled_101389",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 1080,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b5f9181d9224b786",
+      "game_id": "scraped_Kubic_104901",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 227,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b62b42dc284a3a5b",
+      "game_id": "scraped_BNZ94_110766",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 238,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b64e152925dae2ba",
+      "game_id": "scraped_bca_108938",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 671,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b6d62a563b3047cf",
+      "game_id": "scraped_thor_108096",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 509,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b6efa89a932084fa",
+      "game_id": "scraped_BNZ94_108393",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 236,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b7473a532ed12b8b",
+      "game_id": "scraped_ResBot_107295",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 800,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b7799be66b7d01cb",
+      "game_id": "scraped_Nicholas_10880",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 410,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b79833e456e6963c",
+      "game_id": "scraped_candide_84109",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 536,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b7f56c29a0fc254e",
+      "game_id": "scraped_hiems_70524",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 254,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b8223b7ee84b95f7",
+      "game_id": "scraped_BNZ94_110769",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 245,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b837785171bbf5ce",
+      "game_id": "scraped_tvojtatko_101557",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 498,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b8813d5d2454aaf6",
+      "game_id": "scraped_tvojtatko_108881",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 545,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b8b694918e7e55a3",
+      "game_id": "scraped_hiems_112107",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 318,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b93b62887e26c132",
+      "game_id": "scraped_Nicholas_112960",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 420,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "b9f5423571e665e4",
+      "game_id": "scraped_hiems_101675",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 200,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ba23a22650b36a72",
+      "game_id": "scraped_candide_58679",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 233,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ba302deaaa320ed6",
+      "game_id": "scraped_Nicholas_112987",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 77,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "bb555a2573eac4d6",
+      "game_id": "scraped_erik.bystron_10904",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 721,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "bbbd0805ceeb2ff1",
+      "game_id": "scraped____70517",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 927,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "bc77b82b8ab9f829",
+      "game_id": "scraped_Non-Linear_Slob_77296",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 510,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "bcd1eb6ff434a84e",
+      "game_id": "scraped____65673",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 230,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "bd6e0311edbfa58b",
+      "game_id": "scraped_thor_70505",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 607,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "bdb60138f4890be1",
+      "game_id": "scraped_hiems_96308",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 637,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "be08589ae9cbc9fe",
+      "game_id": "scraped_Kubic_109106",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 138,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "be3954c5c4b26c5d",
+      "game_id": "scraped_candide_104995",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 927,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "be8d48088b5b8680",
+      "game_id": "scraped_Kubic_20925",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 185,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "be9cdc3671b2088f",
+      "game_id": "scraped_erik.bystron_29377",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 838,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "be9f27a9c24131e8",
+      "game_id": "scraped_ResBot_32140",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 396,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "bf12da849e8f6e5b",
+      "game_id": "scraped_thor_112529",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 283,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "bf507bbfec57fc79",
+      "game_id": "scraped_BNZ94_110197",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 379,
+      "steps": 20,
+      "result": "win",
+      "winner_player": 1
+    },
+    {
+      "item_id": "bf9f05ca5c276cad",
+      "game_id": "scraped_hiems_100291",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 190,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c03ce55ba1d8d03d",
+      "game_id": "scraped_nanomena_113270",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 426,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c0572dd7ec540081",
+      "game_id": "scraped_candide_91796",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 338,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c0679ed8d745cd42",
+      "game_id": "scraped_Non-Linear_Slob_19511",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 248,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c0840f6cfb731cc9",
+      "game_id": "scraped_Nicholas_11452",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 692,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c115983daf591150",
+      "game_id": "scraped_Nicholas_96312",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 697,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c11e506de6f93d1a",
+      "game_id": "scraped_hiems_81245",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 538,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c1298c53a1deebe8",
+      "game_id": "scraped_tvojtatko_101544",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 231,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c140962473d2679b",
+      "game_id": "scraped_Nicholas_112856",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 199,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c196b74451a95351",
+      "game_id": "scraped_erik.bystron_28922",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 601,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c1af8dba41caa993",
+      "game_id": "scraped_BNZ94_108497",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 773,
+      "steps": 14,
+      "result": "win",
+      "winner_player": 1
+    },
+    {
+      "item_id": "c1d3cef6b24beb9f",
+      "game_id": "scraped_Nicholas_11453",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 622,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c21f366974b68091",
+      "game_id": "scraped_ResBot_108681",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 695,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c27f4395949c0414",
+      "game_id": "scraped_bitterlessonpilled_78948",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 659,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c285e0fd18e50945",
+      "game_id": "scraped_candide_7254",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 680,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c28b0f4a5db14497",
+      "game_id": "scraped_Non-Linear_Slob_102486",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 189,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c29d365f85001dda",
+      "game_id": "scraped_Non-Linear_Slob_105808",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 340,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c3570e2a6b403389",
+      "game_id": "scraped_hiems_65271",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 537,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c3c801a82efc6bba",
+      "game_id": "scraped_Non-Linear_Slob_10232",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 230,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c49cad877d813ead",
+      "game_id": "scraped_thor_113217",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 344,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c525604b7e6afdbe",
+      "game_id": "scraped_erik.bystron_10979",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 971,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c55d91f9d7dcfa8e",
+      "game_id": "scraped_ResBot_32162",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 266,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c56a007fa282d2bf",
+      "game_id": "scraped_thor_17564",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 191,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c5844c2c7661cacc",
+      "game_id": "scraped_Kubic_112741",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 239,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c5af118333c23e48",
+      "game_id": "scraped_candide_91687",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 1160,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c5f8930bfba28f26",
+      "game_id": "scraped_thor_112887",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 298,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c5fdfaf370e0f382",
+      "game_id": "scraped_Nicholas_14236",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 646,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c61631bcd50de5e5",
+      "game_id": "scraped_hiems_69984",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 274,
+      "steps": 2,
+      "result": "loss",
+      "winner_player": 1
+    },
+    {
+      "item_id": "c6b7aae233eb30b1",
+      "game_id": "scraped_Nicholas_11519",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 380,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c6e2e5d410a6a63e",
+      "game_id": "scraped_Nicholas_11777",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 799,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c71776174cd3d458",
+      "game_id": "scraped_Nicholas_100138",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 137,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c750d589cbf6fa2f",
+      "game_id": "scraped_candide_101102",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 550,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c75603d93a6c6f7f",
+      "game_id": "scraped_erik.bystron_35171",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 810,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c7c36d6b169bb2a2",
+      "game_id": "scraped_Nicholas_11556",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 240,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c7fe734596cedf6c",
+      "game_id": "scraped_bca_108688",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 725,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c96f0fe3cbf3e47b",
+      "game_id": "scraped_BNZ94_110933",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 545,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c9f6f2d98f18c3a4",
+      "game_id": "scraped_erik.bystron_29177",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 282,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "c9fd66877f7d0283",
+      "game_id": "scraped_erik.bystron_29027",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 829,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "cb119bcf865fde5c",
+      "game_id": "scraped_Non-Linear_Slob_18088",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 273,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "cb140fd212d0fe6d",
+      "game_id": "scraped_BNZ94_108355",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 638,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "cb2e2af18ce71a7b",
+      "game_id": "scraped_Nicholas_11542",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 536,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "cb4ab501b32cf816",
+      "game_id": "scraped_Nicholas_11408",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 424,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "cba96172077327b3",
+      "game_id": "scraped_Kubic_20561",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 183,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "cbf59596381f3224",
+      "game_id": "scraped_erik.bystron_35946",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 568,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ccb2a09d2cf49a32",
+      "game_id": "scraped_Non-Linear_Slob_100185",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 346,
+      "steps": 2,
+      "result": "win",
+      "winner_player": 1
+    },
+    {
+      "item_id": "cd6be9c076bfa97a",
+      "game_id": "scraped_ResBot_32183",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 940,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "cdcb590d9687eb5e",
+      "game_id": "scraped_thor_112532",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 346,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ceb28480d42e83cc",
+      "game_id": "scraped_hiems_84167",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 270,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "cebcdeb6d4c6742a",
+      "game_id": "scraped____113216",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 248,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "cf4148bb83994188",
+      "game_id": "scraped_hiems_88599",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 400,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "cf8bc55872ea8916",
+      "game_id": "scraped_erik.bystron_10977",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 307,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d063ddc2b8d1a32c",
+      "game_id": "scraped_Nicholas_11496",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 284,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d063fbd51cccd057",
+      "game_id": "scraped_tvojtatko_108291",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 451,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d0864ca4914fbd14",
+      "game_id": "scraped_erik.bystron_24948",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 557,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d0d448283aa1cc28",
+      "game_id": "scraped_Nicholas_112961",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 355,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d1436c7012aeb65c",
+      "game_id": "scraped_ResBot_113144",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 137,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d1e8cea12f55334e",
+      "game_id": "scraped_erik.bystron_37384",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 676,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d277b6f162e11169",
+      "game_id": "scraped_Non-Linear_Slob_101333",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 695,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d2d1ed277970e2ca",
+      "game_id": "scraped_Non-Linear_Slob_65068",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 179,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d3332039e4e852f3",
+      "game_id": "scraped_ResBot_33168",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 181,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d34772253b0d9c94",
+      "game_id": "scraped_ResBot_32240",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 435,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d3ccd7699407a1ec",
+      "game_id": "scraped____64422",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 278,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d582e984a9a07b7e",
+      "game_id": "scraped_Non-Linear_Slob_10290",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 224,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d684a90bd3f13e9a",
+      "game_id": "scraped_thor_108137",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 288,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d6cc3f08015473fd",
+      "game_id": "scraped_hiems_70523",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 301,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d71a3493f3461725",
+      "game_id": "scraped_thor_108463",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 473,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d78f883162405e22",
+      "game_id": "scraped_Non-Linear_Slob_18091",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 304,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d7dbbf3b44149da6",
+      "game_id": "scraped_hiems_69204",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 569,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d7fdac7e049332e0",
+      "game_id": "scraped_BNZ94_113188",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 320,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d82f4ae228faf689",
+      "game_id": "scraped_candide_17839",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 536,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d840f2f9df0ff991",
+      "game_id": "scraped_ResBot_107168",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 421,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d923743ca5d6369e",
+      "game_id": "scraped_tvojtatko_112900",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 908,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "d9447b92231a21f3",
+      "game_id": "scraped_Kubic_77756",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 270,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "da2f64d777b84d35",
+      "game_id": "scraped_Kubic_20603",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 199,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "da6c29c46820ca02",
+      "game_id": "scraped_candide_113173",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 726,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "dd675b99be472453",
+      "game_id": "scraped_bitterlessonpilled_91969",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 648,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "dd78562879e61795",
+      "game_id": "scraped_erik.bystron_24995",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 227,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ddcf0c7a8521fe1f",
+      "game_id": "scraped_hiems_58651",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 388,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "dde8b807b7ac5048",
+      "game_id": "scraped_ResBot_32528",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 401,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "de2af45b50f43e6d",
+      "game_id": "scraped_hiems_87408",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 610,
+      "steps": 22,
+      "result": "loss",
+      "winner_player": 0
+    },
+    {
+      "item_id": "ded8fd86abb64002",
+      "game_id": "scraped_hiems_86225",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 229,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "df7b79365660a819",
+      "game_id": "scraped____70518",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 460,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "dfeda81b2e23bc03",
+      "game_id": "scraped_hiems_74045",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 517,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e00440e202c8ea35",
+      "game_id": "scraped_erik.bystron_13661",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 118,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e0a213f47855ba68",
+      "game_id": "scraped_Nicholas_98691",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 798,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e0ac5398bae0ce2e",
+      "game_id": "scraped_erik.bystron_42737",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 229,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e12987ee22786530",
+      "game_id": "scraped_ResBot_104233",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 478,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e20209e9c3a9751c",
+      "game_id": "scraped_ResBot_107906",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 716,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e242125586e6f577",
+      "game_id": "scraped_thor_110664",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 288,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e256bd5107892d9a",
+      "game_id": "scraped_thor_113218",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 316,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e4176ccec23eea29",
+      "game_id": "scraped_ResBot_107293",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 355,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e436343970615466",
+      "game_id": "scraped_Nicholas_10783",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 296,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e43daccec7eeb931",
+      "game_id": "scraped_Non-Linear_Slob_94835",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 435,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e4e4207490a2d68e",
+      "game_id": "scraped_Non-Linear_Slob_77809",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 249,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e4fd03be0c87108e",
+      "game_id": "scraped_BNZ94_108406",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 730,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e53b4117f2354e12",
+      "game_id": "scraped_bca_108682",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 654,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e626b8e1cd93fe47",
+      "game_id": "scraped_Nicholas_10840",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 800,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e81bc74ea216d5e8",
+      "game_id": "scraped_Kubic_109108",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 291,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e833b839834f635d",
+      "game_id": "scraped_Kubic_108491",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 420,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e903ac07ddd59ebb",
+      "game_id": "scraped_Nicholas_10782",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 414,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e923d827ef802a7a",
+      "game_id": "scraped_thor_108112",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 392,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "e9d6cf556e43fc09",
+      "game_id": "scraped_thor_17536",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 250,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ea50f2b9f8d9d4e8",
+      "game_id": "scraped_ResBot_32274",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 531,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "eadbe78b5c19b4f0",
+      "game_id": "scraped_thor_108280",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 347,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "eb67a31b9cfaf4a1",
+      "game_id": "scraped_hiems_62674",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 420,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "eb9d8a1848e3cb75",
+      "game_id": "scraped_candide_88542",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 395,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "eb9e2c4c4cc55718",
+      "game_id": "scraped_Nicholas_96357",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 332,
+      "steps": 17,
+      "result": "loss",
+      "winner_player": 0
+    },
+    {
+      "item_id": "ebbc506f30f19708",
+      "game_id": "scraped____65211",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 648,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ec0969b194a80396",
+      "game_id": "scraped_Non-Linear_Slob_105237",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 84,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ecd20c6f5affb90a",
+      "game_id": "scraped_thor_99773",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 243,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ecd95358a44f484f",
+      "game_id": "scraped_ResBot_32371",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 418,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ed6140325c08dc4f",
+      "game_id": "scraped_erik.bystron_14141",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 769,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ed9dcdb085103dab",
+      "game_id": "scraped_candide_101219",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 354,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ee0f3b0c4e4ebe40",
+      "game_id": "scraped____113228",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 476,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ee59dbc5d8b50b7a",
+      "game_id": "scraped_erik.bystron_45678",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 570,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ee73f4b60b1c2d7f",
+      "game_id": "scraped_candide_96449",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 469,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ee75f6efb95e7cdf",
+      "game_id": "scraped_ResBot_112980",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 299,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ee9f2493a6e1ffd3",
+      "game_id": "scraped_ResBot_100350",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 352,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "eecbf5ba3f4767bd",
+      "game_id": "scraped_Non-Linear_Slob_18315",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 368,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "eed25b74b050cf12",
+      "game_id": "scraped_erik.bystron_29178",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 237,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f0166d7a190ef2a7",
+      "game_id": "scraped_Non-Linear_Slob_19348",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 247,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f02cf84084c907eb",
+      "game_id": "scraped_bca_108691",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 302,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f036ac9f6e095fd1",
+      "game_id": "scraped_BNZ94_108411",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 135,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f049dae3cfb99488",
+      "game_id": "scraped_Non-Linear_Slob_10715",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 291,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f0aba19d6225be2c",
+      "game_id": "scraped_Non-Linear_Slob_19077",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 506,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f0df47b6b2c0df83",
+      "game_id": "scraped_Non-Linear_Slob_80818",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 79,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f0dfc23f62bdf103",
+      "game_id": "scraped_Nicholas_10773",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 239,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f169b12e0673547b",
+      "game_id": "scraped_hiems_65005",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 547,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f1956a4a92edaa69",
+      "game_id": "scraped_Nicholas_10853",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 495,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f1bb3cf85e94f19a",
+      "game_id": "scraped_erik.bystron_42897",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 438,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f1ff9357073172f5",
+      "game_id": "scraped_candide_105251",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 399,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f20698c672f954a4",
+      "game_id": "scraped_hiems_104162",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 442,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f247ab148bcf0d0f",
+      "game_id": "scraped_candide_113227",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 800,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f26a0dfef7cd733f",
+      "game_id": "scraped_Non-Linear_Slob_19268",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 303,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f2eb32746c9c7f92",
+      "game_id": "scraped_Nicholas_112986",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 731,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f32defa8925187b7",
+      "game_id": "scraped_BNZ94_108498",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 736,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f33e0d1e78aa3953",
+      "game_id": "scraped_Nicholas_11497",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 593,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f359306d407153d7",
+      "game_id": "scraped_ResBot_101148",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 347,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f3bf37e74c9e827e",
+      "game_id": "scraped_ResBot_101258",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 228,
+      "steps": 9,
+      "result": "win",
+      "winner_player": 1
+    },
+    {
+      "item_id": "f4de663874d1c717",
+      "game_id": "scraped_hiems_91666",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 519,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f57bb50530bbaffe",
+      "game_id": "scraped_Non-Linear_Slob_109084",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 493,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f5fb23def73c1e58",
+      "game_id": "scraped_Nicholas_112912",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 246,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f6581188080d3305",
+      "game_id": "scraped_Non-Linear_Slob_19217",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 214,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f6b3ea668d932028",
+      "game_id": "scraped_Nicholas_11887",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 531,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f6c27bc81a24e064",
+      "game_id": "scraped_ResBot_32182",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 788,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f73cb699ddb5bfd0",
+      "game_id": "scraped_tvojtatko_113223",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 370,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f748e65bf21a8eed",
+      "game_id": "scraped_Non-Linear_Slob_101700",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 1195,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f87f6eafe943baa2",
+      "game_id": "scraped_tvojtatko_105260",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 891,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f8f7ed4111819342",
+      "game_id": "scraped_Kubic_21063",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 146,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f910a32204495694",
+      "game_id": "scraped_candide_77598",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 183,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f954f9ed47afbab9",
+      "game_id": "scraped_Nicholas_96510",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 272,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f96cc2febe2bc7af",
+      "game_id": "scraped_Nicholas_96354",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 295,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f96f60c6246af8ec",
+      "game_id": "scraped_tvojtatko_10914",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 835,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "f9e89f86c46ba6d6",
+      "game_id": "scraped_ResBot_108516",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 634,
+      "steps": 37,
+      "result": "win",
+      "winner_player": 1
+    },
+    {
+      "item_id": "fa4ea44f585810ff",
+      "game_id": "scraped_erik.bystron_27949",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 666,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fa612e2db199d1e8",
+      "game_id": "scraped_Nicholas_14789",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 606,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "faa63e28e676b5e2",
+      "game_id": "scraped_thor_17606",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 961,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "faaaa645264e2f27",
+      "game_id": "scraped_hiems_110934",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 462,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fb391e0d9fef54c9",
+      "game_id": "scraped_Non-Linear_Slob_19325",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 193,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fb496ac867d1e1b0",
+      "game_id": "scraped____17837",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 445,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fb6dae2247e9784a",
+      "game_id": "scraped_Nicholas_10889",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 453,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fb87c25e8853b80a",
+      "game_id": "scraped____113377",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 238,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fb8ed7e6294f2d2e",
+      "game_id": "scraped_candide_10920",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 300,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fb974c4f4674dc71",
+      "game_id": "scraped_Kubic_107876",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 130,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fbd09a43bb617f39",
+      "game_id": "scraped_ResBot_104232",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 423,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fcc6c4444cbce122",
+      "game_id": "scraped_candide_77214",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 533,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fd08a53c00cc8cb7",
+      "game_id": "scraped_Non-Linear_Slob_88016",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 803,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fd0c60d9d2940155",
+      "game_id": "scraped_hiems_91998",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 377,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fd6636c76afc8e2b",
+      "game_id": "scraped_hiems_96443",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 345,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fdb434d01913629a",
+      "game_id": "scraped_Kubic_20994",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 113,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fdf5d927f8b5e6ec",
+      "game_id": "scraped_Nicholas_11292",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 552,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fdf7b1dd7827cc7b",
+      "game_id": "scraped_nanomena_113261",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 324,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fe6349ddf83a7b16",
+      "game_id": "scraped_Non-Linear_Slob_18258",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 244,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "febcc970d21cff54",
+      "game_id": "scraped_BNZ94_108410",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 297,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fec2bb13d9a15171",
+      "game_id": "scraped_thor_17547",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 328,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fede17cce3ec0f00",
+      "game_id": "scraped_ResBot_32180",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 210,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "fee69c06bb354a06",
+      "game_id": "scraped_ResBot_112913",
+      "class_id": 1,
+      "sample_seat": 0,
+      "prefix_len": 344,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ff33966d06e520be",
+      "game_id": "scraped_Kubic_113264",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 368,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ff7327195d5bbf97",
+      "game_id": "scraped_erik.bystron_32798",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 642,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    },
+    {
+      "item_id": "ffab22956bbed38b",
+      "game_id": "scraped_Non-Linear_Slob_87929",
+      "class_id": 1,
+      "sample_seat": 1,
+      "prefix_len": 437,
+      "steps": 64,
+      "result": "draw",
+      "winner_player": -1
+    }
+  ],
+  "manifest": "/Users/erikbystron/Work/learning/generals-arena/training/morpheus/manifests/scraped-classes13.json",
+  "artifact": "bots/morpheus_ckpt6000/artifact",
+  "min_wins": 32,
+  "min_losses": 32
+}

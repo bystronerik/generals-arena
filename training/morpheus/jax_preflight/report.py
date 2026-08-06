@@ -13,7 +13,8 @@ DEFAULT_JSON = REPO_ROOT / "docs/research/measurements/morpheus-jax-preflight.js
 DEFAULT_MD = REPO_ROOT / "docs/research/measurements/morpheus-jax-preflight.md"
 
 
-def _looks_like_a100_80gb(gpu_result: dict[str, Any]) -> bool:
+def _looks_like_a100_40gb(gpu_result: dict[str, Any]) -> bool:
+    """Accept A100 with >=40 GB. Modal may upgrade A100→80 GB at no cost."""
     device = gpu_result.get("device") or {}
     nvidia = gpu_result.get("nvidia") or {}
     haystack = " ".join(
@@ -27,17 +28,20 @@ def _looks_like_a100_80gb(gpu_result: dict[str, Any]) -> bool:
         if x
     ).upper()
     has_a100 = "A100" in haystack
-    has_80 = (
-        "80GB" in haystack
-        or "80 GB" in haystack
-        or "81920" in haystack
-        or "80GI" in haystack.replace(" ", "")
+    compact = haystack.replace(" ", "")
+    has_40_or_more = (
+        "40GB" in compact
+        or "80GB" in compact
+        or "40960" in compact
+        or "81920" in compact
+        or "40GI" in compact
+        or "80GI" in compact
     )
-    # memory_total from nvidia-smi is often like "81920 MiB"
-    mem = str(nvidia.get("memory_total") or "")
-    if "81" in mem.replace(",", "") or "80" in mem:
-        has_80 = True
-    return has_a100 and has_80 and device.get("platform") == "gpu"
+    # memory_total from nvidia-smi is often like "40960 MiB" or "81920 MiB"
+    mem = str(nvidia.get("memory_total") or "").replace(",", "").upper()
+    if "40960" in mem or "81920" in mem or "40" in mem or "80" in mem or "81" in mem:
+        has_40_or_more = True
+    return has_a100 and has_40_or_more and device.get("platform") == "gpu"
 
 
 def _parity_table(
@@ -75,7 +79,7 @@ def decide_pass(
     """Apply Part 00 exit criterion."""
     if parity_rows is None:
         parity_rows = _parity_table(cpu_result, gpu_result)
-    a100 = _looks_like_a100_80gb(gpu_result)
+    a100 = _looks_like_a100_40gb(gpu_result)
     compiled = bool(gpu_result.get("compiled_ok")) and bool(
         cpu_result.get("compiled_ok")
     )
@@ -90,7 +94,7 @@ def decide_pass(
         "pass": passed,
         "verdict": "yes" if passed else "no",
         "checks": {
-            "a100_80gb": a100,
+            "a100_40gb": a100,
             "compiled": compiled,
             "competition_modifiers": modifiers_ok,
             "cpu_gpu_parity": parity_ok,

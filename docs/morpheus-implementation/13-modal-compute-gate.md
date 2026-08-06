@@ -44,7 +44,7 @@ The report must state:
 
 ## Defaults and replacement measurement
 
-Training uses Modal through the Python library, one Nvidia A100 80 GB learner,
+Training uses Modal through the Python library, one Nvidia A100 40 GB learner,
 and a total budget of approximately 48 A100 hours.
 
 The current training default permits larger search settings, followed by a

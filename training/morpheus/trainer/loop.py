@@ -49,6 +49,7 @@ from training.morpheus.trainer.manifest import (
     load_run_manifest,
     write_run_manifest,
 )
+from training.morpheus.trainer.metrics import LossSmoother
 from training.morpheus.trainer.step import trainer_step
 
 REPO = Path(__file__).resolve().parents[3]
@@ -341,6 +342,7 @@ def run_training(
     )
 
     t_train = time.perf_counter()
+    smoother = LossSmoother()
     _log(f"train_loop begin steps_target={steps_target} batch_size={cfg.batch_size}")
     while global_step < steps_target:
         batch = buffer.sample_batch(
@@ -371,19 +373,22 @@ def run_training(
                 epoch=consumed.epoch,
             )
         term_dict = terms.to_dict()["terms"]
+        snap = smoother.update(float(loss), term_dict)
         history.append(
             {
                 "step": global_step,
-                "loss": loss,
+                "loss": float(loss),
+                "loss_ema": snap.loss_ema,
                 "terms": term_dict,
             }
         )
         log_every = max(1, cfg.cadence.log_every_steps)
         if global_step % log_every == 0 or global_step == steps_target:
-            term_bits = " ".join(
-                f"{name}={float(value):.6g}" for name, value in sorted(term_dict.items())
-            )
-            _log(f"step={global_step} loss={loss:.6g} {term_bits}")
+            # Refresh avg over the completed window onto the last history row.
+            history[-1]["loss_avg"] = snap.loss_avg
+            history[-1]["smoothed"] = snap.to_dict()
+            _log(snap.log_line(step=global_step))
+            smoother.reset_window()
         if global_step % max(1, cfg.cadence.snapshot_every_steps) == 0 or global_step == steps_target:
             train_spent = (time.perf_counter() - t_train) / 3600.0
             budget["main_training_a100_hours_spent"] = float(

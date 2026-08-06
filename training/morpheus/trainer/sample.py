@@ -164,6 +164,89 @@ def build_train_sample_from_recon(
     )
 
 
+def build_full_start_train_sample(
+    item: CurriculumItem,
+    *,
+    seat: int,
+    n_particles: int = 4,
+    truncation_turns: int = 1200,
+) -> TrainSample:
+    """Assemble a class-5 sample from a fresh competition board (no trajectory).
+
+    Policy is pass (no recorded action). WDL is draw until self-play supplies
+    outcomes. Hidden-state heads use engine truth at turn 0.
+    """
+    if int(item.class_id) != 5:
+        raise ValueError(f"{item.item_id}: build_full_start_train_sample needs class 5")
+    if int(item.prefix_len) != 0:
+        raise ValueError(f"{item.item_id}: class 5 requires prefix_len == 0")
+    seat = int(seat)
+    if seat not in (0, 1):
+        raise ValueError(f"{item.item_id}: invalid seat {seat}")
+
+    recon = reconstruct_prefix(
+        item,
+        trajectories_root=REPO,
+        traj=None,
+        n_particles=n_particles,
+        update_belief_flag=True,
+        engine=item.engine_version,
+    )
+    _ensure_bot_path()
+    from action import PASS_INDEX, legal_mask
+    from particle_summary import summarize_belief
+    from tensor import build_tensor
+
+    seat_rec = recon.seats[seat]
+    summary = summarize_belief(seat_rec.belief) if seat_rec.belief.n > 0 else None
+    tensor = build_tensor(
+        seat_rec.observation,
+        seat_rec.memory,
+        belief=summary,
+        previous_action=None,
+    )
+    mask = np.asarray(legal_mask(seat_rec.observation, seat_rec.memory), dtype=bool)
+    engine_state = recon.engine_state
+    ownership = np.asarray(engine_state.ownership, dtype=bool)
+    armies = np.asarray(engine_state.armies)
+    castles = np.asarray(engine_state.castles, dtype=bool)
+    land = (
+        int(ownership[0].sum()),
+        int(ownership[1].sum()),
+    )
+    army = (
+        int(np.asarray(armies)[ownership[0]].sum()) if ownership[0].any() else 0,
+        int(np.asarray(armies)[ownership[1]].sum()) if ownership[1].any() else 0,
+    )
+    castle_counts = (
+        int((castles & ownership[0]).sum()),
+        int((castles & ownership[1]).sum()),
+    )
+    targets = build_seat_targets(
+        winner="draw",
+        seat=seat,
+        policy=SparsePolicy(indices=(PASS_INDEX,), probs=(1.0,)),
+        ownership=ownership,
+        armies=armies,
+        generals=np.asarray(engine_state.generals, dtype=bool),
+        castles=castles,
+        final_land=land,
+        final_army=army,
+        final_castles=castle_counts,
+        current_turn=int(recon.turn),
+        terminal_turn=int(truncation_turns),
+    )
+    return TrainSample(
+        item_id=item.item_id,
+        sample_seat=seat,
+        tensor=np.asarray(tensor, dtype=np.float32),
+        legal_mask=mask,
+        targets=targets,
+        source_label=item.source_label,
+        outcome="draw",
+    )
+
+
 def build_train_sample(
     item: CurriculumItem,
     *,
@@ -173,6 +256,12 @@ def build_train_sample(
     terminal_cache: dict[str, dict[str, Any]] | None = None,
 ) -> TrainSample:
     """Reconstruct the prefix and assemble seat targets for ``sample_seat``."""
+    if int(item.class_id) == 5:
+        seat = 0 if item.sample_seat is None else int(item.sample_seat)
+        return build_full_start_train_sample(
+            item, seat=seat, n_particles=n_particles
+        )
+
     source = traj
     if source is None and item.trajectory_relpath:
         path = Path(item.trajectory_relpath)

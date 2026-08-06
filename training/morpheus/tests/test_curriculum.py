@@ -333,10 +333,65 @@ def test_scraped_classes13_panel_and_config_load():
         REPO / "training/morpheus/configs/scraped-classes13-run.json"
     )
     assert cfg.promotable_main_run is False
-    assert cfg.replay.class_balance == {"1": 1.0}
+    assert cfg.replay.class_balance == {"1": 1.0, "2": 1.0, "3": 1.0}
     assert cfg.replay.window_size >= 65536
 
 
+def test_scraped_classes15_panel_and_config_load():
+    from training.morpheus.corpus.panel import load_panel
+    from training.morpheus.trainer.config import load_train_run_config
+
+    panel = load_panel(REPO / "scripts/configs/morpheus/scraped-classes15.json")
+    assert panel["kind"] == "provenance"
+    assert panel["name"] == "scraped-classes15"
+    cfg = load_train_run_config(
+        REPO / "training/morpheus/configs/scraped-classes15-run.json"
+    )
+    assert cfg.promotable_main_run is False
+    assert cfg.replay.class_balance == {
+        "1": 1.0,
+        "2": 1.0,
+        "3": 1.0,
+        "4": 1.0,
+    }
+    assert "5" not in cfg.replay.class_balance
+    assert cfg.batch_size == 32
+    assert cfg.cadence.max_steps == 6000
+
+
+def test_make_full_start_items_both_seats():
+    from training.morpheus.curriculum.build import make_full_start_items
+
+    items = make_full_start_items(engine="era", seeds=[7, 8])
+    assert len(items) == 4
+    assert {i.sample_seat for i in items} == {0, 1}
+    assert all(i.class_id == CLASS_FULL_START for i in items)
+    assert all(i.item_id.endswith("_s0") or i.item_id.endswith("_s1") for i in items)
+    assert len({i.item_id for i in items}) == 4
+
+
+def test_build_full_start_train_sample():
+    from training.morpheus.trainer.sample import build_full_start_train_sample
+
+    item = CurriculumItem.from_dict(
+        {
+            **CurriculumItem.build(
+                class_id=CLASS_FULL_START,
+                engine_version="era",
+                map_seed=42,
+                source_label="full_start",
+                prefix_len=0,
+                sample_seat=0,
+            ).to_dict(),
+            "item_id": "fullstart_smoke_s0",
+        }
+    )
+    sample = build_full_start_train_sample(item, seat=0, n_particles=2)
+    assert sample.sample_seat == 0
+    assert sample.tensor.shape[0] == 49
+    assert sample.legal_mask.ndim == 1
+    assert sample.outcome == "draw"
+    assert float(sample.targets.policy.sum()) == pytest.approx(1.0)
 
 @pytest.mark.skipif(not TRAJ_DIR.is_dir(), reason="bootstrap trajectories absent")
 def test_build_and_verify_on_bootstrap(tmp_path: Path):

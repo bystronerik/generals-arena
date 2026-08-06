@@ -1,0 +1,18 @@
+{
+  "kind": "provenance",
+  "name": "scraped-classes15",
+  "selection_date": "2026-08-06",
+  "round_seed": 7,
+  "source_label": "scraped_classes15",
+  "top_win_players": ["ResBot", "Kubic", "thor"],
+  "top_win_fraction": 0.5,
+  "stratify": "global_1to1_wdl",
+  "notes": [
+    "Provenance stub for scraped classes 1–5 research training.",
+    "Classes 1–4 from reconstruction trajectories; class 5 is full_start.",
+    "Global equal queried-player wins and losses (n = n_lose).",
+    "Exactly 50% of kept wins from ResBot, Kubic, thor (equal thirds).",
+    "Remaining wins from all other reconstruction players.",
+    "Not a heuristic match panel; members are intentionally empty."
+  ]
+}

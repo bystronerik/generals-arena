@@ -101,7 +101,7 @@ app = modal.App("morpheus-training")
 
 @app.function(
     image=IMAGE,
-    gpu="A100-80GB",
+    gpu="A100",
     timeout=60 * 60,
     volumes={"/vol": VOLUME},
 )
@@ -206,7 +206,7 @@ def measure_layout_remote(
 
 @app.function(
     image=GPU_IMAGE,
-    gpu="A100-80GB",
+    gpu="A100",
     timeout=60 * 30,
     volumes={"/vol": VOLUME},
 )
@@ -329,7 +329,7 @@ def qualify_compute(
 
 @app.function(
     image=IMAGE,
-    gpu="A100-80GB",
+    gpu="A100",
     timeout=60 * 60 * 6,
     volumes={"/vol": VOLUME},
 )
@@ -420,7 +420,7 @@ def train(
 
 @app.function(
     image=IMAGE,
-    gpu="A100-80GB",
+    gpu="A100",
     timeout=60 * 60 * 6,
     volumes={"/vol": VOLUME},
 )

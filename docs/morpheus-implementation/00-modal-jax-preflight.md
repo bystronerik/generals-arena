@@ -3,7 +3,7 @@
 ## Deliverable
 
 Prove whether the competition transition can run correctly on one Modal
-Nvidia A100 80 GB before Morpheus selects a self-play architecture.
+Nvidia A100 40 GB before Morpheus selects a self-play architecture.
 
 The preflight produces a JSON and Markdown report under
 `docs/research/measurements/`. It records the device, JAX backend, cold compile
@@ -32,7 +32,7 @@ state parity.
 ## Defaults and replacement measurement
 
 This part assumes the decided training device and budget: Modal,
-`gpu="A100-80GB"`, and approximately 48 A100 hours.
+`gpu="A100"` (40 GB), and approximately 48 A100 hours.
 
 It assumes no GPU throughput. The replacement measurement is a small Modal run
 over the competition preset. Local Apple Silicon is not a substitute for this
@@ -76,8 +76,8 @@ Modal image must record its exact JAX, jaxlib, CUDA, and driver versions.
 
 ## Exit criterion
 
-Answer `yes` only if JAX reports an A100 80 GB GPU, the competition transition
-and modifiers compile, and every CPU/GPU state comparison matches.
+Answer `yes` only if JAX reports an A100 with at least 40 GB, the competition
+transition and modifiers compile, and every CPU/GPU state comparison matches.
 
 Answer `no` otherwise. A `no` selects CPU self-play and reserves the A100 for
 learning. Record all A100 time against the 48-hour budget.

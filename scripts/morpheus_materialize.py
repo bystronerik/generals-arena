@@ -59,12 +59,33 @@ def _materialize_game_group(
             traj = read_trajectory(path)
 
     pending: list[CurriculumItem] = []
+    class5_pending: list[CurriculumItem] = []
     for item in items:
-        if item.sample_seat is None and int(item.class_id) != 5:
-            failures.append(f"{item.item_id}: missing sample_seat")
-            continue
         if int(item.class_id) == 5:
-            failures.append(f"{item.item_id}: class-5 full_start not supported here")
+            seats = (
+                (0, 1)
+                if item.sample_seat is None
+                else (int(item.sample_seat),)
+            )
+            for seat in seats:
+                sample_id = (
+                    str(item.item_id)
+                    if item.sample_seat is not None
+                    else f"{item.item_id}_s{seat}"
+                )
+                out_path = output / f"{sample_id}{SAMPLE_SUFFIX}"
+                if skip_existing and out_path.is_file():
+                    written.append(sample_id)
+                    skipped += 1
+                    continue
+                # Clone with explicit seat for the worker path below.
+                row = CurriculumItem.from_dict(
+                    {**item.to_dict(), "sample_seat": int(seat), "item_id": sample_id}
+                )
+                class5_pending.append(row)
+            continue
+        if item.sample_seat is None:
+            failures.append(f"{item.item_id}: missing sample_seat")
             continue
         sample_id = str(item.item_id)
         out_path = output / f"{sample_id}{SAMPLE_SUFFIX}"
@@ -73,6 +94,27 @@ def _materialize_game_group(
             skipped += 1
             continue
         pending.append(item)
+
+    if class5_pending:
+        from training.morpheus.trainer.sample import build_full_start_train_sample
+
+        for item in class5_pending:
+            try:
+                sample = build_full_start_train_sample(
+                    item,
+                    seat=int(item.sample_seat),
+                    n_particles=n_particles,
+                )
+                write_sample(
+                    output,
+                    sample,
+                    sample_id=str(item.item_id),
+                    class_id=str(item.class_id),
+                )
+                written.append(str(item.item_id))
+                newly += 1
+            except Exception as exc:  # noqa: BLE001
+                failures.append(f"{item.item_id}: {exc}")
 
     if not pending:
         return {

@@ -34,6 +34,12 @@ def main() -> int:
     parser.add_argument("--qengine", type=str, default=None, help="torch quantized engine")
     parser.add_argument("--run-id", type=str, default="export-local")
     parser.add_argument("--checkpoint-id", type=str, default="unknown")
+    parser.add_argument(
+        "--allow-parity-fail",
+        action="store_true",
+        help="write the artifact even when online float/export MAE exceeds soft limits "
+        "(research cadence only; MAE stays in the manifest)",
+    )
     args = parser.parse_args()
 
     from morpheus.export import export_from_checkpoint
@@ -46,6 +52,7 @@ def main() -> int:
             "run_id": args.run_id,
             "checkpoint_id": args.checkpoint_id,
         },
+        require_online_parity=not bool(args.allow_parity_fail),
     )
     print(f"exported to {result.output_dir}")
     print(f"qengine={result.qengine}")
@@ -55,8 +62,11 @@ def main() -> int:
     print("online float_to_export_mae:")
     for entry, mae in sorted(result.online_float_to_export_mae.items()):
         print(f"  {entry}:")
-        for key, value in sorted(mae.items()):
-            print(f"    {key}: {value:.6f}")
+        if isinstance(mae, dict):
+            for key, value in sorted(mae.items()):
+                print(f"    {key}: {value:.6f}")
+        else:
+            print(f"    {mae}")
     return 0
 
 

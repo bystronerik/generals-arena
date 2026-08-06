@@ -2,11 +2,11 @@
 
 > Verdict: **no** — Compute gate closed. No tested cadence passed curriculum confidence, held-out belief calibration, and arena pairwise improvement. Deployment-matched final phase remains required. Main training must not start.
 
-Generated: 2026-08-04T19:13:23.858924+00:00
+Generated: 2026-08-06T07:57:42.965123+00:00
 
 ## Selected layout
 
-- self-play backend: `cpu`
+- self-play backend: `hybrid`
 - physical CPU cores per game: `1`
 - seat searches: `sequential`
 - games per worker (measured batch): `2`
@@ -15,14 +15,14 @@ Generated: 2026-08-04T19:13:23.858924+00:00
 
 ## Throughput
 
-- games/hour (aggregate): `9080.752623816252`
-- positions/hour: `145292.04198106003`
-- games/worker-hour: `567.5470389885157`
-- mean game latency (s): `6.342681428500001`
+- games/hour (aggregate): `14502.22948589885`
+- positions/hour: `232035.6717743816`
+- games/worker-hour: `906.3893428686781`
+- mean game latency (s): `3.9714766455`
 
 ## Checkpoint cadence
 
-- games/checkpoint: `54484`
+- games/checkpoint: `87013`
 - checkpoint count: `4`
 - useful cadence found: `False`
 - selected cadence: `None`
@@ -32,17 +32,17 @@ Generated: 2026-08-04T19:13:23.858924+00:00
 | Line | Hours |
 | --- | ---: |
 | `jax_preflight` | 0.03235120986777778 |
-| `throughput_qualification` | 0.0037456870222222225 |
+| `throughput_qualification` | 0.002206710106388889 |
 | `learning_curve_pilot` | 2.0 |
 | `objective_ablations` | 0.0 |
 | `gpu_self_play` | 0.0 |
 | `main_training` | 20.0 |
 | `deployment_calibration` | 2.0 |
-| **total** | **24.03609689689** |
+| **total** | **24.034557919974166** |
 | budget | 48.0 |
 
 - fits budget: `True`
-- CPU hours (measured qualification): `0.03256753491472222`
+- CPU hours (measured qualification): `0.02588340355222222`
 
 ## Checks
 
@@ -78,24 +78,24 @@ Generated: 2026-08-04T19:13:23.858924+00:00
 ```json
 [
   {
-    "name": "cpu1-seq",
-    "games_per_cpu_hour": 567.5470389885157,
-    "mean_game_latency_s": 6.342681428500001
+    "name": "hybrid-cpu-control",
+    "games_per_cpu_hour": 906.3893428686781,
+    "mean_game_latency_s": 3.9714766455
   },
   {
-    "name": "hybrid-cpu-control",
-    "games_per_cpu_hour": 534.0186007169526,
-    "mean_game_latency_s": 6.740953321500001
+    "name": "cpu1-seq",
+    "games_per_cpu_hour": 753.3989988227199,
+    "mean_game_latency_s": 4.777982980500001
   },
   {
     "name": "cpu2-par",
-    "games_per_cpu_hour": 211.81530442195105,
-    "mean_game_latency_s": 8.497327605999999
+    "games_per_cpu_hour": 352.22401060724025,
+    "mean_game_latency_s": 5.1100579345
   },
   {
     "name": "cpu2-par-x2",
-    "games_per_cpu_hour": 126.13345346716969,
-    "mean_game_latency_s": 14.2055922905
+    "games_per_cpu_hour": 130.34405911988378,
+    "mean_game_latency_s": 13.80662328
   }
 ]
 ```
@@ -106,7 +106,7 @@ Generated: 2026-08-04T19:13:23.858924+00:00
 [
   {
     "name": "ckpt-4",
-    "games_per_checkpoint": 54484,
+    "games_per_checkpoint": 87013,
     "checkpoint_count": 4,
     "curriculum": {
       "ok": false,
@@ -127,7 +127,7 @@ Generated: 2026-08-04T19:13:23.858924+00:00
   },
   {
     "name": "ckpt-8",
-    "games_per_checkpoint": 27242,
+    "games_per_checkpoint": 43506,
     "checkpoint_count": 8,
     "curriculum": {
       "ok": false,
@@ -148,7 +148,7 @@ Generated: 2026-08-04T19:13:23.858924+00:00
   },
   {
     "name": "ckpt-16",
-    "games_per_checkpoint": 13621,
+    "games_per_checkpoint": 21753,
     "checkpoint_count": 16,
     "curriculum": {
       "ok": false,

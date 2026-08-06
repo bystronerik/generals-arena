@@ -145,23 +145,23 @@ def test_decide_pass_requires_a100_and_parity(tmp_path: Path):
     # Same snapshots → parity ok, but not an A100.
     decision = decide_pass(cpu, gpu_fail)
     assert decision["verdict"] == "no"
-    assert decision["checks"]["a100_80gb"] is False
+    assert decision["checks"]["a100_40gb"] is False
 
     gpu_ok = dict(base)
     gpu_ok["role"] = "gpu"
     gpu_ok["device"] = {
         "platform": "gpu",
         "device_str": "cuda:0",
-        "device_kind": "NVIDIA A100-SXM4-80GB",
+        "device_kind": "NVIDIA A100-SXM4-40GB",
     }
     gpu_ok["nvidia"] = {
-        "gpu_name": "NVIDIA A100-SXM4-80GB",
-        "memory_total": "81920 MiB",
+        "gpu_name": "NVIDIA A100-SXM4-40GB",
+        "memory_total": "40960 MiB",
         "driver_version": "550.54.15",
         "cuda_version": "12.4",
     }
     decision_ok = decide_pass(cpu, gpu_ok)
-    assert decision_ok["checks"]["a100_80gb"] is True
+    assert decision_ok["checks"]["a100_40gb"] is True
     assert decision_ok["checks"]["cpu_gpu_parity"] is True
     assert decision_ok["verdict"] == "yes"
 
@@ -183,11 +183,11 @@ def test_decide_pass_fails_on_parity_mismatch():
     gpu["device"] = {
         "platform": "gpu",
         "device_str": "cuda:0",
-        "device_kind": "NVIDIA A100-SXM4-80GB",
+        "device_kind": "NVIDIA A100-SXM4-40GB",
     }
     gpu["nvidia"] = {
-        "gpu_name": "NVIDIA A100-SXM4-80GB",
-        "memory_total": "81920 MiB",
+        "gpu_name": "NVIDIA A100-SXM4-40GB",
+        "memory_total": "40960 MiB",
     }
     # Corrupt one fixture snapshot.
     gpu["parity_fixtures"] = [

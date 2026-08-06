@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Modal entry point for Part 00: competition JAX preflight on A100-80GB.
+"""Modal entry point for Part 00: competition JAX preflight on A100 (40GB).
 
 Usage:
     modal run scripts/morpheus_modal_preflight.py
@@ -51,7 +51,7 @@ CPU_IMAGE = _COMMON.pip_install(JAX_PIN, JAXLIB_PIN)
 app = modal.App("morpheus-jax-preflight")
 
 
-@app.function(image=GPU_IMAGE, gpu="A100-80GB", timeout=60 * 30)
+@app.function(image=GPU_IMAGE, gpu="A100", timeout=60 * 30)
 def run_gpu() -> dict:
     from training.morpheus.jax_preflight.measure import run_preflight_on_device
 

@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 """Modal CPU materialize: fan-out curriculum items into a Part 14 buffer.
 
-Upload trajectories + manifest once, then run 64 one-core shards:
+Upload trajectories + manifest once, then run one-core shards:
 
     modal volume put morpheus-training data/trajectories /morpheus/trajectories
     modal volume put morpheus-training \\
-      training/morpheus/manifests/scraped-classes13.json \\
-      /morpheus/manifests/scraped-classes13.json
+      training/morpheus/manifests/scraped-classes15.json \\
+      /morpheus/manifests/scraped-classes15.json
 
-    modal run scripts/morpheus_modal_materialize.py --shards 64 --n-particles 4
+    # Reuse existing class 1–3 buffer files; write only 4 and 5:
+    modal run scripts/morpheus_modal_materialize.py \\
+      --shards 96 --n-particles 4 --classes 4,5
 
 Smoke (2 shards, 32 items):
 
     modal run scripts/morpheus_modal_materialize.py \\
-      --shards 2 --n-particles 4 --max-items 32
+      --shards 2 --n-particles 4 --max-items 32 --classes 4,5
 
 Writes shard-private samples under ``/vol/morpheus/buffer_shards/<i>/``, then
-merges into ``/vol/morpheus/buffer`` for Part 14 train.
+merges into ``/vol/morpheus/buffer`` for Part 14 train. Merge keeps existing
+buffer samples whose ids are not rewritten (class filter reuse path).
 
 Rematerialize after the per-game belief-seed contract; do not reuse samples
 built under the old per-prefix seed.
@@ -29,6 +32,16 @@ import sys
 from pathlib import Path
 
 import modal
+
+
+def _parse_classes(raw: str | None) -> set[int] | None:
+    """Parse comma-separated class ids; empty means no filter."""
+    if raw is None:
+        return None
+    text = str(raw).strip()
+    if not text:
+        return None
+    return {int(part.strip()) for part in text.split(",") if part.strip()}
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -110,6 +123,7 @@ def materialize_shard(
     max_items: int,
     skip_existing: bool,
     manifest_vol_path: str,
+    classes: str = "",
 ) -> dict:
     """One CPU shard: materialize a game-id partition into a private dir."""
     sys.path.insert(0, "/root/scripts")
@@ -119,6 +133,7 @@ def materialize_shard(
     manifest = _resolve_manifest(manifest_vol_path)
     out = VOL_SHARDS / str(int(shard_index))
     out.mkdir(parents=True, exist_ok=True)
+    class_ids = _parse_classes(classes)
 
     report = materialize_manifest(
         manifest_path=manifest,
@@ -126,6 +141,7 @@ def materialize_shard(
         max_items=None if int(max_items) <= 0 else int(max_items),
         skip_existing=bool(skip_existing),
         n_particles=int(n_particles),
+        class_ids=class_ids,
         shard_index=int(shard_index),
         shard_count=int(shard_count),
         repo_root=ROOT,
@@ -189,10 +205,16 @@ def main(
     n_particles: int = 4,
     max_items: int = 0,
     skip_existing: bool = True,
-    manifest: str = "/vol/morpheus/manifests/scraped-classes13.json",
+    manifest: str = "/vol/morpheus/manifests/scraped-classes15.json",
+    classes: str = "",
 ) -> None:
-    """Fan out materialize shards, then merge into the Part 14 buffer."""
+    """Fan out materialize shards, then merge into the Part 14 buffer.
+
+    ``classes`` is a comma-separated filter (e.g. ``4,5``). Empty keeps all
+    classes. Filtered runs leave other class files in ``/vol/morpheus/buffer``.
+    """
     n_shards = max(1, int(shards))
+    class_ids = _parse_classes(classes)
     args = [
         (
             i,
@@ -201,6 +223,7 @@ def main(
             int(max_items),
             bool(skip_existing),
             str(manifest),
+            str(classes or ""),
         )
         for i in range(n_shards)
     ]
@@ -212,6 +235,7 @@ def main(
                 "max_items": int(max_items) if int(max_items) > 0 else None,
                 "skip_existing": bool(skip_existing),
                 "manifest": str(manifest),
+                "classes": sorted(class_ids) if class_ids is not None else None,
             },
             indent=2,
         ),

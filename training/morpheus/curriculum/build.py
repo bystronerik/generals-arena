@@ -165,11 +165,15 @@ def make_full_start_items(
     seeds: list[int],
     source_label: str = SOURCE_FULL_START,
 ) -> list[CurriculumItem]:
-    """Class-5 items: empty prefixes on new competition map seeds."""
+    """Class-5 items: empty prefixes on new competition map seeds.
+
+    Emits both seats with distinct ``item_id`` suffixes (``_s0`` / ``_s1``)
+    so materialize can write one sample per seat without id collisions.
+    """
     items: list[CurriculumItem] = []
     for seed in seeds:
-        items.append(
-            CurriculumItem.build(
+        for seat in (0, 1):
+            base = CurriculumItem.build(
                 class_id=CLASS_FULL_START,
                 engine_version=engine,
                 map_seed=int(seed),
@@ -179,9 +183,13 @@ def make_full_start_items(
                 trajectory_relpath=None,
                 decisive=None,
                 outcome=None,
-                sample_seat=None,
+                sample_seat=int(seat),
             )
-        )
+            items.append(
+                CurriculumItem.from_dict(
+                    {**base.to_dict(), "item_id": f"{base.item_id}_s{seat}"}
+                )
+            )
     return items
 
 

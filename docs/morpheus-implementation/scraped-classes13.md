@@ -16,7 +16,7 @@ sampling weight only.
   One reconstruct pass per `game_id` continues belief across prefixes (seed is
   per game+seat, not per `prefix_len`). Rematerialize the buffer after that
   seed contract change; do not reuse `*.sample.npz` built under the old seed.
-- **Train:** `class_balance: {"1": 1.0}`; `promotable_main_run: false`.
+- **Train:** `class_balance: {"1": 1.0, "2": 1.0, "3": 1.0}`; `promotable_main_run: false`.
 
 ## Operator sequence
 

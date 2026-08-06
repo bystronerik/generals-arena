@@ -1,0 +1,4252 @@
+{
+  "ok": false,
+  "active_classes": [
+    1
+  ],
+  "class_wdl": {
+    "1": {
+      "wins": 8,
+      "losses": 15,
+      "draws": 682
+    }
+  },
+  "games": 705,
+  "insufficient": true,
+  "details": [
+    {
+      "item_id": "00af6848e36b54db",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "00d7d549618ed844",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "019ae4854264b354",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "01b0e11a6968b403",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "02345a406e5337a2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0264644bef564180",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "02da3f15c2cffc1c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "03b9e64853ee59f8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0409d12422e4b20f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "04cf42f8649d5f48",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "058dccd3ee179695",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0607516b698dbb66",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "062ef4b90cefbc37",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "06688e4debd97c4c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "066e461a8b1f874b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "067c7088378e06e8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "06d704ec7494e2cf",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "07235eef7c28e82c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "081d5b1824b8ad73",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "083277e2dd150be5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "084b74b7a6a0e4f1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0946be9964bb8405",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0b3c14613d1df9be",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0b8d4d1bd3dc0670",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0c2e8eac063b1c9a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0c2fef13e6a15d9a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0cee54c3f0548aca",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0d41eb49f8212b3b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0d58e37b836a2f1c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0d8682eace24030a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0dbc8e027cd9f005",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0e077de605f18b1f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0f2d04e08b24433b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0f56aa0fa2e65233",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "0fbded1dafc7fb35",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "10ba552416bd192c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "110ebd318d2f7dff",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "112cf9f15e97e93c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1131776a848a296d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1139bc14ab8d262d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1154060199519c53",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "123eea223f59f277",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "12bdaa0fb3c5d2b0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "12fc8b66ab8c7aab",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "12ff0293068ce0c7",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "134206fd71fd2e51",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1368553ea776dfbc",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "13b63284cd099831",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "13f478b1aae55526",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "14b7f173eaccb83d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "14dc380f879bfb1a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "14fa5bf2d6b696bb",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "152685a1013901eb",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "15d4478fe0ae1acd",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "164aad95a107d46f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "16af14494023105d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "16d3ea881a52e6e1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1712f43cdd4b5985",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1762764dea5bc58f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "17c355d9940beaa6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "18032ec4a6df6f7e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1868b06a9c4cfd76",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "18833964f60b682a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "18999f1097f4c2b2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "18e1198a57c537d5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "194bfc54bd3f6e74",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "19efa4228aa5af2c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "19f9b8aa38ae9b0c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1a0ab48715cef0d1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1a2ac8de5e3ee49e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1a74663c444c31ed",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1aabcc1bf5ec0822",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1c8d80de7a8d8a7b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1cbfe1b21dc457b0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1dc7d13946cb2929",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1ea3aa640a69c831",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1f3457d950e4c17c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "1f9572d4f5e4e4c2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "201b32c83672f2c9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2052c98d941c5643",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2055523958911f11",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "20b43e45bf5b3b78",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "20d52deb41b8ef04",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "21a0471285b86d13",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "21f2c185058ebcd6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "21fdfb545ff50fdf",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "223a36010ac51324",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "225fc5a9f3e75f64",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "22639847e378e76e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "23133770edcf0395",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "23180150bb69da0c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "23507884c1d5b152",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "23b37d2c14c773df",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "243a0d3526afc8c7",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2471dd4981407700",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "252cf75fe1e6de9b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "25497a754f27c462",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2638a000e05ab70a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "26f44f189093ec02",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "27d78b489fed86c5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "281fdbdb0a5210eb",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "28d2886ff02f2b83",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "291969ddfa568cdb",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2974bc8faa331f64",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2986e19ce064085c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "29cb5fe3f2d2e7e5",
+      "result": "win",
+      "steps": 8,
+      "class_id": 1
+    },
+    {
+      "item_id": "29ce2abaf080f258",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "29ee9986050a39f8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "29f68fc8616c5680",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2af4ef3de610d1d4",
+      "result": "loss",
+      "steps": 32,
+      "class_id": 1
+    },
+    {
+      "item_id": "2b32a182d7b62399",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2b59296764fd21f8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2b71807391090788",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2b83eec227d3a4a4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2bf5f00a5afef6cd",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2c5158a8fa2f9731",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2c522d644a340cf4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2c586b430599e7b2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2c5918350785fb51",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2c6cd08633b3b4fa",
+      "result": "loss",
+      "steps": 56,
+      "class_id": 1
+    },
+    {
+      "item_id": "2c8272d53cd4c730",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2dd8dfe217abea01",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2de1ef8e0eceb6eb",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2e244dc9779e26d6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2e5e1994e2b4b309",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2f4799cee266d4fd",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "2f4e148a917da524",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "300a364e3f2337c2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "30693f5be4c68873",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3119c28aa993d4c8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "318ba3d20419d819",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "31b7b25e39f39e48",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "31ce05a87566553c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "31d6bf2f15f31fca",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "322a0df72ca1a2c8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3240a58793982ae1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3243118a1139fc66",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "32b252b4a7464f07",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "333980013364f59d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "333ec1fc1155e664",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3449e488c7fa38ad",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "352c3ced433ad6c6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "358a4af1ad88ca06",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "35c7a4e50b9dbf3d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "35ececed4b516f00",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "37dd728f2d480d87",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "37e80c968ea27c98",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "384a287943d44ac3",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "38702cc2a010b406",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3880ac9b7fad8eba",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3895f6ef778c03dd",
+      "result": "win",
+      "steps": 8,
+      "class_id": 1
+    },
+    {
+      "item_id": "3a87cd8db1d7d2a1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3aad522ca6d41824",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3c4ea246732151cc",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3c7bdda2bbfd5998",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3ca4d0cff78a11b6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3d04034e7f3f8500",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3d36dd885403cabc",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3d43a630b4e664ba",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3d48882f6b63bd3c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3dab28bb468185e5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3dea55d03879c26a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3f2852f04bc3a2cf",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "3faa51ba30abec86",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "400995f80634d6b1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "401d565f91877f35",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "406af8ac24f93655",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "408decf7443d316c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "40a16e46fc720999",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "40d48cf441c705d9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "41811ca776e27c77",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "41bfb3afd0fe3d3b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "423783445c213e5c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "426565e3413e3a14",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "431f126b48559eaf",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4334d2e38efa92c4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "43b2ce771557dc8e",
+      "result": "loss",
+      "steps": 24,
+      "class_id": 1
+    },
+    {
+      "item_id": "44abb61636ba15cf",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "452a3222b94b4677",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "452ca03402bf5a90",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "459c28ed6a6d0ee6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "45a8adb52f86065c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "45d5df3f9ba7a476",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "45db2757bb6dffa8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "460d670dca6af20a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "479f8a8c4200a0ef",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "47afb4e101eb8dea",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "47c501f562c38e17",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "47fa9a8a9405ce43",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "482c5f71e36a1ad6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "485f8fa633edfa64",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4890e7cd5004e9bb",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "48d2719e3fa44575",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "48d659290f401d42",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4994985872418af5",
+      "result": "loss",
+      "steps": 10,
+      "class_id": 1
+    },
+    {
+      "item_id": "49e52aee4a9cc906",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "49f4b8d40b0cbd52",
+      "result": "loss",
+      "steps": 12,
+      "class_id": 1
+    },
+    {
+      "item_id": "4a39f9e339192071",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4a57491f7809662b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4b40d567b5a0a5b9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4b4ec4ff254ec6a4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4bb658cd26110c25",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4be4949c535120b9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4bf9de7276085d1d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4c0c40f1f492eea3",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4c3eb5d9c362e437",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4cb6fa8b7fb4d26f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4cb9e52142d7dcee",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4e69b94ca4f2d513",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4ef75f83a848c2f8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4f371ad2a02c80db",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "4f80a934b8a6622c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "50274ab17adfcc16",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "52222059266799d5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "526e8f715c4328f0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "528d0eeb4d52e344",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "52951fe44ee3df58",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "529922c719d13ee5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "53cd9340e24e3f31",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "53d4f84fc27bd8a0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "53ea66fed286a4a4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "542da0e666679f73",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5441c3fbd2d02d08",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "544dff0904103ba5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "546a9982c4e857aa",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "54dad3c935d67cd3",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5531b29013af8a6d",
+      "result": "loss",
+      "steps": 20,
+      "class_id": 1
+    },
+    {
+      "item_id": "55384dca540fb22d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "55442f69dd6f2401",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "555ce37a4f39ab36",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "55bab34a1a11fb2f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "55ddde32f0c7733c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5655be0de9c8c6b5",
+      "result": "loss",
+      "steps": 36,
+      "class_id": 1
+    },
+    {
+      "item_id": "56939388dfba1a5c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "569c29beddf08b1e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "56c3698eb1d1bdef",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "577feeb6c3eee14c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "57b1dc9a69faaf40",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "57e646cdf504a8d8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "58598eb8120788f8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5a30251904b49ecb",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5a3fc9bfb03928b4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5a413e82e8095540",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5a47c226b5dd21e3",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5a5159d32f5f296f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5a640b84687bae6b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5a8ddda071d9f9d8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5aa77e7d9580d13e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5af58cfa2492e5bc",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5b01c8d129961f78",
+      "result": "loss",
+      "steps": 37,
+      "class_id": 1
+    },
+    {
+      "item_id": "5b4811ac59ba1657",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5e3937aab780ce12",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5e6810e3849d4020",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5e920e67b24c3098",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5ea5ffd7ee43ed65",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5ef040daff4ca848",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5f0958b8778c86d1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "5f73875ccf242aa4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "607bb5a05e2c84f9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "60957db4de701931",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "60c7a0c07a3e71ef",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "61cf92a6b549cba0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "61cfa302a3be21fe",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "624b86fb50f87477",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "625b68b96764a538",
+      "result": "win",
+      "steps": 4,
+      "class_id": 1
+    },
+    {
+      "item_id": "62828aff20a837c3",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6295ad690291a923",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "62c95784611c6e4c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "63f3becf467a6dd2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "643dfe01d0341bc4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "64552c8133dba3ee",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "64c7b91326d71b87",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "64ea1721ba0a7eb9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6521ea49f122b6e6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6578c58a6fbb1c6f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "65ce99619c54a786",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "670af8d43b439444",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "672c54fd5eb89920",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "67372e65a51ca760",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "673ef61a9811dc7d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "67543646fe7966ef",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6784ed05f91bce63",
+      "result": "loss",
+      "steps": 32,
+      "class_id": 1
+    },
+    {
+      "item_id": "67d1167823e1825d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "684e5b5f5cd2cb56",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "68cfa2a8a4af044f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "68eafc169b1129b4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6a9e221b37e345f9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6af3192e6f601b01",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6b16a5c55abdd88d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6ba32237581935e0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6bb97a973f60dc2c",
+      "result": "win",
+      "steps": 18,
+      "class_id": 1
+    },
+    {
+      "item_id": "6c5a0ee5f3196f16",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6c7e4af457616891",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6cb5119bfcb0c894",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6d12b14cf6b0ef12",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6dcbe4c7fb39ef63",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6deade3bec5045a6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6df42ba5a8b8a58b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6dfe187ead370465",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6f076322c0048e48",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "6ff871d87ce44dba",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7023bf3da7cd2f6e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "704639da7ff37b90",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "70864e44160d64dc",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "70bf35e545d9a7b9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7107070151a0013e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "71249e5d4bdc0a2d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7175af1586fa58be",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "72de7f1fb6e692e6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "73a1209a30a45c4c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "73a6af02be4f112d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "74281e68a88a28e4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "74a68df1f3f53933",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "74fab43a919cc7d5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "75b2e986af8f058b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "761e08e3bb1c8a5f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "769f5eff98401409",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "770ca9ca9d0710d4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "774e707975a4cc86",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7818d41e9002447f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "78226976a082f202",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7864bf07573b6aa2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "78c525f095a1a414",
+      "result": "loss",
+      "steps": 24,
+      "class_id": 1
+    },
+    {
+      "item_id": "799624a3ee429ff4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "79bf9c96da1a38cb",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7a04cb8cb6374a6e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7a5ef8f6eb29facd",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7a7cd1287a5966f2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7b57ded4a9a99e7f",
+      "result": "win",
+      "steps": 7,
+      "class_id": 1
+    },
+    {
+      "item_id": "7c073ffc602d3f16",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7c4926dc068649ab",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7d251d790ec223af",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7d29dfbfc7157894",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7d921088369e7254",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7da2176db1445f51",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7da6ffac0630df4e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7eca41b415061197",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7ee68f9c71aa565f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7f2fdc63e4488b13",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "7fc00e28b8c7167c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "80348b47f88be091",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "803b66d6ba7d79e2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "805c46313b2053b5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "807f4ee4bd5a1a1b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "817c08f033b7753d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "81813a3cac837434",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8237fa33750327cc",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8251f71c0e3069de",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "82bf854d00f98e8d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "82f9ba3bf3798797",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "83e0a21492d754c0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8431129af19f1b13",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "858b155452e7ce3d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "85e7aac435d3ce60",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "86336f69be895027",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "864e6a6fcd9b4940",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "866ada3af4b34f88",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "86962c2e42eee11d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "86a8eb1bf6895c10",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8709be0cb8669139",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "870c3e0d91534890",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "872fa96df27ef005",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "887d02565bf6fa57",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "891f971bc873b5ed",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "89ba34867dec27db",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8a8dca7ea5fa8fe4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8a95a311d7d21bc8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8adf90d4c9231476",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8adffd3c98a21756",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8b821dc515e30ba6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8ba6aa1843b5f56c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8bb05d2ab557c262",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8c8d73473379a5cd",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8cb8ffdce8e6fd25",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8ce6221f787787c7",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8cfa464d68abe102",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8d5937e19f8f856f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8e5bfbe4aecbe34c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8e6dfebffaf53403",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8e74fb69399f9675",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8ed2f3880977d9f9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8f0d04843882072a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8f7b470ed4a67831",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "8f7d30a084a3f3b0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9022d0c136b818d6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "90a65c55d7d992c5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "90e63bd48fbf2ed3",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9247cfc380b17186",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9264fcf794b55b0f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "92859fe07aa6af14",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "930688417b5639d1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "936b9bd5cfb3c770",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "939c6696658f430f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "93d0be874ff129ae",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "94499050b85a92e5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9520b72e35166897",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "955340b796b7e18f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "95b543b2d7109a69",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9605ba4589dc4e56",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "968a4bcb2e934cd8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "96b06cb6bf4d8b56",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "972ab83a7d8ea36c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "973e664689ecf6a4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "979aad3e90922ccf",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "97f72f565cc6ab79",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9821fbc78abfe977",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "997072f1812c2cda",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "99b865ed4f19f99f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "99c2d4dd00835819",
+      "result": "win",
+      "steps": 8,
+      "class_id": 1
+    },
+    {
+      "item_id": "99e34c52821a97f4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9a55882569a41dc6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9a787ae262b196e8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9b2eaf1ec93928ce",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9b5d19977da1b594",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9c2917506eed88a8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9ca49eb0b4c96b6d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9cb5da41b36d72d7",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9d03e2b4af023e6a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9d334fc58114f7dc",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9d6b4547847398f6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9debd1b2affddec8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9dfe25938f07fea8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9f107c849a1a2a43",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9f1d21f73e39bc31",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9f491a9c36811346",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9f6b593e77761581",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "9fed8a0c86e2cbe0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a05067945ccb19d5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a0da3ebf93fde52e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a1a21328e0449f40",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a1ba1cc23780982c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a1bbc8aabf2e03de",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a2f269b6c25abc0e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a31a18b840137d3a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a37c4b9d51d4ef17",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a3cd33c8cc606967",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a41c3beea48d23fd",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a45987784d216ef5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a46556677ff79803",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a4798742418e33a7",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a4dcf0459ed7dfe9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a50379dc44a648ac",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a5644c65166b85e4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a5ff19262dff79a9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a6010c5b0d5cf363",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a6dcd7aa3f06b476",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a6dd43114dbcad84",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a7e4f436344c7423",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a806ed2a8a8e71d2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a87a6a3b9ba3b4d4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a881a7f746a19f5e",
+      "result": "win",
+      "steps": 12,
+      "class_id": 1
+    },
+    {
+      "item_id": "a8c5441da9a243e2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a8f99a4e3673d82a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "a9583f76c1e53375",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "abc86a0751200c10",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "abd2a1b996376c7c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ac940a1776179e99",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "acad17621c28bc88",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "acd6b4f342a4e420",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "acf695fdf739b0f0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ad7488c0829149ed",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "add07e25e16e2784",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ade88eb941368347",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ae296eb2eac46aa4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ae7283c4635b634f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "af21be7e6b474a89",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "afdaa6632c8b2e13",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b038f71522fa3f86",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b06d40068687e693",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b0a4e0ee8718db9a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b0b1ea1e1210cf76",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b0bcf11eecad38e2",
+      "result": "loss",
+      "steps": 33,
+      "class_id": 1
+    },
+    {
+      "item_id": "b0dea9548b4b2777",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b0df7c37a0a39b09",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b11ffb7a463c78fe",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b154bdac54f9a24e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b203407b55de50df",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b233a771b6913004",
+      "result": "win",
+      "steps": 1,
+      "class_id": 1
+    },
+    {
+      "item_id": "b250f59bd8a4c224",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b2de4e2ff88c00b4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b3196763d8eb2096",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b325d529c76048e0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b32974f0ab13d980",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b34789dbddd02e38",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b3787db68d7b5b0a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b37d4c13c2e11013",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b385ed3c5df578d5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b472b39b48423c80",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b48520d00c6557bd",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b4a508c924946058",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b4a59b31b63d119d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b4a79e06976aca01",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b58e935894ba1b92",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b596f45ec4b4d2e8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b5b2c02c6ecb2ec4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b5f9181d9224b786",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b62b42dc284a3a5b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b64e152925dae2ba",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b6d62a563b3047cf",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b6efa89a932084fa",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b7473a532ed12b8b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b7799be66b7d01cb",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b79833e456e6963c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b7f56c29a0fc254e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b8223b7ee84b95f7",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b837785171bbf5ce",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b8813d5d2454aaf6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b8b694918e7e55a3",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b93b62887e26c132",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "b9f5423571e665e4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ba23a22650b36a72",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ba302deaaa320ed6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "bb555a2573eac4d6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "bbbd0805ceeb2ff1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "bc77b82b8ab9f829",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "bcd1eb6ff434a84e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "bd6e0311edbfa58b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "bdb60138f4890be1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "be08589ae9cbc9fe",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "be3954c5c4b26c5d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "be8d48088b5b8680",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "be9cdc3671b2088f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "be9f27a9c24131e8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "bf12da849e8f6e5b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "bf507bbfec57fc79",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "bf9f05ca5c276cad",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c03ce55ba1d8d03d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c0572dd7ec540081",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c0679ed8d745cd42",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c0840f6cfb731cc9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c115983daf591150",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c11e506de6f93d1a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c1298c53a1deebe8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c140962473d2679b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c196b74451a95351",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c1af8dba41caa993",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c1d3cef6b24beb9f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c21f366974b68091",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c27f4395949c0414",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c285e0fd18e50945",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c28b0f4a5db14497",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c29d365f85001dda",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c3570e2a6b403389",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c3c801a82efc6bba",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c49cad877d813ead",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c525604b7e6afdbe",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c55d91f9d7dcfa8e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c56a007fa282d2bf",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c5844c2c7661cacc",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c5af118333c23e48",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c5f8930bfba28f26",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c5fdfaf370e0f382",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c61631bcd50de5e5",
+      "result": "loss",
+      "steps": 2,
+      "class_id": 1
+    },
+    {
+      "item_id": "c6b7aae233eb30b1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c6e2e5d410a6a63e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c71776174cd3d458",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c750d589cbf6fa2f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c75603d93a6c6f7f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c7c36d6b169bb2a2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c7fe734596cedf6c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c96f0fe3cbf3e47b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c9f6f2d98f18c3a4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "c9fd66877f7d0283",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "cb119bcf865fde5c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "cb140fd212d0fe6d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "cb2e2af18ce71a7b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "cb4ab501b32cf816",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "cba96172077327b3",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "cbf59596381f3224",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ccb2a09d2cf49a32",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "cd6be9c076bfa97a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "cdcb590d9687eb5e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ceb28480d42e83cc",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "cebcdeb6d4c6742a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "cf4148bb83994188",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "cf8bc55872ea8916",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d063ddc2b8d1a32c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d063fbd51cccd057",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d0864ca4914fbd14",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d0d448283aa1cc28",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d1436c7012aeb65c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d1e8cea12f55334e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d277b6f162e11169",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d2d1ed277970e2ca",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d3332039e4e852f3",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d34772253b0d9c94",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d3ccd7699407a1ec",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d582e984a9a07b7e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d684a90bd3f13e9a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d6cc3f08015473fd",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d71a3493f3461725",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d78f883162405e22",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d7dbbf3b44149da6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d7fdac7e049332e0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d82f4ae228faf689",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d840f2f9df0ff991",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d923743ca5d6369e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "d9447b92231a21f3",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "da2f64d777b84d35",
+      "result": "loss",
+      "steps": 30,
+      "class_id": 1
+    },
+    {
+      "item_id": "da6c29c46820ca02",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "dd675b99be472453",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "dd78562879e61795",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ddcf0c7a8521fe1f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "dde8b807b7ac5048",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "de2af45b50f43e6d",
+      "result": "loss",
+      "steps": 22,
+      "class_id": 1
+    },
+    {
+      "item_id": "ded8fd86abb64002",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "df7b79365660a819",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "dfeda81b2e23bc03",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e00440e202c8ea35",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e0a213f47855ba68",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e0ac5398bae0ce2e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e12987ee22786530",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e20209e9c3a9751c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e242125586e6f577",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e256bd5107892d9a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e4176ccec23eea29",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e436343970615466",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e43daccec7eeb931",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e4e4207490a2d68e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e4fd03be0c87108e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e53b4117f2354e12",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e626b8e1cd93fe47",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e81bc74ea216d5e8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e833b839834f635d",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e903ac07ddd59ebb",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e923d827ef802a7a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "e9d6cf556e43fc09",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ea50f2b9f8d9d4e8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "eadbe78b5c19b4f0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "eb67a31b9cfaf4a1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "eb9d8a1848e3cb75",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "eb9e2c4c4cc55718",
+      "result": "loss",
+      "steps": 17,
+      "class_id": 1
+    },
+    {
+      "item_id": "ebbc506f30f19708",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ec0969b194a80396",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ecd20c6f5affb90a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ecd95358a44f484f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ed6140325c08dc4f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ed9dcdb085103dab",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ee0f3b0c4e4ebe40",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ee59dbc5d8b50b7a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ee73f4b60b1c2d7f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ee75f6efb95e7cdf",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ee9f2493a6e1ffd3",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "eecbf5ba3f4767bd",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "eed25b74b050cf12",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f0166d7a190ef2a7",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f02cf84084c907eb",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f036ac9f6e095fd1",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f049dae3cfb99488",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f0aba19d6225be2c",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f0df47b6b2c0df83",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f0dfc23f62bdf103",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f169b12e0673547b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f1956a4a92edaa69",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f1bb3cf85e94f19a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f1ff9357073172f5",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f20698c672f954a4",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f247ab148bcf0d0f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f26a0dfef7cd733f",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f2eb32746c9c7f92",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f32defa8925187b7",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f33e0d1e78aa3953",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f359306d407153d7",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f3bf37e74c9e827e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f4de663874d1c717",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f57bb50530bbaffe",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f5fb23def73c1e58",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f6581188080d3305",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f6b3ea668d932028",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f6c27bc81a24e064",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f73cb699ddb5bfd0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f748e65bf21a8eed",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f87f6eafe943baa2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f8f7ed4111819342",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f910a32204495694",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f954f9ed47afbab9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f96cc2febe2bc7af",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f96f60c6246af8ec",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "f9e89f86c46ba6d6",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fa4ea44f585810ff",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fa612e2db199d1e8",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "faa63e28e676b5e2",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "faaaa645264e2f27",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fb391e0d9fef54c9",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fb496ac867d1e1b0",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fb6dae2247e9784a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fb87c25e8853b80a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fb8ed7e6294f2d2e",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fb974c4f4674dc71",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fbd09a43bb617f39",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fcc6c4444cbce122",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fd08a53c00cc8cb7",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fd0c60d9d2940155",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fd6636c76afc8e2b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fdb434d01913629a",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fdf5d927f8b5e6ec",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fdf7b1dd7827cc7b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fe6349ddf83a7b16",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "febcc970d21cff54",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fec2bb13d9a15171",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fede17cce3ec0f00",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "fee69c06bb354a06",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ff33966d06e520be",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ff7327195d5bbf97",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    },
+    {
+      "item_id": "ffab22956bbed38b",
+      "result": "draw",
+      "steps": 64,
+      "class_id": 1
+    }
+  ],
+  "manifest": "training/morpheus/manifests/scraped-classes13.json",
+  "artifact": "bots/morpheus_ckpt200/artifact",
+  "min_wins": 32,
+  "min_losses": 32,
+  "note": "Restored from /tmp/wdl-full2.log after an earlier 512-game write overwrote the report."
+}
