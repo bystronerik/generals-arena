@@ -28,8 +28,9 @@
     "augment_symmetries": false
   },
   "cadence": {
-    "snapshot_every_steps": 50,
-    "max_steps": 200,
+    "snapshot_every_steps": 200,
+    "log_every_steps": 50,
+    "max_steps": 2000,
     "games_per_checkpoint": 54484,
     "checkpoint_count": 4,
     "stopping_rule": "max_steps"

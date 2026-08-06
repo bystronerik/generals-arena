@@ -92,7 +92,13 @@ def _tiny_sample(*, item_id: str = "tiny-0") -> TrainSample:
     )
 
 
-def _cfg(tmp_path: Path) -> TrainRunConfig:
+def _cfg(
+    tmp_path: Path,
+    *,
+    log_every_steps: int = 1,
+    snapshot_every_steps: int = 1,
+    max_steps: int = 4,
+) -> TrainRunConfig:
     bundle = load_pilot_objective_bundle(OBJECTIVE)
     return TrainRunConfig(
         name="resume-unit",
@@ -119,8 +125,9 @@ def _cfg(tmp_path: Path) -> TrainRunConfig:
             augment_symmetries=False,
         ),
         cadence=CadenceConfig(
-            snapshot_every_steps=1,
-            max_steps=4,
+            snapshot_every_steps=snapshot_every_steps,
+            log_every_steps=log_every_steps,
+            max_steps=max_steps,
             games_per_checkpoint=1,
             checkpoint_count=1,
             stopping_rule="max_steps",
@@ -263,6 +270,36 @@ def test_interrupt_resume_matches_continuous(tmp_path: Path):
         # Rebuild continuous model at step 3 via its checkpoint list.
         _model_at_step(continuous.run_dir, 3, cfg)
     )
+
+
+def test_train_loss_logged_every_log_every_steps(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    cfg = _cfg(tmp_path, log_every_steps=2, snapshot_every_steps=4, max_steps=4)
+    buf = _buffer(tmp_path)
+    result = run_training(
+        cfg,
+        run_id="loss-log",
+        repo_root=REPO,
+        device="cpu",
+        buffer=buf,
+        max_steps=4,
+        run_calibration=False,
+    )
+    assert result.ok
+    assert len(result.loss_history) == 4
+    out = capsys.readouterr().out
+    loss_lines = [
+        line
+        for line in out.splitlines()
+        if line.startswith("[trainer] step=") and " loss=" in line
+    ]
+    assert len(loss_lines) == 2
+    assert "step=2 loss=" in loss_lines[0]
+    assert "step=4 loss=" in loss_lines[1]
+    assert "policy=" in loss_lines[0]
+    assert not any("step=1 loss=" in line for line in loss_lines)
+    assert not any("step=3 loss=" in line for line in loss_lines)
 
 
 def _model_at_step(run_dir: Path, step: int, cfg: TrainRunConfig):

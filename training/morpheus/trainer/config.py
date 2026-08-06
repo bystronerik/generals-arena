@@ -170,6 +170,7 @@ class ReplayConfig:
 @dataclass(frozen=True)
 class CadenceConfig:
     snapshot_every_steps: int
+    log_every_steps: int
     max_steps: int
     games_per_checkpoint: int
     checkpoint_count: int
@@ -178,6 +179,7 @@ class CadenceConfig:
     def to_dict(self) -> dict[str, Any]:
         return {
             "snapshot_every_steps": self.snapshot_every_steps,
+            "log_every_steps": self.log_every_steps,
             "max_steps": self.max_steps,
             "games_per_checkpoint": self.games_per_checkpoint,
             "checkpoint_count": self.checkpoint_count,
@@ -190,6 +192,7 @@ class CadenceConfig:
             raise TrainConfigError("cadence is required (fail closed)")
         required = (
             "snapshot_every_steps",
+            "log_every_steps",
             "max_steps",
             "games_per_checkpoint",
             "checkpoint_count",
@@ -206,6 +209,9 @@ class CadenceConfig:
         return cls(
             snapshot_every_steps=_require_int(
                 "snapshot_every_steps", data["snapshot_every_steps"], minimum=1
+            ),
+            log_every_steps=_require_int(
+                "log_every_steps", data["log_every_steps"], minimum=1
             ),
             max_steps=_require_int("max_steps", data["max_steps"], minimum=1),
             games_per_checkpoint=_require_int(

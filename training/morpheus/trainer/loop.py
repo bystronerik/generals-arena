@@ -370,13 +370,20 @@ def run_training(
                 consumed_ids=consumed.consumed_ids[-256:],
                 epoch=consumed.epoch,
             )
+        term_dict = terms.to_dict()["terms"]
         history.append(
             {
                 "step": global_step,
                 "loss": loss,
-                "terms": terms.to_dict()["terms"],
+                "terms": term_dict,
             }
         )
+        log_every = max(1, cfg.cadence.log_every_steps)
+        if global_step % log_every == 0 or global_step == steps_target:
+            term_bits = " ".join(
+                f"{name}={float(value):.6g}" for name, value in sorted(term_dict.items())
+            )
+            _log(f"step={global_step} loss={loss:.6g} {term_bits}")
         if global_step % max(1, cfg.cadence.snapshot_every_steps) == 0 or global_step == steps_target:
             train_spent = (time.perf_counter() - t_train) / 3600.0
             budget["main_training_a100_hours_spent"] = float(

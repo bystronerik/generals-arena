@@ -100,6 +100,7 @@ def _research_config(*, run_root: Path, buffer_dir: Path) -> TrainRunConfig:
         ),
         cadence=CadenceConfig(
             snapshot_every_steps=1,
+            log_every_steps=1,
             max_steps=8,
             games_per_checkpoint=1,
             checkpoint_count=1,
@@ -197,3 +198,13 @@ def test_promotable_run_config_loads_research_scope():
     assert cfg.scope == "narrower_non_promotable_research_scope"
     assert cfg.optimizer.name == "adamw"
     assert cfg.cadence.games_per_checkpoint == 54484
+    assert cfg.cadence.log_every_steps == 10
+
+
+def test_scraped_classes13_run_config_loads_log_every_steps():
+    path = REPO / "training/morpheus/configs/scraped-classes13-run.json"
+    from training.morpheus.trainer.config import load_train_run_config
+
+    cfg = load_train_run_config(path)
+    assert cfg.cadence.log_every_steps == 50
+    assert cfg.cadence.snapshot_every_steps == 200

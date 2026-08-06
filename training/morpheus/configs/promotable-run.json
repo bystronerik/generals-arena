@@ -29,6 +29,7 @@
   },
   "cadence": {
     "snapshot_every_steps": 50,
+    "log_every_steps": 10,
     "max_steps": 200,
     "games_per_checkpoint": 54484,
     "checkpoint_count": 4,
