@@ -424,6 +424,7 @@ def run_training(
             deployment=cfg.deployment,
             self_play=cfg.self_play,
             repo_root=root,
+            engine_version=manifest.engine_era,
         )
         calibration_report = cal.to_dict()
         budget["deployment_calibration_a100_hours_spent"] = float(

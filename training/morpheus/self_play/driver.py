@@ -278,8 +278,13 @@ def run_batch(
     *,
     output: Path | None = None,
     repo_root: Path | None = None,
+    engine: str | None = None,
 ) -> BatchResult:
-    """Sample matchups, play games, write shards. Never writes data/games/."""
+    """Sample matchups, play games, write shards. Never writes data/games/.
+
+    Pass ``engine`` when the process cannot read competition-module HEAD
+    (Modal images copy the submodule without ``.git``).
+    """
     root = Path(repo_root) if repo_root is not None else REPO
     out = Path(output) if output is not None else Path(config.output)
     if not out.is_absolute():
@@ -309,6 +314,7 @@ def run_batch(
             game_id=game_id,
             runtime_kwargs=config.runtime_kwargs(),
             max_turns=config.max_turns,
+            engine=engine,
             seat_rng_salt=i,
             recursive_opponent_particles=config.recursive_opponent_particles,
             seat_search=config.seat_search,

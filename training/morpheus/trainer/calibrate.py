@@ -74,6 +74,7 @@ def run_deployment_calibration(
     deployment: Mapping[str, Any],
     self_play: Mapping[str, Any],
     repo_root: Path | None = None,
+    engine_version: str | None = None,
 ) -> CalibrationResult:
     """Run a short self-play batch under deployment settings and record the report."""
     run_dir = Path(run_dir)
@@ -82,7 +83,12 @@ def run_deployment_calibration(
     shards_dir = out / "shards"
     driver = _driver_from_deployment(deployment, self_play, output=shards_dir)
     t0 = time.perf_counter()
-    batch = run_batch(driver, output=shards_dir, repo_root=repo_root)
+    batch = run_batch(
+        driver,
+        output=shards_dir,
+        repo_root=repo_root,
+        engine=engine_version,
+    )
     wall_s = time.perf_counter() - t0
     report = {
         "games": int(driver.games),
