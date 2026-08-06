@@ -333,8 +333,9 @@ def qualify_compute(
     timeout=60 * 60 * 6,
     volumes={"/vol": VOLUME},
 )
-def train_remote(config_json: str, run_id: str) -> dict:
+def train_remote(config_json: str, run_id: str, engine_version: str = "") -> dict:
     """Part 14 training loop. A100 wall charges to main_training."""
+    print(f"[train_remote] container_start run_id={run_id}", flush=True)
     from training.morpheus.trainer.config import load_train_run_config
     from training.morpheus.trainer.loop import run_training
 
@@ -350,7 +351,7 @@ def train_remote(config_json: str, run_id: str) -> dict:
     device = "cuda" if _torch.cuda.is_available() else "cpu"
     print(
         f"[train_remote] run_id={run_id} device={device} scope={cfg.scope} "
-        f"promotable={cfg.promotable_main_run}",
+        f"promotable={cfg.promotable_main_run} engine={engine_version or 'unset'}",
         flush=True,
     )
     result = run_training(
@@ -358,6 +359,7 @@ def train_remote(config_json: str, run_id: str) -> dict:
         run_id=run_id,
         repo_root=Path("/root"),
         device=device,
+        engine_era=(engine_version or None),
     )
     VOLUME.commit()
     return {
@@ -382,6 +384,7 @@ def train(
     local: bool = False,
 ) -> None:
     """Part 14 resumable trainer (Modal A100 or local CPU)."""
+    from arena.records.store import engine_version as current_engine_version
     from training.morpheus.trainer.config import load_train_run_config
     from training.morpheus.trainer.loop import run_training
 
@@ -390,16 +393,27 @@ def train(
         cfg_path = REPO / config
     rid = run_id or time.strftime("train-%Y%m%d-%H%M%S")
     cfg = load_train_run_config(cfg_path)
+    # Resolve on the local host: Modal images copy competition-module without .git.
+    engine_sha = current_engine_version()
     print(
         f"[train] entry local={local} run_id={rid} scope={cfg.scope} "
-        f"promotable={cfg.promotable_main_run} part13={cfg.part13_verdict}",
+        f"promotable={cfg.promotable_main_run} part13={cfg.part13_verdict} "
+        f"engine={engine_sha}",
         flush=True,
     )
     if local:
-        result = run_training(cfg, run_id=rid, repo_root=REPO, device="cpu")
+        result = run_training(
+            cfg,
+            run_id=rid,
+            repo_root=REPO,
+            device="cpu",
+            engine_era=engine_sha,
+        )
         summary = result.to_dict()
     else:
-        summary = train_remote.remote(cfg_path.read_text(encoding="utf-8"), rid)
+        summary = train_remote.remote(
+            cfg_path.read_text(encoding="utf-8"), rid, engine_sha
+        )
     print(json.dumps(summary, indent=2), flush=True)
     print(f"ok={summary.get('ok')}", flush=True)
 

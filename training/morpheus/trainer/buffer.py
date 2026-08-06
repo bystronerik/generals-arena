@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator, Mapping, Sequence
@@ -216,20 +217,40 @@ def load_replay_buffer(
     *,
     window_size: int,
     max_samples: int | None = None,
+    progress_every: int = 500,
 ) -> ReplayBuffer:
+    directory = Path(directory)
     paths = list(iter_sample_paths(directory))
     if max_samples is not None:
         paths = paths[: int(max_samples)]
+    total = len(paths)
+    print(
+        f"[buffer] load start dir={directory} files={total} window_size={window_size}",
+        flush=True,
+    )
     samples: list[TrainSample] = []
     ids: list[str] = []
     classes: list[str] = []
-    for path in paths:
+    t0 = time.perf_counter()
+    every = max(1, int(progress_every))
+    for i, path in enumerate(paths, start=1):
         sample, sid, cid = read_sample(path)
         samples.append(sample)
         ids.append(sid)
         classes.append(cid)
+        if i == total or i % every == 0:
+            elapsed = time.perf_counter() - t0
+            rate = i / elapsed if elapsed > 0 else 0.0
+            print(
+                f"[buffer] load {i}/{total} elapsed_s={elapsed:.1f} files_per_s={rate:.1f}",
+                flush=True,
+            )
     if not samples:
         raise BufferError(f"no samples under {directory}")
+    print(
+        f"[buffer] load done samples={len(samples)} wall_s={time.perf_counter() - t0:.1f}",
+        flush=True,
+    )
     return ReplayBuffer(
         samples=samples,
         sample_ids=ids,

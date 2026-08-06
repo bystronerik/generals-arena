@@ -257,8 +257,14 @@ def run_training(
     max_steps: int | None = None,
     resume_checkpoint: Path | None = None,
     run_calibration: bool | None = None,
+    engine_era: str | None = None,
 ) -> TrainResult:
-    """Train from scratch or resume. Deterministic under fixed seed + buffer."""
+    """Train from scratch or resume. Deterministic under fixed seed + buffer.
+
+    ``engine_era`` pins the competition-module SHA. Pass it from a host that
+    has the submodule git metadata (e.g. Modal local entrypoint) when the
+    remote image copies ``competition-module`` without ``.git``.
+    """
     t_run = time.perf_counter()
     root = Path(repo_root) if repo_root is not None else REPO
     cfg = (
@@ -275,7 +281,7 @@ def run_training(
     run_dir.mkdir(parents=True, exist_ok=True)
     _log(f"run_dir={run_dir} scope={cfg.scope} promotable={cfg.promotable_main_run}")
 
-    manifest = build_run_manifest(cfg, run_id=run_id)
+    manifest = build_run_manifest(cfg, run_id=run_id, engine_era=engine_era)
     write_run_manifest(manifest, run_dir)
 
     cuda_available = bool(torch.cuda.is_available())
@@ -286,8 +292,11 @@ def run_training(
 
     if buffer is None:
         buffer_dir = _resolve_path(cfg.buffer_dir, repo_root=root)
+        _log(f"buffer_load begin dir={buffer_dir}")
         buffer = load_replay_buffer(buffer_dir, window_size=cfg.replay.window_size)
+        _log(f"buffer_load done samples={len(buffer)}")
 
+    _log(f"model_init begin n_blocks={cfg.n_blocks}")
     model, optimizer, scheduler = build_model_and_optimizer(
         n_blocks=cfg.n_blocks,
         seed=cfg.seed,
@@ -295,6 +304,7 @@ def run_training(
         scheduler_cfg=cfg.scheduler,
         device=dev,
     )
+    _log("model_init done")
     np_rng = np.random.default_rng(cfg.seed)
     torch.manual_seed(cfg.seed)
 
@@ -331,6 +341,7 @@ def run_training(
     )
 
     t_train = time.perf_counter()
+    _log(f"train_loop begin steps_target={steps_target} batch_size={cfg.batch_size}")
     while global_step < steps_target:
         batch = buffer.sample_batch(
             np_rng,
@@ -509,6 +520,7 @@ def resume_training(
         max_steps=max_steps,
         resume_checkpoint=ckpt,
         run_calibration=run_calibration,
+        engine_era=stored.engine_era,
     )
 
 
