@@ -75,6 +75,11 @@ def _run(seed: int, sims: int, *, scripted: bool):
 
 
 # Baseline captured on Phase-3 HEAD before Phase-4 edits.
+# table_visits_sorted for (scripted, 7, 16) re-captured after 5abb519
+# (early-pass lock-in fix): widening now draws from the full network prior
+# and refreshes self masses, which moves one simulation between enemy
+# tables for this seed. That commit changed search on purpose; the other
+# fields and parametrizations were unaffected.
 _BASELINES = {
     ("scripted", 7, 16): {
         "N": 16,
@@ -83,7 +88,7 @@ _BASELINES = {
         "best_action": [1, 0, 0, 0, 0],
         "completed": 16,
         "n_enemy_tables": 3,
-        "table_visits_sorted": [3.0, 6.0, 7.0],
+        "table_visits_sorted": [4.0, 6.0, 6.0],
     },
     ("scripted", 11, 8): {
         "N": 8,
