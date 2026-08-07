@@ -58,6 +58,10 @@ returns `yes`.
 2. [Artifact freeze](15-artifact-freeze.md)
 3. [Arena promotion](16-arena-promotion.md)
 
+### Phase 5: hand play back to the network
+
+1. [Bounded prior-shaping blend](17-prior-shaping-blend.md)
+
 ## Dependency graph
 
 ```mermaid
@@ -82,6 +86,7 @@ flowchart TD
     P14["14 Trainer and checkpoints"]
     P15["15 Artifact freeze"]
     P16["16 Arena promotion"]
+    P17["17 Prior-shaping blend"]
 
     PN1 --> P00
     PN1 --> P00B
@@ -136,6 +141,9 @@ flowchart TD
     P09 --> P15
     P14 --> P15
     P15 --> P16
+    P06 --> P17
+    P07 --> P17
+    P09 --> P17
 ```
 
 ## Gates
