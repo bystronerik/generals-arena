@@ -133,12 +133,36 @@ def test_manifest_validation_rejects_architecture_drift(
 
 def test_load_rejects_unsupported_qengine(tmp_path: Path, tiny_checkpoint: Path):
     out = tmp_path / "export"
-    export_from_checkpoint(tiny_checkpoint, out)
+    export_from_checkpoint(tiny_checkpoint, out, fmt="int8")
     manifest = read_manifest(out / MANIFEST_NAME)
     manifest["quantization"]["engine"] = "not-a-real-engine"
     write_manifest(out / MANIFEST_NAME, manifest)
     with pytest.raises(ValueError, match="quantized engine"):
         load_session(out)
+
+
+def test_float32_export_is_bit_faithful_and_needs_no_qengine(
+    tmp_path: Path, tiny_checkpoint: Path
+):
+    out = tmp_path / "export-float"
+    result = export_from_checkpoint(tiny_checkpoint, out)
+    manifest = read_manifest(out / MANIFEST_NAME)
+    assert manifest["quantization"]["format"] == "float32"
+    assert manifest["quantization"]["engine"] == "none"
+    # Float export must be numerically indistinguishable from the eager model.
+    for mae in result.float_to_export_mae.values():
+        assert mae < 1e-5
+    for entry in ("policy", "policy_wdl"):
+        for mae in result.online_float_to_export_mae[entry].values():
+            assert mae < 1e-5
+    assert "parity_assert_skipped" not in result.online_float_to_export_mae
+
+    session = load_session(out)
+    x = torch.randn(2, IN_CHANNELS, BOARD, BOARD)
+    policy, pass_logit, wdl = session.forward_policy_wdl(x)
+    assert policy.shape == (2, 9, BOARD, BOARD)
+    assert pass_logit.shape == (2, 1)
+    assert wdl.shape == (2, 3)
 
 
 def test_checkpoint_round_trip(tmp_path: Path):

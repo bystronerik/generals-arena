@@ -6,8 +6,13 @@ Morpheus uses one fully convolutional residual network for both seats. The same
 weights produce policy and value from a perspective-relative tensor.
 
 The initial model budget is about **0.35 million parameters**, an
-**initial guess**. Deployment uses quantized 8-bit weights in a static CPU
-graph. No GPU is required at match time.
+**initial guess**. Deployment uses **float32 TorchScript** weights on CPU. No
+GPU is required at match time. Static int8 was the original design and was
+abandoned after measurement: at this size the quantized graph is both slower
+(GroupNorm has no int8 kernel, so every block pays dequant → GroupNorm → quant)
+and lossy unless calibrated on real observation tensors. Measured on the
+judge-like host at 0.25M and 2M parameters, float32 wins every batch shape; see
+[`morpheus-float32-deployment.md`](../../research/measurements/morpheus-float32-deployment.md).
 
 ## Trunk
 

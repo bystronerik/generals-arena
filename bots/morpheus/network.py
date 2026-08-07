@@ -39,10 +39,16 @@ class MorpheusOutput(NamedTuple):
 class InvertedResidual(nn.Module):
     """64 → 128 → 64 inverted residual with depthwise dilated 3×3 and GroupNorm."""
 
-    def __init__(self, dilation: int) -> None:
+    def __init__(
+        self,
+        dilation: int,
+        *,
+        channels: int = TRUNK_CHANNELS,
+        expansion: int = EXPANSION,
+    ) -> None:
         super().__init__()
-        mid = EXPANSION
-        ch = TRUNK_CHANNELS
+        mid = expansion
+        ch = channels
         self.pw_expand = nn.Conv2d(ch, mid, kernel_size=1, bias=False)
         self.gn_expand = nn.GroupNorm(GROUP_NORM_GROUPS, mid)
         self.dw = nn.Conv2d(
@@ -81,33 +87,54 @@ def masked_global_features(trunk: torch.Tensor, mask: torch.Tensor) -> torch.Ten
 class MorpheusNet(nn.Module):
     """Shared-weight trunk with policy, WDL, hidden-state, margin, and termination heads."""
 
-    def __init__(self, n_blocks: int = N_BLOCKS) -> None:
+    def __init__(
+        self,
+        n_blocks: int = N_BLOCKS,
+        *,
+        trunk_channels: int = TRUNK_CHANNELS,
+        expansion: int = EXPANSION,
+    ) -> None:
         super().__init__()
         if n_blocks < 1:
             raise ValueError("n_blocks must be >= 1")
+        if trunk_channels % GROUP_NORM_GROUPS or expansion % GROUP_NORM_GROUPS:
+            raise ValueError(
+                f"trunk_channels={trunk_channels} and expansion={expansion} "
+                f"must be divisible by GROUP_NORM_GROUPS={GROUP_NORM_GROUPS}"
+            )
+        self.trunk_channels = trunk_channels
+        self.expansion = expansion
+        feat_dim = trunk_channels * 2
         self.stem = nn.Conv2d(
-            IN_CHANNELS, TRUNK_CHANNELS, kernel_size=3, padding=1, bias=False
+            IN_CHANNELS, trunk_channels, kernel_size=3, padding=1, bias=False
         )
-        self.gn_stem = nn.GroupNorm(GROUP_NORM_GROUPS, TRUNK_CHANNELS)
+        self.gn_stem = nn.GroupNorm(GROUP_NORM_GROUPS, trunk_channels)
         self.act = nn.ReLU6(inplace=True)
         dilations = [DILATION_CYCLE[i % len(DILATION_CYCLE)] for i in range(n_blocks)]
-        self.blocks = nn.ModuleList([InvertedResidual(dilation=d) for d in dilations])
-
-        self.policy = nn.Conv2d(TRUNK_CHANNELS, POLICY_CHANNELS, kernel_size=1, bias=True)
-        self.pass_fc = nn.Linear(GLOBAL_FEAT_DIM, 1)
-        self.wdl = nn.Linear(GLOBAL_FEAT_DIM, 3)
-
-        self.hidden_owner = nn.Conv2d(TRUNK_CHANNELS, 1, kernel_size=1, bias=True)
-        self.enemy_army_bins = nn.Conv2d(
-            TRUNK_CHANNELS, N_ARMY_BINS, kernel_size=1, bias=True
+        self.blocks = nn.ModuleList(
+            [
+                InvertedResidual(
+                    dilation=d, channels=trunk_channels, expansion=expansion
+                )
+                for d in dilations
+            ]
         )
-        self.enemy_general = nn.Conv2d(TRUNK_CHANNELS, 1, kernel_size=1, bias=True)
-        self.hidden_castle = nn.Conv2d(TRUNK_CHANNELS, 1, kernel_size=1, bias=True)
 
-        self.land_margin = nn.Linear(GLOBAL_FEAT_DIM, 1)
-        self.army_margin = nn.Linear(GLOBAL_FEAT_DIM, 1)
-        self.castle_margin = nn.Linear(GLOBAL_FEAT_DIM, 1)
-        self.turns_to_termination = nn.Linear(GLOBAL_FEAT_DIM, 1)
+        self.policy = nn.Conv2d(trunk_channels, POLICY_CHANNELS, kernel_size=1, bias=True)
+        self.pass_fc = nn.Linear(feat_dim, 1)
+        self.wdl = nn.Linear(feat_dim, 3)
+
+        self.hidden_owner = nn.Conv2d(trunk_channels, 1, kernel_size=1, bias=True)
+        self.enemy_army_bins = nn.Conv2d(
+            trunk_channels, N_ARMY_BINS, kernel_size=1, bias=True
+        )
+        self.enemy_general = nn.Conv2d(trunk_channels, 1, kernel_size=1, bias=True)
+        self.hidden_castle = nn.Conv2d(trunk_channels, 1, kernel_size=1, bias=True)
+
+        self.land_margin = nn.Linear(feat_dim, 1)
+        self.army_margin = nn.Linear(feat_dim, 1)
+        self.castle_margin = nn.Linear(feat_dim, 1)
+        self.turns_to_termination = nn.Linear(feat_dim, 1)
 
     def trunk_forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         mask = x.narrow(1, 0, 1)
@@ -150,9 +177,17 @@ class MorpheusNet(nn.Module):
         )
 
 
-def make_model(*, seed: int = 0, n_blocks: int = N_BLOCKS) -> MorpheusNet:
+def make_model(
+    *,
+    seed: int = 0,
+    n_blocks: int = N_BLOCKS,
+    trunk_channels: int = TRUNK_CHANNELS,
+    expansion: int = EXPANSION,
+) -> MorpheusNet:
     torch.manual_seed(seed)
-    model = MorpheusNet(n_blocks=n_blocks)
+    model = MorpheusNet(
+        n_blocks=n_blocks, trunk_channels=trunk_channels, expansion=expansion
+    )
     model.eval()
     return model
 
@@ -165,8 +200,8 @@ def architecture_summary(model: MorpheusNet) -> dict[str, Any]:
     return {
         "in_channels": IN_CHANNELS,
         "board": BOARD,
-        "trunk_channels": TRUNK_CHANNELS,
-        "expansion": EXPANSION,
+        "trunk_channels": getattr(model, "trunk_channels", TRUNK_CHANNELS),
+        "expansion": getattr(model, "expansion", EXPANSION),
         "policy_channels": POLICY_CHANNELS,
         "n_blocks": len(model.blocks),
         "n_army_bins": N_ARMY_BINS,

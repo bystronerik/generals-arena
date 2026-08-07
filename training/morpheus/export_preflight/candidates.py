@@ -19,6 +19,21 @@ from training.morpheus.export_preflight.fixtures import (
     make_input,
 )
 from training.morpheus.export_preflight.model import make_probe
+
+
+def _make_probe_sized(
+    *,
+    seed: int,
+    n_blocks: int,
+    trunk_channels: int | None,
+    expansion: int | None,
+):
+    kwargs = {}
+    if trunk_channels is not None:
+        kwargs["trunk_channels"] = trunk_channels
+    if expansion is not None:
+        kwargs["expansion"] = expansion
+    return make_probe(seed=seed, n_blocks=n_blocks, **kwargs)
 from morpheus.export import (
     EXPORT_OUTPUT_NAMES,
     MorpheusExportWrapper,
@@ -203,6 +218,8 @@ def try_torch_fx_static(
     engine: str,
     seed: int,
     n_blocks: int,
+    trunk_channels: int | None = None,
+    expansion: int | None = None,
     work_dir: Path,
 ) -> dict[str, Any]:
     """FX graph-mode static quantization with a sandbox torch build."""
@@ -230,7 +247,9 @@ def try_torch_fx_static(
         result["sandbox_packages_only"] = False
         return result
 
-    float_model = make_probe(seed=seed, n_blocks=n_blocks)
+    float_model = _make_probe_sized(
+        seed=seed, n_blocks=n_blocks, trunk_channels=trunk_channels, expansion=expansion
+    )
     wrapper = MorpheusExportWrapper(float_model)
     example = make_input(1, seed=seed)
     with torch.no_grad():
@@ -315,6 +334,8 @@ def try_torch_jit_float(
     *,
     seed: int,
     n_blocks: int,
+    trunk_channels: int | None = None,
+    expansion: int | None = None,
     work_dir: Path,
 ) -> dict[str, Any]:
     """Float TorchScript control path — not a static 8-bit candidate."""
@@ -326,7 +347,9 @@ def try_torch_jit_float(
     result["notes"].append(
         "Control path only. Float weights do not satisfy static 8-bit deployment."
     )
-    float_model = make_probe(seed=seed, n_blocks=n_blocks)
+    float_model = _make_probe_sized(
+        seed=seed, n_blocks=n_blocks, trunk_channels=trunk_channels, expansion=expansion
+    )
     wrapper = MorpheusExportWrapper(float_model)
     example = make_input(1, seed=seed)
     with torch.no_grad():
@@ -364,6 +387,8 @@ def try_safetensors_weight_only_int8(
     *,
     seed: int,
     n_blocks: int,
+    trunk_channels: int | None = None,
+    expansion: int | None = None,
     work_dir: Path,
 ) -> dict[str, Any]:
     """Pack Conv/Linear weights as int8 tensors; run float after dequant.
@@ -380,7 +405,9 @@ def try_safetensors_weight_only_int8(
         "Weight-only int8 with float runtime dequant. Not a static 8-bit graph."
     )
     result["fallback_operators"].append("entire_forward:float32_after_dequant")
-    float_model = make_probe(seed=seed, n_blocks=n_blocks)
+    float_model = _make_probe_sized(
+        seed=seed, n_blocks=n_blocks, trunk_channels=trunk_channels, expansion=expansion
+    )
     example = make_input(1, seed=seed)
     with torch.no_grad():
         float_ref = _outputs_to_cpu(_forward_export_outputs(float_model, example))
@@ -408,7 +435,12 @@ def try_safetensors_weight_only_int8(
         result["serialized_bytes"] = _serialize_size(artifact_dir)
 
         # Reload into a fresh float model (dequant).
-        restored = make_probe(seed=seed ^ 0xABCDEF, n_blocks=n_blocks)
+        restored = _make_probe_sized(
+            seed=seed ^ 0xABCDEF,
+            n_blocks=n_blocks,
+            trunk_channels=trunk_channels,
+            expansion=expansion,
+        )
         from safetensors.torch import load_file
 
         loaded_tensors = load_file(str(artifact_dir / "weights.safetensors"))
@@ -446,6 +478,8 @@ def probe_all_candidates(
     *,
     seed: int = 0,
     n_blocks: int = 12,
+    trunk_channels: int | None = None,
+    expansion: int | None = None,
     work_dir: Path | None = None,
 ) -> list[dict[str, Any]]:
     own_tmpdir = work_dir is None
@@ -453,26 +487,27 @@ def probe_all_candidates(
     assert root is not None
     root.mkdir(parents=True, exist_ok=True)
 
+    size = {"trunk_channels": trunk_channels, "expansion": expansion}
     candidates: list[dict[str, Any]] = []
     # Always attempt qnnpack (ARM/macOS and many mobile CPU builds).
     candidates.append(
         try_torch_fx_static(
-            engine="qnnpack", seed=seed, n_blocks=n_blocks, work_dir=root
+            engine="qnnpack", seed=seed, n_blocks=n_blocks, work_dir=root, **size
         )
     )
     # Attempt x86 engines when present (Linux competition image).
     for engine in ("fbgemm", "x86"):
         candidates.append(
             try_torch_fx_static(
-                engine=engine, seed=seed, n_blocks=n_blocks, work_dir=root
+                engine=engine, seed=seed, n_blocks=n_blocks, work_dir=root, **size
             )
         )
     candidates.append(
-        try_torch_jit_float(seed=seed, n_blocks=n_blocks, work_dir=root)
+        try_torch_jit_float(seed=seed, n_blocks=n_blocks, work_dir=root, **size)
     )
     candidates.append(
         try_safetensors_weight_only_int8(
-            seed=seed, n_blocks=n_blocks, work_dir=root
+            seed=seed, n_blocks=n_blocks, work_dir=root, **size
         )
     )
     return candidates

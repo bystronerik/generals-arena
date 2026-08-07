@@ -201,7 +201,10 @@ def load_session(
     if not artifact_path.is_file():
         raise FileNotFoundError(f"missing artifact: {artifact_path}")
     validate_manifest(manifest, artifact_path)
-    _require_qengine(manifest["quantization"]["engine"])
+    quant = manifest["quantization"]
+    # Float artifacts need no quantized engine; int8 artifacts must match one.
+    if str(quant.get("format")) != "float32":
+        _require_qengine(quant["engine"])
     dev = device or torch.device("cpu")
     module = torch.jit.load(str(artifact_path), map_location=dev)
     module.eval()

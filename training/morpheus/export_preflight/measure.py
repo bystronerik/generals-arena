@@ -22,12 +22,19 @@ def run_export_preflight(
     requirements_path: Path | None = None,
     seed: int = 0,
     n_blocks: int = 12,
+    trunk_channels: int | None = None,
+    expansion: int | None = None,
     work_dir: Path | None = None,
     seat: str = "local",
 ) -> dict[str, Any]:
     """Measure every sandbox-available export candidate on this host."""
     pins = pin_audit(requirements_path)
-    model = make_probe(seed=seed, n_blocks=n_blocks)
+    size_kwargs = {}
+    if trunk_channels is not None:
+        size_kwargs["trunk_channels"] = trunk_channels
+    if expansion is not None:
+        size_kwargs["expansion"] = expansion
+    model = make_probe(seed=seed, n_blocks=n_blocks, **size_kwargs)
     arch = architecture_summary(model)
 
     own_tmpdir = work_dir is None
@@ -40,7 +47,11 @@ def run_export_preflight(
     root.mkdir(parents=True, exist_ok=True)
 
     candidates = probe_all_candidates(
-        seed=seed, n_blocks=n_blocks, work_dir=root
+        seed=seed,
+        n_blocks=n_blocks,
+        trunk_channels=trunk_channels,
+        expansion=expansion,
+        work_dir=root,
     )
     return {
         "part": "00b-sandbox-export-preflight",

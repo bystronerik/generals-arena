@@ -30,9 +30,9 @@ class DeploymentConfig:
     """Complete coupled online configuration for one checkpoint family."""
 
     # Inference / export identity
-    inference_runtime: str = "torch.jit.trace+fx_static_qnnpack"
-    quantization_format: str = "static_ptq_fx_qnnpack_int8"
-    quantization_engine: str = "qnnpack"
+    inference_runtime: str = "torch.jit.script+float32"
+    quantization_format: str = "float32"
+    quantization_engine: str = "none"
     trunk_channels: int = 64
     network_width: int = 64
 

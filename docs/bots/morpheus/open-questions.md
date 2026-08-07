@@ -8,7 +8,7 @@ and the evidence that must replace the default.
 **Unknown:** Which inference runtime, model width, particle count, simulation
 target, and deadline reserve fit together on one competition CPU core.
 
-**Current default:** 8-bit 64-channel network, 64 particles, 32 target
+**Current default:** float32 64-channel network, 64 particles, 32 target
 simulations, at most 113 forward-equivalents, and a 125 ms internal deadline.
 
 **Evidence:** Measure the complete belief batch, root, enemy priors, leaf

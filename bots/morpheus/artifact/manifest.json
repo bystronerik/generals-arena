@@ -76,46 +76,45 @@
     "policy_wdl": "model_policy_wdl.pt"
   },
   "online_weights_sha256": {
-    "policy": "d8c05e66855c4fa8a4dd1cf9e8b3f99e5ad6d61bde9e22eed11ea2414f65b371",
-    "policy_wdl": "13cdfcc6d8c0601dd0d823f9c0700d2eca82b4f70d700aa2a2d90750c99b980c"
+    "policy": "d6f57835b7e067315c7fa86bfdddeb1b4dbf06956159ecb7a08794af65dc1aec",
+    "policy_wdl": "640d4af26b321d2d9dfeeaa898fc345a2a8470844e8b74a9e5f6726e7f244b2d"
   },
   "quantization": {
-    "engine": "qnnpack",
+    "engine": "none",
     "float_to_export_mae": {
-      "army_margin_mae": 0.7251483798027039,
-      "castle_margin_mae": 3.038970947265625,
-      "enemy_army_bins_mae": 18.921825408935547,
-      "enemy_general_mae": 8.452301025390625,
-      "hidden_castle_mae": 16.243669509887695,
-      "hidden_owner_mae": 6.616549968719482,
-      "land_margin_mae": 0.059436142444610596,
-      "pass_logit_mae": 105.9744873046875,
-      "policy_mae": 22.006576538085938,
-      "turns_to_termination_mae": 0.27813929319381714,
-      "wdl_mae": 23.25598907470703
+      "army_margin_mae": 0.0,
+      "castle_margin_mae": 0.0,
+      "enemy_army_bins_mae": 0.0,
+      "enemy_general_mae": 0.0,
+      "hidden_castle_mae": 0.0,
+      "hidden_owner_mae": 0.0,
+      "land_margin_mae": 0.0,
+      "pass_logit_mae": 0.0,
+      "policy_mae": 0.0,
+      "turns_to_termination_mae": 0.0,
+      "wdl_mae": 0.0
     },
-    "format": "static_ptq_fx_qnnpack_int8",
-    "group_norm_float_fallback": true,
+    "format": "float32",
+    "group_norm_float_fallback": false,
     "host": "macOS-26.5.2-arm64-arm-64bit",
     "online_float_to_export_mae": {
-      "parity_assert_skipped": true,
       "policy": {
-        "pass_logit_mae": 114.27149963378906,
-        "policy_mae": 22.230859756469727
+        "pass_logit_mae": 0.0,
+        "policy_mae": 0.0
       },
       "policy_wdl": {
-        "pass_logit_mae": 101.95637512207031,
-        "policy_mae": 21.38059425354004,
-        "wdl_mae": 23.69775390625
+        "pass_logit_mae": 0.0,
+        "policy_mae": 0.0,
+        "wdl_mae": 0.0
       }
     },
-    "runtime": "torch.jit.trace+fx_static_qnnpack"
+    "runtime": "torch.jit.script+float32"
   },
-  "runtime": "torch.jit.trace+fx_static_qnnpack",
+  "runtime": "torch.jit.script+float32",
   "tensor_schema": "morpheus-tensor-v1",
   "training_run": {
     "checkpoint_id": "ckpt-00100000-e5b415184274",
     "run_id": "scraped-classes15-2026-08-06-1"
   },
-  "weights_sha256": "44bf9c57fc66e3ba2231f9218a664db3f8589b0f3ef63913e1f44bef2aead4ec"
+  "weights_sha256": "531dbd7b37f1fa9af6d3a8274a36a85bd8130d35c6bb5ac1f3fa9f1bbe907c3b"
 }

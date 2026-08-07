@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Export a Morpheus float checkpoint to a static 8-bit TorchScript artifact + manifest."""
+"""Export a Morpheus float checkpoint to a TorchScript artifact + manifest.
+
+Default format is float32 (bit-faithful, no calibration). ``--format int8``
+keeps the static PTQ research path.
+"""
 from __future__ import annotations
 
 import argparse
@@ -31,7 +35,14 @@ def main() -> int:
         required=True,
         help="Output directory for manifest.json and model.pt",
     )
-    parser.add_argument("--qengine", type=str, default=None, help="torch quantized engine")
+    parser.add_argument(
+        "--format",
+        dest="fmt",
+        choices=("float32", "int8"),
+        default="float32",
+        help="artifact format; float32 is the deployment default, int8 is research-only",
+    )
+    parser.add_argument("--qengine", type=str, default=None, help="torch quantized engine (int8 only)")
     parser.add_argument("--run-id", type=str, default="export-local")
     parser.add_argument("--checkpoint-id", type=str, default="unknown")
     parser.add_argument(
@@ -47,6 +58,7 @@ def main() -> int:
     result = export_from_checkpoint(
         args.checkpoint.resolve(),
         args.output.resolve(),
+        fmt=args.fmt,
         qengine=args.qengine,
         training_run={
             "run_id": args.run_id,

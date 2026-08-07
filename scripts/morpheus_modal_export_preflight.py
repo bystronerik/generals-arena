@@ -45,13 +45,22 @@ IMAGE = (
         index_url="https://download.pytorch.org/whl/cpu",
     )
     .pip_install(*_SANDBOX_REST)
-    .env({"PYTHONPATH": "/root"})
+    # The preflight imports morpheus.export (bots/morpheus), whose modules use
+    # flat sibling imports — both /root/bots and /root/bots/morpheus must be
+    # importable.
+    .env({"PYTHONPATH": "/root:/root/bots:/root/bots/morpheus"})
     # copy=True so pin files and training code land in the image; keep these
     # steps last (Modal forbids later build steps after non-copy add_local_*).
     .add_local_dir(
         str(REPO / "training"),
         remote_path="/root/training",
         copy=True,
+    )
+    .add_local_dir(
+        str(REPO / "bots" / "morpheus"),
+        remote_path="/root/bots/morpheus",
+        copy=True,
+        ignore=["**/__pycache__", "artifact", "tests"],
     )
     .add_local_file(
         str(REPO / "requirements-sandbox.txt"),
@@ -72,30 +81,67 @@ app = modal.App("morpheus-export-preflight")
 def run_sandbox_export_cpu(
     seed: int = 0,
     n_blocks: int = 12,
+    trunk_channels: int = 0,
+    expansion: int = 0,
+    torch_threads: int = 0,
 ) -> dict:
-    """Run the export probe inside the Modal Linux CPU image."""
+    """Run the export probe inside the Modal Linux CPU image.
+
+    ``trunk_channels`` / ``expansion`` of 0 keep the deployed architecture.
+    ``torch_threads=1`` mirrors the judge's single dedicated core.
+    """
+    import torch
+
     from training.morpheus.export_preflight.measure import run_export_preflight
 
-    return run_export_preflight(
+    if torch_threads > 0:
+        torch.set_num_threads(torch_threads)
+    result = run_export_preflight(
         requirements_path=Path("/root/requirements-sandbox.txt"),
         seed=seed,
         n_blocks=n_blocks,
+        trunk_channels=trunk_channels or None,
+        expansion=expansion or None,
         seat="modal-cpu",
     )
+    result.setdefault("host", {})
+    result["host"]["torch_num_threads"] = torch.get_num_threads()
+    return result
 
 
 @app.local_entrypoint()
-def main(seed: int = 0, n_blocks: int = 12) -> None:
-    from training.morpheus.export_preflight.report import build_report, write_report
+def main(
+    seed: int = 0,
+    n_blocks: int = 12,
+    trunk_channels: int = 0,
+    expansion: int = 0,
+    torch_threads: int = 0,
+    tag: str = "",
+) -> None:
+    from training.morpheus.export_preflight.report import (
+        DEFAULT_JSON,
+        build_report,
+        write_report,
+    )
 
     t0 = time.perf_counter()
-    result = run_sandbox_export_cpu.remote(seed=seed, n_blocks=n_blocks)
+    result = run_sandbox_export_cpu.remote(
+        seed=seed,
+        n_blocks=n_blocks,
+        trunk_channels=trunk_channels,
+        expansion=expansion,
+        torch_threads=torch_threads,
+    )
     wall_s = time.perf_counter() - t0
     result.setdefault("host", {})
     result["host"]["modal_wall_s"] = wall_s
 
     report = build_report(result)
-    json_path, md_path = write_report(report)
+    if tag:
+        json_path = DEFAULT_JSON.with_name(f"morpheus-export-preflight-{tag}.json")
+        json_path, md_path = write_report(report, json_path=json_path)
+    else:
+        json_path, md_path = write_report(report)
     verdict = report["decision"]["verdict"]
     viable = report["decision"]["viable_candidates"]
     engines = (result.get("host") or {}).get("supported_qengines")

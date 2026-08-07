@@ -62,7 +62,7 @@ def test_qnnpack_online_entry_parity(tiny_checkpoint: Path, tmp_path: Path):
     if "qnnpack" not in _supported():
         pytest.skip(f"qnnpack not in {_supported()}")
     out = tmp_path / "qnnpack-online"
-    result = export_from_checkpoint(tiny_checkpoint, out, qengine="qnnpack")
+    result = export_from_checkpoint(tiny_checkpoint, out, fmt="int8", qengine="qnnpack")
     assert result.qengine == "qnnpack"
     for name in POLICY_OUTPUT_NAMES:
         key = f"{name}_mae"

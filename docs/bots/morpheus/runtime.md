@@ -19,7 +19,7 @@ and reserves the remainder. This value is an **initial guess**.
 First-move work is limited to:
 
 - loading and validating the frozen weight artifact;
-- creating the static quantized inference session;
+- creating the float32 TorchScript inference session;
 - warming every network head and batch shape;
 - classifying the initial terrain;
 - creating the initial particle belief;

@@ -1,4 +1,10 @@
-"""Export Morpheus float checkpoints to sandbox static 8-bit TorchScript artifacts."""
+"""Export Morpheus checkpoints to sandbox TorchScript artifacts.
+
+Default deployment format is float32 TorchScript: at this model size the
+static int8 path is both slower (GroupNorm float fallback forces
+dequant→quant round trips) and lossy unless calibrated on real observation
+tensors. The int8 path remains available via ``fmt="int8"`` for research.
+"""
 from __future__ import annotations
 
 import copy
@@ -33,6 +39,9 @@ MANIFEST_NAME = "manifest.json"
 DEFAULT_ARTIFACT_FILE = "model.pt"
 POLICY_ARTIFACT_FILE = "model_policy.pt"
 POLICY_WDL_ARTIFACT_FILE = "model_policy_wdl.pt"
+
+FLOAT32_FORMAT = "float32"
+FLOAT32_RUNTIME = "torch.jit.script+float32"
 
 # Soft upper bounds from recorded Part 04 / Part 00b qnnpack MAE (with margin).
 ONLINE_PARITY_LIMITS: dict[str, float] = {
@@ -285,25 +294,45 @@ def _quantize_and_trace(
     return loaded
 
 
-def export_static_int8(
+def _script_and_save(
+    wrapper: nn.Module,
+    artifact_path: Path,
+) -> torch.jit.ScriptModule:
+    """Script and save a float wrapper — no quantization, bit-faithful weights."""
+    wrapper.eval()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        warnings.simplefilter("ignore", DeprecationWarning)
+        scripted = torch.jit.script(wrapper)
+        torch.jit.save(scripted, str(artifact_path))
+
+    loaded = torch.jit.load(str(artifact_path))
+    loaded.eval()
+    return loaded
+
+
+def _export_artifacts(
     model: MorpheusNet,
     output_dir: Path,
     *,
-    qengine: Optional[str] = None,
-    training_run: Optional[dict[str, Any]] = None,
-    example_batch: int = 1,
-    seed: int = 0,
-    require_online_parity: bool = True,
+    fmt: str,
+    qengine: Optional[str],
+    training_run: Optional[dict[str, Any]],
+    example_batch: int,
+    seed: int,
+    require_online_parity: bool,
 ) -> ExportResult:
-    """FX static PTQ export with full + online policy / policy+WDL entry points."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    engine = qengine or _pick_qengine()
-    supported = _supported_qengines()
-    if engine not in supported:
-        raise RuntimeError(
-            f"quantized engine {engine!r} not in supported_engines={supported}"
-        )
-    _set_qengine(engine)
+    if fmt == FLOAT32_FORMAT:
+        engine = "none"
+    else:
+        engine = qengine or _pick_qengine()
+        supported = _supported_qengines()
+        if engine not in supported:
+            raise RuntimeError(
+                f"quantized engine {engine!r} not in supported_engines={supported}"
+            )
+        _set_qengine(engine)
 
     torch.manual_seed(seed)
     example = torch.randn(example_batch, IN_CHANNELS, BOARD, BOARD)
@@ -321,15 +350,20 @@ def export_static_int8(
     policy_path = output_dir / POLICY_ARTIFACT_FILE
     policy_wdl_path = output_dir / POLICY_WDL_ARTIFACT_FILE
 
-    loaded_full = _quantize_and_trace(
-        full_wrapper, example, artifact_path, engine=engine
-    )
-    loaded_policy = _quantize_and_trace(
-        policy_wrapper, example, policy_path, engine=engine
-    )
-    loaded_policy_wdl = _quantize_and_trace(
-        policy_wdl_wrapper, example, policy_wdl_path, engine=engine
-    )
+    if fmt == FLOAT32_FORMAT:
+        loaded_full = _script_and_save(full_wrapper, artifact_path)
+        loaded_policy = _script_and_save(policy_wrapper, policy_path)
+        loaded_policy_wdl = _script_and_save(policy_wdl_wrapper, policy_wdl_path)
+    else:
+        loaded_full = _quantize_and_trace(
+            full_wrapper, example, artifact_path, engine=engine
+        )
+        loaded_policy = _quantize_and_trace(
+            policy_wrapper, example, policy_path, engine=engine
+        )
+        loaded_policy_wdl = _quantize_and_trace(
+            policy_wdl_wrapper, example, policy_wdl_path, engine=engine
+        )
 
     with torch.no_grad():
         export_full = loaded_full(example)
@@ -352,15 +386,26 @@ def export_static_int8(
         online_parity["parity_assert_skipped"] = True
 
     arch = architecture_summary(model)
-    quantization = {
-        "format": f"static_ptq_fx_{engine}_int8",
-        "engine": engine,
-        "runtime": f"torch.jit.trace+fx_static_{engine}",
-        "group_norm_float_fallback": True,
-        "float_to_export_mae": parity,
-        "online_float_to_export_mae": online_parity,
-        "host": platform.platform(),
-    }
+    if fmt == FLOAT32_FORMAT:
+        quantization = {
+            "format": FLOAT32_FORMAT,
+            "engine": "none",
+            "runtime": FLOAT32_RUNTIME,
+            "group_norm_float_fallback": False,
+            "float_to_export_mae": parity,
+            "online_float_to_export_mae": online_parity,
+            "host": platform.platform(),
+        }
+    else:
+        quantization = {
+            "format": f"static_ptq_fx_{engine}_int8",
+            "engine": engine,
+            "runtime": f"torch.jit.trace+fx_static_{engine}",
+            "group_norm_float_fallback": True,
+            "float_to_export_mae": parity,
+            "online_float_to_export_mae": online_parity,
+            "host": platform.platform(),
+        }
     run_meta = training_run or {
         "run_id": "export-local",
         "checkpoint_id": "unknown",
@@ -400,10 +445,56 @@ def export_static_int8(
     )
 
 
+def export_static_int8(
+    model: MorpheusNet,
+    output_dir: Path,
+    *,
+    qengine: Optional[str] = None,
+    training_run: Optional[dict[str, Any]] = None,
+    example_batch: int = 1,
+    seed: int = 0,
+    require_online_parity: bool = True,
+) -> ExportResult:
+    """FX static PTQ export with full + online policy / policy+WDL entry points."""
+    return _export_artifacts(
+        model,
+        output_dir,
+        fmt="int8",
+        qengine=qengine,
+        training_run=training_run,
+        example_batch=example_batch,
+        seed=seed,
+        require_online_parity=require_online_parity,
+    )
+
+
+def export_float32(
+    model: MorpheusNet,
+    output_dir: Path,
+    *,
+    training_run: Optional[dict[str, Any]] = None,
+    example_batch: int = 1,
+    seed: int = 0,
+    require_online_parity: bool = True,
+) -> ExportResult:
+    """Float TorchScript export — bit-faithful weights, no calibration step."""
+    return _export_artifacts(
+        model,
+        output_dir,
+        fmt=FLOAT32_FORMAT,
+        qengine=None,
+        training_run=training_run,
+        example_batch=example_batch,
+        seed=seed,
+        require_online_parity=require_online_parity,
+    )
+
+
 def export_from_checkpoint(
     checkpoint_path: Path,
     output_dir: Path,
     *,
+    fmt: str = FLOAT32_FORMAT,
     qengine: Optional[str] = None,
     training_run: Optional[dict[str, Any]] = None,
     require_online_parity: bool = True,
@@ -412,11 +503,13 @@ def export_from_checkpoint(
     model = build_model_from_checkpoint(checkpoint)
     meta = checkpoint.get("meta", {})
     seed = int(meta.get("seed", 0))
-    return export_static_int8(
+    return _export_artifacts(
         model,
         output_dir,
+        fmt=fmt,
         qengine=qengine,
         training_run=training_run,
+        example_batch=1,
         seed=seed,
         require_online_parity=require_online_parity,
     )
