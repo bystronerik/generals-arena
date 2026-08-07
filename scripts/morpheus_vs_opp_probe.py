@@ -51,12 +51,14 @@ def main() -> int:
         str(REPO / "competition-module"),
         str(REPO / "bots"),
         str(REPO / "bots/morpheus"),
+        str(REPO / "scripts"),
     ]
     from arena.matches.loop import make_board, make_transition
     from competition.protocol import encode_observation
     from generals import GeneralsEnv
     from _common.wire import _read_observation
     from memory import OWNER_ENEMY, OWNER_NEUTRAL, empty_memory, update_memory
+    from morpheus_heuristic_play import select_play_action
     from tactics import (
         enemy_is_visible,
         enemy_seek_target,
@@ -64,7 +66,6 @@ def main() -> int:
         path_distance_field,
         path_progress,
         seek_goals,
-        select_play_action,
         structure_idle_army,
     )
     from transition import DIRECTIONS

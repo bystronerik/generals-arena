@@ -27,13 +27,15 @@ def _run_one(args: tuple) -> dict:
         str(REPO / "competition-module"),
         str(REPO / "bots"),
         str(REPO / "bots/morpheus"),
+        str(REPO / "scripts"),
     ]
     from arena.matches.loop import make_board, make_transition
     from competition.protocol import encode_observation
     from generals import GeneralsEnv
     from _common.wire import _read_observation
     from memory import empty_memory, update_memory
-    from tactics import enemy_is_visible, select_play_action
+    from morpheus_heuristic_play import select_play_action
+    from tactics import enemy_is_visible
 
     spec = importlib.util.spec_from_file_location(
         "smoke_agent", REPO / "bots/smoke/agent.py"

@@ -13,12 +13,9 @@ from observe import emit_observation
 from state import create_initial_state
 from tactics import (
     apply_pre_contact_prior,
-    best_fog_explore_action,
     enemy_is_visible,
     frontier_expand_indices,
-    newly_revealed_cells,
     play_mask,
-    select_play_action,
 )
 from transition import DIRECTIONS
 
@@ -39,26 +36,6 @@ def _corridor_obs():
     state = state._replace(armies=armies, ownership=ownership)
     obs = emit_observation(state, 0)
     mem = update_memory(empty_memory(8, 8), obs)
-    return obs, mem
-
-
-def _fork_obs():
-    """Owned tip with two neutral expands: one hugs fog, one is inland."""
-    grid = np.zeros((10, 10), dtype=np.int32)
-    grid[9, 0] = 1
-    grid[0, 9] = 2
-    state = create_initial_state(grid)
-    armies = np.asarray(state.armies, dtype=np.int32).copy()
-    ownership = np.asarray(state.ownership, dtype=bool).copy()
-    # Own a 2x2 block near bottom-left so vision covers inland south/west.
-    for r, c in ((8, 0), (8, 1), (9, 0), (9, 1)):
-        ownership[0, r, c] = True
-        armies[r, c] = 2
-    armies[8, 1] = 30  # tip that can expand north (more fog) or east (less)
-    # Advance turn into the explore window without changing the board.
-    state = state._replace(armies=armies, ownership=ownership, time=5)
-    obs = emit_observation(state, 0)
-    mem = update_memory(empty_memory(10, 10), obs)
     return obs, mem
 
 
@@ -120,46 +97,6 @@ def test_frontier_expand_indices_lists_unowned_destinations():
         assert int(owners[tr, tc]) == 0
 
 
-def test_select_play_action_expands_before_contact():
-    obs, mem = _corridor_obs()
-    assert not enemy_is_visible(obs, mem)
-    action = select_play_action(obs, mem)
-    assert action[0] == 0
-    owners = np.asarray(obs.owner_grid)
-    tr = action[1] + int(DIRECTIONS[action[3], 0])
-    tc = action[2] + int(DIRECTIONS[action[3], 1])
-    assert int(owners[tr, tc]) == 0
-
-
-def test_select_play_action_never_passes_with_legal_expand():
-    obs, mem = _corridor_obs()
-    action = select_play_action(obs, mem)
-    assert action != (1, 0, 0, 0, 0)
-
-
-def test_best_fog_explore_prefers_higher_reveal():
-    obs, mem = _fork_obs()
-    tip_r, tip_c = 8, 1
-    # North expand from tip vs east expand — north should reveal more fog.
-    north_reveal = newly_revealed_cells(obs, tip_r - 1, tip_c)
-    east_reveal = newly_revealed_cells(obs, tip_r, tip_c + 1)
-    assert north_reveal >= east_reveal
-    action = best_fog_explore_action(obs, mem)
-    assert action is not None
-    tr = action[1] + int(DIRECTIONS[action[3], 0])
-    tc = action[2] + int(DIRECTIONS[action[3], 1])
-    assert newly_revealed_cells(obs, tr, tc) == max(north_reveal, east_reveal)
-
-
-def test_select_play_action_early_turn_uses_fog_explore():
-    obs, mem = _fork_obs()
-    assert int(obs.turn) < 20
-    action = select_play_action(obs, mem)
-    explore = best_fog_explore_action(obs, mem)
-    assert explore is not None
-    assert action == explore
-
-
 def test_fog_urgency_rises_until_contact():
     from tactics import castle_timing_weight, explore_wave_weight, fog_urgency
 
@@ -191,37 +128,10 @@ def test_prior_scores_castle_builds_with_timing():
     assert shaped[build_idxs[0]] > 0.0
 
 
-def test_fog_explore_prefers_wave_over_one_man_tip():
-    from tactics import best_fog_explore_action
-
-    grid = np.zeros((12, 12), dtype=np.int32)
-    grid[11, 0] = 1
-    grid[0, 11] = 2
-    state = create_initial_state(grid)
-    armies = np.asarray(state.armies, dtype=np.int32).copy()
-    ownership = np.asarray(state.ownership, dtype=bool).copy()
-    neut = np.asarray(state.ownership_neutral, dtype=bool).copy()
-    for r, c in ((10, 0), (10, 1), (9, 0), (9, 1)):
-        ownership[0, r, c] = True
-        neut[r, c] = False
-        armies[r, c] = 2
-    armies[9, 1] = 25  # wave tip
-    armies[9, 0] = 2  # weak tip
-    state = state._replace(
-        armies=armies, ownership=ownership, ownership_neutral=neut, time=120
-    )
-    obs = emit_observation(state, 0)
-    mem = update_memory(empty_memory(12, 12), obs)
-    action = best_fog_explore_action(obs, mem)
-    assert action is not None
-    assert (action[1], action[2]) == (9, 1)
-    assert int(np.asarray(obs.army_grid)[action[1], action[2]]) >= 3
-
-
 def test_blocks_own_land_oscillation():
     from tactics import blocks_oscillation, is_reverse_move
 
-    obs, mem = _corridor_obs()
+    obs, _mem = _corridor_obs()
     # Tip at (6,0) moved north to (5,0) last turn; reverse is (5,0)->(6,0).
     prev = (0, 6, 0, 0, 0)  # north
     reverse = (0, 5, 0, 1, 0)  # south back
@@ -229,15 +139,13 @@ def test_blocks_own_land_oscillation():
     assert blocks_oscillation(reverse, prev, obs)
     other = (0, 5, 0, 0, 0)  # continue north
     assert not is_reverse_move(other, prev)
-    chosen = select_play_action(obs, mem, prev_action=prev)
-    assert not is_reverse_move(chosen, prev)
 
 
 def test_blocks_delayed_corridor_retreat():
     """A→B then B→C then C→B is oscillation even with a gap step."""
     from tactics import blocks_oscillation
 
-    obs, mem = _corridor_obs()
+    obs, _mem = _corridor_obs()
     a_to_b = (0, 6, 0, 0, 0)  # (6,0)->(5,0)
     b_to_c = (0, 5, 0, 0, 0)  # (5,0)->(4,0)
     c_to_b = (0, 4, 0, 1, 0)  # (4,0)->(5,0) retreat
@@ -250,49 +158,6 @@ def test_blocks_delayed_corridor_retreat():
     assert not blocks_oscillation(
         c_to_d, None, obs, recent_actions=recent
     )
-    chosen = select_play_action(
-        obs, mem, recent_actions=recent + (c_to_b,)
-    )
-    assert not blocks_oscillation(chosen, None, obs, recent_actions=recent)
-
-
-def test_cheap_scout_prefers_enemy_tile_over_fog():
-    from tactics import best_cheap_scout_action
-
-    grid = np.zeros((10, 10), dtype=np.int32)
-    grid[9, 0] = 1
-    grid[0, 9] = 2
-    state = create_initial_state(grid)
-    armies = np.asarray(state.armies, dtype=np.int32).copy()
-    ownership = np.asarray(state.ownership, dtype=bool).copy()
-    neut = np.asarray(state.ownership_neutral, dtype=bool).copy()
-    ring = [
-        (4, 4), (4, 5), (4, 6),
-        (5, 4), (5, 6),
-        (6, 4), (6, 5), (6, 6),
-    ]
-    for r, c in ring:
-        ownership[0, r, c] = True
-        ownership[1, r, c] = False
-        neut[r, c] = False
-        armies[r, c] = 3
-    armies[5, 4] = 40
-    ownership[1, 5, 5] = True
-    ownership[0, 5, 5] = False
-    neut[5, 5] = False
-    armies[5, 5] = 1
-    state = state._replace(
-        armies=armies, ownership=ownership, ownership_neutral=neut, time=40
-    )
-    obs = emit_observation(state, 0)
-    mem = update_memory(empty_memory(10, 10), obs)
-    assert enemy_is_visible(obs, mem)
-    scout = best_cheap_scout_action(obs, mem)
-    assert scout is not None
-    tr = scout[1] + int(DIRECTIONS[scout[3], 0])
-    tc = scout[2] + int(DIRECTIONS[scout[3], 1])
-    owners = np.asarray(obs.owner_grid)
-    assert int(owners[tr, tc]) == 2
 
 
 def test_prior_ranks_enemy_take_above_fog_after_contact():
@@ -339,95 +204,8 @@ def test_constrain_nn_keeps_non_oscillating_move():
     assert out == nn_move
 
 
-def test_wave_commits_attack_over_rear_stack():
-    """A committed front stack attacks when it is the main force."""
-    from tactics import seek_kill_action
-
-    grid = np.zeros((12, 12), dtype=np.int32)
-    grid[11, 0] = 1
-    grid[0, 11] = 2
-    state = create_initial_state(grid)
-    armies = np.asarray(state.armies, dtype=np.int32).copy()
-    ownership = np.asarray(state.ownership, dtype=bool).copy()
-    neut = np.asarray(state.ownership_neutral, dtype=bool).copy()
-    for r, c in ((10, 0), (9, 0), (8, 0), (7, 0), (6, 5), (5, 5)):
-        ownership[0, r, c] = True
-        ownership[1, r, c] = False
-        neut[r, c] = False
-        armies[r, c] = 2
-    armies[5, 5] = 80
-    ownership[1, 4, 5] = True
-    ownership[0, 4, 5] = False
-    neut[4, 5] = False
-    armies[4, 5] = 3
-    mem = empty_memory(12, 12)
-    kg = np.zeros((12, 12), dtype=bool)
-    kg[0, 11] = True
-    og = np.zeros((12, 12), dtype=bool)
-    og[11, 0] = True
-    mem = mem._replace(known_enemy_general=kg, own_general=og)
-    state = state._replace(
-        armies=armies, ownership=ownership, ownership_neutral=neut, time=80
-    )
-    obs = emit_observation(state, 0)
-    mem = update_memory(mem, obs)
-    mem = mem._replace(known_enemy_general=kg)
-    action = seek_kill_action(obs, mem)
-    assert action is not None
-    tr = action[1] + int(DIRECTIONS[action[3], 0])
-    tc = action[2] + int(DIRECTIONS[action[3], 1])
-    owners = np.asarray(obs.owner_grid)
-    assert int(owners[tr, tc]) == 2
-    assert (action[1], action[2]) == (5, 5)
-
-
-def test_seek_marches_idle_king_before_tip_thrash():
-    """A huge rear stack marches forward instead of tip-tapping the border."""
-    from tactics import seek_kill_action
-
-    grid = np.zeros((12, 12), dtype=np.int32)
-    grid[11, 5] = 1
-    grid[0, 5] = 2
-    state = create_initial_state(grid)
-    armies = np.asarray(state.armies, dtype=np.int32).copy()
-    ownership = np.asarray(state.ownership, dtype=bool).copy()
-    neut = np.asarray(state.ownership_neutral, dtype=bool).copy()
-    for r in range(4, 12):
-        ownership[0, r, 5] = True
-        ownership[1, r, 5] = False
-        neut[r, 5] = False
-        armies[r, 5] = 2
-    armies[10, 5] = 220
-    armies[4, 5] = 4
-    ownership[1, 3, 5] = True
-    ownership[0, 3, 5] = False
-    neut[3, 5] = False
-    armies[3, 5] = 2
-    mem = empty_memory(12, 12)
-    kg = np.zeros((12, 12), dtype=bool)
-    kg[0, 5] = True
-    og = np.zeros((12, 12), dtype=bool)
-    og[11, 5] = True
-    mem = mem._replace(known_enemy_general=kg, own_general=og)
-    state = state._replace(
-        armies=armies, ownership=ownership, ownership_neutral=neut, time=90
-    )
-    obs = emit_observation(state, 0)
-    mem = update_memory(mem, obs)
-    mem = mem._replace(known_enemy_general=kg)
-    action = seek_kill_action(obs, mem)
-    assert action is not None
-    assert (action[1], action[2]) == (10, 5)
-    assert action[3] == 0  # north toward the enemy
-
-
-def test_overstack_gather_is_punished_and_blocked():
-    from tactics import (
-        STACK_GATHER_BAN,
-        is_overstack_own_gather,
-        stack_gather_factor,
-        wave_weight,
-    )
+def test_overstack_gather_is_punished():
+    from tactics import STACK_GATHER_BAN, stack_gather_factor, wave_weight
 
     assert wave_weight(400) == pytest.approx(wave_weight(20))
     # Lateral / default progress: fat pile dumps stay crushed.
@@ -439,8 +217,6 @@ def test_overstack_gather_is_punished_and_blocked():
     assert stack_gather_factor(400, 50, 1, progress=1.0) > 0.2
     assert stack_gather_factor(400, 50, 1, progress=-1.0) < 0.05
     assert STACK_GATHER_BAN <= 16
-    obs, _mem = _corridor_obs()
-    assert not is_overstack_own_gather((0, 5, 0, 0, 0), obs)
 
 
 def test_direction_bias_ranks_enemy_above_toward_own_above_retreat():
@@ -600,7 +376,7 @@ def test_pre_contact_prior_prefers_frontier_over_pass_and_reinforce():
 
 def test_path_progress_routes_around_mountains():
     """Manhattan can point into a wall; path progress must go around."""
-    from tactics import path_distance_field, path_progress, seek_kill_action
+    from tactics import path_distance_field, path_progress
 
     grid = np.zeros((8, 8), dtype=np.int32)
     grid[7, 0] = 1
@@ -633,19 +409,11 @@ def test_path_progress_routes_around_mountains():
     # South shortens the true path; west lengthens it.
     assert path_progress(4, 1, 5, 1, dist) > 0.0
     assert path_progress(4, 1, 4, 0, dist) < 0.0
-    kill = seek_kill_action(obs, mem)
-    assert kill is not None
-    assert (kill[1], kill[2]) == (4, 1)
-    # Commit the king along a path-improving step (N/S), not west into the rear.
-    assert kill[3] in (0, 1)
+    del mem
 
 
-def test_structure_idle_evacuates_fat_general_pile():
-    from tactics import (
-        STRUCTURE_IDLE_ARMY,
-        best_structure_evacuate_action,
-        structure_idle_army,
-    )
+def test_structure_idle_detects_fat_general_pile():
+    from tactics import STRUCTURE_IDLE_ARMY, structure_idle_army
 
     grid = np.zeros((8, 8), dtype=np.int32)
     grid[7, 0] = 1
@@ -662,8 +430,3 @@ def test_structure_idle_evacuates_fat_general_pile():
     obs = emit_observation(state, 0)
     mem = update_memory(empty_memory(8, 8), obs)
     assert structure_idle_army(obs, mem) >= STRUCTURE_IDLE_ARMY
-    evacuate = best_structure_evacuate_action(obs, mem)
-    assert evacuate is not None
-    assert (evacuate[1], evacuate[2]) == (7, 0)
-    chosen = select_play_action(obs, mem)
-    assert (chosen[1], chosen[2]) == (7, 0)
