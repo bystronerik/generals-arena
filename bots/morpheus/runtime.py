@@ -98,8 +98,13 @@ class FallbackLevel(str, Enum):
 
     PASS = "pass"  # no root result
     POLICY = "policy"  # 0 completed simulations
-    VISIT = "visit"  # 1–7 completed simulations
-    AVERAGE = "average"  # 8+ completed simulations
+    # Retired band, kept for old-trace schema compatibility. Three different
+    # selectors flipping by sim count (measured: 220 flips in a 573-turn game)
+    # was a real source of move-to-move inconsistency; any completed
+    # simulation now goes through the single AVERAGE selector, which degrades
+    # to prior-argmax at low sims anyway.
+    VISIT = "visit"
+    AVERAGE = "average"  # 1+ completed simulations
 
 
 def nearest_rank_p99(samples: Sequence[float]) -> float:
@@ -1016,17 +1021,18 @@ def select_degraded_action(
     ``has_root_result`` is False when root inference never completed (distinct
     from ``completed_simulations == 0``, which still has a policy fallback).
     Prefer a non-pass policy fallback over emitting pass after search.
+
+    One selector for every simulated turn: ``select_root_action`` reads the
+    average strategy with visit and prior tie-breaks, and at low sim counts
+    the average strategy is dominated by the prior, so it degrades to the old
+    visit/prior band without switching decision rules turn to turn.
     """
     if not has_root_result:
         return PASS, FallbackLevel.PASS
     if completed_simulations <= 0:
         return (policy_fallback or PASS), FallbackLevel.POLICY
-    if completed_simulations < 8:
-        action = search.best_action_by_visits()
-        level = FallbackLevel.VISIT
-    else:
-        action = search.best_action()
-        level = FallbackLevel.AVERAGE
+    action = search.best_action()
+    level = FallbackLevel.AVERAGE
     if action == PASS and policy_fallback is not None and policy_fallback != PASS:
         return policy_fallback, FallbackLevel.POLICY
     return action, level

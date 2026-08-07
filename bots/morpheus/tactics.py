@@ -48,6 +48,12 @@ FOG_URGENCY_TURN_SCALE = 40.0
 EXPLORE_WAVE_MIN = 3
 # Remember this many recent army moves; reverse along any of those edges is banned.
 OSCILLATION_HISTORY = 8
+# Commitment hysteresis: shaped-prior bonus for moving the stack we moved last
+# turn (source == previous destination). Measured without it, the chosen source
+# tile jumped >=3 Manhattan on 27% of consecutive move turns — plans died to
+# tie-break jitter. The bonus only amplifies already-positive scores, so a
+# banned or retreating continuation stays dead.
+CONTINUATION_BONUS = 1.5
 
 # Prior-shaping blend (Part 17). ``lam`` is the trust knob, ``log_clip`` bounds
 # how far one heuristic may move an action, ``floor_frac`` keeps a network zero
@@ -833,6 +839,8 @@ def heuristic_action_scores(
     memory: VisibleMemory,
     mask: Optional[Array] = None,
     belief: Optional[Any] = None,
+    *,
+    prev_action: Optional[Action5] = None,
 ) -> Array:
     """Per-action tactical score over the play mask, independent of the network.
 
@@ -844,6 +852,9 @@ def heuristic_action_scores(
     ``mandatory_action_indices`` (root candidate inclusion) and forced by
     ``constrain_nn_action`` (hard rule), so a score term would only duplicate a
     rule that cannot be outvoted anyway.
+
+    ``prev_action`` enables commitment hysteresis: moves continuing the stack
+    that moved last turn get ``CONTINUATION_BONUS`` if they already score > 0.
     """
     if mask is None:
         mask = play_mask(obs, memory)
@@ -1031,6 +1042,18 @@ def heuristic_action_scores(
             ci = move_idx[corridor]
             out[ci] = np.maximum(out[ci], c_score[corridor])
 
+    if prev_action is not None:
+        ends = move_dest(tuple(int(x) for x in prev_action))  # type: ignore[arg-type]
+        if ends is not None:
+            _pr, _pc, p_tr, p_tc = ends
+            if 0 <= p_tr < H and 0 <= p_tc < W:
+                cont = np.flatnonzero(
+                    (kind_t == 0) & (sr_t == p_tr) & (sc_t == p_tc)
+                )
+                out[cont] = np.where(
+                    out[cont] > 0.0, out[cont] * CONTINUATION_BONUS, out[cont]
+                )
+
     return np.where(mask_a, np.maximum(out, 0.0), 0.0)
 
 
@@ -1129,6 +1152,7 @@ def apply_pre_contact_prior(
     floor_abs: float = 0.0,
     lam_pre_contact: float = DEFAULT_SHAPING_LAMBDA,
     lam_post_contact: float = DEFAULT_SHAPING_LAMBDA,
+    prev_action: Optional[Action5] = None,
 ) -> Array:
     """Reshape root prior: expand pre-contact, seek after contact.
 
@@ -1144,7 +1168,9 @@ def apply_pre_contact_prior(
             if enemy_is_visible(obs, memory)
             else lam_pre_contact
         )
-    scores = heuristic_action_scores(obs, memory, mask_a, belief)
+    scores = heuristic_action_scores(
+        obs, memory, mask_a, belief, prev_action=prev_action
+    )
     return blend_prior(
         prior,
         scores,

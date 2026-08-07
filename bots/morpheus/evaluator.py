@@ -73,6 +73,7 @@ class NetworkEvaluator:
             lam=float(lam),
             log_clip=float(self.shaping_log_clip),
             floor_frac=float(self.shaping_floor_frac),
+            prev_action=self.previous_action,
         )
 
     def _tensor(
@@ -241,6 +242,7 @@ class ShapedUniformEvaluator:
                 lam=float(lam),
                 log_clip=float(self.shaping_log_clip),
                 floor_frac=float(self.shaping_floor_frac),
+                prev_action=self.previous_action,
             )
             return prior, 0.0
         return self._uniform(np.asarray(legal_mask(obs, memory), dtype=bool)), 0.0

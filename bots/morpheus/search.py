@@ -842,8 +842,7 @@ class SearchController:
             root = self.tree.root
             order = int(np.argmax(root.prior)) if len(root.prior) else 0
             return as_action5(decode_action(root.actions[order]))
-        if self.tree.completed_simulations < 8:
-            return self.best_action_by_visits()
+        # One selector for any completed simulation (see select_degraded_action).
         return self.best_action()
 
 

@@ -160,8 +160,10 @@ def test_fallback_order_pass_then_policy_then_search():
         policy_fallback=policy,
         search=search,
     )
-    assert level is FallbackLevel.VISIT
-    assert action == search.best_action_by_visits()
+    # One selector for every simulated turn — low sim counts no longer switch
+    # to the visit-band rule.
+    assert level is FallbackLevel.AVERAGE
+    assert action == search.best_action()
 
     while search.tree.completed_simulations < 8:
         search.run_batch(belief, n_sims=1)

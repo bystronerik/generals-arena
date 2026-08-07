@@ -99,7 +99,7 @@ def test_zero_sims_returns_policy_fallback():
     assert mask[encode_action(action)]
 
 
-def test_one_to_seven_sims_uses_visit_band():
+def test_one_to_seven_sims_uses_average_selector():
     clock = FakeClock()
     obs, _, _, rng = _ctx(2)
     # Allow a few leaf batches then starve further work via high backup after.
@@ -109,7 +109,9 @@ def test_one_to_seven_sims_uses_visit_band():
     )
     action = ctl.decide(obs)
     assert 1 <= ctl.completed_simulations <= 7
-    assert ctl.fallback_level == FallbackLevel.VISIT.value
+    # The visit band is retired: any completed simulation uses the single
+    # average-strategy selector (no per-turn decision-rule switching).
+    assert ctl.fallback_level == FallbackLevel.AVERAGE.value
     assert isinstance(action, tuple) and len(action) == 5
 
 
@@ -190,7 +192,7 @@ def test_degradation_table_matches_runtime_spec():
     cases = [
         (False, 0, FallbackLevel.PASS),
         (True, 0, FallbackLevel.POLICY),
-        (True, 3, FallbackLevel.VISIT),
+        (True, 3, FallbackLevel.AVERAGE),
         (True, 8, FallbackLevel.AVERAGE),
         (True, 16, FallbackLevel.AVERAGE),
     ]
