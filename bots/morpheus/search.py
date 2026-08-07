@@ -5,6 +5,7 @@ tests do not require a trained checkpoint. Part 07 wires the runtime deadline.
 """
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Optional, Protocol, Sequence
 
@@ -70,6 +71,11 @@ class SearchConfig:
     max_nodes: int = 4096
     max_enemy_tables: int = 8
     n_particles: int = 64
+    # Cross-turn LRU of enemy priors keyed by enemy info hash. The tree is
+    # rebuilt on most turns (obs-hash reuse rarely matches), so without this
+    # every turn re-runs the same enemy-prior forwards (~36 ms/turn measured).
+    # 512 float32 vectors ≈ 8 MB.
+    enemy_prior_cache_size: int = 512
 
 
 @dataclass
@@ -123,6 +129,12 @@ class SearchController:
     # Enemy-prior network time from materialize_enemy_priors (never select_path).
     last_select_enemy_prior_ms: float = field(default=0.0, init=False)
     last_select_enemy_prior_forwards: int = field(default=0, init=False)
+    # Cross-turn enemy-prior LRU: enemy info hash -> full-length float32 prior.
+    # Content-addressed (hash covers enemy obs + memory), so entries never go
+    # stale — they only cost memory. Survives tree.clear() by design.
+    enemy_prior_cache: "OrderedDict[bytes, Array]" = field(init=False)
+    enemy_prior_cache_hits: int = field(default=0, init=False)
+    enemy_prior_cache_misses: int = field(default=0, init=False)
 
     def __post_init__(self) -> None:
         self.tree = SearchTree(
@@ -133,6 +145,23 @@ class SearchController:
         self.last_root_prior = None
         self.last_select_enemy_prior_ms = 0.0
         self.last_select_enemy_prior_forwards = 0
+        self.enemy_prior_cache = OrderedDict()
+        self.enemy_prior_cache_hits = 0
+        self.enemy_prior_cache_misses = 0
+
+    def _cached_enemy_prior(self, info_hash: bytes) -> Optional[Array]:
+        prior = self.enemy_prior_cache.get(info_hash)
+        if prior is None:
+            return None
+        self.enemy_prior_cache.move_to_end(info_hash)
+        self.enemy_prior_cache_hits += 1
+        return np.asarray(prior, dtype=np.float64)
+
+    def _store_enemy_prior(self, info_hash: bytes, prior: Array) -> None:
+        self.enemy_prior_cache[info_hash] = np.asarray(prior, dtype=np.float32)
+        self.enemy_prior_cache.move_to_end(info_hash)
+        while len(self.enemy_prior_cache) > self.config.enemy_prior_cache_size:
+            self.enemy_prior_cache.popitem(last=False)
 
     def ensure_root(
         self,
@@ -336,6 +365,8 @@ class SearchController:
 
         for req, prior in zip(ordered, priors):
             node = req.node
+            self._store_enemy_prior(req.info_hash, np.asarray(prior))
+            self.enemy_prior_cache_misses += 1
             if req.info_hash in node.enemy_tables:
                 continue
             self._install_enemy_table(
@@ -466,6 +497,13 @@ class SearchController:
 
             enemy_obs, enemy_mem, h = self._enemy_view(particle)
             table = node.enemy_tables.get(h)
+            if table is None:
+                # Cross-turn cache first: an install from a cached prior needs
+                # no network, so selection keeps its zero-forward invariant.
+                cached = self._cached_enemy_prior(h)
+                if cached is not None:
+                    self._install_enemy_table(node, h, enemy_obs, enemy_mem, cached)
+                    table = node.enemy_tables[h]
             if table is None:
                 # Pin before materialisation so a later install cannot evict it.
                 self.tree.pin_enemy(node, h)
