@@ -13,6 +13,7 @@ tooling, not part of the bot's play path.
 from __future__ import annotations
 
 import json
+import math
 from collections import deque
 from pathlib import Path
 from typing import Any, Optional, Sequence
@@ -47,6 +48,15 @@ FOG_URGENCY_TURN_SCALE = 40.0
 EXPLORE_WAVE_MIN = 3
 # Remember this many recent army moves; reverse along any of those edges is banned.
 OSCILLATION_HISTORY = 8
+
+# Prior-shaping blend (Part 17). ``lam`` is the trust knob, ``log_clip`` bounds
+# how far one heuristic may move an action, ``floor_frac`` keeps a network zero
+# from being resurrected. The LEGACY_* values reproduce the unbounded geometric
+# reshape that shipped before Part 17 and exist for the parity test.
+LEGACY_SHAPING_LAMBDA = 1.0
+LEGACY_SHAPING_LOG_CLIP = math.inf
+LEGACY_SHAPING_FLOOR_FRAC = 0.0
+LEGACY_SHAPING_FLOOR_ABS = 1e-6
 
 MoveSegment = tuple[tuple[int, int], tuple[int, int]]
 
@@ -656,30 +666,31 @@ def enemy_seek_target(
     return min(goals, key=lambda g: abs(g[0] - kr) + abs(g[1] - kc))
 
 
-def apply_pre_contact_prior(
-    prior: Array,
+def heuristic_action_scores(
     obs,
     memory: VisibleMemory,
-    *,
     mask: Optional[Array] = None,
     belief: Optional[Any] = None,
 ) -> Array:
-    """Reshape root prior: expand pre-contact, seek after contact."""
-    prior_a = np.asarray(prior, dtype=np.float64).reshape(-1).copy()
+    """Per-action tactical score over the play mask, independent of the network.
+
+    Expand before contact, seek after it. The scores are a *relative* ranking
+    signal only: ``blend_prior`` decides how much of it reaches the root prior,
+    so the absolute magnitudes here carry no meaning beyond their ratios.
+
+    General captures are deliberately not scored. They are already guaranteed by
+    ``mandatory_action_indices`` (root candidate inclusion) and forced by
+    ``constrain_nn_action`` (hard rule), so a score term would only duplicate a
+    rule that cannot be outvoted anyway.
+    """
     if mask is None:
         mask = play_mask(obs, memory)
     mask_a = np.asarray(mask, dtype=bool).reshape(-1)
-    prior_a = np.where(mask_a, np.maximum(prior_a, 0.0), 0.0)
 
     _types, owners, armies = _as_grids(obs)
     H, W = int(obs.H), int(obs.W)
-    out = np.zeros_like(prior_a)
+    out = np.zeros(mask_a.shape, dtype=np.float64)
     seen_enemy = enemy_is_visible(obs, memory)
-
-    for idx in general_capture_indices(obs, memory, mask_a):
-        action = decode_action(idx)
-        sr, sc = int(action[1]), int(action[2])
-        out[int(idx)] = 1_000_000.0 * float(max(int(armies[sr, sc]), 1))
 
     turn = int(getattr(obs, "turn", 0))
     castle_w = castle_timing_weight(turn)
@@ -690,11 +701,10 @@ def apply_pre_contact_prior(
             continue
         r, c = int(action[1]), int(action[2])
         army = float(max(int(armies[r, c]), 1))
-        nn = max(float(prior_a[idx]), 1e-6)
         # Prefer cells that can still hold a useful remnant after the spend.
         out[idx] = max(
             out[idx],
-            nn * castle_w * (10.0 + 0.2 * min(army, 100.0)),
+            castle_w * (10.0 + 0.2 * min(army, 100.0)),
         )
 
     if seen_enemy:
@@ -732,7 +742,6 @@ def apply_pre_contact_prior(
             )
             bias = direction_bias(progress, dest_owner)
             surplus = float(max(army_i - dest_army - 1, 0))
-            nn = max(float(prior_a[idx]), 1e-6)
             thrash = tip_thrash_factor(army_i, max_own, tot)
             gather = stack_gather_factor(
                 army_i, dest_army, dest_owner, progress=progress
@@ -741,8 +750,7 @@ def apply_pre_contact_prior(
             if dest_owner == OWNER_ENEMY and surplus > 0.0:
                 # Strong attack reward: raw NN rarely proposes takes (probe ~0.8%).
                 score = (
-                    nn
-                    * atk_w
+                    atk_w
                     * thrash
                     * bias
                     * (
@@ -757,8 +765,7 @@ def apply_pre_contact_prior(
             elif dest_owner == OWNER_NEUTRAL:
                 # Fog carve that shortens the path to enemy is a real attack prep.
                 score = (
-                    nn
-                    * atk_w
+                    atk_w
                     * thrash
                     * bias
                     * (
@@ -780,8 +787,7 @@ def apply_pre_contact_prior(
                     )
                 if k_prog > 0.0 and share < GATHER_SHARE_MIN:
                     score = (
-                        nn
-                        * army_w
+                        army_w
                         * (14.0 + 22.0 * k_prog)
                         * stack_gather_factor(
                             army_i, dest_army, 1, progress=k_prog
@@ -789,8 +795,7 @@ def apply_pre_contact_prior(
                     )
                 elif progress > 0.0:
                     score = (
-                        nn
-                        * atk_w
+                        atk_w
                         * thrash
                         * bias
                         * (18.0 + 32.0 * progress)
@@ -798,9 +803,9 @@ def apply_pre_contact_prior(
                     )
                 else:
                     # Raw NN often picks retreat; keep mass near zero here.
-                    score = nn * 0.008 * army_w * bias * gather
+                    score = 0.008 * army_w * bias * gather
             else:
-                score = nn * 0.01 * army_w * gather
+                score = 0.01 * army_w * gather
             out[idx] = max(out[idx], score)
     else:
         # No enemy yet: hunt fog with a formed wave; urgency rises with turn.
@@ -824,14 +829,12 @@ def apply_pre_contact_prior(
             eff = float(reveal) / float(explore_cost(dest_army))
             src_army = int(armies[sr, sc])
             ew = explore_wave_weight(src_army)
-            nn = max(float(prior_a[int(idx)]), 1e-6)
             progress = path_progress(
                 sr, sc, tr, tc, fog_dist, fallback_target=fog_target
             )
             bias = direction_bias(progress, OWNER_NEUTRAL)
             score = (
-                nn
-                * ew
+                ew
                 * urgency
                 * bias
                 * (4.0 + 12.0 * float(reveal) + 7.0 * eff + 6.0 * max(progress, 0.0))
@@ -857,7 +860,6 @@ def apply_pre_contact_prior(
                 continue
             src_army = int(armies[sr, sc])
             dest_army = int(armies[tr, tc])
-            nn = max(float(prior_a[idx]), 1e-6)
             progress = path_progress(
                 sr, sc, tr, tc, fog_dist, fallback_target=fog_target
             )
@@ -868,12 +870,11 @@ def apply_pre_contact_prior(
             tip_bonus = 2.0 if (tr, tc) in frontier_sources else 1.0
             if bool(own_struct[sr, sc]) and src_army >= STRUCTURE_IDLE_ARMY:
                 if progress < 0.0:
-                    out[idx] = max(out[idx], nn * 0.01)
+                    out[idx] = max(out[idx], 0.01)
                     continue
                 out[idx] = max(
                     out[idx],
-                    nn
-                    * urgency
+                    urgency
                     * tip_bonus
                     * bias
                     * (5.0 + 0.1 * float(min(src_army, 100)) + 8.0 * max(progress, 0.0))
@@ -884,8 +885,7 @@ def apply_pre_contact_prior(
                 ew = explore_wave_weight(src_army)
                 out[idx] = max(
                     out[idx],
-                    nn
-                    * ew
+                    ew
                     * urgency
                     * tip_bonus
                     * bias
@@ -893,18 +893,119 @@ def apply_pre_contact_prior(
                     * gather,
                 )
             else:
-                out[idx] = max(out[idx], nn * 0.008 * bias * gather)
+                out[idx] = max(out[idx], 0.008 * bias * gather)
 
-    out = np.where(mask_a, np.maximum(out, 0.0), 0.0)
-    if float(out.sum()) > 0.0:
-        return out / float(out.sum())
-    total = float(prior_a.sum())
-    if total > 0.0:
-        return prior_a / total
-    n = int(mask_a.sum())
-    if n <= 0:
-        return prior_a
-    return mask_a.astype(np.float64) / float(n)
+    return np.where(mask_a, np.maximum(out, 0.0), 0.0)
+
+
+def blend_prior(
+    nn_prior: Array,
+    scores: Array,
+    mask: Array,
+    *,
+    lam: float,
+    log_clip: float,
+    floor_frac: float,
+    floor_abs: float = 0.0,
+) -> Array:
+    """Blend a network prior with heuristic scores under a bounded nudge.
+
+    ``shaped = softmax( log p + lam * clip(log(h / gmean(h)), +-log_clip) )``
+
+    - ``lam`` is the single trust knob. ``lam = 0`` returns the network prior
+      renormalized over ``mask``; ``lam = 1`` with ``log_clip = inf`` is the
+      plain geometric blend ``p * h``.
+    - ``log_clip`` caps how far one heuristic may move an action, in log space.
+      ``ln 10`` means "at most a 10x nudge either way", so no heuristic can
+      override the network by orders of magnitude.
+    - Centering by the geometric mean is load-bearing: raw scores sit around
+      ~120, so without centering every action would saturate the clip and the
+      heuristic term would collapse to a constant.
+    - ``floor_frac`` lifts the prior to a fraction of its own maximum before the
+      blend, so an action the network zeroed cannot be resurrected past the clip
+      bound. ``floor_abs`` is the legacy absolute floor, kept for parity.
+
+    Actions with zero heuristic score sit at the bottom of the clip range rather
+    than at zero, unless ``log_clip`` is infinite (then they keep the legacy
+    hard zero).
+    """
+    mask_a = np.asarray(mask, dtype=bool).reshape(-1)
+    prior_a = np.asarray(nn_prior, dtype=np.float64).reshape(-1)
+    prior_a = np.where(mask_a, np.maximum(prior_a, 0.0), 0.0)
+    h = np.asarray(scores, dtype=np.float64).reshape(-1)
+    h = np.where(mask_a, np.maximum(h, 0.0), 0.0)
+
+    def _renormalized_prior() -> Array:
+        total = float(prior_a.sum())
+        if total > 0.0:
+            return prior_a / total
+        n = int(mask_a.sum())
+        if n <= 0:
+            return prior_a
+        return mask_a.astype(np.float64) / float(n)
+
+    lam = float(lam)
+    if lam == 0.0 or float(log_clip) == 0.0:
+        return _renormalized_prior()
+
+    scored = mask_a & (h > 0.0)
+    if not np.any(scored):
+        return _renormalized_prior()
+
+    floor = max(float(floor_abs), float(floor_frac) * float(prior_a.max()))
+    p = np.where(mask_a, np.maximum(prior_a, floor), 0.0)
+    if not np.any(p > 0.0):
+        return _renormalized_prior()
+
+    # Center before clipping so the clip measures a ratio, not a magnitude.
+    log_gmean = float(np.mean(np.log(h[scored])))
+    log_h = np.full(mask_a.shape, -np.inf, dtype=np.float64)
+    log_h[scored] = np.log(h[scored]) - log_gmean
+    clip = float(log_clip)
+    log_h = np.clip(log_h, -clip, clip)
+
+    logits = np.full(mask_a.shape, -np.inf, dtype=np.float64)
+    live = mask_a & (p > 0.0)
+    logits[live] = np.log(p[live]) + lam * log_h[live]
+
+    finite = np.isfinite(logits)
+    if not np.any(finite):
+        return _renormalized_prior()
+    top = float(logits[finite].max())
+    weights = np.zeros(mask_a.shape, dtype=np.float64)
+    weights[finite] = np.exp(logits[finite] - top)
+    total = float(weights.sum())
+    if total <= 0.0:
+        return _renormalized_prior()
+    return weights / total
+
+
+def apply_pre_contact_prior(
+    prior: Array,
+    obs,
+    memory: VisibleMemory,
+    *,
+    mask: Optional[Array] = None,
+    belief: Optional[Any] = None,
+    lam: float = LEGACY_SHAPING_LAMBDA,
+    log_clip: float = LEGACY_SHAPING_LOG_CLIP,
+    floor_frac: float = LEGACY_SHAPING_FLOOR_FRAC,
+    floor_abs: float = LEGACY_SHAPING_FLOOR_ABS,
+) -> Array:
+    """Reshape root prior: expand pre-contact, seek after contact."""
+    if mask is None:
+        mask = play_mask(obs, memory)
+    mask_a = np.asarray(mask, dtype=bool).reshape(-1)
+    scores = heuristic_action_scores(obs, memory, mask_a, belief)
+    return blend_prior(
+        prior,
+        scores,
+        mask_a,
+        lam=lam,
+        log_clip=log_clip,
+        floor_frac=floor_frac,
+        floor_abs=floor_abs,
+    )
 
 
 def newly_revealed_cells(obs, dest_r: int, dest_c: int) -> int:
