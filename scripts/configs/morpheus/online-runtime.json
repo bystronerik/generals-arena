@@ -16,7 +16,7 @@
     "backup": 2.257166081108153,
     "belief_proposal": 43.65883395075798,
     "belief_tensor": 2.103540929965675,
-    "enemy_prior_batch": NaN,
+    "enemy_prior_batch": 19.779082969762385,
     "hashing": 0.0,
     "leaf_batch": 21.18849998805672,
     "particle_transitions": 0.0,

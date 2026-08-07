@@ -8,6 +8,7 @@ at acceptance time.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Optional
@@ -126,6 +127,15 @@ class DeploymentConfig:
         if missing:
             raise ValueError(
                 f"deployment offline_p99_ms missing components: {missing}"
+            )
+        bad = sorted(
+            name
+            for name, value in cfg.offline_p99_ms.items()
+            if not math.isfinite(value) or value < 0
+        )
+        if bad:
+            raise ValueError(
+                f"deployment offline_p99_ms must be finite and >= 0: {bad}"
             )
         if cfg.p99_estimator_type != P99_ESTIMATOR_TYPE:
             raise ValueError(

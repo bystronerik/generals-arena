@@ -97,6 +97,27 @@ def test_admission_rejects_when_forecast_plus_guard_exceeds_remaining():
     assert not ctl.can_admit("leaf_batch", deadline)  # 50+10 > 55
 
 
+def test_estimator_rejects_non_finite_offline_seed():
+    with pytest.raises(ValueError, match="finite"):
+        NearestRankP99Estimator(window=4, offline_p99_ms=float("nan"))
+
+
+def test_non_finite_config_seed_falls_back_instead_of_locking_out():
+    """NaN forecasts fail every comparison, so the component would never run."""
+    clock = FakeClock(0.0)
+    cfg = RuntimeConfig(
+        normal_deadline_ms=1000.0,
+        admission_guard_ms=10.0,
+        offline_p99_ms={**DEFAULT_OFFLINE_P99_MS, "enemy_prior_batch": float("nan")},
+    )
+    ctl = RuntimeController(seat=0, H=8, W=8, config=cfg, clock=clock)
+    ctl._turn_start = 0.0
+    forecast = ctl.forecast_ms("enemy_prior_batch")
+    assert np.isfinite(forecast)
+    assert forecast == DEFAULT_OFFLINE_P99_MS["enemy_prior_batch"]
+    assert ctl.can_admit("enemy_prior_batch", 1.0)  # 1000 ms deadline
+
+
 def test_fallback_order_pass_then_policy_then_search():
     _, obs, mem, belief, rng = _board_obs()
     prior = np.zeros(3970, dtype=np.float64)

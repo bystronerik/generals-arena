@@ -149,6 +149,10 @@ class NearestRankP99Estimator:
     def __post_init__(self) -> None:
         if self.window < 1:
             raise ValueError("p99 window must be >= 1")
+        if not math.isfinite(self.offline_p99_ms):
+            # A non-finite seed poisons every forecast (max(nan, x) is nan) and
+            # silently locks the component out of admission forever.
+            raise ValueError("offline_p99_ms seed must be finite")
         self._samples = deque(maxlen=int(self.window))
 
     @property
@@ -168,6 +172,22 @@ class NearestRankP99Estimator:
         if not self.warmed_up:
             return float(max(self.offline_p99_ms, max(self._samples)))
         return nearest_rank_p99(self._samples)
+
+
+def _offline_seed_ms(offline_p99_ms: Mapping[str, float], name: str) -> float:
+    """Seed for one component's estimator, with a finite fallback.
+
+    A non-finite seed makes every admission comparison False, so the component
+    never runs. Fall back to the Part 07 default rather than pass it through.
+    """
+    fallback = float(DEFAULT_OFFLINE_P99_MS.get(name, 1.0))
+    try:
+        value = float(offline_p99_ms.get(name, fallback))
+    except (TypeError, ValueError):
+        return fallback
+    if not math.isfinite(value) or value < 0.0:
+        return fallback
+    return value
 
 
 @dataclass
@@ -281,11 +301,7 @@ class RuntimeController:
         self._estimators: dict[str, NearestRankP99Estimator] = {
             name: NearestRankP99Estimator(
                 window=self.config.p99_window,
-                offline_p99_ms=float(
-                    self.config.offline_p99_ms.get(
-                        name, DEFAULT_OFFLINE_P99_MS.get(name, 1.0)
-                    )
-                ),
+                offline_p99_ms=_offline_seed_ms(self.config.offline_p99_ms, name),
             )
             for name in COST_COMPONENTS
         }
