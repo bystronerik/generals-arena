@@ -61,6 +61,11 @@
       "content_hash": "9a7a700e0da5",
       "note": "revert to seq 8",
       "seq": 12
+    },
+    {
+      "at": "2026-08-07T16:22:33Z",
+      "content_hash": "d3399c6dc5f5",
+      "seq": 13
     }
   ],
   "version": 1,
@@ -2099,6 +2104,191 @@
       "first_seen_at": "2026-08-06T18:09:03Z",
       "git_commit": "6965521b7b1b8ad88daa614be055869d1feae2a8",
       "git_dirty": true
+    },
+    {
+      "closure_ref": "refs/bot-versions/d3399c6dc5f5",
+      "closure_tree": "69ecf4137ee592a7d3539f57232d7537adc5f754",
+      "content_hash": "d3399c6dc5f5",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "c2d818155e7572c15debad636e69f8263b60330d",
+          "path": "bots/morpheus/__init__.py",
+          "sha256": "4fc4c043498e8abbf244b0f82e105c3c06a72339c7b3e482a071d73744b1695d"
+        },
+        {
+          "blob": "1254b6ec33862e0a12e659692a8bfa74eb786c11",
+          "path": "bots/morpheus/action.py",
+          "sha256": "c3e0b209c5e0b90043d7d2074e06e08ecec37a559000e23af1d9c2803bdf5c77"
+        },
+        {
+          "blob": "1c3e3e4e6587aaae3979e194a4432d38141c9db0",
+          "path": "bots/morpheus/agent.py",
+          "sha256": "c043937b2be1fd390daed8f00031d1226f29fdefd0e96c205f58a92e68ae749c"
+        },
+        {
+          "blob": "5f722a8e8d2246ec5953019b3ba325ce4a5e7c15",
+          "path": "bots/morpheus/artifact/manifest.json",
+          "sha256": "67cdef45f44343e197c203129cc32db4912815853aed184c4b48349e79e138a2"
+        },
+        {
+          "blob": "d6f1a8c9efd99180474cd707d7815854bedb2656",
+          "path": "bots/morpheus/artifact/model.pt",
+          "sha256": "531dbd7b37f1fa9af6d3a8274a36a85bd8130d35c6bb5ac1f3fa9f1bbe907c3b"
+        },
+        {
+          "blob": "1456b979a2020fb2f7fc8300ec6a9da6415820dd",
+          "path": "bots/morpheus/artifact/model_policy.pt",
+          "sha256": "d6f57835b7e067315c7fa86bfdddeb1b4dbf06956159ecb7a08794af65dc1aec"
+        },
+        {
+          "blob": "c4a82dbb4b34468f6a96e0b5a482c3d5089d651e",
+          "path": "bots/morpheus/artifact/model_policy_wdl.pt",
+          "sha256": "640d4af26b321d2d9dfeeaa898fc345a2a8470844e8b74a9e5f6726e7f244b2d"
+        },
+        {
+          "blob": "ce916bc408e6ace6e2a8ef2385b43b0101189023",
+          "path": "bots/morpheus/belief.py",
+          "sha256": "e4b1451e954e1378019ce26878f374d3f365d00b3047b31fd716aa0069596588"
+        },
+        {
+          "blob": "1d89dc5190193d3cefe89e7155a90006d5ab8982",
+          "path": "bots/morpheus/deployment.json",
+          "sha256": "bd7cbcdfcd5bcfc9edac35795bb04ee578e8280f1028e3b3b9a9ba1936d8c6a7"
+        },
+        {
+          "blob": "62650e627b66d05e2540ec8bd802036668c443cd",
+          "path": "bots/morpheus/deployment.py",
+          "sha256": "5a3cb94b6ce88684d44860f5f0297f8b678585fa614b716c9105c19a0a305e3e"
+        },
+        {
+          "blob": "0b10f8d1a764e6101fea96f9abb4130f9725d469",
+          "path": "bots/morpheus/evaluator.py",
+          "sha256": "d3e57c4bf6db65c759217f994bf88af26214b725d0d3c9fc30677cf21b76aafe"
+        },
+        {
+          "blob": "55499a8cdb7a4dbb0f9fc2f4fe4c638dd9d85ed2",
+          "path": "bots/morpheus/export.py",
+          "sha256": "3a3c86e1304200521f98c63fb5af1f6ea153bfd26b95d6fce5273cb258ada486"
+        },
+        {
+          "blob": "afeac1ca5a098cd73cabeef4810278dca70d9461",
+          "path": "bots/morpheus/hashing.py",
+          "sha256": "946b854907699844829a2f625d19dd5d3c00e5d07ed7024b72eedb6921e9eae2"
+        },
+        {
+          "blob": "270ce605fd37d56c80e2456c0a75899fd0c9dc4d",
+          "path": "bots/morpheus/inference.py",
+          "sha256": "c1749ab47024f151100294ebb57b9a742d1af8059e61ae69622f1e8fe6d495b6"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/morpheus/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "61ebc07d59c2c656275eaeacd90d02f551b493ff",
+          "path": "bots/morpheus/matrix.py",
+          "sha256": "e8fd2f91058ce36eda78813713651f2b7afcb2dc11fda030292abb95893605a8"
+        },
+        {
+          "blob": "1b33aefd751d205688adcd4fe6a3fe234b674a2c",
+          "path": "bots/morpheus/memory.py",
+          "sha256": "cbe308071d14de786329e7cd91e05d312787ddd3e6f006ea7c66f325dc9ee746"
+        },
+        {
+          "blob": "1fd9ed44fdf087eb8906d9ef26151a7eab2b5c9e",
+          "path": "bots/morpheus/network.py",
+          "sha256": "474a108a4347ee322fce51ce1d4b2dc0435073b889a306d508d70eb74e6a199c"
+        },
+        {
+          "blob": "4df7b2907f2f6a9fb1cdd69ab93a7f101eb1b67c",
+          "path": "bots/morpheus/observe.py",
+          "sha256": "4fc86d9cef9c71da51ced77468df318a81d2ccd6c8ff2c9edf3bbceeead6a5cb"
+        },
+        {
+          "blob": "3af72e327b2670d1b5635efac83b9b3eb3e13d15",
+          "path": "bots/morpheus/particle_summary.py",
+          "sha256": "71ad017dd73e0174cc4d825d94d07229034f37ccf9c99075cfc4f7e594bf9fc4"
+        },
+        {
+          "blob": "7886a7f6a886f99e47c8e2ea58d423f13c8c4cf6",
+          "path": "bots/morpheus/proposal.py",
+          "sha256": "b5568d8e5951e05db7a3fe690421a5de4d413bbc21c1cc87042ba5490675ee5f"
+        },
+        {
+          "blob": "391fee6a9be9605820921379f7516ccd6ed541e6",
+          "path": "bots/morpheus/recovery.py",
+          "sha256": "a03bf32591622b83a34856e8f64b5436c237a7aa7eda64e1a8e7819e7416bb6c"
+        },
+        {
+          "blob": "d02bbb96854dde912c161d05e90f20428f4b3ef1",
+          "path": "bots/morpheus/reservoir.py",
+          "sha256": "be8849aeba3bac5c48c949e8f4548fb7a7cd808e34f09e87df335bb909be374a"
+        },
+        {
+          "blob": "e7d78ac169a30678efe60bdb108611f9d932e630",
+          "path": "bots/morpheus/run.sh",
+          "sha256": "3a4eb8902a76a3bd1a8e9292feef29339976c72786d157da3a20edfcbf296f56"
+        },
+        {
+          "blob": "75bf3d4b773724fc8b3213c7bec9dba26db5208d",
+          "path": "bots/morpheus/runtime.py",
+          "sha256": "a30acbd4106a9704970a40e4288a5e690a142185e42ca63949b883c82625d092"
+        },
+        {
+          "blob": "c3648661ba1ae905db9167a88ddedaedd1a4a410",
+          "path": "bots/morpheus/schema.py",
+          "sha256": "463593e14f1f2987a9a800be969d02a0e91cf89dbc936d97faeccde448692237"
+        },
+        {
+          "blob": "7acdf33f8d23b26b63f3ad6d8351fdfb2b54844e",
+          "path": "bots/morpheus/search.py",
+          "sha256": "1b498a87545b87ae0a4ac8e897ca77f44e6ad31e063152bac9ab6bffa21da1ef"
+        },
+        {
+          "blob": "f783f42f7d2bc0f956cbf5037dee9e4dab4804f4",
+          "path": "bots/morpheus/state.py",
+          "sha256": "6f3f6c0615262a41c9138a7b2070b952f22bc3d73638d93c35816d9df465f05e"
+        },
+        {
+          "blob": "e3362a29724371d9903e61ea628daacb445035cb",
+          "path": "bots/morpheus/symmetry.py",
+          "sha256": "0197defaa4f127ee56c9fb79275937bb0875569a928d133dfbfaa8947e5f7e4c"
+        },
+        {
+          "blob": "f12d4539bf2012410d581e4d7c46e63971a03b4c",
+          "path": "bots/morpheus/tactics.py",
+          "sha256": "24252f0f89c3196483ced400df4f973240c7b43d4b590d78b301206d110d16fc"
+        },
+        {
+          "blob": "02640709fa17b92e174a84b66703f71660f79c68",
+          "path": "bots/morpheus/tensor.py",
+          "sha256": "75f241a9cba137fc92f51ece2c93a23240e36d3bbbde784a9c6aa957377f8776"
+        },
+        {
+          "blob": "2e66fb6f5314b25332759a51816f9b2cb351d0a8",
+          "path": "bots/morpheus/transition.py",
+          "sha256": "6fa8b60447100efffa5984c71ed0e67260a5b6bffd35d3cbbcf443fd95cf0cbe"
+        },
+        {
+          "blob": "5b13708e885638512b18c2e3bdb3ea6f514c3dcf",
+          "path": "bots/morpheus/tree.py",
+          "sha256": "0a96f66877194eca5b2b6a7ab2d4b0b820ec8c4b7ebd54296c2fa916d6e70de9"
+        }
+      ],
+      "first_seen_at": "2026-08-07T16:22:33Z",
+      "git_commit": "ce6643efbcbb9e8a91d576b21e59241acacb9e19",
+      "git_dirty": false
     }
   ]
 }

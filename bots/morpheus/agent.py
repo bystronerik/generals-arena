@@ -34,13 +34,18 @@ class Agent:
         self._evaluator = NetworkEvaluator(self._session)
         runtime_cfg = self._deployment.to_runtime_config()
         runtime_cfg.max_proposal_batch = int(self._deployment.max_proposal_batch)
+        # proposal_policy=None: belief particles advance on uniform legal
+        # enemy actions, not the policy net. Measured vs macaria (100 games
+        # per arm, docs/research/measurements/belief-ablation-macaria.md):
+        # the learned proposal showed no benefit (-0.07 +/- 0.13 paired),
+        # and skipping its forward returns ~13 ms/turn to the search budget.
         self._controller = RuntimeController(
             seat=int(player_id),
             H=int(H),
             W=int(W),
             evaluator=self._evaluator,
             config=runtime_cfg,
-            proposal_policy=self._evaluator.policy_logits,
+            proposal_policy=None,
         )
         self._mirror_metrics()
 

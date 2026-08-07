@@ -1,0 +1,48 @@
+{
+  "bot_id": "morpheus_ubelief",
+  "steps": [
+    {
+      "at": "2026-08-07T16:52:07Z",
+      "content_hash": "c4f9119c7f0a",
+      "seq": 1
+    }
+  ],
+  "version": 1,
+  "versions": [
+    {
+      "closure_ref": "refs/bot-versions/c4f9119c7f0a",
+      "closure_tree": "e71c58bfb4e7358996dcbb2645a9c5b7a32dbb6f",
+      "content_hash": "c4f9119c7f0a",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "63b6cfc45b2b50cdb0613af527c6d0f516cd222c",
+          "path": "bots/morpheus_ubelief/agent_local.py",
+          "sha256": "c169ad87e2f70f3153d0d8950bd66b98bdd727c32e396dc51615c87ede8dbe79"
+        },
+        {
+          "blob": "0ad6db41d31dd23cc7ef494a8e764f32b59cb02c",
+          "path": "bots/morpheus_ubelief/main.py",
+          "sha256": "ec4e94cbf272489184b86e521526f093cb7c8411bbcabd8f721197e439a676da"
+        },
+        {
+          "blob": "26a8cb674cc1165ed2330300f6acedae894a4bd3",
+          "path": "bots/morpheus_ubelief/run.sh",
+          "sha256": "42642f4a20fe85cd9bc90b45df6f2cdde8a804c36593d9203cfb07336f37a0e5"
+        }
+      ],
+      "first_seen_at": "2026-08-07T16:52:07Z",
+      "git_commit": "ce6643efbcbb9e8a91d576b21e59241acacb9e19",
+      "git_dirty": true
+    }
+  ]
+}
