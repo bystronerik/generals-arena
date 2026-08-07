@@ -1,0 +1,166 @@
+{
+ "provenance": {
+  "date": "2026-08-08",
+  "purpose": "Re-measure offline_p99_ms.belief_proposal after disabling the learned belief proposal; both-modes comparison",
+  "host": {
+   "platform": "macOS-26.5.2-arm64-arm-64bit",
+   "cpu_brand": "Apple M3 Pro",
+   "torch": "2.13.0",
+   "torch_num_threads": 1
+  },
+  "method": "training.morpheus.measure_online._calibrate_offline_p99, side 18",
+  "note": "measure_online._make_controller was fixed in the same change to read DeploymentConfig.use_policy_proposal instead of hardcoding the policy proposal"
+ },
+ "three_seed_calibration_uniform": {
+  "backup": {
+   "shipped": 2.257166081108153,
+   "reps": [
+    0.6825419841334224,
+    0.669916975311935,
+    0.6874579703435302
+   ],
+   "max": 0.6874579703435302
+  },
+  "belief_proposal": {
+   "shipped": 10.0,
+   "reps": [
+    2.4683340452611446,
+    2.4965839693322778,
+    2.475750050507486
+   ],
+   "max": 2.4965839693322778
+  },
+  "belief_tensor": {
+   "shipped": 2.103540929965675,
+   "reps": [
+    1.692833029665053,
+    1.702791079878807,
+    1.7405420076102018
+   ],
+   "max": 1.7405420076102018
+  },
+  "enemy_prior_batch": {
+   "shipped": 19.779082969762385,
+   "reps": [
+    24.692291975952685,
+    22.67766697332263,
+    22.570167086087167
+   ],
+   "max": 24.692291975952685
+  },
+  "hashing": {
+   "shipped": 0.0,
+   "reps": [
+    0.00029103830456733704,
+    0.00033294782042503357,
+    0.00024994369596242905
+   ],
+   "max": 0.00033294782042503357
+  },
+  "leaf_batch": {
+   "shipped": 21.18849998805672,
+   "reps": [
+    26.671000057831407,
+    25.387499947100878,
+    25.451917084865272
+   ],
+   "max": 26.671000057831407
+  },
+  "particle_transitions": {
+   "shipped": 0.0,
+   "reps": [
+    71.0295420140028,
+    81.05070900637656,
+    61.54833408072591
+   ],
+   "max": 81.05070900637656
+  },
+  "reply": {
+   "shipped": 0.0,
+   "reps": [
+    0.00020908191800117493,
+    0.00024994369596242905,
+    0.000208965502679348
+   ],
+   "max": 0.00024994369596242905
+  },
+  "root_inference": {
+   "shipped": 5.881791934370995,
+   "reps": [
+    8.494291920214891,
+    8.677834062837064,
+    8.225708967074752
+   ],
+   "max": 8.677834062837064
+  },
+  "selection": {
+   "shipped": 7.308125030249357,
+   "reps": [
+    0.9939579758793116,
+    0.9669169085100293,
+    0.9785828879103065
+   ],
+   "max": 0.9939579758793116
+  }
+ },
+ "both_modes": {
+  "use_policy_proposal=False": {
+   "calibrated": {
+    "belief_tensor": 1.683,
+    "belief_proposal": 2.438,
+    "particle_transitions": 66.642,
+    "hashing": 0.0,
+    "root_inference": 8.969,
+    "leaf_batch": 26.135,
+    "enemy_prior_batch": 22.902,
+    "backup": 0.684,
+    "reply": 0.0,
+    "selection": 0.91
+   },
+   "loose_deadline": {
+    "recovery_rate": 0.0,
+    "collapsed_rate": 0.15384615384615385,
+    "belief_plus_root_ok_rate": 1.0,
+    "normal_move_ms_max": 267.1
+   },
+   "real_deadline_140ms": {
+    "recovery_rate": 0.0,
+    "collapsed_rate": 0.23076923076923078,
+    "belief_plus_root_ok_rate": 1.0,
+    "deadline_faults": 1,
+    "min_sims_misses": 1,
+    "normal_move_ms_max": 140.1,
+    "sims_mean": 10.77
+   }
+  },
+  "use_policy_proposal=True": {
+   "calibrated": {
+    "belief_tensor": 1.704,
+    "belief_proposal": 28.057,
+    "particle_transitions": 1.229,
+    "hashing": 0.0,
+    "root_inference": 8.444,
+    "leaf_batch": 25.851,
+    "enemy_prior_batch": 22.867,
+    "backup": 0.641,
+    "reply": 0.0,
+    "selection": 0.975
+   },
+   "loose_deadline": {
+    "recovery_rate": 0.0,
+    "collapsed_rate": 0.0,
+    "belief_plus_root_ok_rate": 1.0,
+    "normal_move_ms_max": 219.0
+   },
+   "real_deadline_140ms": {
+    "recovery_rate": 0.0,
+    "collapsed_rate": 0.0,
+    "belief_plus_root_ok_rate": 1.0,
+    "deadline_faults": 0,
+    "min_sims_misses": 0,
+    "normal_move_ms_max": 139.8,
+    "sims_mean": 8.62
+   }
+  }
+ }
+}

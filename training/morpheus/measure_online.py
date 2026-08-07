@@ -173,6 +173,12 @@ def _make_controller(
 ) -> RuntimeController:
     evaluator = NetworkEvaluator(session)
     cfg = deployment.to_runtime_config()
+    # Mirror the bot: bots/morpheus/agent.py reads the same flag. Hardcoding
+    # the policy proposal here would calibrate belief_proposal against a path
+    # the bot does not play.
+    proposal_policy = (
+        evaluator.policy_logits if deployment.use_policy_proposal else None
+    )
     return RuntimeController(
         seat=0,
         H=H,
@@ -180,7 +186,7 @@ def _make_controller(
         evaluator=evaluator,
         config=cfg,
         rng=np.random.default_rng(seed),
-        proposal_policy=evaluator.policy_logits,
+        proposal_policy=proposal_policy,
     )
 
 

@@ -67,6 +67,14 @@ class DeploymentConfig:
     # First-move warm-up batch shapes exercised at load
     warmup_batch_shapes: tuple[int, ...] = (1, 4, 16)
 
+    # Belief proposal source. False = particles advance on uniform legal enemy
+    # actions; True = sample the policy net from the enemy's perspective.
+    # Read by both the bot (agent.py) and the qualification harness
+    # (training/morpheus/measure_online.py) so a calibration run cannot measure
+    # a proposal path the bot does not play. Measured off:
+    # docs/research/measurements/belief-ablation-macaria.md.
+    use_policy_proposal: bool = False
+
     # Belief limitation recorded at qualification (not a quality gate)
     belief_quality_threshold: Optional[float] = None
     belief_limitation_note: str = (

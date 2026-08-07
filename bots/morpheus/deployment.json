@@ -14,7 +14,7 @@
   "normal_deadline_ms": 140.0,
   "offline_p99_ms": {
     "backup": 2.257166081108153,
-    "belief_proposal": 43.65883395075798,
+    "belief_proposal": 2.4965839693322778,
     "belief_tensor": 2.103540929965675,
     "enemy_prior_batch": 19.779082969762385,
     "hashing": 0.0,
@@ -37,6 +37,7 @@
   "search_depth": 2,
   "target_simulations": 16,
   "trunk_channels": 64,
+  "use_policy_proposal": false,
   "warmup_batch_shapes": [
     1,
     4,
