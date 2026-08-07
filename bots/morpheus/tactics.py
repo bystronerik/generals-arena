@@ -51,8 +51,16 @@ OSCILLATION_HISTORY = 8
 
 # Prior-shaping blend (Part 17). ``lam`` is the trust knob, ``log_clip`` bounds
 # how far one heuristic may move an action, ``floor_frac`` keeps a network zero
-# from being resurrected. The LEGACY_* values reproduce the unbounded geometric
-# reshape that shipped before Part 17 and exist for the parity test.
+# from being resurrected. Semantics: docs/bots/morpheus/prior-shaping.md.
+#
+# lambda stays at 1 until the Part 17 C2 sweep picks a value; the bound comes
+# from the clip, not from distrusting the heuristic ranking outright.
+DEFAULT_SHAPING_LAMBDA = 1.0
+DEFAULT_SHAPING_LOG_CLIP = math.log(10.0)  # at most a 10x nudge either way
+DEFAULT_SHAPING_FLOOR_FRAC = 1e-3
+
+# The LEGACY_* values reproduce the unbounded geometric reshape that shipped
+# before Part 17. They exist for the A1 parity test, not for play.
 LEGACY_SHAPING_LAMBDA = 1.0
 LEGACY_SHAPING_LOG_CLIP = math.inf
 LEGACY_SHAPING_FLOOR_FRAC = 0.0
@@ -987,15 +995,27 @@ def apply_pre_contact_prior(
     *,
     mask: Optional[Array] = None,
     belief: Optional[Any] = None,
-    lam: float = LEGACY_SHAPING_LAMBDA,
-    log_clip: float = LEGACY_SHAPING_LOG_CLIP,
-    floor_frac: float = LEGACY_SHAPING_FLOOR_FRAC,
-    floor_abs: float = LEGACY_SHAPING_FLOOR_ABS,
+    lam: Optional[float] = None,
+    log_clip: float = DEFAULT_SHAPING_LOG_CLIP,
+    floor_frac: float = DEFAULT_SHAPING_FLOOR_FRAC,
+    floor_abs: float = 0.0,
+    lam_pre_contact: float = DEFAULT_SHAPING_LAMBDA,
+    lam_post_contact: float = DEFAULT_SHAPING_LAMBDA,
 ) -> Array:
-    """Reshape root prior: expand pre-contact, seek after contact."""
+    """Reshape root prior: expand pre-contact, seek after contact.
+
+    ``lam`` pins one trust level for both phases. Leave it ``None`` to select
+    ``lam_pre_contact`` / ``lam_post_contact`` by ``enemy_is_visible``.
+    """
     if mask is None:
         mask = play_mask(obs, memory)
     mask_a = np.asarray(mask, dtype=bool).reshape(-1)
+    if lam is None:
+        lam = (
+            lam_post_contact
+            if enemy_is_visible(obs, memory)
+            else lam_pre_contact
+        )
     scores = heuristic_action_scores(obs, memory, mask_a, belief)
     return blend_prior(
         prior,

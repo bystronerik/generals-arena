@@ -160,9 +160,23 @@ def test_blocks_delayed_corridor_retreat():
     )
 
 
-def test_prior_ranks_enemy_take_above_fog_after_contact():
+def test_prior_ranks_enemy_take_at_the_top_of_the_band_after_contact():
+    """Enemy takes rank at the ceiling; the clip may tie them with fog carves.
+
+    Before Part 17 the heuristic ratio (enemy take ~3300x the geometric mean,
+    fog carve ~12x) reached the shaped prior unbounded, so the take strictly
+    outranked the carve on a flat network prior. The bounded blend caps both at
+    ``exp(log_clip)``, which deliberately hands that tie to the network. The
+    heuristic ordering itself is unchanged — the unbounded knobs still separate
+    them — so this asserts the take is at the top, not strictly above fog.
+    """
     from action import encode_action
-    from tactics import apply_pre_contact_prior
+    from tactics import (
+        LEGACY_SHAPING_FLOOR_ABS,
+        LEGACY_SHAPING_FLOOR_FRAC,
+        LEGACY_SHAPING_LOG_CLIP,
+        apply_pre_contact_prior,
+    )
 
     grid = np.zeros((10, 10), dtype=np.int32)
     grid[9, 0] = 1
@@ -190,8 +204,22 @@ def test_prior_ranks_enemy_take_above_fog_after_contact():
     enemy_idx = encode_action((0, 5, 6, 3, 0))  # east onto enemy (5,7)
     # Fog/neutral north from (5,6) if legal.
     fog_idx = encode_action((0, 5, 6, 0, 0))  # north
-    if mask[enemy_idx] and mask[fog_idx]:
-        assert shaped[enemy_idx] > shaped[fog_idx]
+    assert mask[enemy_idx] and mask[fog_idx]
+    # Bounded regime: the take is at the ceiling, never below the carve.
+    assert shaped[enemy_idx] >= shaped[fog_idx]
+    assert shaped[enemy_idx] == pytest.approx(float(shaped[mask].max()))
+    # The underlying heuristic ranking is untouched — only its reach is capped.
+    unbounded = apply_pre_contact_prior(
+        prior,
+        obs,
+        mem,
+        mask=mask,
+        lam=1.0,
+        log_clip=LEGACY_SHAPING_LOG_CLIP,
+        floor_frac=LEGACY_SHAPING_FLOOR_FRAC,
+        floor_abs=LEGACY_SHAPING_FLOOR_ABS,
+    )
+    assert unbounded[enemy_idx] > unbounded[fog_idx]
 
 
 def test_constrain_nn_keeps_non_oscillating_move():
@@ -297,8 +325,14 @@ def test_constrain_replaces_retreat_with_seek():
     shaped = apply_pre_contact_prior(prior, obs, mem, mask=mask)
     retreat = (0, 8, 5, 1, 0)  # south, away from enemy general
     out = constrain_nn_action(obs, mem, retreat, prev_action=None, prior=shaped)
+    assert out != retreat
+    assert out[0] == 0  # a move, not a pass or a build
     assert out[3] == 0  # prior re-rank north toward enemy
-    assert (out[1], out[2]) == (8, 5)
+    # Which corridor cell marches is now the network's call: on a flat prior the
+    # bounded clip ties every progressive north move, so pin the direction and
+    # the column, not one source cell.
+    assert out[2] == 5
+    assert 4 <= out[1] <= 11
 
 
 def test_constrain_forces_evacuate_when_nn_idles_structure():
@@ -351,6 +385,7 @@ def test_pre_contact_prior_prefers_frontier_over_pass_and_reinforce():
             frontier_side = idx
             prior[idx] = 0.05
     assert frontier_side is not None
+    assert leave_gen_own is not None
     prior[PASS_INDEX] = 0.25
     prior = prior / prior.sum()
 
@@ -366,12 +401,25 @@ def test_pre_contact_prior_prefers_frontier_over_pass_and_reinforce():
         tc = action[2] + int(DIRECTIONS[action[3], 1])
         if gen[tr, tc]:
             assert shaped[int(idx)] == pytest.approx(0.0)
-    top = int(np.argmax(shaped))
-    top_action = decode_action(top)
+    # The frontier expand is lifted relative to what the network gave it, but
+    # by no more than the two-sided clip allows.
+    import math
+
+    lift = (shaped[frontier_side] / shaped[leave_gen_own]) / (
+        prior[frontier_side] / prior[leave_gen_own]
+    )
+    assert 1.0 < lift <= math.exp(2.0 * math.log(10.0)) * (1.0 + 1e-9)
+    # ...but a 14x network preference (0.7 vs 0.05) survives a 10x clip. That is
+    # the Part 17 contract: heuristics nudge, they no longer override.
+    assert shaped[leave_gen_own] > shaped[frontier_side]
+    # With a flat prior — nothing for the heuristic to fight — the frontier
+    # expand is still the top action.
+    flat = np.where(mask, 1.0 / float(mask.sum()), 0.0)
+    flat_shaped = apply_pre_contact_prior(flat, obs, mem, mask=mask)
+    top_action = decode_action(int(np.argmax(flat_shaped)))
     tr = top_action[1] + int(DIRECTIONS[top_action[3], 0])
     tc = top_action[2] + int(DIRECTIONS[top_action[3], 1])
     assert int(owners[tr, tc]) == 0
-    del leave_gen_own
 
 
 def test_path_progress_routes_around_mountains():

@@ -224,3 +224,70 @@ def test_shaped_prior_never_leaves_the_play_mask():
 def test_play_mask_is_the_default_mask():
     for _name, obs, mem, mask, prior in golden_cases():
         np.testing.assert_array_equal(np.asarray(play_mask(obs, mem), dtype=bool), mask)
+
+
+def test_probe_fields_compare_chosen_against_the_unshaped_network_top():
+    """Part 17 B: agreement is measured against the raw prior, not the shaped one."""
+    from action import decode_action, encode_action
+    from runtime import _prior_probe_fields
+
+    n = PASS_INDEX + 1
+    mask = np.zeros(n, dtype=bool)
+    mask[:5] = True
+    nn = np.zeros(n, dtype=np.float64)
+    nn[:5] = (0.05, 0.5, 0.2, 0.15, 0.10)  # network top is index 1
+    shaped = np.zeros(n, dtype=np.float64)
+    shaped[:5] = (0.6, 0.1, 0.1, 0.1, 0.1)  # shaping moved the top to index 0
+
+    chosen = tuple(int(x) for x in decode_action(0))
+    fields = _prior_probe_fields(
+        shaped,
+        mask,
+        chosen=chosen,
+        policy_fallback=None,
+        has_root_result=True,
+        unshaped_prior=nn,
+        enemy_visible=True,
+    )
+    assert fields["root_top_action"] == 0  # shaped top
+    assert fields["nn_top_action"] == 1  # network top
+    assert fields["nn_top_prior_milli"] == 500
+    assert fields["chosen_matches_nn_top"] == 0
+    assert fields["chosen_in_nn_top3"] == 0  # nn top3 is {1, 2, 3}
+    assert fields["enemy_visible"] == 1
+
+    agreeing = tuple(int(x) for x in decode_action(2))
+    fields = _prior_probe_fields(
+        shaped,
+        mask,
+        chosen=agreeing,
+        policy_fallback=None,
+        has_root_result=True,
+        unshaped_prior=nn,
+        enemy_visible=False,
+    )
+    assert fields["chosen_matches_nn_top"] == 0
+    assert fields["chosen_in_nn_top3"] == 1
+    assert fields["enemy_visible"] == 0
+    del encode_action
+
+
+def test_probe_fields_are_neutral_without_an_unshaped_prior():
+    from action import decode_action
+    from runtime import _prior_probe_fields
+
+    n = PASS_INDEX + 1
+    mask = np.zeros(n, dtype=bool)
+    mask[:3] = True
+    shaped = np.zeros(n, dtype=np.float64)
+    shaped[:3] = (0.5, 0.3, 0.2)
+    fields = _prior_probe_fields(
+        shaped,
+        mask,
+        chosen=tuple(int(x) for x in decode_action(0)),
+        policy_fallback=None,
+        has_root_result=True,
+    )
+    assert fields["nn_top_action"] == -1
+    assert fields["chosen_matches_nn_top"] == 0
+    assert fields["chosen_in_nn_top3"] == 0

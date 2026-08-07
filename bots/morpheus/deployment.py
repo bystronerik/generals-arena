@@ -18,6 +18,13 @@ from runtime import (
     DEFAULT_OFFLINE_P99_MS,
     RuntimeConfig,
 )
+from tactics import (
+    DEFAULT_SHAPING_FLOOR_FRAC,
+    DEFAULT_SHAPING_LAMBDA,
+    DEFAULT_SHAPING_LOG_CLIP,
+)
+
+EVALUATOR_KINDS = ("network", "uniform")
 
 BOT_DIR = Path(__file__).resolve().parent
 DEFAULT_DEPLOYMENT_PATH = BOT_DIR / "deployment.json"
@@ -47,6 +54,21 @@ class DeploymentConfig:
     max_forward_equivalents: int = 113
     max_tree_nodes: int = 4096
     widen_freeze_below: int = 16
+
+    # Root prior-shaping blend (Part 17). One trust knob per phase (defaults
+    # equal; the phase split exists so a sweep can move them independently),
+    # a clip that bounds any heuristic to a fixed multiplicative nudge, and a
+    # relative prior floor. Full semantics and the hard-rule list live in
+    # docs/bots/morpheus/prior-shaping.md.
+    shaping_lambda_pre_contact: float = DEFAULT_SHAPING_LAMBDA
+    shaping_lambda_post_contact: float = DEFAULT_SHAPING_LAMBDA
+    shaping_log_clip: float = DEFAULT_SHAPING_LOG_CLIP
+    shaping_floor_frac: float = DEFAULT_SHAPING_FLOOR_FRAC
+
+    # Root/leaf evaluator selection. "network" plays the exported net; "uniform"
+    # replaces it with a flat prior and a zero value so the net-value ablation
+    # (Part 17 C1) is an honest content-hash entity instead of an env var.
+    evaluator: str = "network"
 
     # Deadlines and reserve
     normal_deadline_ms: float = 125.0
@@ -108,6 +130,10 @@ class DeploymentConfig:
             max_proposal_batch=int(self.max_proposal_batch),
             search_depth=int(self.search_depth),
             widen_freeze_below=int(self.widen_freeze_below),
+            shaping_lambda_pre_contact=float(self.shaping_lambda_pre_contact),
+            shaping_lambda_post_contact=float(self.shaping_lambda_post_contact),
+            shaping_log_clip=float(self.shaping_log_clip),
+            shaping_floor_frac=float(self.shaping_floor_frac),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -128,6 +154,10 @@ class DeploymentConfig:
                 kwargs[key] = {str(k): float(v) for k, v in dict(value).items()}
             elif key == "belief_quality_threshold":
                 kwargs[key] = None if value is None else float(value)
+            elif key.startswith("shaping_"):
+                kwargs[key] = float(value)
+            elif key == "evaluator":
+                kwargs[key] = str(value)
             else:
                 kwargs[key] = value
         cfg = cls(**kwargs)
@@ -155,6 +185,23 @@ class DeploymentConfig:
             raise ValueError("p99_window must be >= 1")
         if cfg.admission_guard_ms < 0:
             raise ValueError("admission_guard_ms must be >= 0")
+        if cfg.evaluator not in EVALUATOR_KINDS:
+            raise ValueError(
+                f"evaluator must be one of {EVALUATOR_KINDS}: {cfg.evaluator!r}"
+            )
+        for name in ("shaping_lambda_pre_contact", "shaping_lambda_post_contact"):
+            value = getattr(cfg, name)
+            if not math.isfinite(value) or not (0.0 <= value <= 1.0):
+                raise ValueError(f"{name} must be finite in [0, 1]: {value}")
+        # An infinite clip is the retired unbounded regime, not a valid config.
+        if not math.isfinite(cfg.shaping_log_clip) or cfg.shaping_log_clip <= 0.0:
+            raise ValueError(
+                f"shaping_log_clip must be finite and > 0: {cfg.shaping_log_clip}"
+            )
+        if not (0.0 <= cfg.shaping_floor_frac < 1.0):
+            raise ValueError(
+                f"shaping_floor_frac must be in [0, 1): {cfg.shaping_floor_frac}"
+            )
         return cfg
 
 

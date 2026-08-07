@@ -576,6 +576,44 @@ _PROBE_KEYS = (
         MEAN,
         FIRST,
     ),
+    _key(
+        "nn_top_action",
+        Kind.INT,
+        "morpheus: argmax action of the UNSHAPED network prior (-1 if no root)",
+        F,
+    ),
+    _key(
+        "nn_top_prior_milli",
+        Kind.INT,
+        "morpheus: unshaped network prior mass of its own top action * 1000",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "chosen_matches_nn_top",
+        Kind.BOOL01,
+        "morpheus: emitted action equals the unshaped network top action",
+        F,
+        MEAN,
+        FIRST,
+    ),
+    _key(
+        "chosen_in_nn_top3",
+        Kind.BOOL01,
+        "morpheus: emitted action is in the unshaped network top 3",
+        F,
+        MEAN,
+        FIRST,
+    ),
+    _key(
+        "enemy_visible",
+        Kind.BOOL01,
+        "morpheus: an enemy cell was visible this turn (shaping phase selector)",
+        F,
+        MEAN,
+        FIRST,
+    ),
 )
 
 # Engine keys: ground truth, recorded per turn by the trajectory recorder.

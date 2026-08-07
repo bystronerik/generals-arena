@@ -17,7 +17,14 @@ from network import (
     legal_normalized_policy,
 )
 from particle_summary import summarize_belief
-from tactics import apply_pre_contact_prior, play_mask
+from tactics import (
+    DEFAULT_SHAPING_FLOOR_FRAC,
+    DEFAULT_SHAPING_LAMBDA,
+    DEFAULT_SHAPING_LOG_CLIP,
+    apply_pre_contact_prior,
+    enemy_is_visible,
+    play_mask,
+)
 from tensor import build_tensor
 
 Array = np.ndarray
@@ -30,15 +37,43 @@ class NetworkEvaluator:
     Belief proposal and enemy priors use policy-only inference. Root and leaf
     evaluation use policy plus WDL. Auxiliary heads are not computed on the
     online search path.
+
+    Root priors pass through the Part 17 shaping blend; the knobs come from
+    ``deployment.json`` so every setting is a distinct content-hash entity.
+    ``last_unshaped_prior`` keeps the raw legal-normalized network prior from
+    the most recent root evaluation for the "who's deciding" probe.
     """
 
     session: InferenceSession
     previous_action: Optional[tuple[int, int, int, int, int]] = None
+    shaping_lambda_pre_contact: float = DEFAULT_SHAPING_LAMBDA
+    shaping_lambda_post_contact: float = DEFAULT_SHAPING_LAMBDA
+    shaping_log_clip: float = DEFAULT_SHAPING_LOG_CLIP
+    shaping_floor_frac: float = DEFAULT_SHAPING_FLOOR_FRAC
+    last_unshaped_prior: Optional[Array] = None
 
     def set_previous_action(
         self, action: Optional[tuple[int, int, int, int, int]]
     ) -> None:
         self.previous_action = action
+
+    def _shape_root(self, prior: Array, obs, memory, mask, belief) -> Array:
+        self.last_unshaped_prior = np.array(prior, dtype=np.float64, copy=True)
+        lam = (
+            self.shaping_lambda_post_contact
+            if enemy_is_visible(obs, memory)
+            else self.shaping_lambda_pre_contact
+        )
+        return apply_pre_contact_prior(
+            prior,
+            obs,
+            memory,
+            mask=mask,
+            belief=belief,
+            lam=float(lam),
+            log_clip=float(self.shaping_log_clip),
+            floor_frac=float(self.shaping_floor_frac),
+        )
 
     def _tensor(
         self,
@@ -70,9 +105,7 @@ class NetworkEvaluator:
         prior_t = legal_normalized_policy(policy, pass_logit, mask)
         prior = prior_t.squeeze(0).detach().cpu().numpy().astype(np.float64)
         if from_root:
-            prior = apply_pre_contact_prior(
-                prior, obs, memory, mask=mask_np, belief=belief
-            )
+            prior = self._shape_root(prior, obs, memory, mask_np, belief)
         value_t = backup_value(wdl_logits, from_root=from_root)
         return prior, float(value_t.squeeze(0).item())
 
@@ -106,9 +139,7 @@ class NetworkEvaluator:
                 value = -value
             else:
                 obs_i, mem_i, belief_i, _fr = items[i]
-                prior = apply_pre_contact_prior(
-                    prior, obs_i, mem_i, mask=masks[i], belief=belief_i
-                )
+                prior = self._shape_root(prior, obs_i, mem_i, masks[i], belief_i)
             results.append((prior, value))
         return results
 
@@ -142,3 +173,83 @@ class NetworkEvaluator:
         policy, pass_logit = self.session.forward_policy(x)
         logits = flatten_policy_logits(policy, pass_logit)
         return logits.detach().cpu().numpy().astype(np.float64)
+
+
+@dataclass
+class ShapedUniformEvaluator:
+    """Network-free arm of the Part 17 C1 ablation.
+
+    Same play mask, same shaping blend, same hard rules as ``NetworkEvaluator``
+    — only the learned prior and value are gone. A flat prior over the play mask
+    means the blend output is the heuristic ranking alone, so the contrast
+    against the network arm measures exactly what the network contributes.
+    """
+
+    shaping_lambda_pre_contact: float = DEFAULT_SHAPING_LAMBDA
+    shaping_lambda_post_contact: float = DEFAULT_SHAPING_LAMBDA
+    shaping_log_clip: float = DEFAULT_SHAPING_LOG_CLIP
+    shaping_floor_frac: float = DEFAULT_SHAPING_FLOOR_FRAC
+    previous_action: Optional[tuple[int, int, int, int, int]] = None
+    last_unshaped_prior: Optional[Array] = None
+
+    def set_previous_action(
+        self, action: Optional[tuple[int, int, int, int, int]]
+    ) -> None:
+        self.previous_action = action
+
+    def _uniform(self, mask: Array) -> Array:
+        prior = np.zeros(mask.shape, dtype=np.float64)
+        n = int(mask.sum())
+        if n <= 0:
+            prior[-1] = 1.0
+            return prior
+        prior[mask] = 1.0 / float(n)
+        return prior
+
+    def evaluate(
+        self,
+        obs,
+        memory: VisibleMemory,
+        belief: BeliefState,
+        *,
+        from_root: bool,
+    ) -> tuple[Array, float]:
+        if from_root:
+            mask = np.asarray(play_mask(obs, memory), dtype=bool)
+            prior = self._uniform(mask)
+            self.last_unshaped_prior = np.array(prior, dtype=np.float64, copy=True)
+            lam = (
+                self.shaping_lambda_post_contact
+                if enemy_is_visible(obs, memory)
+                else self.shaping_lambda_pre_contact
+            )
+            prior = apply_pre_contact_prior(
+                prior,
+                obs,
+                memory,
+                mask=mask,
+                belief=belief,
+                lam=float(lam),
+                log_clip=float(self.shaping_log_clip),
+                floor_frac=float(self.shaping_floor_frac),
+            )
+            return prior, 0.0
+        return self._uniform(np.asarray(legal_mask(obs, memory), dtype=bool)), 0.0
+
+    def evaluate_many(
+        self,
+        items: list[tuple[object, VisibleMemory, BeliefState, bool]],
+    ) -> list[tuple[Array, float]]:
+        return [
+            self.evaluate(obs, mem, belief, from_root=from_root)
+            for obs, mem, belief, from_root in items
+        ]
+
+    def policy_priors_many(
+        self,
+        items: list[tuple[object, VisibleMemory, BeliefState]],
+    ) -> list[Array]:
+        return [
+            self._uniform(np.asarray(legal_mask(obs, mem), dtype=bool))
+            for obs, mem, _belief in items
+        ]

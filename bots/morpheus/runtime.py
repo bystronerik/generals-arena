@@ -28,6 +28,9 @@ from proposal import PolicyFn, ProposalTelemetry, propose_enemy_actions
 from recovery import recover_belief
 from search import SearchConfig, SearchController, SearchEvaluator, UniformEvaluator
 from tactics import (
+    DEFAULT_SHAPING_FLOOR_FRAC,
+    DEFAULT_SHAPING_LAMBDA,
+    DEFAULT_SHAPING_LOG_CLIP,
     OSCILLATION_HISTORY,
     constrain_nn_action,
     enemy_is_visible,
@@ -131,6 +134,12 @@ class RuntimeConfig:
     max_proposal_batch: int = DEFAULT_MAX_PROPOSAL_BATCH
     search_depth: int = DEFAULT_SEARCH_DEPTH
     widen_freeze_below: int = 16  # stop widening when forecast sims < this
+    # Root prior-shaping blend (Part 17). Semantics and the hard-rule list:
+    # docs/bots/morpheus/prior-shaping.md.
+    shaping_lambda_pre_contact: float = DEFAULT_SHAPING_LAMBDA
+    shaping_lambda_post_contact: float = DEFAULT_SHAPING_LAMBDA
+    shaping_log_clip: float = DEFAULT_SHAPING_LOG_CLIP
+    shaping_floor_frac: float = DEFAULT_SHAPING_FLOOR_FRAC
 
 
 @dataclass
@@ -224,6 +233,14 @@ class TurnMetrics:
     policy_fallback_is_pass: int = 0
     root_legal_nonpass: int = 0
     has_root_result: int = 0
+    # "Who's deciding" (Part 17 B): the same fields measured on the *unshaped*
+    # network prior, so agreement between the network's own top action and what
+    # the bot played is observable without re-running inference.
+    nn_top_action: int = -1
+    nn_top_prior_milli: int = 0
+    chosen_matches_nn_top: int = 0
+    chosen_in_nn_top3: int = 0
+    enemy_visible: int = 0
 
 
 def _prior_probe_fields(
@@ -233,19 +250,32 @@ def _prior_probe_fields(
     chosen: Action5,
     policy_fallback: Optional[Action5],
     has_root_result: bool,
+    unshaped_prior: Optional[np.ndarray] = None,
+    enemy_visible: bool = False,
 ) -> dict[str, int]:
-    """Derive integer probe fields from the legal-normalized root prior."""
+    """Derive integer probe fields from the legal-normalized root prior.
+
+    ``prior`` is the shaped prior the bot actually searched on; ``unshaped_prior``
+    is the raw network prior before the Part 17 blend. Comparing the chosen
+    action against the *unshaped* top is what makes "who's deciding" answerable.
+    """
     from action import PASS_INDEX, encode_action
 
+    chosen_idx = int(encode_action(chosen))
     out = {
         "root_pass_prior_milli": 0,
         "root_top_action": -1,
         "root_top_prior_milli": 0,
-        "chosen_action": int(encode_action(chosen)),
-        "chosen_is_pass": int(chosen == PASS or encode_action(chosen) == PASS_INDEX),
+        "chosen_action": chosen_idx,
+        "chosen_is_pass": int(chosen == PASS or chosen_idx == PASS_INDEX),
         "policy_fallback_is_pass": 0,
         "root_legal_nonpass": 0,
         "has_root_result": int(bool(has_root_result)),
+        "nn_top_action": -1,
+        "nn_top_prior_milli": 0,
+        "chosen_matches_nn_top": 0,
+        "chosen_in_nn_top3": 0,
+        "enemy_visible": int(bool(enemy_visible)),
     }
     if policy_fallback is not None:
         out["policy_fallback_is_pass"] = int(
@@ -264,6 +294,20 @@ def _prior_probe_fields(
     top = int(np.argmax(scored))
     out["root_top_action"] = top
     out["root_top_prior_milli"] = int(round(float(prior_a[top]) * 1000.0))
+
+    if unshaped_prior is None:
+        return out
+    nn_a = np.asarray(unshaped_prior, dtype=np.float64).reshape(-1)
+    if nn_a.shape != mask_a.shape or not np.any(mask_a):
+        return out
+    nn_scored = np.where(mask_a, nn_a, -1.0)
+    nn_top = int(np.argmax(nn_scored))
+    out["nn_top_action"] = nn_top
+    out["nn_top_prior_milli"] = int(round(float(nn_a[nn_top]) * 1000.0))
+    out["chosen_matches_nn_top"] = int(chosen_idx == nn_top)
+    k = min(3, int(mask_a.sum()))
+    top3 = np.argpartition(-nn_scored, k - 1)[:k]
+    out["chosen_in_nn_top3"] = int(chosen_idx in {int(i) for i in top3})
     return out
 
 
@@ -355,6 +399,11 @@ class RuntimeController:
         self.policy_fallback_is_pass = 0
         self.root_legal_nonpass = 0
         self.has_root_result = 0
+        self.nn_top_action = -1
+        self.nn_top_prior_milli = 0
+        self.chosen_matches_nn_top = 0
+        self.chosen_in_nn_top3 = 0
+        self.enemy_visible = 0
         self._proposal_telemetry = ProposalTelemetry()
 
     # ------------------------------------------------------------------ clock
@@ -471,6 +520,9 @@ class RuntimeController:
         self.forward_by_consumer = {name: 0 for name in FORWARD_CONSUMERS}
         self.metrics = TurnMetrics()
         recovery_flag = 0
+        # A skipped root inference must not report last turn's network prior.
+        if hasattr(self.evaluator, "last_unshaped_prior"):
+            self.evaluator.last_unshaped_prior = None
 
         if first_move:
             admitted, _ = self._run_admitted(
@@ -679,6 +731,10 @@ class RuntimeController:
             chosen=action,
             policy_fallback=self._policy_fallback,
             has_root_result=has_root_result,
+            unshaped_prior=getattr(self.evaluator, "last_unshaped_prior", None),
+            enemy_visible=(
+                self.memory is not None and enemy_is_visible(obs, self.memory)
+            ),
         )
         self._publish_metrics(
             action_level=level,
@@ -903,6 +959,11 @@ class RuntimeController:
         self.policy_fallback_is_pass = int(fields.get("policy_fallback_is_pass", 0))
         self.root_legal_nonpass = int(fields.get("root_legal_nonpass", 0))
         self.has_root_result = int(fields.get("has_root_result", 0))
+        self.nn_top_action = int(fields.get("nn_top_action", -1))
+        self.nn_top_prior_milli = int(fields.get("nn_top_prior_milli", 0))
+        self.chosen_matches_nn_top = int(fields.get("chosen_matches_nn_top", 0))
+        self.chosen_in_nn_top3 = int(fields.get("chosen_in_nn_top3", 0))
+        self.enemy_visible = int(fields.get("enemy_visible", 0))
 
         self.metrics.move_ms = self.move_ms
         self.metrics.completed_simulations = self.completed_simulations
@@ -925,6 +986,11 @@ class RuntimeController:
         self.metrics.policy_fallback_is_pass = self.policy_fallback_is_pass
         self.metrics.root_legal_nonpass = self.root_legal_nonpass
         self.metrics.has_root_result = self.has_root_result
+        self.metrics.nn_top_action = self.nn_top_action
+        self.metrics.nn_top_prior_milli = self.nn_top_prior_milli
+        self.metrics.chosen_matches_nn_top = self.chosen_matches_nn_top
+        self.metrics.chosen_in_nn_top3 = self.chosen_in_nn_top3
+        self.metrics.enemy_visible = self.enemy_visible
 
 
 def highest_prior_legal(prior: Array, mask: Array) -> Action5:

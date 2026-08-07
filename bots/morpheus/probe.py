@@ -51,4 +51,9 @@ def extras(agent) -> dict:
         "policy_fallback_is_pass": int(getattr(agent, "policy_fallback_is_pass", 0)),
         "root_legal_nonpass": int(getattr(agent, "root_legal_nonpass", 0)),
         "has_root_result": int(getattr(agent, "has_root_result", 0)),
+        "nn_top_action": int(getattr(agent, "nn_top_action", -1)),
+        "nn_top_prior_milli": int(getattr(agent, "nn_top_prior_milli", 0)),
+        "chosen_matches_nn_top": int(getattr(agent, "chosen_matches_nn_top", 0)),
+        "chosen_in_nn_top3": int(getattr(agent, "chosen_in_nn_top3", 0)),
+        "enemy_visible": int(getattr(agent, "enemy_visible", 0)),
     }

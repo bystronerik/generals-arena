@@ -6,7 +6,7 @@ belief-proposal policy. Probe counters stay passive.
 """
 
 from deployment import try_load_deployment
-from evaluator import NetworkEvaluator
+from evaluator import NetworkEvaluator, ShapedUniformEvaluator
 from inference import load_default_session
 from runtime import RuntimeController
 
@@ -31,7 +31,23 @@ class Agent:
             x = torch.randn(int(batch), IN_CHANNELS, BOARD, BOARD, generator=gen)
             self._session.forward_policy(x)
             self._session.forward_policy_wdl(x)
-        self._evaluator = NetworkEvaluator(self._session)
+        self._evaluator = NetworkEvaluator(
+            self._session,
+            shaping_lambda_pre_contact=self._deployment.shaping_lambda_pre_contact,
+            shaping_lambda_post_contact=self._deployment.shaping_lambda_post_contact,
+            shaping_log_clip=self._deployment.shaping_log_clip,
+            shaping_floor_frac=self._deployment.shaping_floor_frac,
+        )
+        # Net-value ablation (Part 17 C1): a deployment field, not an env var,
+        # so "no network" is its own rated content hash. The shaping blend and
+        # every hard rule stay identical across the two arms.
+        if self._deployment.evaluator == "uniform":
+            self._evaluator = ShapedUniformEvaluator(
+                shaping_lambda_pre_contact=self._deployment.shaping_lambda_pre_contact,
+                shaping_lambda_post_contact=self._deployment.shaping_lambda_post_contact,
+                shaping_log_clip=self._deployment.shaping_log_clip,
+                shaping_floor_frac=self._deployment.shaping_floor_frac,
+            )
         runtime_cfg = self._deployment.to_runtime_config()
         runtime_cfg.max_proposal_batch = int(self._deployment.max_proposal_batch)
         # Belief particles advance on uniform legal enemy actions unless the
@@ -40,7 +56,7 @@ class Agent:
         # the learned proposal showed no benefit (-0.07 +/- 0.13 paired), and
         # skipping its forward returns ~13 ms/turn to the search budget.
         proposal_policy = (
-            self._evaluator.policy_logits
+            getattr(self._evaluator, "policy_logits", None)
             if self._deployment.use_policy_proposal
             else None
         )
@@ -86,6 +102,11 @@ class Agent:
         self.policy_fallback_is_pass = c.policy_fallback_is_pass
         self.root_legal_nonpass = c.root_legal_nonpass
         self.has_root_result = c.has_root_result
+        self.nn_top_action = c.nn_top_action
+        self.nn_top_prior_milli = c.nn_top_prior_milli
+        self.chosen_matches_nn_top = c.chosen_matches_nn_top
+        self.chosen_in_nn_top3 = c.chosen_in_nn_top3
+        self.enemy_visible = c.enemy_visible
 
     def act(self, obs):
         action = self._controller.decide(obs)

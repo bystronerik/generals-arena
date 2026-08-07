@@ -171,7 +171,15 @@ def _make_controller(
     session,
     seed: int,
 ) -> RuntimeController:
-    evaluator = NetworkEvaluator(session)
+    # Mirror the bot's shaping knobs too: calibrating against a different blend
+    # would measure a root path the bot does not play.
+    evaluator = NetworkEvaluator(
+        session,
+        shaping_lambda_pre_contact=deployment.shaping_lambda_pre_contact,
+        shaping_lambda_post_contact=deployment.shaping_lambda_post_contact,
+        shaping_log_clip=deployment.shaping_log_clip,
+        shaping_floor_frac=deployment.shaping_floor_frac,
+    )
     cfg = deployment.to_runtime_config()
     # Mirror the bot: bots/morpheus/agent.py reads the same flag. Hardcoding
     # the policy proposal here would calibrate belief_proposal against a path
@@ -277,6 +285,11 @@ def _run_scenario(
                     for key, value in dict(ctl.forward_by_consumer).items()
                 },
                 "cost_search_ms": int(ctl.cost_search_ms),
+                "has_root_result": int(ctl.has_root_result),
+                "enemy_visible": int(ctl.enemy_visible),
+                "chosen_matches_nn_top": int(ctl.chosen_matches_nn_top),
+                "chosen_in_nn_top3": int(ctl.chosen_in_nn_top3),
+                "nn_top_prior_milli": int(ctl.nn_top_prior_milli),
             }
         )
 
@@ -329,6 +342,12 @@ def _summarize_turn_telemetry(rows: list[dict[str, Any]]) -> dict[str, Any]:
     proposal_batches: list[float] = []
     search_ms: list[float] = []
     component_total_vs_move: list[float] = []
+    # Part 17 B: how often the played action is the network's own top choice,
+    # split by shaping phase. A near-zero pre-contact rate means the heuristic
+    # is picking the action class and the network is only ranking inside it.
+    agree_top: dict[str, list[float]] = {"pre_contact": [], "post_contact": []}
+    agree_top3: dict[str, list[float]] = {"pre_contact": [], "post_contact": []}
+    nn_top_milli: dict[str, list[float]] = {"pre_contact": [], "post_contact": []}
 
     for row in rows:
         for turn in row.get("turns", []):
@@ -355,6 +374,16 @@ def _summarize_turn_telemetry(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 )
                 proposal_batches.append(float(turn.get("proposal_n_policy_batches", 0)))
                 search_ms.append(float(turn.get("cost_search_ms", 0)))
+            # Agreement is only defined on turns where a root prior existed.
+            if int(turn.get("has_root_result", 0)):
+                phase = (
+                    "post_contact"
+                    if int(turn.get("enemy_visible", 0))
+                    else "pre_contact"
+                )
+                agree_top[phase].append(float(turn.get("chosen_matches_nn_top", 0)))
+                agree_top3[phase].append(float(turn.get("chosen_in_nn_top3", 0)))
+                nn_top_milli[phase].append(float(turn.get("nn_top_prior_milli", 0)))
 
     turn_total_p99 = {
         name: (
@@ -390,6 +419,15 @@ def _summarize_turn_telemetry(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "proposal_policy_batches_mean": _mean_or_zero(proposal_batches),
         "search_ms_mean": _mean_or_zero(search_ms),
         "component_total_over_move_mean": _mean_or_zero(component_total_vs_move),
+        "nn_agreement": {
+            phase: {
+                "n_turns": len(agree_top[phase]),
+                "chosen_matches_nn_top_rate": _mean_or_zero(agree_top[phase]),
+                "chosen_in_nn_top3_rate": _mean_or_zero(agree_top3[phase]),
+                "nn_top_prior_milli_mean": _mean_or_zero(nn_top_milli[phase]),
+            }
+            for phase in ("pre_contact", "post_contact")
+        },
     }
 
 

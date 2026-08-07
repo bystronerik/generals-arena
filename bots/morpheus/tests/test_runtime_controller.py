@@ -321,9 +321,19 @@ def test_probe_is_passive_and_keys_are_declared():
         policy_fallback_is_pass = 1
         root_legal_nonpass = 3
         has_root_result = 1
+        nn_top_action = 17
+        nn_top_prior_milli = 120
+        chosen_matches_nn_top = 0
+        chosen_in_nn_top3 = 1
+        enemy_visible = 1
 
     extras = probe_extras(probe, _Stub())
     validated = validate_extras(extras)
+    assert validated["nn_top_action"] == 17
+    assert validated["nn_top_prior_milli"] == 120
+    assert validated["chosen_matches_nn_top"] is False
+    assert validated["chosen_in_nn_top3"] is True
+    assert validated["enemy_visible"] is True
     assert validated["completed_simulations"] == 3
     assert validated["fallback_level"] == "visit"
     assert validated["proposal_n_unique_info_keys"] == 30
