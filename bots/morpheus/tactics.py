@@ -445,6 +445,160 @@ def _as_grids(obs) -> tuple[Array, Array, Array]:
     )
 
 
+# ---------------------------------------------------------------------------
+# Vectorized scoring machinery. ``heuristic_action_scores`` ran a Python loop
+# with two full visibility dilations per candidate action (~15 ms per call
+# mid-game); these tables and array helpers replace that with one dilation and
+# pure numpy. The scalar helpers above stay the semantic reference — the
+# parity test in tests/test_heuristic_scores_parity.py holds the two together.
+# ---------------------------------------------------------------------------
+
+_DECODE_TABLES: Optional[tuple[Array, Array, Array, Array, Array]] = None
+
+
+def _decode_tables() -> tuple[Array, Array, Array, Array, Array]:
+    """Static ``(kind, sr, sc, tr, tc)`` per non-pass action index.
+
+    ``tr``/``tc`` are move destinations (unclipped; may fall outside a small
+    board — callers bounds-check against the live ``H``/``W``). For builds the
+    destination equals the source.
+    """
+    global _DECODE_TABLES
+    if _DECODE_TABLES is None:
+        n = PASS_INDEX
+        kind = np.zeros(n, dtype=np.int16)
+        sr = np.zeros(n, dtype=np.int16)
+        sc = np.zeros(n, dtype=np.int16)
+        tr = np.zeros(n, dtype=np.int16)
+        tc = np.zeros(n, dtype=np.int16)
+        for i in range(n):
+            k, r, c, d, _s = decode_action(i)
+            kind[i] = k
+            sr[i] = r
+            sc[i] = c
+            if k == 0:
+                tr[i] = r + int(DIRECTIONS[d, 0])
+                tc[i] = c + int(DIRECTIONS[d, 1])
+            else:
+                tr[i] = r
+                tc[i] = c
+        _DECODE_TABLES = (kind, sr, sc, tr, tc)
+    return _DECODE_TABLES
+
+
+def reveal_count_grid(obs) -> Array:
+    """Per-cell ``newly_revealed_cells`` computed once for the whole board.
+
+    Visibility is a 3×3 dilation of ownership, so owning one new cell reveals
+    exactly the currently-invisible cells inside that cell's 3×3 box. Cells we
+    already own reveal nothing (matches ``newly_revealed_cells``).
+    """
+    _types, owners, _armies = _as_grids(obs)
+    owned = owners == 1
+    before = visibility_mask(owned)
+    invisible = (~before).astype(np.int32)
+    H, W = invisible.shape
+    padded = np.pad(invisible, 1)
+    box = np.zeros((H, W), dtype=np.int32)
+    for dr in range(3):
+        for dc in range(3):
+            box += padded[dr : dr + H, dc : dc + W]
+    return np.where(owned, 0, box)
+
+
+def _wave_weight_v(army: Array) -> Array:
+    a = np.clip(army, 1, WAVE_ARMY_SOFT_CAP)
+    return 1.0 + 0.25 * np.log1p(a)
+
+
+def _attack_weight_v(army: Array) -> Array:
+    a = np.clip(army, 1, ATTACK_ARMY_CAP)
+    return 1.0 + 0.85 * np.log1p(a)
+
+
+def _explore_wave_weight_v(army: Array) -> Array:
+    a = np.maximum(army, 1)
+    formed = 1.0 + 0.9 * np.log1p(np.minimum(a, 80))
+    return np.where(a < EXPLORE_WAVE_MIN, 0.12, formed)
+
+
+def _committed_v(army: Array, max_army: int, total: int, share: float) -> Array:
+    a = np.asarray(army)
+    tot = max(int(total), 1)
+    mx = max(int(max_army), 1)
+    if share < GATHER_SHARE_MIN:
+        floor = max(STACK_GATHER_BAN, int(COMMIT_TOTAL_FRAC * tot))
+        return (a >= mx) & (a >= floor)
+    return (a >= COMMIT_ARMY_FRAC * mx) | (a >= COMMIT_TOTAL_FRAC * tot)
+
+
+def _tip_thrash_v(src_army: Array, max_army: int, total: int) -> Array:
+    src = np.maximum(src_army, 1)
+    big = max(int(max_army), 1)
+    tot = max(int(total), 1)
+    share = float(big) / float(tot)
+    committed = _committed_v(src, big, tot, share)
+    out = 0.08 + 0.6 * (src / float(big))
+    if big < STACK_GATHER_BAN and share >= GATHER_SHARE_MIN:
+        return np.ones_like(out)
+    return np.where(committed, 1.0, out)
+
+
+def _gather_v(src_army: Array, dest_army: Array, progress: Array) -> Array:
+    """Vector ``stack_gather_factor`` for own-land destinations."""
+    src = np.maximum(src_army, 1)
+    dest = np.maximum(dest_army, 0).astype(np.float64)
+    forward = 1.0 / (1.0 + (dest / 25.0) ** 1.5)
+    retreat = 0.03 / (1.0 + dest / 4.0)
+    feed = 1.0 / (1.0 + (dest / 6.0) ** 2)
+    lateral = np.where(
+        (src >= STACK_GATHER_BAN) & (dest > COMMIT_DEST_ARMY_MAX),
+        feed * 0.05,
+        feed,
+    )
+    return np.where(progress > 0.0, forward, np.where(progress < 0.0, retreat, lateral))
+
+
+def _bias_v(progress: Array, dest_owner: Array) -> Array:
+    """Vector ``direction_bias``."""
+    p = np.asarray(progress, dtype=np.float64)
+    own = np.asarray(dest_owner)
+    enemy = 4.0 + 2.0 * np.maximum(p, 0.0)
+    toward = np.where(own == 1, 1.5 + 1.2 * p, 1.8 + 1.4 * p)
+    flat = np.where(own == 1, 0.25, 0.55)
+    non_enemy = np.where(p > 0.0, toward, np.where(p < 0.0, 0.06, flat))
+    return np.where(own == OWNER_ENEMY, enemy, non_enemy)
+
+
+def _path_progress_v(
+    sr: Array,
+    sc: Array,
+    tr: Array,
+    tc: Array,
+    dist_field: Optional[Array],
+    fallback_target: Optional[tuple[int, int]],
+) -> Array:
+    """Vector ``path_progress`` (all coordinates already in bounds)."""
+    if fallback_target is None:
+        manhattan = np.zeros(len(sr), dtype=np.float64)
+    else:
+        gr, gc = fallback_target
+        before_m = np.abs(sr - gr) + np.abs(sc - gc)
+        after_m = np.abs(tr - gr) + np.abs(tc - gc)
+        manhattan = (before_m - after_m).astype(np.float64)
+    if dist_field is None:
+        return manhattan
+    before = dist_field[sr, sc].astype(np.float64)
+    after = dist_field[tr, tc].astype(np.float64)
+    both_unreachable = (before < 0) & (after < 0)
+    enter = (before < 0) & (after >= 0)
+    leave = (before >= 0) & (after < 0)
+    out = before - after
+    out = np.where(enter, 2.0, out)
+    out = np.where(leave, -2.0, out)
+    return np.where(both_unreachable, manhattan, out)
+
+
 def _is_passable_type(cell_type: int) -> bool:
     return int(cell_type) not in (TYPE_MOUNTAIN, TYPE_STRUCTURE_FOG)
 
@@ -702,18 +856,24 @@ def heuristic_action_scores(
 
     turn = int(getattr(obs, "turn", 0))
     castle_w = castle_timing_weight(turn)
-    for idx in np.flatnonzero(mask_a):
-        idx = int(idx)
-        action = decode_action(idx)
-        if int(action[0]) != 2:
-            continue
-        r, c = int(action[1]), int(action[2])
-        army = float(max(int(armies[r, c]), 1))
+    kind_t, sr_t, sc_t, tr_t, tc_t = _decode_tables()
+    legal = np.flatnonzero(mask_a[:PASS_INDEX])
+    build_idx = legal[kind_t[legal] == 2]
+    if build_idx.size:
+        b_army = np.maximum(
+            armies[sr_t[build_idx], sc_t[build_idx]], 1
+        ).astype(np.float64)
         # Prefer cells that can still hold a useful remnant after the spend.
-        out[idx] = max(
-            out[idx],
-            castle_w * (10.0 + 0.2 * min(army, 100.0)),
-        )
+        out[build_idx] = castle_w * (10.0 + 0.2 * np.minimum(b_army, 100.0))
+
+    move_all = legal[kind_t[legal] == 0]
+    sr = sr_t[move_all].astype(np.int64)
+    sc = sc_t[move_all].astype(np.int64)
+    tr = tr_t[move_all].astype(np.int64)
+    tc = tc_t[move_all].astype(np.int64)
+    inb = (tr >= 0) & (tr < H) & (tc >= 0) & (tc < W)
+    move_idx = move_all[inb]
+    sr, sc, tr, tc = sr[inb], sc[inb], tr[inb], tc[inb]
 
     if seen_enemy:
         target = enemy_seek_target(obs, memory, belief=belief)
@@ -723,185 +883,153 @@ def heuristic_action_scores(
         king_dist = path_distance_field(obs, [king]) if king is not None else None
         share, max_own, tot = army_concentration(obs)
         gen_known = enemy_general_visible(obs, memory)
-        for idx in np.flatnonzero(mask_a):
-            idx = int(idx)
-            if idx == PASS_INDEX:
-                continue
-            action = decode_action(idx)
-            if int(action[0]) == 2:
-                continue  # already scored with castle timing
-            if int(action[0]) != 0:
-                out[idx] = max(out[idx], 0.01)
-                continue
-            sr, sc, d = int(action[1]), int(action[2]), int(action[3])
-            tr = sr + int(DIRECTIONS[d, 0])
-            tc = sc + int(DIRECTIONS[d, 1])
-            if not (0 <= tr < H and 0 <= tc < W):
-                continue
-            army_i = int(armies[sr, sc])
-            army_w = wave_weight(army_i)
-            atk_w = attack_weight(army_i)
-            dest_owner = int(owners[tr, tc])
-            dest_army = int(armies[tr, tc])
-            reveal = newly_revealed_cells(obs, tr, tc)
-            efficiency = float(reveal) / float(explore_cost(dest_army))
-            progress = path_progress(
-                sr, sc, tr, tc, dist_field, fallback_target=target
-            )
-            bias = direction_bias(progress, dest_owner)
-            surplus = float(max(army_i - dest_army - 1, 0))
-            thrash = tip_thrash_factor(army_i, max_own, tot)
-            gather = stack_gather_factor(
-                army_i, dest_army, dest_owner, progress=progress
+        if move_idx.size:
+            army_i = armies[sr, sc].astype(np.int64)
+            dest_owner = owners[tr, tc]
+            dest_army = armies[tr, tc].astype(np.int64)
+            reveal = reveal_count_grid(obs)[tr, tc].astype(np.float64)
+            efficiency = reveal / (1.0 + np.maximum(dest_army, 0))
+            progress = _path_progress_v(sr, sc, tr, tc, dist_field, target)
+            bias = _bias_v(progress, dest_owner)
+            surplus = np.maximum(army_i - dest_army - 1, 0).astype(np.float64)
+            thrash = _tip_thrash_v(army_i, max_own, tot)
+            army_w = _wave_weight_v(army_i)
+            atk_w = _attack_weight_v(army_i)
+            gather = np.where(
+                dest_owner == 1, _gather_v(army_i, dest_army, progress), 1.0
             )
 
-            if dest_owner == OWNER_ENEMY and surplus > 0.0:
-                # Strong attack reward: raw NN rarely proposes takes (probe ~0.8%).
-                score = (
-                    atk_w
-                    * thrash
-                    * bias
-                    * (
-                        120.0
-                        + 40.0 * max(progress, 0.0)
-                        + 8.0 * float(reveal)
-                        + 3.5 * min(surplus, 80.0)
-                    )
+            # Strong attack reward: raw NN rarely proposes takes (probe ~0.8%).
+            enemy_score = (
+                atk_w
+                * thrash
+                * bias
+                * (
+                    120.0
+                    + 40.0 * np.maximum(progress, 0.0)
+                    + 8.0 * reveal
+                    + 3.5 * np.minimum(surplus, 80.0)
                 )
-                if gen_known:
-                    score *= 1.35
-            elif dest_owner == OWNER_NEUTRAL:
-                # Fog carve that shortens the path to enemy is a real attack prep.
-                score = (
-                    atk_w
-                    * thrash
-                    * bias
-                    * (
-                        45.0
-                        + 30.0 * max(progress, 0.0)
-                        + 12.0 * efficiency
-                        + 8.0 * float(reveal)
-                    )
+            )
+            if gen_known:
+                enemy_score = enemy_score * 1.35
+            # Fog carve that shortens the path to enemy is a real attack prep.
+            neutral_score = (
+                atk_w
+                * thrash
+                * bias
+                * (
+                    45.0
+                    + 30.0 * np.maximum(progress, 0.0)
+                    + 12.0 * efficiency
+                    + 8.0 * reveal
                 )
-            elif dest_owner == 1:
-                # Own corridor: reward path-toward-enemy; crush retreat.
-                # Also reward hinterland tips gathering into the king stack.
-                k_prog = 0.0
-                if king_dist is not None and not is_committed_army(
-                    army_i, max_own, tot, share
-                ):
-                    k_prog = path_progress(
-                        sr, sc, tr, tc, king_dist, fallback_target=king
-                    )
-                if k_prog > 0.0 and share < GATHER_SHARE_MIN:
-                    score = (
-                        army_w
-                        * (14.0 + 22.0 * k_prog)
-                        * stack_gather_factor(
-                            army_i, dest_army, 1, progress=k_prog
-                        )
-                    )
-                elif progress > 0.0:
-                    score = (
-                        atk_w
-                        * thrash
-                        * bias
-                        * (18.0 + 32.0 * progress)
-                        * gather
-                    )
-                else:
-                    # Raw NN often picks retreat; keep mass near zero here.
-                    score = 0.008 * army_w * bias * gather
+            )
+            # Own corridor: reward path-toward-enemy; crush retreat.
+            # Also reward hinterland tips gathering into the king stack.
+            committed = _committed_v(army_i, max_own, tot, share)
+            if king_dist is not None:
+                k_prog = np.where(
+                    committed,
+                    0.0,
+                    _path_progress_v(sr, sc, tr, tc, king_dist, king),
+                )
             else:
-                score = 0.01 * army_w * gather
-            out[idx] = max(out[idx], score)
-    else:
+                k_prog = np.zeros(len(move_idx), dtype=np.float64)
+            king_gather = (
+                army_w
+                * (14.0 + 22.0 * k_prog)
+                * _gather_v(army_i, dest_army, k_prog)
+            )
+            own_forward = atk_w * thrash * bias * (18.0 + 32.0 * progress) * gather
+            # Raw NN often picks retreat; keep mass near zero here.
+            own_idle = 0.008 * army_w * bias * gather
+            own_score = np.where(
+                (k_prog > 0.0) & (share < GATHER_SHARE_MIN),
+                king_gather,
+                np.where(progress > 0.0, own_forward, own_idle),
+            )
+            score = np.where(
+                (dest_owner == OWNER_ENEMY) & (surplus > 0.0),
+                enemy_score,
+                np.where(
+                    dest_owner == OWNER_NEUTRAL,
+                    neutral_score,
+                    np.where(dest_owner == 1, own_score, 0.01 * army_w * gather),
+                ),
+            )
+            out[move_idx] = np.maximum(out[move_idx], score)
+    elif move_idx.size:
         # No enemy yet: hunt fog with a formed wave; urgency rises with turn.
         # Idle piles on general/castle are heavily discouraged.
-        turn = int(getattr(obs, "turn", 0))
         urgency = fog_urgency(turn, enemy_seen=False)
-        own_struct = own_structure_mask(obs, memory)
+        own_struct = np.asarray(own_structure_mask(obs, memory), dtype=bool)
         fog_target = enemy_seek_target(obs, memory, belief=belief)
         fog_goals = seek_goals(obs, memory)
         fog_dist = path_distance_field(obs, fog_goals) if fog_goals else None
-        frontier = frontier_expand_indices(obs, memory, mask_a)
-        frontier_sources: set[tuple[int, int]] = set()
-        for idx in frontier:
-            action = decode_action(idx)
-            sr, sc, d = int(action[1]), int(action[2]), int(action[3])
-            tr = sr + int(DIRECTIONS[d, 0])
-            tc = sc + int(DIRECTIONS[d, 1])
-            frontier_sources.add((sr, sc))
-            reveal = newly_revealed_cells(obs, tr, tc) if 0 <= tr < H and 0 <= tc < W else 0
-            dest_army = int(armies[tr, tc]) if 0 <= tr < H and 0 <= tc < W else 0
-            eff = float(reveal) / float(explore_cost(dest_army))
-            src_army = int(armies[sr, sc])
-            ew = explore_wave_weight(src_army)
-            progress = path_progress(
-                sr, sc, tr, tc, fog_dist, fallback_target=fog_target
-            )
-            bias = direction_bias(progress, OWNER_NEUTRAL)
-            score = (
+
+        src_army = armies[sr, sc].astype(np.int64)
+        dest_owner = owners[tr, tc]
+        dest_army = armies[tr, tc].astype(np.int64)
+        progress = _path_progress_v(sr, sc, tr, tc, fog_dist, fog_target)
+        struct_src = own_struct[sr, sc] & (src_army >= STRUCTURE_IDLE_ARMY)
+
+        frontier = dest_owner == OWNER_NEUTRAL
+        if np.any(frontier):
+            reveal = reveal_count_grid(obs)[tr, tc].astype(np.float64)
+            eff = reveal / (1.0 + np.maximum(dest_army, 0))
+            ew = _explore_wave_weight_v(src_army)
+            bias_f = _bias_v(progress, np.full(len(move_idx), OWNER_NEUTRAL))
+            f_score = (
                 ew
                 * urgency
-                * bias
-                * (4.0 + 12.0 * float(reveal) + 7.0 * eff + 6.0 * max(progress, 0.0))
+                * bias_f
+                * (
+                    4.0
+                    + 12.0 * reveal
+                    + 7.0 * eff
+                    + 6.0 * np.maximum(progress, 0.0)
+                )
             )
             # Leaving a fat structure into fog is the right pre-contact move.
-            if bool(own_struct[sr, sc]) and src_army >= STRUCTURE_IDLE_ARMY:
-                score *= 2.5 + 0.04 * float(min(src_army, 80))
-            out[int(idx)] = max(out[int(idx)], score)
+            f_score = np.where(
+                struct_src,
+                f_score * (2.5 + 0.04 * np.minimum(src_army, 80)),
+                f_score,
+            )
+            fi = move_idx[frontier]
+            out[fi] = np.maximum(out[fi], f_score[frontier])
+
         # Own corridor: reward toward fog target; punish retreat / circles.
-        for idx in np.flatnonzero(mask_a):
-            idx = int(idx)
-            if idx == PASS_INDEX:
-                continue
-            action = decode_action(idx)
-            if int(action[0]) != 0:
-                continue
-            sr, sc, d = int(action[1]), int(action[2]), int(action[3])
-            tr = sr + int(DIRECTIONS[d, 0])
-            tc = sc + int(DIRECTIONS[d, 1])
-            if not (0 <= tr < H and 0 <= tc < W):
-                continue
-            if int(owners[tr, tc]) != 1:
-                continue
-            src_army = int(armies[sr, sc])
-            dest_army = int(armies[tr, tc])
-            progress = path_progress(
-                sr, sc, tr, tc, fog_dist, fallback_target=fog_target
-            )
-            bias = direction_bias(progress, 1)
-            gather = stack_gather_factor(
-                src_army, dest_army, 1, progress=progress
-            )
-            tip_bonus = 2.0 if (tr, tc) in frontier_sources else 1.0
-            if bool(own_struct[sr, sc]) and src_army >= STRUCTURE_IDLE_ARMY:
-                if progress < 0.0:
-                    out[idx] = max(out[idx], 0.01)
-                    continue
-                out[idx] = max(
-                    out[idx],
-                    urgency
-                    * tip_bonus
-                    * bias
-                    * (5.0 + 0.1 * float(min(src_army, 100)) + 8.0 * max(progress, 0.0))
-                    * gather,
+        corridor = dest_owner == 1
+        if np.any(corridor):
+            frontier_src_grid = np.zeros((H, W), dtype=bool)
+            frontier_src_grid[sr[frontier], sc[frontier]] = True
+            bias_c = _bias_v(progress, np.ones(len(move_idx), dtype=np.int64))
+            gather = _gather_v(src_army, dest_army, progress)
+            tip_bonus = np.where(frontier_src_grid[tr, tc], 2.0, 1.0)
+            struct_score = np.where(
+                progress < 0.0,
+                0.01,
+                urgency
+                * tip_bonus
+                * bias_c
+                * (
+                    5.0
+                    + 0.1 * np.minimum(src_army, 100)
+                    + 8.0 * np.maximum(progress, 0.0)
                 )
-                continue
-            if progress > 0.0:
-                ew = explore_wave_weight(src_army)
-                out[idx] = max(
-                    out[idx],
-                    ew
-                    * urgency
-                    * tip_bonus
-                    * bias
-                    * (0.8 + 4.0 * progress)
-                    * gather,
-                )
-            else:
-                out[idx] = max(out[idx], 0.008 * bias * gather)
+                * gather,
+            )
+            ew_c = _explore_wave_weight_v(src_army)
+            plain_score = np.where(
+                progress > 0.0,
+                ew_c * urgency * tip_bonus * bias_c * (0.8 + 4.0 * progress) * gather,
+                0.008 * bias_c * gather,
+            )
+            c_score = np.where(struct_src, struct_score, plain_score)
+            ci = move_idx[corridor]
+            out[ci] = np.maximum(out[ci], c_score[corridor])
 
     return np.where(mask_a, np.maximum(out, 0.0), 0.0)
 
