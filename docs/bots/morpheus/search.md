@@ -91,6 +91,21 @@ Search selects up to 4 paths from one frozen statistics snapshot without
 virtual loss or temporary regret. Duplicate leaves are allowed. One batch
 evaluates them; backup follows selection order and reserves no prior statistics.
 
+Leaf evaluations run in the root player's perspective but **unshaped**: the
+evaluator's `shape` flag is separate from its `from_root` perspective flag,
+and only the actual root evaluation passes `shape=True`. Before the split,
+every leaf paid the root heuristic blend (measured: half of all search time)
+and interior nodes expanded from heuristic-shaped priors.
+
+## Enemy-prior cache
+
+Exact obs-hash tree reuse succeeds on a minority of turns (~19% measured), so
+the controller keeps a cross-turn LRU of enemy priors keyed by the enemy
+information hash (bounded, float32, ~8 MB at 512 entries). Selection installs
+an enemy table from a cached prior without a network forward — its
+zero-forward invariant holds — and entries are content-addressed, so they can
+be reused but never go stale.
+
 ## Matrix backup
 
 The completed simulation updates `N[a,h,b]`, `W[a,h,b]`, and `Q[a,h,b]` on

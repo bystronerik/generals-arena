@@ -85,11 +85,15 @@ Morpheus uses the following deterministic path:
 
 | Completed simulations | Decision |
 | ---: | --- |
-| 16 or more | root average strategy |
-| 8-15 | root average strategy |
-| 1-7 | highest marginal visit; tie by root policy |
+| 1 or more | root average strategy (visit and prior tie-breaks) |
 | 0 | highest-prior legal root action |
 | no root result | pass |
+
+The former 1–7 visit band is retired: three selectors switching by sim count
+flipped the decision rule 220 times in a measured 573-turn game, which showed
+up as abandoned attacks. At low sim counts the average strategy is dominated
+by the prior, so the single selector degrades to prior-argmax on its own. The
+`visit` fallback level remains in the telemetry schema for old traces only.
 
 When the forecast falls below 16 completed simulations, search stops widening
 before it selects more paths. This is a search-time rule, not a final-decision

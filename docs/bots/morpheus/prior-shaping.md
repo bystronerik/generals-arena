@@ -29,6 +29,21 @@ that runs the pair.
 All four are `deployment.json` fields, so every setting is a distinct
 content-hash rated entity. Phase selection uses `enemy_is_visible`.
 
+Two scoring behaviors sit outside these knobs, as `tactics.py` constants:
+
+- **Commitment hysteresis** (`CONTINUATION_BONUS`, 1.5x): moves whose source
+  is the previous move's destination are multiplied when they already score
+  positive, so the shaped argmax keeps marching the stack it moved last turn
+  instead of re-tie-breaking from scratch. It never revives a zero score, so
+  bans and crushed retreats still win.
+- **Wave-forming gather** (`stack_gather_factor`, `GATHER_SHARE_MIN`,
+  `WAVE_ARMY_SOFT_CAP`): forward merges into a large stack are near-free,
+  lateral merges are dampened rather than crushed, gathering into the king
+  stack stays rewarded until it holds half the total army, and the gather
+  score is weighted by `attack_weight` so heavy stacks move before tips.
+  Motivated by measurement: waves used to reach enemy land with a median 6
+  army (0.9% of total; 8% at first contact).
+
 ### Why each piece
 
 - **Centering is load-bearing.** Raw scores sit around ~120. Without dividing by
