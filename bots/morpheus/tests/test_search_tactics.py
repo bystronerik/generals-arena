@@ -23,6 +23,7 @@ from state import create_initial_state
 from tactics import (
     load_tactical_suite,
     mandatory_action_indices,
+    play_mask,
     policy_ordered_candidates,
     suite_path,
 )
@@ -80,7 +81,7 @@ def test_tactical_suite_drives_average_strategy():
 
 
 
-def test_mandatory_candidates_include_pass_and_enemy_interaction():
+def test_mandatory_candidates_include_enemy_interaction():
     # Adjacent generals so the enemy is visible and capturable.
     grid = np.zeros((5, 5), dtype=np.int32)
     grid[2, 1] = 1
@@ -93,13 +94,15 @@ def test_mandatory_candidates_include_pass_and_enemy_interaction():
     obs = emit_observation(state, 0)
     mem = update_memory(empty_memory(5, 5), obs)
     mandatory = mandatory_action_indices(obs, mem)
-    assert PASS_INDEX in mandatory
     assert any(i != PASS_INDEX for i in mandatory)
-    mask = legal_mask(obs, mem)
+    # Pass is omitted once any non-pass playable action exists.
+    assert PASS_INDEX not in mandatory
+    mask = play_mask(obs, mem)
     prior = np.zeros(mask.shape)
     prior[mask] = 1.0
     cands = policy_ordered_candidates(prior, mask, mandatory=mandatory, limit=8)
-    assert PASS_INDEX in cands
+    assert PASS_INDEX not in cands
+    assert len(cands) >= 1
 
 
 def test_search_runs_batch_without_partial_root_stats():

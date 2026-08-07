@@ -188,8 +188,10 @@ class SearchController:
             )
             child.network_value = float(value)
             self.last_root_prior = np.asarray(prior_e, dtype=np.float64)
-            if not child.actions:
-                self._expand_self_candidates(child, obs, memory, prior_e)
+            # Always refresh masses + widen from the live network prior. Skipping
+            # when child.actions is non-empty left pass-only priors stuck after
+            # early turns where only pass was legal.
+            self._expand_self_candidates(child, obs, memory, prior_e)
             self.memory = memory
             self.tree.set_root(child)
             return child
@@ -210,10 +212,16 @@ class SearchController:
         prior: Array,
     ) -> None:
         from action import live_build_cost
+        from tactics import play_mask
 
         cost_grid = live_build_cost(obs, memory)
-        mask = legal_mask(obs, memory, cost_grid=cost_grid)
+        mask = play_mask(obs, memory, cost_grid=cost_grid)
         limit = self_widening_limit(node.N)
+        # Cache the full network prior so later widening does not rebuild mass
+        # only from already-accepted candidates (which zeros new expands).
+        node.cached_policy_prior = np.asarray(prior, dtype=np.float64).reshape(-1).copy()
+        if node.actions:
+            node.refresh_self_priors(node.cached_policy_prior)
         mandatory = mandatory_action_indices(
             obs, memory, mask=mask, cost_grid=cost_grid
         )
@@ -223,6 +231,10 @@ class SearchController:
         for idx in candidates:
             mass = float(prior[idx]) if idx < len(prior) else 0.0
             node.widen_self(idx, mass)
+        # Re-normalize from the live prior after any new widen appends so early
+        # pass-only mass cannot dominate newly added expands.
+        if node.actions:
+            node.refresh_self_priors(node.cached_policy_prior)
 
     def _enemy_view(self, particle: Particle) -> tuple[object, VisibleMemory, bytes]:
         enemy_seat = 1 - self.seat
@@ -471,18 +483,27 @@ class SearchController:
             self.tree.pin_enemy(node, h)
 
             if not freeze_widening:
-                prior_full = np.zeros(3970, dtype=np.float64)
-                for i, act in enumerate(node.actions):
-                    if i < len(node.prior):
-                        prior_full[act] = node.prior[i]
+                # Prefer a full-length network prior. Rebuilding from node.prior
+                # alone assigns mass 0 to newly legal expands (pass lock).
+                if node is self.tree.root and self.last_root_prior is not None:
+                    prior_for_self = np.asarray(self.last_root_prior, dtype=np.float64)
+                elif node.cached_policy_prior is not None:
+                    prior_for_self = np.asarray(
+                        node.cached_policy_prior, dtype=np.float64
+                    )
+                else:
+                    prior_for_self = np.zeros(3970, dtype=np.float64)
+                    for i, act in enumerate(node.actions):
+                        if i < len(node.prior):
+                            prior_for_self[act] = node.prior[i]
                 self._widen_if_needed(
-                    node, my_obs, my_mem, prior_full, enemy=False
+                    node, my_obs, my_mem, prior_for_self, enemy=False
                 )
                 self._widen_if_needed(
                     node,
                     my_obs,
                     my_mem,
-                    prior_full,
+                    prior_for_self,
                     enemy=True,
                     enemy_obs=enemy_obs,
                     enemy_mem=enemy_mem,

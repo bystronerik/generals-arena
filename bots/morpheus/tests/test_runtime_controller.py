@@ -292,6 +292,14 @@ def test_probe_is_passive_and_keys_are_declared():
             "leaf_batch": 2,
             "enemy_prior_batch": 1,
         }
+        root_pass_prior_milli = 850
+        root_top_action = 3969
+        root_top_prior_milli = 850
+        chosen_action = 3969
+        chosen_is_pass = 1
+        policy_fallback_is_pass = 1
+        root_legal_nonpass = 3
+        has_root_result = 1
 
     extras = probe_extras(probe, _Stub())
     validated = validate_extras(extras)
@@ -300,6 +308,10 @@ def test_probe_is_passive_and_keys_are_declared():
     assert validated["proposal_n_unique_info_keys"] == 30
     assert validated["proposal_n_unique_policy_inputs"] == 0
     assert validated["search_selection_calls"] == 4
+    assert validated["root_pass_prior_milli"] == 850
+    assert validated["chosen_is_pass"] is True
+    assert validated["has_root_result"] is True
+    assert validated["root_legal_nonpass"] == 3
     # Probe must not import into the agent closure (fingerprint rule).
     agent_src = (bot_dir / "agent.py").read_text(encoding="utf-8")
     runtime_src = (bot_dir / "runtime.py").read_text(encoding="utf-8")

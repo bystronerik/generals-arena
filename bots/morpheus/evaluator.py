@@ -17,6 +17,7 @@ from network import (
     legal_normalized_policy,
 )
 from particle_summary import summarize_belief
+from tactics import apply_pre_contact_prior, play_mask
 from tensor import build_tensor
 
 Array = np.ndarray
@@ -64,9 +65,14 @@ class NetworkEvaluator:
     ) -> tuple[Array, float]:
         x = self._tensor(obs, memory, belief)
         policy, pass_logit, wdl_logits = self.session.forward_policy_wdl(x)
-        mask = torch.from_numpy(np.asarray(legal_mask(obs, memory), dtype=bool)).unsqueeze(0)
+        mask_np = np.asarray(play_mask(obs, memory), dtype=bool)
+        mask = torch.from_numpy(mask_np).unsqueeze(0)
         prior_t = legal_normalized_policy(policy, pass_logit, mask)
         prior = prior_t.squeeze(0).detach().cpu().numpy().astype(np.float64)
+        if from_root:
+            prior = apply_pre_contact_prior(
+                prior, obs, memory, mask=mask_np, belief=belief
+            )
         value_t = backup_value(wdl_logits, from_root=from_root)
         return prior, float(value_t.squeeze(0).item())
 
@@ -85,7 +91,7 @@ class NetworkEvaluator:
         from_roots = []
         for obs, memory, belief, from_root in items:
             tensors.append(self._tensor(obs, memory, belief).squeeze(0))
-            masks.append(np.asarray(legal_mask(obs, memory), dtype=bool))
+            masks.append(np.asarray(play_mask(obs, memory), dtype=bool))
             from_roots.append(bool(from_root))
         x = torch.stack(tensors, dim=0)
         policy, pass_logit, wdl_logits = self.session.forward_policy_wdl(x)
@@ -98,6 +104,11 @@ class NetworkEvaluator:
             value = float(values_t[i].item())
             if not from_root:
                 value = -value
+            else:
+                obs_i, mem_i, belief_i, _fr = items[i]
+                prior = apply_pre_contact_prior(
+                    prior, obs_i, mem_i, mask=masks[i], belief=belief_i
+                )
             results.append((prior, value))
         return results
 

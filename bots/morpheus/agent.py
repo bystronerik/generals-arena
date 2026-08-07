@@ -68,6 +68,14 @@ class Agent:
         self.proposal_n_unique_info_keys = c.proposal_n_unique_info_keys
         self.proposal_n_unique_policy_inputs = c.proposal_n_unique_policy_inputs
         self.proposal_n_policy_batches = c.proposal_n_policy_batches
+        self.root_pass_prior_milli = c.root_pass_prior_milli
+        self.root_top_action = c.root_top_action
+        self.root_top_prior_milli = c.root_top_prior_milli
+        self.chosen_action = c.chosen_action
+        self.chosen_is_pass = c.chosen_is_pass
+        self.policy_fallback_is_pass = c.policy_fallback_is_pass
+        self.root_legal_nonpass = c.root_legal_nonpass
+        self.has_root_result = c.has_root_result
 
     def act(self, obs):
         action = self._controller.decide(obs)

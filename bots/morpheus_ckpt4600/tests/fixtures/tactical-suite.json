@@ -1,0 +1,69 @@
+{
+  "cases": [
+    {
+      "name": "chase",
+      "kind": "matrix",
+      "description": "Attack loses to chase; reinforce/chase-aware row wins the matrix.",
+      "self_actions": ["hold", "strike"],
+      "enemy_actions": ["pass", "chase"],
+      "prior_self": [0.5, 0.5],
+      "prior_enemy": [0.5, 0.5],
+      "q": [[0.0, -1.0], [0.2, 0.8]],
+      "visits": [[1, 1], [1, 1]],
+      "expected_best_self": "strike",
+      "first_play": 0.0
+    },
+    {
+      "name": "reinforcement",
+      "kind": "matrix",
+      "description": "Split-into-threat loses; reinforce-adjacent wins against enemy merge.",
+      "self_actions": ["split", "reinforce"],
+      "enemy_actions": ["pass", "merge"],
+      "prior_self": [0.4, 0.6],
+      "prior_enemy": [0.5, 0.5],
+      "q": [[-0.5, -0.8], [0.1, 0.6]],
+      "visits": [[1, 1], [1, 1]],
+      "expected_best_self": "reinforce",
+      "first_play": 0.0
+    },
+    {
+      "name": "castle",
+      "kind": "matrix",
+      "description": "Build is dominated when enemy contests the cell; move-away wins.",
+      "self_actions": ["build", "evacuate"],
+      "enemy_actions": ["pass", "contest"],
+      "prior_self": [0.5, 0.5],
+      "prior_enemy": [0.3, 0.7],
+      "q": [[0.4, -0.9], [0.0, 0.3]],
+      "visits": [[1, 1], [1, 1]],
+      "expected_best_self": "evacuate",
+      "first_play": 0.0
+    },
+    {
+      "name": "mutual_capture",
+      "kind": "matrix",
+      "description": "Mutual general captures draw; unilateral capture wins.",
+      "self_actions": ["pass", "capture"],
+      "enemy_actions": ["pass", "capture"],
+      "prior_self": [0.5, 0.5],
+      "prior_enemy": [0.5, 0.5],
+      "q": [[0.0, -1.0], [1.0, 0.0]],
+      "visits": [[1, 1], [1, 1]],
+      "expected_best_self": "capture",
+      "first_play": 0.0
+    },
+    {
+      "name": "deathtouch",
+      "kind": "matrix",
+      "description": "Post-800 touch on general wins regardless of army; prefer touch.",
+      "self_actions": ["pass", "touch"],
+      "enemy_actions": ["pass", "flee"],
+      "prior_self": [0.2, 0.8],
+      "prior_enemy": [0.5, 0.5],
+      "q": [[0.0, 0.0], [1.0, 0.7]],
+      "visits": [[1, 1], [1, 1]],
+      "expected_best_self": "touch",
+      "first_play": 0.0
+    }
+  ]
+}

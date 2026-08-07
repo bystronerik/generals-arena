@@ -1,0 +1,121 @@
+{
+  "action_schema": "morpheus-action-v1",
+  "architecture": {
+    "army_bin_edges": [
+      0.0,
+      1.681792830507429,
+      2.82842712474619,
+      4.756828460010883,
+      7.999999999999998,
+      13.454342644059432,
+      22.627416997969508,
+      38.05462768008706,
+      63.99999999999998,
+      107.63474115247539,
+      181.01933598375612,
+      304.4370214406964,
+      511.9999999999995,
+      861.0779292198033,
+      1448.154687870048,
+      2435.4961715255718,
+      4096.0
+    ],
+    "board": 21,
+    "dilation_cycle": [
+      1,
+      2,
+      4
+    ],
+    "expansion": 128,
+    "group_norm_groups": 8,
+    "in_channels": 49,
+    "n_army_bins": 16,
+    "n_blocks": 12,
+    "outputs": {
+      "army_margin": "N\u00d71",
+      "castle_margin": "N\u00d71",
+      "enemy_army_bins": "N\u00d716\u00d721\u00d721",
+      "enemy_general": "N\u00d71\u00d721\u00d721",
+      "hidden_castle": "N\u00d71\u00d721\u00d721",
+      "hidden_owner": "N\u00d71\u00d721\u00d721",
+      "land_margin": "N\u00d71",
+      "pass_logit": "N\u00d71",
+      "policy": "N\u00d79\u00d721\u00d721",
+      "turns_to_termination": "N\u00d71",
+      "wdl_logits": "N\u00d73"
+    },
+    "parameter_count": 249316,
+    "policy_channels": 9,
+    "trunk_channels": 64
+  },
+  "architecture_version": "morpheus-net-v1",
+  "army_bin_edges": [
+    0.0,
+    1.681792830507429,
+    2.82842712474619,
+    4.756828460010883,
+    7.999999999999998,
+    13.454342644059432,
+    22.627416997969508,
+    38.05462768008706,
+    63.99999999999998,
+    107.63474115247539,
+    181.01933598375612,
+    304.4370214406964,
+    511.9999999999995,
+    861.0779292198033,
+    1448.154687870048,
+    2435.4961715255718,
+    4096.0
+  ],
+  "army_scale": 4096.0,
+  "artifact_file": "model.pt",
+  "manifest_version": "1",
+  "online_entry_points": {
+    "policy": "model_policy.pt",
+    "policy_wdl": "model_policy_wdl.pt"
+  },
+  "online_weights_sha256": {
+    "policy": "5c7459105d4d9fe6c67b2cbda8a9f5a0b23bedfb3542c8419b9dde7b5c6fd4af",
+    "policy_wdl": "f7120810d7c7e89e6b6d113d97cc7d6ac2a52742c815e3479432dd40621bfa95"
+  },
+  "quantization": {
+    "engine": "qnnpack",
+    "float_to_export_mae": {
+      "army_margin_mae": 1.6774448156356812,
+      "castle_margin_mae": 0.03637707233428955,
+      "enemy_army_bins_mae": 1.419764518737793,
+      "enemy_general_mae": 1.1760576963424683,
+      "hidden_castle_mae": 0.9888029098510742,
+      "hidden_owner_mae": 0.8469007015228271,
+      "land_margin_mae": 0.8256832361221313,
+      "pass_logit_mae": 1.1447504758834839,
+      "policy_mae": 1.5986214876174927,
+      "turns_to_termination_mae": 0.30180737376213074,
+      "wdl_mae": 1.8106504678726196
+    },
+    "format": "static_ptq_fx_qnnpack_int8",
+    "group_norm_float_fallback": true,
+    "host": "macOS-26.5.2-arm64-arm-64bit",
+    "online_float_to_export_mae": {
+      "parity_assert_skipped": true,
+      "policy": {
+        "pass_logit_mae": 1.385242223739624,
+        "policy_mae": 1.5993633270263672
+      },
+      "policy_wdl": {
+        "pass_logit_mae": 1.1488887071609497,
+        "policy_mae": 1.5983834266662598,
+        "wdl_mae": 1.8588072061538696
+      }
+    },
+    "runtime": "torch.jit.trace+fx_static_qnnpack"
+  },
+  "runtime": "torch.jit.trace+fx_static_qnnpack",
+  "tensor_schema": "morpheus-tensor-v1",
+  "training_run": {
+    "checkpoint_id": "ckpt-00000100-fdc442a302b1",
+    "run_id": "scraped-classes13-2026-08-06"
+  },
+  "weights_sha256": "59488c44de2da561a5f2d118d53b8bc1285f05e7db8d838d11b4f975a8318c97"
+}

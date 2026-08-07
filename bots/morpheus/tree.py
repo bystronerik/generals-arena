@@ -136,6 +136,8 @@ class InfoNode:
     network_value: float = 0.0
     pending_pins: set[bytes] = field(default_factory=set)
     expanded: bool = False
+    # Full-length network prior from the last evaluate/expand at this node.
+    cached_policy_prior: Optional[Array] = None
     # Cache: particle enemy-info hashes for the current reservoir version.
     _enemy_hash_version: int = -1
     _enemy_hash_cache: list[tuple[float, bytes]] = field(default_factory=list)
@@ -154,6 +156,32 @@ class InfoNode:
         for table in self.enemy_tables.values():
             table.ensure_self_rows(n_self)
         return n_self - 1
+
+    def refresh_self_priors(self, prior: Array) -> None:
+        """Replace candidate prior masses from a full-length network prior.
+
+        Used when the legal set grows or the root is reused with a fresh
+        evaluate. Without this, widening rebuilds mass only from old candidates
+        and newly legal expands get prior 0 (search locks onto pass).
+        """
+        if not self.actions:
+            return
+        prior_a = np.asarray(prior, dtype=np.float64).reshape(-1)
+        masses = np.asarray(
+            [
+                float(prior_a[int(a)]) if int(a) < prior_a.shape[0] else 0.0
+                for a in self.actions
+            ],
+            dtype=np.float64,
+        )
+        masses = np.maximum(masses, 0.0)
+        total = float(masses.sum())
+        if total > 0.0:
+            self.prior = masses / total
+        else:
+            self.prior = np.ones(len(self.actions), dtype=np.float64) / float(
+                len(self.actions)
+            )
 
     def retention_evict(
         self,

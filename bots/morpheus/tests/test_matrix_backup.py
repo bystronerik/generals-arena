@@ -23,8 +23,9 @@ from matrix import (
 
 
 def test_widening_and_epsilon_defaults():
-    assert self_widening_limit(0) == 1
-    assert self_widening_limit(1) == 3  # 1 + floor(2*1) = 3
+    assert self_widening_limit(0) == 8  # floor keeps early sims off pass-only
+    assert self_widening_limit(1) == 8  # floor still binds above formula's 3
+    assert self_widening_limit(16) == 9  # 1 + floor(2*4) = 9
     assert self_widening_limit(100) == 16  # capped
     assert enemy_widening_limit(0) == 1
     assert enemy_widening_limit(4) == 4  # 1 + floor(1.5*2) = 4

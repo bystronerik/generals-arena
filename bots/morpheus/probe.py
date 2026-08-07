@@ -43,4 +43,12 @@ def extras(agent) -> dict:
         "search_enemy_prior_calls": int(
             (getattr(agent, "component_calls", {}) or {}).get("enemy_prior_batch", 0)
         ),
+        "root_pass_prior_milli": int(getattr(agent, "root_pass_prior_milli", 0)),
+        "root_top_action": int(getattr(agent, "root_top_action", -1)),
+        "root_top_prior_milli": int(getattr(agent, "root_top_prior_milli", 0)),
+        "chosen_action": int(getattr(agent, "chosen_action", -1)),
+        "chosen_is_pass": int(getattr(agent, "chosen_is_pass", 0)),
+        "policy_fallback_is_pass": int(getattr(agent, "policy_fallback_is_pass", 0)),
+        "root_legal_nonpass": int(getattr(agent, "root_legal_nonpass", 0)),
+        "has_root_result": int(getattr(agent, "has_root_result", 0)),
     }

@@ -27,6 +27,12 @@ from memory import VisibleMemory, empty_memory, update_memory
 from proposal import PolicyFn, ProposalTelemetry, propose_enemy_actions
 from recovery import recover_belief
 from search import SearchConfig, SearchController, SearchEvaluator, UniformEvaluator
+from tactics import (
+    OSCILLATION_HISTORY,
+    constrain_nn_action,
+    enemy_is_visible,
+    play_mask,
+)
 
 ClockFn = Callable[[], float]
 Array = np.ndarray
@@ -189,6 +195,56 @@ class TurnMetrics:
     proposal_n_unique_info_keys: int = 0
     proposal_n_unique_policy_inputs: int = 0
     proposal_n_policy_batches: int = 0
+    # Root-policy diagnostics (probe-only; milli = prior * 1000).
+    root_pass_prior_milli: int = 0
+    root_top_action: int = -1
+    root_top_prior_milli: int = 0
+    chosen_action: int = -1
+    chosen_is_pass: int = 0
+    policy_fallback_is_pass: int = 0
+    root_legal_nonpass: int = 0
+    has_root_result: int = 0
+
+
+def _prior_probe_fields(
+    prior: Optional[np.ndarray],
+    mask: Optional[np.ndarray],
+    *,
+    chosen: Action5,
+    policy_fallback: Optional[Action5],
+    has_root_result: bool,
+) -> dict[str, int]:
+    """Derive integer probe fields from the legal-normalized root prior."""
+    from action import PASS_INDEX, encode_action
+
+    out = {
+        "root_pass_prior_milli": 0,
+        "root_top_action": -1,
+        "root_top_prior_milli": 0,
+        "chosen_action": int(encode_action(chosen)),
+        "chosen_is_pass": int(chosen == PASS or encode_action(chosen) == PASS_INDEX),
+        "policy_fallback_is_pass": 0,
+        "root_legal_nonpass": 0,
+        "has_root_result": int(bool(has_root_result)),
+    }
+    if policy_fallback is not None:
+        out["policy_fallback_is_pass"] = int(
+            policy_fallback == PASS or encode_action(policy_fallback) == PASS_INDEX
+        )
+    if prior is None or mask is None:
+        return out
+    prior_a = np.asarray(prior, dtype=np.float64).reshape(-1)
+    mask_a = np.asarray(mask, dtype=bool).reshape(-1)
+    if prior_a.shape != mask_a.shape:
+        return out
+    if mask_a[PASS_INDEX]:
+        out["root_pass_prior_milli"] = int(round(float(prior_a[PASS_INDEX]) * 1000.0))
+    out["root_legal_nonpass"] = int(mask_a.sum()) - int(bool(mask_a[PASS_INDEX]))
+    scored = np.where(mask_a, prior_a, -1.0)
+    top = int(np.argmax(scored))
+    out["root_top_action"] = top
+    out["root_top_prior_milli"] = int(round(float(prior_a[top]) * 1000.0))
+    return out
 
 
 class RuntimeController:
@@ -251,6 +307,7 @@ class RuntimeController:
         self.belief: Optional[BeliefState] = None
         self._setup_done = False
         self._last_action: Action5 = PASS
+        self._recent_actions: deque[Action5] = deque(maxlen=OSCILLATION_HISTORY)
         self._pending_recovery = False
         self.metrics = TurnMetrics()
 
@@ -274,6 +331,14 @@ class RuntimeController:
         self.proposal_n_unique_info_keys = 0
         self.proposal_n_unique_policy_inputs = 0
         self.proposal_n_policy_batches = 0
+        self.root_pass_prior_milli = 0
+        self.root_top_action = -1
+        self.root_top_prior_milli = 0
+        self.chosen_action = -1
+        self.chosen_is_pass = 0
+        self.policy_fallback_is_pass = 0
+        self.root_legal_nonpass = 0
+        self.has_root_result = 0
         self._proposal_telemetry = ProposalTelemetry()
 
     # ------------------------------------------------------------------ clock
@@ -382,6 +447,8 @@ class RuntimeController:
         action: Action5 = PASS
         self._policy_fallback: Optional[Action5] = None
         has_root_result = False
+        root_prior_for_probe: Optional[np.ndarray] = None
+        root_mask_for_probe: Optional[np.ndarray] = None
         belief_update_ok = first_move  # first move allocates; later turns track update
         self.search.tree.completed_simulations = 0
         self.forward_equivalents = 0
@@ -526,9 +593,11 @@ class RuntimeController:
                     )
                     self.forward_equivalents += 1
                     self.forward_by_consumer["root"] += 1
-                mask = legal_mask(obs, self.memory)
+                mask = play_mask(obs, self.memory)
                 self._policy_fallback = highest_prior_legal(prior_full, mask)
                 action = self._policy_fallback
+                root_prior_for_probe = prior_full
+                root_mask_for_probe = mask
                 # Hashing already ran inside ensure_root / reuse_or_reset.
                 # Record elapsed (not a forecast) so estimators stay finite.
                 t_hash = self._now()
@@ -555,6 +624,20 @@ class RuntimeController:
             policy_fallback=self._policy_fallback,
             search=self.search,
         )
+        # Hard rules only — keep search/NN choice otherwise so training stays
+        # influential. Cheap enemy scouting lives in the root prior reshape.
+        if self.memory is not None:
+            constrained = constrain_nn_action(
+                obs,
+                self.memory,
+                action,
+                prev_action=self._last_action,
+                recent_actions=tuple(self._recent_actions),
+                prior=self.search.last_root_prior,
+            )
+            if constrained != action:
+                action = constrained
+                level = FallbackLevel.POLICY
 
         # Reply cost accounting: wall elapsed (serialization is at the caller).
         if self.can_admit("reply", deadline):
@@ -566,16 +649,26 @@ class RuntimeController:
             self._observe("reply", reply_ms)
 
         self._last_action = action
+        if int(action[0]) == 0:
+            self._recent_actions.append(action)
         set_prev = getattr(self.evaluator, "set_previous_action", None)
         if callable(set_prev):
             set_prev(action)
         # Finite samples for components that may not run every turn.
         if "enemy_prior_batch" not in self.metrics.component_ms:
             self._observe("enemy_prior_batch", 0.0, count_call=False)
+        probe_fields = _prior_probe_fields(
+            root_prior_for_probe,
+            root_mask_for_probe,
+            chosen=action,
+            policy_fallback=self._policy_fallback,
+            has_root_result=has_root_result,
+        )
         self._publish_metrics(
             action_level=level,
             recovery_flag=recovery_flag,
             belief_plus_root_ok=int(belief_update_ok and has_root_result),
+            probe_fields=probe_fields,
         )
         return action
 
@@ -744,6 +837,7 @@ class RuntimeController:
         action_level: FallbackLevel,
         recovery_flag: int,
         belief_plus_root_ok: int = 0,
+        probe_fields: Optional[Mapping[str, int]] = None,
     ) -> None:
         move_ms = int(round((self._now() - self._turn_start) * 1000.0))
         ess_milli = 0
@@ -784,6 +878,16 @@ class RuntimeController:
         )
         self.proposal_n_policy_batches = int(self.metrics.proposal_n_policy_batches)
 
+        fields = dict(probe_fields or {})
+        self.root_pass_prior_milli = int(fields.get("root_pass_prior_milli", 0))
+        self.root_top_action = int(fields.get("root_top_action", -1))
+        self.root_top_prior_milli = int(fields.get("root_top_prior_milli", 0))
+        self.chosen_action = int(fields.get("chosen_action", -1))
+        self.chosen_is_pass = int(fields.get("chosen_is_pass", 0))
+        self.policy_fallback_is_pass = int(fields.get("policy_fallback_is_pass", 0))
+        self.root_legal_nonpass = int(fields.get("root_legal_nonpass", 0))
+        self.has_root_result = int(fields.get("has_root_result", 0))
+
         self.metrics.move_ms = self.move_ms
         self.metrics.completed_simulations = self.completed_simulations
         self.metrics.forward_equivalents = self.forward_equivalents
@@ -797,12 +901,22 @@ class RuntimeController:
         self.metrics.cost_search_ms = self.cost_search_ms
         self.metrics.cost_reply_ms = self.cost_reply_ms
         self.metrics.belief_plus_root_ok = self.belief_plus_root_ok
+        self.metrics.root_pass_prior_milli = self.root_pass_prior_milli
+        self.metrics.root_top_action = self.root_top_action
+        self.metrics.root_top_prior_milli = self.root_top_prior_milli
+        self.metrics.chosen_action = self.chosen_action
+        self.metrics.chosen_is_pass = self.chosen_is_pass
+        self.metrics.policy_fallback_is_pass = self.policy_fallback_is_pass
+        self.metrics.root_legal_nonpass = self.root_legal_nonpass
+        self.metrics.has_root_result = self.has_root_result
 
 
 def highest_prior_legal(prior: Array, mask: Array) -> Action5:
-    """Highest-prior legal action; pass wins ties when priors are equal."""
+    """Highest-prior playable action. Pass only if it is the sole masked action."""
     prior = np.asarray(prior, dtype=np.float64).reshape(-1)
     mask = np.asarray(mask, dtype=bool).reshape(-1)
+    if not np.any(mask):
+        return PASS
     scores = np.where(mask, prior, -1.0)
     idx = int(np.argmax(scores))
     return tuple(int(x) for x in decode_action(idx))  # type: ignore[return-value]
@@ -819,14 +933,21 @@ def select_degraded_action(
 
     ``has_root_result`` is False when root inference never completed (distinct
     from ``completed_simulations == 0``, which still has a policy fallback).
+    Prefer a non-pass policy fallback over emitting pass after search.
     """
     if not has_root_result:
         return PASS, FallbackLevel.PASS
     if completed_simulations <= 0:
         return (policy_fallback or PASS), FallbackLevel.POLICY
     if completed_simulations < 8:
-        return search.best_action_by_visits(), FallbackLevel.VISIT
-    return search.best_action(), FallbackLevel.AVERAGE
+        action = search.best_action_by_visits()
+        level = FallbackLevel.VISIT
+    else:
+        action = search.best_action()
+        level = FallbackLevel.AVERAGE
+    if action == PASS and policy_fallback is not None and policy_fallback != PASS:
+        return policy_fallback, FallbackLevel.POLICY
+    return action, level
 
 
 class FakeClock:

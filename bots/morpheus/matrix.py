@@ -15,6 +15,7 @@ Array = np.ndarray
 # Defaults — initial guesses; measurements may replace them.
 SELF_WIDENING_CAP = 16
 SELF_WIDENING_COEFF = 2.0
+SELF_WIDENING_FLOOR = 8
 ENEMY_WIDENING_CAP = 12
 ENEMY_WIDENING_COEFF = 1.5
 EXPLORATION_FLOOR = 0.05
@@ -28,7 +29,12 @@ def widening_limit(n: int, *, coeff: float, cap: int) -> int:
 
 
 def self_widening_limit(n: int) -> int:
-    return widening_limit(n, coeff=SELF_WIDENING_COEFF, cap=SELF_WIDENING_CAP)
+    # Floor keeps root from spending early sims on pass-only before policy
+    # expands enter (K(0)=1 would otherwise lock average strategy onto pass).
+    return max(
+        SELF_WIDENING_FLOOR,
+        widening_limit(n, coeff=SELF_WIDENING_COEFF, cap=SELF_WIDENING_CAP),
+    )
 
 
 def enemy_widening_limit(n: int) -> int:
@@ -207,7 +213,11 @@ def select_root_action(
     prior: Array,
     legal_mask: Optional[Array] = None,
 ) -> int:
-    """Largest normalized ``S_A``; ties by marginal visits, then prior."""
+    """Largest normalized ``S_A``; ties by marginal visits, then prior.
+
+    Near-zero prior entries are ignored so early progressive-widening mass on
+    pass cannot win after the live network prior has moved elsewhere.
+    """
     avg = normalize_average_strategy(avg_strategy)
     visits = np.asarray(marginal_visits, dtype=np.float64).reshape(-1)
     prior = np.asarray(prior, dtype=np.float64).reshape(-1)
@@ -216,6 +226,13 @@ def select_root_action(
         avg = np.where(mask, avg, -1.0)
         visits = np.where(mask, visits, -1.0)
         prior = np.where(mask, prior, -1.0)
+    # Drop stale average/visit mass on actions the live prior has zeroed out.
+    max_prior = float(np.max(prior)) if prior.size else 0.0
+    if max_prior > 0.0:
+        active = prior > max(1e-12, 1e-6 * max_prior)
+        if bool(active.any()) and not bool(active.all()):
+            avg = np.where(active, avg, -1.0)
+            visits = np.where(active, visits, -1.0)
     # Lexicographic: strategy, visits, prior.
     order = np.lexsort((-prior, -visits, -avg))
     return int(order[0])
