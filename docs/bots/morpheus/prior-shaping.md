@@ -44,15 +44,18 @@ Two scoring behaviors sit outside these knobs, as `tactics.py` constants:
   Motivated by an unpublished diagnostic recorded in commit `04b7e4c`: waves
   used to reach enemy land with a median 6 army (0.9% of total; 17 of 219
   first-contact waves).
-- **General hunt** (`believed_enemy_general`, `GENERAL_CHEW_DAMP`,
-  `DEATHTOUCH_SCORE`): when the general is not latched, the seek goal is the
-  particle posterior's mode over its location (the belief filter already
-  maintains that map; the old goal — nearest visible enemy cell — let the bot
-  chew the border forever: one diagnosed 1200-turn draw never sighted the
-  general at all). Once latched, enemy takes that do not shorten the general
-  path are damped x`GENERAL_CHEW_DAMP`, and from turn 800 a touch on the
-  general scores `DEATHTOUCH_SCORE` regardless of army (deathtouch wins
-  outright).
+- **General hunt** (`believed_enemy_general`, `HUNT_PROGRESS_BONUS`,
+  `GENERAL_CHEW_DAMP`, `DEATHTOUCH_SCORE`): takes, carves, and forward
+  marches that shorten the path to the known — else belief-posterior —
+  general cell are multiplied by `1 + HUNT_PROGRESS_BONUS * progress`. It is
+  a *bonus on top of* the enemy-land objective, never a goal replacement: a
+  replacement variant collapsed play into one corridor and lost its own
+  general to an expander (incursions near home stopped counting as
+  progress). The believed cell becomes the goal itself only with no enemy
+  land in sight (lost contact, or as the pre-contact fog beacon). Once
+  latched, enemy takes that do not shorten the general path are damped
+  x`GENERAL_CHEW_DAMP`; from turn 800 a touch on the general scores
+  `DEATHTOUCH_SCORE` regardless of army (deathtouch wins outright).
 
 ### Why each piece
 
