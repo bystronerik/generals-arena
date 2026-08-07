@@ -37,16 +37,19 @@ class CountingEvaluator:
         belief: BeliefState,
         *,
         from_root: bool,
+        shape: bool = False,
     ):
         self.calls += 1
-        return self.inner.evaluate(obs, memory, belief, from_root=from_root)
+        return self.inner.evaluate(
+            obs, memory, belief, from_root=from_root, shape=shape
+        )
 
     def evaluate_many(self, items):
         self.batch_calls += 1
         self.calls += len(items)
         return [
-            self.inner.evaluate(obs, mem, blf, from_root=fr)
-            for obs, mem, blf, fr in items
+            self.inner.evaluate(obs, mem, blf, from_root=fr, shape=sh)
+            for obs, mem, blf, fr, sh in items
         ]
 
 

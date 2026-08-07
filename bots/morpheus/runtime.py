@@ -657,7 +657,7 @@ class RuntimeController:
                 prior_full = self.search.last_root_prior
                 if prior_full is None:
                     prior_full, _ = self.evaluator.evaluate(
-                        obs, self.memory, belief, from_root=True
+                        obs, self.memory, belief, from_root=True, shape=True
                     )
                     self.forward_equivalents += 1
                     self.forward_by_consumer["root"] += 1

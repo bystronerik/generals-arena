@@ -97,6 +97,7 @@ class NetworkEvaluator:
         belief: BeliefState,
         *,
         from_root: bool,
+        shape: bool = False,
     ) -> tuple[Array, float]:
         x = self._tensor(obs, memory, belief)
         policy, pass_logit, wdl_logits = self.session.forward_policy_wdl(x)
@@ -104,41 +105,46 @@ class NetworkEvaluator:
         mask = torch.from_numpy(mask_np).unsqueeze(0)
         prior_t = legal_normalized_policy(policy, pass_logit, mask)
         prior = prior_t.squeeze(0).detach().cpu().numpy().astype(np.float64)
-        if from_root:
+        if shape:
             prior = self._shape_root(prior, obs, memory, mask_np, belief)
         value_t = backup_value(wdl_logits, from_root=from_root)
         return prior, float(value_t.squeeze(0).item())
 
     def evaluate_many(
         self,
-        items: list[tuple[object, VisibleMemory, BeliefState, bool]],
+        items: list[tuple[object, VisibleMemory, BeliefState, bool, bool]],
     ) -> list[tuple[Array, float]]:
-        """Batched root/leaf evaluation. ``items`` are ``(obs, mem, belief, from_root)``."""
+        """Batched evaluation. Items are ``(obs, mem, belief, from_root, shape)``.
+
+        ``from_root`` picks the value perspective; ``shape`` applies the root
+        prior blend. Leaves run ``(True, False)``: root perspective, unshaped.
+        """
         if not items:
             return []
         if len(items) == 1:
-            obs, memory, belief, from_root = items[0]
-            return [self.evaluate(obs, memory, belief, from_root=from_root)]
+            obs, memory, belief, from_root, shape = items[0]
+            return [
+                self.evaluate(
+                    obs, memory, belief, from_root=from_root, shape=shape
+                )
+            ]
         tensors = []
         masks = []
-        from_roots = []
-        for obs, memory, belief, from_root in items:
+        for obs, memory, belief, _from_root, _shape in items:
             tensors.append(self._tensor(obs, memory, belief).squeeze(0))
             masks.append(np.asarray(play_mask(obs, memory), dtype=bool))
-            from_roots.append(bool(from_root))
         x = torch.stack(tensors, dim=0)
         policy, pass_logit, wdl_logits = self.session.forward_policy_wdl(x)
         mask_t = torch.from_numpy(np.stack(masks, axis=0))
         prior_t = legal_normalized_policy(policy, pass_logit, mask_t)
         values_t = backup_value(wdl_logits, from_root=True)
         results: list[tuple[Array, float]] = []
-        for i, from_root in enumerate(from_roots):
+        for i, (obs_i, mem_i, belief_i, from_root, shape) in enumerate(items):
             prior = prior_t[i].detach().cpu().numpy().astype(np.float64)
             value = float(values_t[i].item())
             if not from_root:
                 value = -value
-            else:
-                obs_i, mem_i, belief_i, _fr = items[i]
+            if shape:
                 prior = self._shape_root(prior, obs_i, mem_i, masks[i], belief_i)
             results.append((prior, value))
         return results
@@ -213,10 +219,13 @@ class ShapedUniformEvaluator:
         belief: BeliefState,
         *,
         from_root: bool,
+        shape: bool = False,
     ) -> tuple[Array, float]:
         if from_root:
             mask = np.asarray(play_mask(obs, memory), dtype=bool)
             prior = self._uniform(mask)
+            if not shape:
+                return prior, 0.0
             self.last_unshaped_prior = np.array(prior, dtype=np.float64, copy=True)
             lam = (
                 self.shaping_lambda_post_contact
@@ -238,11 +247,11 @@ class ShapedUniformEvaluator:
 
     def evaluate_many(
         self,
-        items: list[tuple[object, VisibleMemory, BeliefState, bool]],
+        items: list[tuple[object, VisibleMemory, BeliefState, bool, bool]],
     ) -> list[tuple[Array, float]]:
         return [
-            self.evaluate(obs, mem, belief, from_root=from_root)
-            for obs, mem, belief, from_root in items
+            self.evaluate(obs, mem, belief, from_root=from_root, shape=shape)
+            for obs, mem, belief, from_root, shape in items
         ]
 
     def policy_priors_many(

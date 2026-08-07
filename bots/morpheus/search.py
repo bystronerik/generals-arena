@@ -49,11 +49,16 @@ class SearchEvaluator(Protocol):
         belief: BeliefState,
         *,
         from_root: bool,
+        shape: bool = False,
     ) -> tuple[Array, float]:
         """Return ``(prior_3970, V)`` from the requested perspective.
 
-        ``V`` must already be in the root-player perspective (no sign flip
-        inside backup).
+        ``from_root`` is the *perspective* flag: ``V`` must already be in the
+        root-player perspective (no sign flip inside backup). ``shape`` is the
+        *root-prior shaping* flag: only the actual root evaluation passes True.
+        Leaf evaluations are root-perspective but unshaped — conflating the two
+        made every leaf pay the heuristic blend and clobbered the
+        ``last_unshaped_prior`` probe.
         """
         ...
 
@@ -142,7 +147,7 @@ class SearchController:
             int(obs.turn), mem_d, obs_h, self.history_digest
         )
         prior, value = self.evaluator.evaluate(
-            obs, memory, belief, from_root=True
+            obs, memory, belief, from_root=True, shape=True
         )
         self.last_root_prior = np.asarray(prior, dtype=np.float64)
         node = self.tree.make_node(
@@ -184,7 +189,7 @@ class SearchController:
         ):
             child.reservoir.replace_from_belief(belief)
             prior_e, value = self.evaluator.evaluate(
-                obs, memory, belief, from_root=True
+                obs, memory, belief, from_root=True, shape=True
             )
             child.network_value = float(value)
             self.last_root_prior = np.asarray(prior_e, dtype=np.float64)
@@ -318,7 +323,7 @@ class SearchController:
             batch_fn = getattr(self.evaluator, "evaluate_many", None)
             if callable(batch_fn):
                 results = batch_fn(
-                    [(obs, mem, blf, False) for obs, mem, blf in prior_items]
+                    [(obs, mem, blf, False, False) for obs, mem, blf in prior_items]
                 )
             else:
                 results = [
@@ -673,7 +678,9 @@ class SearchController:
         """Evaluate many leaves; batches network forwards when the evaluator allows."""
         values: list[Optional[float]] = [None] * len(paths)
         pending_idx: list[int] = []
-        pending_items: list[tuple[object, VisibleMemory, BeliefState, bool]] = []
+        pending_items: list[
+            tuple[object, VisibleMemory, BeliefState, bool, bool]
+        ] = []
         pending_paths: list[PendingPath] = []
 
         for i, path in enumerate(paths):
@@ -696,7 +703,9 @@ class SearchController:
                 config=belief.config,
             )
             pending_idx.append(i)
-            pending_items.append((obs, mem, leaf_belief, True))
+            # Root perspective (no sign flip), but NOT shaped: leaves keep the
+            # raw network prior so the tree interior stays faithful to the net.
+            pending_items.append((obs, mem, leaf_belief, True, False))
             pending_paths.append(path)
 
         if pending_items:
@@ -705,8 +714,10 @@ class SearchController:
                 results = batch_fn(pending_items)
             else:
                 results = [
-                    self.evaluator.evaluate(obs, mem, blf, from_root=fr)
-                    for obs, mem, blf, fr in pending_items
+                    self.evaluator.evaluate(
+                        obs, mem, blf, from_root=fr, shape=sh
+                    )
+                    for obs, mem, blf, fr, sh in pending_items
                 ]
             for local_j, (i, path, (prior, value)) in enumerate(
                 zip(pending_idx, pending_paths, results)
@@ -715,7 +726,7 @@ class SearchController:
                 if path.leaf_node is not None and path.needs_expand:
                     path.leaf_node.network_value = float(value)
                     if not path.leaf_node.actions:
-                        obs, mem, _leaf_belief, _ = pending_items[local_j]
+                        obs, mem, _leaf_belief, _, _ = pending_items[local_j]
                         self._expand_self_candidates(
                             path.leaf_node, obs, mem, np.asarray(prior, dtype=np.float64)
                         )
@@ -811,6 +822,7 @@ class UniformEvaluator:
         belief: BeliefState,
         *,
         from_root: bool,
+        shape: bool = False,
     ) -> tuple[Array, float]:
         mask = legal_mask(obs, memory)
         prior = np.zeros(mask.shape, dtype=np.float64)
@@ -836,6 +848,7 @@ class ScriptedEvaluator:
         belief: BeliefState,
         *,
         from_root: bool,
+        shape: bool = False,
     ) -> tuple[Array, float]:
         prior = np.asarray(self.prior, dtype=np.float64).reshape(-1).copy()
         mask = legal_mask(obs, memory)
