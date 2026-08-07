@@ -10,6 +10,26 @@ from evaluator import NetworkEvaluator, ShapedUniformEvaluator
 from inference import load_default_session
 from runtime import RuntimeController
 
+# One thread, always. run.sh exports the OMP/BLAS variables before the
+# interpreter starts (pools are sized at library init); this covers callers that
+# construct Agent in-process, where those exports never ran. Deployment latency
+# is calibrated single-threaded, so anything else runs on numbers measured for a
+# machine the bot is not on. Rationale and measurements:
+# docs/bots/morpheus/thread-pinning.md.
+TORCH_NUM_THREADS = 1
+
+
+def _pin_torch_threads() -> None:
+    import torch
+
+    torch.set_num_threads(TORCH_NUM_THREADS)
+    try:
+        torch.set_num_interop_threads(TORCH_NUM_THREADS)
+    except RuntimeError:
+        # Only settable before the inter-op pool starts. Already-running means
+        # another caller initialized it; intra-op is the one that matters here.
+        pass
+
 
 class Agent:
     """Deadline-aware Morpheus seat. Probe reads public counter attributes."""
@@ -18,6 +38,8 @@ class Agent:
         self.player_id = player_id
         self.H = H
         self.W = W
+        # Before the session loads or any forward runs.
+        _pin_torch_threads()
         self._deployment = try_load_deployment()
         self._session = load_default_session()
         shapes = tuple(self._deployment.warmup_batch_shapes) or (1, 4, 64)

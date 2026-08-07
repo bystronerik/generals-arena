@@ -35,6 +35,8 @@ config rather than incidental behavior:
 - [Network](network.md) defines the model family and heads.
 - [Search](search.md) defines simultaneous information-set MCTS.
 - [Prior shaping](prior-shaping.md) defines the bounded root-prior blend.
+- [Thread pinning](thread-pinning.md) defines the single-thread play/calibration
+  invariant that keeps search admissible.
 - [Runtime](runtime.md) defines deadline control and degraded operation.
 - [Training](training.md) defines reward, curriculum, and opponent sampling.
 - [Curriculum](curriculum.md) defines executable class and confidence rules.

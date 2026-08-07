@@ -177,3 +177,46 @@ def test_shaping_variant_is_a_distinct_closure(tmp_path: Path):
         assert not (dest / "tests").exists()
     finally:
         shutil.rmtree(dest, ignore_errors=True)
+
+
+def test_run_sh_pins_every_math_backend_to_one_thread():
+    """OpenMP/BLAS size their pools at library init — Python is too late."""
+    run_sh = (BOT_DIR / "run.sh").read_text(encoding="utf-8")
+    for var in (
+        "OMP_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+    ):
+        assert f"export {var}=1" in run_sh, f"run.sh must pin {var}"
+    # The exports must precede exec, or the interpreter never sees them.
+    assert run_sh.index("export OMP_NUM_THREADS=1") < run_sh.index("exec ")
+
+
+def test_play_and_calibration_pin_the_same_thread_count():
+    """A bot calibrated single-threaded must not play multi-threaded.
+
+    This mismatch made the whole offline_p99_ms block describe a machine the bot
+    never ran on, and it locked search out entirely. Pin the invariant, not just
+    the value.
+    """
+    import re
+
+    agent_src = (BOT_DIR / "agent.py").read_text(encoding="utf-8")
+    m = re.search(r"^TORCH_NUM_THREADS\s*=\s*(\d+)", agent_src, re.M)
+    assert m, "agent.py must declare TORCH_NUM_THREADS"
+    play_threads = int(m.group(1))
+    assert play_threads == 1
+
+    measure_src = (
+        REPO_ROOT / "training/morpheus/measure_online.py"
+    ).read_text(encoding="utf-8")
+    assert "torch.set_num_threads(1)" in measure_src, (
+        "calibration no longer pins one thread; play and measurement have "
+        "diverged (see docs/bots/morpheus/thread-pinning.md)"
+    )
+    # And the bot must actually apply it before loading the session.
+    assert "_pin_torch_threads()" in agent_src
+    assert agent_src.index("_pin_torch_threads()", agent_src.index("def __init__")) < (
+        agent_src.index("load_default_session()", agent_src.index("def __init__"))
+    )
