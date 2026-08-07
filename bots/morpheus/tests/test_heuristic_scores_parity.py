@@ -16,7 +16,10 @@ pytestmark = pytest.mark.morpheus
 from action import PASS_INDEX, decode_action
 from memory import OWNER_ENEMY, OWNER_NEUTRAL
 from tactics import (
+    DEATHTOUCH_SCORE,
     GATHER_SHARE_MIN,
+    GENERAL_CHEW_DAMP,
+    HUNT_PROGRESS_BONUS,
     STRUCTURE_IDLE_ARMY,
     army_concentration,
     attack_weight,
@@ -32,6 +35,7 @@ from tactics import (
     heuristic_action_scores,
     is_committed_army,
     king_cell,
+    known_enemy_general_cell,
     newly_revealed_cells,
     own_structure_mask,
     path_distance_field,
@@ -43,7 +47,7 @@ from tactics import (
     wave_weight,
 )
 from tactics import _as_grids  # noqa: F401  (shared grid casting)
-from transition import DIRECTIONS
+from transition import DEATHTOUCH_TURN, DIRECTIONS
 
 from shaping_boards import BOARDS
 
@@ -78,6 +82,10 @@ def reference_scores(obs, memory, mask):
         king_dist = path_distance_field(obs, [king]) if king is not None else None
         share, max_own, tot = army_concentration(obs)
         gen_known = enemy_general_visible(obs, memory)
+        gen_cell = known_enemy_general_cell(obs, memory)
+        hunt_dist = (
+            path_distance_field(obs, [gen_cell]) if gen_cell is not None else None
+        )
         for idx in np.flatnonzero(mask_a):
             idx = int(idx)
             if idx == PASS_INDEX:
@@ -106,6 +114,14 @@ def reference_scores(obs, memory, mask):
             thrash = tip_thrash_factor(army_i, max_own, tot)
             gather = stack_gather_factor(army_i, dest_army, dest_owner, progress=progress)
 
+            is_touch = gen_cell is not None and (tr, tc) == gen_cell
+            if hunt_dist is not None:
+                hunt_prog = path_progress(
+                    sr, sc, tr, tc, hunt_dist, fallback_target=gen_cell
+                )
+            else:
+                hunt_prog = 0.0
+            hunt_factor = 1.0 + HUNT_PROGRESS_BONUS * max(hunt_prog, 0.0)
             if dest_owner == OWNER_ENEMY and surplus > 0.0:
                 score = atk_w * thrash * bias * (
                     120.0
@@ -114,14 +130,15 @@ def reference_scores(obs, memory, mask):
                     + 3.5 * min(surplus, 200.0)
                 )
                 if gen_known:
-                    score *= 1.35
+                    score *= 1.35 if (is_touch or progress > 0.0) else GENERAL_CHEW_DAMP
+                score *= hunt_factor
             elif dest_owner == OWNER_NEUTRAL:
                 score = atk_w * thrash * bias * (
                     45.0
                     + 30.0 * max(progress, 0.0)
                     + 12.0 * efficiency
                     + 8.0 * float(reveal)
-                )
+                ) * hunt_factor
             elif dest_owner == 1:
                 k_prog = 0.0
                 if king_dist is not None and not is_committed_army(
@@ -137,11 +154,15 @@ def reference_scores(obs, memory, mask):
                         * stack_gather_factor(army_i, dest_army, 1, progress=k_prog)
                     )
                 elif progress > 0.0:
-                    score = atk_w * thrash * bias * (18.0 + 32.0 * progress) * gather
+                    score = (
+                        atk_w * thrash * bias * (18.0 + 32.0 * progress) * gather
+                    ) * hunt_factor
                 else:
                     score = 0.008 * army_w * bias * gather
             else:
                 score = 0.01 * army_w * gather
+            if turn >= DEATHTOUCH_TURN and is_touch:
+                score = DEATHTOUCH_SCORE
             out[idx] = max(out[idx], score)
     else:
         urgency = fog_urgency(turn, enemy_seen=False)

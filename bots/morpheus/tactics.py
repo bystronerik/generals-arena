@@ -37,7 +37,7 @@ from memory import (
     VisibleMemory,
 )
 from observe import visibility_mask
-from transition import DIRECTIONS
+from transition import DEATHTOUCH_TURN, DIRECTIONS
 
 Array = np.ndarray
 Action5 = tuple[int, int, int, int, int]
@@ -54,6 +54,20 @@ OSCILLATION_HISTORY = 8
 # tie-break jitter. The bonus only amplifies already-positive scores, so a
 # banned or retreating continuation stays dead.
 CONTINUATION_BONUS = 1.5
+# Once the enemy general is latched, enemy takes that do not shorten the path
+# to it are farming, not killing. Measured: a 1200-turn draw in which the
+# border was chewed for 850 turns while the general sat at 1-9 army, unseen.
+GENERAL_CHEW_DAMP = 0.3
+# Multiplier per step of progress toward the known/believed general, applied
+# on top of the normal take/carve/march scores. A bonus, not a goal swap: an
+# earlier version replaced the enemy-land goal set with the believed cell and
+# promptly lost its own general — incursions near home stopped counting as
+# progress, so defense collapsed along with broad border pressure.
+HUNT_PROGRESS_BONUS = 0.75
+# Post-DEATHTOUCH_TURN, any executed move onto the general wins outright, so a
+# touch outranks every other action. The blend clip saturates this to the top
+# of the shaped prior; the adjacency hard rule makes the touch itself forced.
+DEATHTOUCH_SCORE = 1.0e6
 
 # Prior-shaping blend (Part 17). ``lam`` is the trust knob, ``log_clip`` bounds
 # how far one heuristic may move an action, ``floor_frac`` keeps a network zero
@@ -345,8 +359,45 @@ def path_distance_field(
     return dist
 
 
-def seek_goals(obs, memory: VisibleMemory) -> list[tuple[int, int]]:
-    """Cells to drive toward: enemy general, else all visible enemy land."""
+def believed_enemy_general(belief: Optional[Any]) -> Optional[tuple[int, int]]:
+    """Mode of the particle posterior over the enemy general's cell.
+
+    The particle filter maintains exactly the signal the general hunt needs;
+    before this, ``enemy_seek_target`` deleted its ``belief`` argument and the
+    seek goal degenerated to "nearest border cell" — measured as a 1200-turn
+    game in which the enemy general was never even seen. Duck-typed so tests
+    can pass a light stub. Returns ``None`` when no usable posterior exists.
+    """
+    if belief is None or int(getattr(belief, "n", 0)) <= 0:
+        return None
+    enemy = int(belief.enemy_seat)
+    mass: dict[tuple[int, int], tuple[float, int]] = {}
+    for p in belief.particles:
+        g = p.state.general_positions[enemy]
+        gr, gc = int(g[0]), int(g[1])
+        if gr < 0 or gc < 0:
+            continue
+        w, n = mass.get((gr, gc), (0.0, 0))
+        mass[(gr, gc)] = (w + max(float(p.weight), 0.0), n + 1)
+    if not mass:
+        return None
+    # Weighted mode; particle count breaks ties when all weights are zero.
+    cell, _ = max(mass.items(), key=lambda kv: kv[1])
+    return cell
+
+
+def seek_goals(
+    obs, memory: VisibleMemory, belief: Optional[Any] = None
+) -> list[tuple[int, int]]:
+    """Cells to drive toward: enemy general, else land, else believed general.
+
+    Enemy land stays ahead of the belief posterior on purpose: it is what
+    keeps incursions near home scored as progress (defense) and the border
+    under broad pressure. The directed hunt is a separate *bonus* field in
+    ``heuristic_action_scores``, not a goal replacement. The believed cell
+    takes over only when no enemy land is visible — lost contact, or the
+    pre-contact fog hunt (better beacon than the opposite corner).
+    """
     types, owners, _ = _as_grids(obs)
     latched = np.argwhere(memory.known_enemy_general)
     if latched.size:
@@ -357,7 +408,10 @@ def seek_goals(obs, memory: VisibleMemory) -> list[tuple[int, int]]:
     enemy = np.argwhere(owners == OWNER_ENEMY)
     if enemy.size:
         return [(int(r), int(c)) for r, c in enemy]
-    # Pre-contact: opposite corner from own general (fog hunt beacon).
+    believed = believed_enemy_general(belief)
+    if believed is not None:
+        return [believed]
+    # Pre-contact fallback: opposite corner from own general (fog beacon).
     own = np.argwhere(memory.own_general)
     if own.size == 0:
         own = np.argwhere((types == TYPE_GENERAL) & (owners == 1))
@@ -824,13 +878,12 @@ def enemy_seek_target(
     memory: VisibleMemory,
     belief: Optional[Any] = None,
 ) -> Optional[tuple[int, int]]:
-    """Drive toward latched/visible enemy general, else nearest enemy land.
+    """Drive toward known/believed enemy general, else nearest enemy land.
 
     Prefers the enemy cell closest (Manhattan) to the largest own stack so the
     king stack does not aim at a centroid behind mountains.
     """
-    del belief
-    goals = seek_goals(obs, memory)
+    goals = seek_goals(obs, memory, belief)
     if not goals:
         return None
     if len(goals) == 1:
@@ -899,7 +952,7 @@ def heuristic_action_scores(
 
     if seen_enemy:
         target = enemy_seek_target(obs, memory, belief=belief)
-        goals = seek_goals(obs, memory)
+        goals = seek_goals(obs, memory, belief)
         dist_field = path_distance_field(obs, goals) if goals else None
         king = king_cell(obs)
         king_dist = path_distance_field(obs, [king]) if king is not None else None
@@ -933,8 +986,25 @@ def heuristic_action_scores(
                     + 3.5 * np.minimum(surplus, 200.0)
                 )
             )
+            gen_cell = known_enemy_general_cell(obs, memory)
+            hunt_cell = gen_cell or believed_enemy_general(belief)
+            if gen_cell is not None:
+                is_gen_touch = (tr == gen_cell[0]) & (tc == gen_cell[1])
+            else:
+                is_gen_touch = np.zeros(len(move_idx), dtype=bool)
+            if hunt_cell is not None:
+                hunt_dist = path_distance_field(obs, [hunt_cell])
+                hunt_prog = _path_progress_v(sr, sc, tr, tc, hunt_dist, hunt_cell)
+            else:
+                hunt_prog = np.zeros(len(move_idx), dtype=np.float64)
+            hunt_factor = 1.0 + HUNT_PROGRESS_BONUS * np.maximum(hunt_prog, 0.0)
             if gen_known:
-                enemy_score = enemy_score * 1.35
+                # Kill, don't farm: takes that shorten the path to the known
+                # general keep the boost; sideways border chew is damped.
+                enemy_score = enemy_score * np.where(
+                    is_gen_touch | (progress > 0.0), 1.35, GENERAL_CHEW_DAMP
+                )
+            enemy_score = enemy_score * hunt_factor
             # Fog carve that shortens the path to enemy is a real attack prep.
             neutral_score = (
                 atk_w
@@ -946,7 +1016,7 @@ def heuristic_action_scores(
                     + 12.0 * efficiency
                     + 8.0 * reveal
                 )
-            )
+            ) * hunt_factor
             # Own corridor: reward path-toward-enemy; crush retreat.
             # Also reward hinterland tips gathering into the king stack.
             committed = _committed_v(army_i, max_own, tot, share)
@@ -966,7 +1036,9 @@ def heuristic_action_scores(
                 * (14.0 + 22.0 * k_prog)
                 * _gather_v(army_i, dest_army, k_prog)
             )
-            own_forward = atk_w * thrash * bias * (18.0 + 32.0 * progress) * gather
+            own_forward = (
+                atk_w * thrash * bias * (18.0 + 32.0 * progress) * gather
+            ) * hunt_factor
             # Raw NN often picks retreat; keep mass near zero here.
             own_idle = 0.008 * army_w * bias * gather
             own_score = np.where(
@@ -983,6 +1055,11 @@ def heuristic_action_scores(
                     np.where(dest_owner == 1, own_score, 0.01 * army_w * gather),
                 ),
             )
+            # Deathtouch: any executed touch wins outright, so the surplus
+            # gate must not suppress it. Pre-800 an underpowered touch stays
+            # in the near-zero branch (feeding a defended general is a loss).
+            if turn >= DEATHTOUCH_TURN:
+                score = np.where(is_gen_touch, DEATHTOUCH_SCORE, score)
             out[move_idx] = np.maximum(out[move_idx], score)
     elif move_idx.size:
         # No enemy yet: hunt fog with a formed wave; urgency rises with turn.
@@ -990,7 +1067,7 @@ def heuristic_action_scores(
         urgency = fog_urgency(turn, enemy_seen=False)
         own_struct = np.asarray(own_structure_mask(obs, memory), dtype=bool)
         fog_target = enemy_seek_target(obs, memory, belief=belief)
-        fog_goals = seek_goals(obs, memory)
+        fog_goals = seek_goals(obs, memory, belief)
         fog_dist = path_distance_field(obs, fog_goals) if fog_goals else None
 
         src_army = armies[sr, sc].astype(np.int64)
@@ -1222,6 +1299,20 @@ def enemy_general_visible(obs, memory: VisibleMemory) -> bool:
     return bool(np.any(memory.known_enemy_general))
 
 
+def known_enemy_general_cell(
+    obs, memory: VisibleMemory
+) -> Optional[tuple[int, int]]:
+    """Latched or currently visible enemy general cell, else ``None``."""
+    types, owners, _ = _as_grids(obs)
+    latched = np.argwhere(memory.known_enemy_general)
+    if latched.size:
+        return (int(latched[0, 0]), int(latched[0, 1]))
+    gen = np.argwhere((types == TYPE_GENERAL) & (owners == OWNER_ENEMY))
+    if gen.size:
+        return (int(gen[0, 0]), int(gen[0, 1]))
+    return None
+
+
 def best_prior_legal_action(
     prior: Array,
     obs,
@@ -1280,6 +1371,13 @@ def best_prior_legal_action(
     return tuple(int(x) for x in decode_action(best_idx))  # type: ignore[return-value]
 
 
+def _capture_moved_army(idx: int, armies: Array) -> int:
+    """Army that actually moves for a capture action (full or half split)."""
+    action = decode_action(idx)
+    src = int(armies[int(action[1]), int(action[2])])
+    return src // 2 if int(action[4]) == 1 else src - 1
+
+
 def constrain_nn_action(
     obs,
     memory: VisibleMemory,
@@ -1291,20 +1389,33 @@ def constrain_nn_action(
 ) -> Action5:
     """Keep NN/search choice except for hard rules + prior re-rank.
 
-    Hard rules: general capture; never pass when another move exists; never
-    own-land oscillation. Soft redirects (pass / retreat / lateral home) pick
-    the best legal action from the shaped root prior — not a full heuristic
-    policy. When ``prior`` is missing, only hard rules apply.
+    Hard rules: winning general capture (any touch from ``DEATHTOUCH_TURN``);
+    never pass when another move exists; never own-land oscillation. Soft
+    redirects (pass / retreat / lateral home) pick the best legal action from
+    the shaped root prior — not a full heuristic policy. When ``prior`` is
+    missing, only hard rules apply.
     """
     mask = play_mask(obs, memory)
     caps = general_capture_indices(obs, memory, mask)
     if caps:
         _t, _o, armies = _as_grids(obs)
-        best_cap = max(
-            caps,
-            key=lambda i: int(armies[decode_action(i)[1], decode_action(i)[2]]),
-        )
-        return tuple(int(x) for x in decode_action(best_cap))  # type: ignore[return-value]
+        turn = int(getattr(obs, "turn", 0))
+        if turn < DEATHTOUCH_TURN:
+            # Kill calculus: forcing an underpowered capture feeds the
+            # defense. Only a touch that actually wins the clash is forced;
+            # otherwise fall through and let scoring gather next door.
+            def _defender(idx: int) -> int:
+                a = decode_action(idx)
+                d_r = int(a[1]) + int(DIRECTIONS[int(a[3]), 0])
+                d_c = int(a[2]) + int(DIRECTIONS[int(a[3]), 1])
+                return int(armies[d_r, d_c])
+
+            caps = [
+                i for i in caps if _capture_moved_army(i, armies) > _defender(i)
+            ]
+        if caps:
+            best_cap = max(caps, key=lambda i: _capture_moved_army(i, armies))
+            return tuple(int(x) for x in decode_action(best_cap))  # type: ignore[return-value]
 
     chosen: Action5 = tuple(int(x) for x in action)  # type: ignore[assignment]
     nonpass = np.asarray(mask, dtype=bool).copy()
