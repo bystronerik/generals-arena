@@ -1,0 +1,32 @@
+{
+  "bounded_shipped_log_clip_ln10": {
+    "games": 3,
+    "post_contact": {
+      "n_turns": 701,
+      "nn_top_prior_milli_mean": 636.7,
+      "top1": 0.7589,
+      "top3": 0.9258
+    },
+    "pre_contact": {
+      "n_turns": 329,
+      "nn_top_prior_milli_mean": 651.1,
+      "top1": 0.8815,
+      "top3": 0.9909
+    }
+  },
+  "effectively_unbounded_log_clip_20": {
+    "games": 3,
+    "post_contact": {
+      "n_turns": 948,
+      "nn_top_prior_milli_mean": 595.0,
+      "top1": 0.7078,
+      "top3": 0.9019
+    },
+    "pre_contact": {
+      "n_turns": 290,
+      "nn_top_prior_milli_mean": 685.5,
+      "top1": 0.8172,
+      "top3": 0.9828
+    }
+  }
+}
