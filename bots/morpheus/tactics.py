@@ -167,8 +167,10 @@ def blocks_oscillation(
     return False
 
 
-# Soft size bonus for tip-feed / explore (not for commit attacks).
-WAVE_ARMY_SOFT_CAP = 20
+# Soft size bonus for tip-feed / explore (not for commit attacks). Raised from
+# 20: measured waves hit enemy territory with a median 6 army (0.9% of total),
+# so the size signal saturated far below a useful attack mass.
+WAVE_ARMY_SOFT_CAP = 60
 # Own-land pile merges at/above this are stacking waste.
 STACK_GATHER_BAN = 16
 # Large stacks may march onto thin own cells toward the enemy.
@@ -181,7 +183,9 @@ CASTLE_EARLY_UNTIL = 200
 # Keep a real garrison — emptying the general loses to rush bots.
 STRUCTURE_IDLE_ARMY = 18
 # Below this share of total army in the king stack, sweep land into it.
-GATHER_SHARE_MIN = 0.35
+# Raised from 0.35: gathering stopped while the king held barely a third of
+# the army, which is how 17-of-219 first-contact waves happened.
+GATHER_SHARE_MIN = 0.5
 # Tip armies below this fraction of the king must gather, not freestyle.
 COMMIT_ARMY_FRAC = 0.35
 # Absolute floor: a stack below this fraction of *total* army is a tip when
@@ -424,22 +428,29 @@ def stack_gather_factor(
     *,
     progress: float = 0.0,
 ) -> float:
-    """Own-land friction: soft on forward marches, hard on retreat dumps."""
+    """Own-land friction: near-free forward merges, hard on retreat dumps.
+
+    Forward merges into a big stack ARE the wave-building move, so the forward
+    penalty only bites past ~80 army (was: visibly punished from ~25, which
+    kept attack waves at tip size). Lateral merges stay dampened but no longer
+    crushed — the retreat branch is the one that stays brutal.
+    """
     if int(dest_owner) != 1:
         return 1.0
     src = max(int(src_army), 1)
     dest = max(int(dest_army), 0)
     p = float(progress)
     if p > 0.0:
-        # Toward enemy: allow corridor gathers / front consolidation.
-        return float(1.0 / (1.0 + (dest / 25.0) ** 1.5))
+        # Toward enemy: corridor gathers / front consolidation are near-free.
+        return float(1.0 / (1.0 + (dest / 80.0) ** 2))
     if p < 0.0:
         # Away from enemy: crush pile dumps and retreat shuffles.
         return float(0.03 / (1.0 + dest / 4.0))
-    # Lateral: keep the old pile-merge ban.
-    feed = 1.0 / (1.0 + (dest / 6.0) ** 2)
+    # Lateral: dampen, don't forbid — merging a tip into a nearby pile can
+    # still be the right wave-forming move.
+    feed = 1.0 / (1.0 + (dest / 18.0) ** 2)
     if src >= STACK_GATHER_BAN and dest > COMMIT_DEST_ARMY_MAX:
-        return float(feed * 0.05)
+        return float(feed * 0.25)
     return float(feed)
 
 
@@ -554,12 +565,12 @@ def _gather_v(src_army: Array, dest_army: Array, progress: Array) -> Array:
     """Vector ``stack_gather_factor`` for own-land destinations."""
     src = np.maximum(src_army, 1)
     dest = np.maximum(dest_army, 0).astype(np.float64)
-    forward = 1.0 / (1.0 + (dest / 25.0) ** 1.5)
+    forward = 1.0 / (1.0 + (dest / 80.0) ** 2)
     retreat = 0.03 / (1.0 + dest / 4.0)
-    feed = 1.0 / (1.0 + (dest / 6.0) ** 2)
+    feed = 1.0 / (1.0 + (dest / 18.0) ** 2)
     lateral = np.where(
         (src >= STACK_GATHER_BAN) & (dest > COMMIT_DEST_ARMY_MAX),
-        feed * 0.05,
+        feed * 0.25,
         feed,
     )
     return np.where(progress > 0.0, forward, np.where(progress < 0.0, retreat, lateral))
@@ -919,7 +930,7 @@ def heuristic_action_scores(
                     120.0
                     + 40.0 * np.maximum(progress, 0.0)
                     + 8.0 * reveal
-                    + 3.5 * np.minimum(surplus, 80.0)
+                    + 3.5 * np.minimum(surplus, 200.0)
                 )
             )
             if gen_known:
@@ -947,8 +958,11 @@ def heuristic_action_scores(
                 )
             else:
                 k_prog = np.zeros(len(move_idx), dtype=np.float64)
+            # Army-weighted: a 100-army hinterland stack's gather move must
+            # outrank a 3-army tip shuffle, so weight by attack_weight (caps
+            # at 200) rather than the wave cap.
             king_gather = (
-                army_w
+                atk_w
                 * (14.0 + 22.0 * k_prog)
                 * _gather_v(army_i, dest_army, k_prog)
             )

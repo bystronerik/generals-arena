@@ -233,17 +233,25 @@ def test_constrain_nn_keeps_non_oscillating_move():
 
 
 def test_overstack_gather_is_punished():
-    from tactics import STACK_GATHER_BAN, stack_gather_factor, wave_weight
+    from tactics import (
+        STACK_GATHER_BAN,
+        WAVE_ARMY_SOFT_CAP,
+        stack_gather_factor,
+        wave_weight,
+    )
 
-    assert wave_weight(400) == pytest.approx(wave_weight(20))
-    # Lateral / default progress: fat pile dumps stay crushed.
-    assert stack_gather_factor(400, 50, 1) < 0.01
-    assert stack_gather_factor(10, 2, 1) > stack_gather_factor(400, 50, 1)
+    assert wave_weight(400) == pytest.approx(wave_weight(WAVE_ARMY_SOFT_CAP))
+    # Lateral pile dumps are dampened (no longer crushed — merging a tip into
+    # a pile can be the wave-forming move), but retreat dumps stay brutal.
+    lateral = stack_gather_factor(400, 50, 1)
+    assert lateral < 0.1
+    assert stack_gather_factor(10, 2, 1) > lateral
     assert stack_gather_factor(25, 1, 2) == pytest.approx(1.0)
     assert stack_gather_factor(200, 2, 1) > 0.5
-    # Toward-enemy consolidation is allowed (soft friction only).
-    assert stack_gather_factor(400, 50, 1, progress=1.0) > 0.2
+    # Toward-enemy consolidation into a big stack is near-free now.
+    assert stack_gather_factor(400, 50, 1, progress=1.0) > 0.5
     assert stack_gather_factor(400, 50, 1, progress=-1.0) < 0.05
+    assert stack_gather_factor(400, 50, 1, progress=-1.0) < lateral
     assert STACK_GATHER_BAN <= 16
 
 

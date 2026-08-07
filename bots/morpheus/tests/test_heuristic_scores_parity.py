@@ -111,7 +111,7 @@ def reference_scores(obs, memory, mask):
                     120.0
                     + 40.0 * max(progress, 0.0)
                     + 8.0 * float(reveal)
-                    + 3.5 * min(surplus, 80.0)
+                    + 3.5 * min(surplus, 200.0)
                 )
                 if gen_known:
                     score *= 1.35
@@ -132,7 +132,7 @@ def reference_scores(obs, memory, mask):
                     )
                 if k_prog > 0.0 and share < GATHER_SHARE_MIN:
                     score = (
-                        wave_weight(army_i)
+                        attack_weight(army_i)
                         * (14.0 + 22.0 * k_prog)
                         * stack_gather_factor(army_i, dest_army, 1, progress=k_prog)
                     )
