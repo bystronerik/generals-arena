@@ -6,8 +6,12 @@ Morpheus maintains an explicit weighted particle belief. Search uses
 root-sampled information-set MCTS: each simulation samples one particle, but
 all particles update the same tree nodes for the same observable history.
 
-`N_PARTICLES = 64` is an **initial guess**. The runtime benchmark can change
-the count without changing the belief design.
+`N_PARTICLES = 64` is an **initial guess** and remains the code default
+(`bots/morpheus/belief.py`). The shipped `deployment.json` plays
+`n_particles = 8` — the best belief+root-complete trial from the Part 09
+qualification, whose verdict was *no* (see
+[`morpheus-online-runtime.md`](../../research/measurements/morpheus-online-runtime.md)).
+The runtime benchmark can change the count without changing the belief design.
 
 ## Particle contents
 
@@ -39,7 +43,12 @@ totals.
 After Morpheus sends action `a` and receives the next observation:
 
 1. Build the enemy-perspective observation for every particle.
-2. Sample enemy action `b` from the shared policy network.
+2. Sample enemy action `b` — uniformly over that particle's legal mask in the
+   deployed configuration (`use_policy_proposal: false`), or from the shared
+   policy network when the deployment enables the learned proposal. The
+   learned proposal was measured off: no benefit vs macaria (−0.07 ± 0.13
+   paired over 100 games per arm) at ~13 ms/turn; see
+   [`belief-ablation-macaria.md`](../../research/measurements/belief-ablation-macaria.md).
 3. Apply `(a,b)` with build-first resolution, move priority, combat, and growth.
 4. Emit Morpheus's simulated observation.
 5. Give zero weight to any particle that differs on a visible cell, type,
@@ -49,14 +58,17 @@ After Morpheus sends action `a` and receives the next observation:
 
 The half-count threshold is an **initial guess**.
 
-The proposal uses the same policy from the enemy perspective. Its belief
-planes come from the enemy's simulated last-seen memory and a level-zero
-state estimate. Morpheus does not build recursive beliefs about beliefs.
+When the policy proposal is enabled, it uses the same policy from the enemy
+perspective. Its belief planes come from the enemy's simulated last-seen
+memory and a level-zero state estimate. Morpheus does not build recursive
+beliefs about beliefs.
 
-Morpheus deduplicates identical enemy information tensors by hash. It evaluates
-all remaining particle proposals in one batch of up to 64, then samples one
-action per particle from the matching policy. It does not run 64 serial
-forwards.
+On that path, Morpheus deduplicates identical enemy information tensors by
+hash and evaluates the remaining particle proposals in one batch of up to
+`max_proposal_batch` tensors (code default 64; deployed 8), then samples one
+action per particle from the matching policy. It does not run serial
+per-particle forwards. The deployed uniform proposal runs no network forward
+at all on the belief path.
 
 ## Rejuvenation and recovery
 
@@ -177,8 +189,9 @@ The reconstructed set sets `belief_ess` to the minimum confidence
 
 ### Importance and acceptance weights
 
-- **Normal filter.** The shared policy is both the target prior and the
-  proposal. Sample one enemy action per particle from that policy. The
+- **Normal filter.** The proposal distribution (uniform over legal actions in
+  the deployed configuration; the shared policy when injected) is also the
+  target prior. Sample one enemy action per particle from it. The
   observation likelihood is exact: weight becomes `0` on any visible-cell,
   type, owner, army, turn, or public-total mismatch; otherwise the weight is
   unchanged (importance ratio `1`). Normalize survivors.

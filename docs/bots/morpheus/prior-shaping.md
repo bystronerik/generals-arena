@@ -41,8 +41,18 @@ Two scoring behaviors sit outside these knobs, as `tactics.py` constants:
   lateral merges are dampened rather than crushed, gathering into the king
   stack stays rewarded until it holds half the total army, and the gather
   score is weighted by `attack_weight` so heavy stacks move before tips.
-  Motivated by measurement: waves used to reach enemy land with a median 6
-  army (0.9% of total; 8% at first contact).
+  Motivated by an unpublished diagnostic recorded in commit `04b7e4c`: waves
+  used to reach enemy land with a median 6 army (0.9% of total; 17 of 219
+  first-contact waves).
+- **General hunt** (`believed_enemy_general`, `GENERAL_CHEW_DAMP`,
+  `DEATHTOUCH_SCORE`): when the general is not latched, the seek goal is the
+  particle posterior's mode over its location (the belief filter already
+  maintains that map; the old goal — nearest visible enemy cell — let the bot
+  chew the border forever: one diagnosed 1200-turn draw never sighted the
+  general at all). Once latched, enemy takes that do not shorten the general
+  path are damped x`GENERAL_CHEW_DAMP`, and from turn 800 a touch on the
+  general scores `DEATHTOUCH_SCORE` regardless of army (deathtouch wins
+  outright).
 
 ### Why each piece
 
@@ -78,8 +88,10 @@ included — disables any of them:
   interactions, enemy attacks, and frontier expands are always in the root
   candidate set. Steering is by *inclusion*, not by score. Pinned by a test that
   runs every `lambda`.
-- `constrain_nn_action` — forces an available general capture, forbids passing
-  when a move exists, and blocks own-land oscillation.
+- `constrain_nn_action` — forces an available *winning* general capture
+  (before turn 800 the moved army must beat the defender; from turn 800 any
+  touch wins by deathtouch and is always forced), forbids passing when a move
+  exists, and blocks own-land oscillation.
 
 General captures are deliberately *not* scored by `heuristic_action_scores`.
 They are already guaranteed by inclusion and forced by `constrain_nn_action`, so

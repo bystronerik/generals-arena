@@ -53,7 +53,9 @@ A turn `t` is class 1 when both generals are alive and either:
    `TACTICAL_HORIZON = 8`.
 
 Classes 1–3 use decisive fixed-panel trajectories before Morpheus wins its own
-games.
+games. The current research-scope runs instead draw classes 1–4 from
+`<player>_reconstructions` sources plus class-5 full starts
+([`scraped-classes13.md`](../../morpheus-implementation/scraped-classes13.md)).
 
 ### Class assignment (exclusive, priority order)
 

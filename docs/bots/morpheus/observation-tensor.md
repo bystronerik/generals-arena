@@ -73,9 +73,12 @@ For any army value `x`:
 army_value(x) = clip(log(1 + max(x, 0)) / log(1 + 4096), 0, 1)
 ```
 
-`4096` is an **initial guess**. Training statistics can replace this scale
-without changing the plane meanings. Record the selected scale in the model
-manifest so a scale change moves the artifact identity.
+`4096` was an initial guess and was measured **keep_default**: the bootstrap
+corpus's maximum owned stack is 1545, well inside the scale
+([`morpheus-army-normalization.md`](../../research/measurements/morpheus-army-normalization.md)).
+Training statistics can still replace this scale without changing the plane
+meanings. The selected scale is recorded in the model manifest
+(`army_scale: 4096`), so a scale change moves the artifact identity.
 
 `structure_growth_next` uses `(turn + 1) mod 2 == 0`.
 `bulk_growth_countdown` uses

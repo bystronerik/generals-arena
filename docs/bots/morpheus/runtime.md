@@ -2,14 +2,17 @@
 
 ## Decision
 
-Morpheus treats the 150 ms reply limit as a hard deadline. Normal turns use an
-internal deadline of **125 ms** after the complete frame is parsed. The 25 ms
-reserve is an **initial guess** for serialization, scheduling, and timing
-variation.
+Morpheus treats the 150 ms reply limit as a hard deadline. The design default
+is an internal deadline of **125 ms** after the complete frame is parsed, with
+a 25 ms reserve — an **initial guess** for serialization, scheduling, and
+timing variation. The shipped `deployment.json` plays a **140 ms** deadline
+with a 10 ms reserve; that coupled budget predates live search and does not
+fit under 150 ms once search runs — see
+[thread pinning](thread-pinning.md#known-consequence-the-budget-no-longer-fits).
 
-The target is **32 completed simulations per normal move**. The minimum search
-target is 8. Both numbers are **initial guesses** until measured on one
-competition CPU core.
+The design target is **32 completed simulations per normal move** (the code
+default), with a minimum search target of 8. Both are **initial guesses**; the
+shipped `deployment.json` targets **16** with minimum 8.
 
 ## First move
 
@@ -40,24 +43,30 @@ Every turn follows this order:
 7. Stop before the internal deadline.
 8. Serialize the best available action.
 
-Belief proposals use one separate batch of up to 64 unique enemy tensors.
+When the policy proposal is enabled, belief proposals use one separate batch
+of up to `max_proposal_batch` unique enemy tensors (design 64; deployed 8).
+The deployed configuration uses the uniform proposal and spends zero forwards
+on the belief path
+([`belief-ablation-macaria.md`](../../research/measurements/belief-ablation-macaria.md)).
 Search batch size 4 is an **initial guess**.
 
 ## Per-turn network budget
 
 A forward-equivalent is one tensor through the network, even when a batch
-executes many tensors together.
+executes many tensors together. This table is the Part 07 design budget; the
+code enforces the 113 total plus per-component admission, not the per-consumer
+rows.
 
-| Consumer | Default maximum | Batch form |
+| Consumer | Design maximum | Batch form |
 | --- | ---: | --- |
-| belief enemy-action proposals | 64 | one deduplicated batch |
+| belief enemy-action proposals | 64 | one deduplicated batch (0 when the uniform proposal is active — the deployed default) |
 | root policy and value | 1 | one tensor |
-| search leaf values | 32 | up to 8 batches of 4 |
-| new enemy-table priors | 16 | join compatible search batches |
-| total | 113 | hard accounting maximum |
+| search leaf values | 32 | batches of 4 |
+| new enemy-table priors | 16 | separate `enemy_prior_batch` calls |
+| total | 113 | hard accounting maximum, enforced in code |
 
-The enemy-prior limit of 16 is an **initial guess**. Cached or deduplicated
-priors consume zero new forward-equivalents.
+The enemy-prior row is an **initial guess** and is not separately enforced.
+Cached or deduplicated priors consume zero new forward-equivalents.
 
 The total is a limit, not proof of feasibility. A valid deployment
 configuration must fit belief update, root, target search, transitions, and
@@ -69,8 +78,13 @@ selected together. If belief plus root cannot fit, the artifact is rejected.
 Morpheus keeps separate moving estimates for belief tensor construction,
 belief-proposal batch, particle transitions, hashing, root inference, leaf
 batches, enemy-prior batches, backup, and reply cost. It starts a network batch
-only when its measured p99 time plus a 10 ms guard fits before the internal
-deadline. The 10 ms guard is an **initial guess**.
+only when its measured p99 time plus a guard fits before the internal
+deadline. The design default guard is 10 ms, an **initial guess**; the shipped
+`deployment.json` sets `admission_guard_ms = 0` because its `offline_p99_ms`
+block already carries honest (higher) forecasts — see
+[`morpheus-offline-p99-recalibration.md`](../../research/measurements/morpheus-offline-p99-recalibration.md)
+and
+[`morpheus-float32-p99.md`](../../research/measurements/morpheus-float32-p99.md).
 
 The clock is monotonic. Morpheus checks it before selection, before inference,
 and before starting another simulation. Work already in a network call is not
@@ -90,7 +104,8 @@ Morpheus uses the following deterministic path:
 | no root result | pass |
 
 The former 1–7 visit band is retired: three selectors switching by sim count
-flipped the decision rule 220 times in a measured 573-turn game, which showed
+flipped the decision rule 220 times in one diagnosed 573-turn game (an
+unpublished diagnostic recorded in commit `a6d2aa2`), which showed
 up as abandoned attacks. At low sim counts the average strategy is dominated
 by the prior, so the single selector degrades to prior-argmax on its own. The
 `visit` fallback level remains in the telemetry schema for old traces only.
@@ -109,9 +124,10 @@ The initial tree limit is 4,096 nodes, an **initial guess**. Morpheus evicts
 least-recently-used nodes outside the current root subtree. Particle reservoirs
 are bounded by the configured particle count.
 
-Model, tree, particles, runtime, and process must stay below 2 GB. The target is
-below 256 MB resident memory, an **initial guess** that leaves a large safety
-margin.
+Model, tree, particles, runtime, and process must stay below 2 GB. The design
+target is below 256 MB resident memory, an **initial guess** that leaves a
+large safety margin; the shipped `deployment.json` records a measured
+`resident_memory_target_mb` of ~310 MB from qualification.
 
 ## Fault policy
 

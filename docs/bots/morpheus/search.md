@@ -28,9 +28,11 @@ All values use the root player's perspective. Backup does not alternate signs.
 
 ## Candidate actions
 
-Actions enter each matrix in policy-prior order. Pass, legal general captures,
-and legal actions that directly interact with a visible enemy source are always
-eligible for widening.
+Actions enter each matrix in policy-prior order after a mandatory prefix:
+legal general captures, visible-enemy-source interactions, enemy attacks, and
+frontier expands are always included (`mandatory_action_indices`). Pass is a
+candidate only when it is the sole legal action — the play mask removes it
+whenever another action exists.
 
 The enemy information hash contains its simulated observation and persistent
 memory. After a simulation samples a particle, it uses only the enemy actions
@@ -45,12 +47,14 @@ joint statistics; the table used by a pending simulation cannot be evicted.
 Progressive widening uses:
 
 ```text
-K_self(N) = min(16, 1 + floor(2.0 * sqrt(N)))
+K_self(N) = max(8, min(16, 1 + floor(2.0 * sqrt(N))))
 K_enemy(N) = min(12, 1 + floor(1.5 * sqrt(N)))
 ```
 
-The caps and coefficients are **initial guesses**. A newly added action keeps
-its normalized network prior.
+The self floor of 8 keeps the root from spending early simulations on a
+pass-only candidate set before policy expands enter. The caps, coefficients,
+and floor are **initial guesses**. A newly added action keeps its normalized
+network prior.
 
 ## Matrix selection
 
@@ -79,11 +83,12 @@ One simulation:
 4. Applies the exact competition transition.
 5. Ends with `+1`, `0`, or `-1` on win, draw, or loss.
 6. Otherwise follows the child for Morpheus's resulting information state.
-7. Expands one new child or stops at depth 16.
+7. Expands one new child or stops at the configured depth.
 8. Bootstraps a nonterminal leaf with `p_win - p_loss`.
 
-Depth 16 is an **initial guess**. Search uses no random rollout. A rollout to
-turn 1200 is too slow and gives high-variance values under fog.
+The code default is depth 16, an **initial guess**; the shipped
+`deployment.json` plays `search_depth = 2`. Search uses no random rollout. A
+rollout to turn 1200 is too slow and gives high-variance values under fog.
 
 ## Pending leaf batch
 
@@ -94,12 +99,14 @@ evaluates them; backup follows selection order and reserves no prior statistics.
 Leaf evaluations run in the root player's perspective but **unshaped**: the
 evaluator's `shape` flag is separate from its `from_root` perspective flag,
 and only the actual root evaluation passes `shape=True`. Before the split,
-every leaf paid the root heuristic blend (measured: half of all search time)
-and interior nodes expanded from heuristic-shaped priors.
+every leaf paid the root heuristic blend (an unpublished one-off profile in
+commit `0133404` measured 3.9 s of a 7.9 s 256-simulation turn) and interior
+nodes expanded from heuristic-shaped priors.
 
 ## Enemy-prior cache
 
-Exact obs-hash tree reuse succeeds on a minority of turns (~19% measured), so
+Exact obs-hash tree reuse succeeds on a minority of turns (~19% in the
+unpublished diagnostic recorded in commit `02057c0`), so
 the controller keeps a cross-turn LRU of enemy priors keyed by the enemy
 information hash (bounded, float32, ~8 MB at 512 entries). Selection installs
 an enemy table from a cached prior without a network forward — its
@@ -135,8 +142,11 @@ build, and pass interactions.
 ## Root action
 
 During rated play, Morpheus selects the legal action with the largest
-normalized `S_A`. Ties use marginal visit count and then policy prior. Training
-can sample from `S_A` with a configured temperature.
+normalized `S_A`. Ties use marginal visit count and then policy prior. Actions
+whose live network prior is near zero are excluded first, so early
+progressive-widening mass on pass cannot win after the prior has moved
+elsewhere (`select_root_action`). Training can sample from `S_A` with a
+configured temperature.
 
 Only fully backed-up simulations affect root choice. A partial simulation has
 no statistics.

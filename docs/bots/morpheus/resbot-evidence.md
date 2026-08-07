@@ -5,7 +5,12 @@ signal for Morpheus. It is not evidence about ResBot's implementation.
 
 ## Corpus
 
-The current directory has 1,158 replay files, not the expected 2,140. The
+Every number in this file describes the scrape snapshot the analysis ran on
+(1,158 files). The directory has since grown by re-running the scraper —
+3,804 replays (3,766 wins / 36 losses / 2 draws) as of 2026-08-08 — and the
+statistics below have not been recomputed on the larger corpus.
+
+At analysis time the directory had 1,158 replay files, not the expected 2,140. The
 replay tool skips 6 one-tick forfeits and reports 1,152 played games:
 
 - 1,144 ResBot wins;

@@ -20,8 +20,10 @@ Land, army, castles, sight, and game length are not reward terms.
 
 ## Sparse-reward solution
 
-The old learned-bot placeholder records 31 games and 31 turn-1200 draws. Raw
-WDL from full starts would give almost no early learning signal.
+At specification time the old learned-bot placeholder recorded 31 games and
+31 turn-1200 draws (historical motivation; not re-verified against the current
+match store). Raw WDL from full starts would give almost no early learning
+signal.
 
 Morpheus keeps WDL unchanged and uses a backward curriculum of **reachable**
 states:
@@ -34,7 +36,12 @@ states:
 
 Before Morpheus can win, classes 1-3 come from decisive competition
 trajectories made by the fixed heuristic and research panel. Class 4 uses all
-legal fixed-panel prefixes. Class 5 starts from new competition maps. Once
+legal fixed-panel prefixes. Class 5 starts from new competition maps. In
+practice the current research-scope runs build classes 1–4 from
+`<player>_reconstructions` trajectories plus class-5 full starts — see
+[`scraped-classes13.md`](../../morpheus-implementation/scraped-classes13.md);
+the deployed checkpoint's manifest records run
+`scraped-classes15-2026-08-06-1`. Once
 Morpheus produces decisive games, immutable league and self-play trajectories
 join classes 1-4. Source labels detect one source taking over. Raw scraped
 leaderboard files are not curriculum states. Trajectories rebuilt by

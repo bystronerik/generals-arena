@@ -10,15 +10,17 @@ There is no neural-model leaderboard or separate checkpoint score.
 
 ## Frozen artifact
 
-The future `bots/morpheus/` closure must contain:
+The `bots/morpheus/` closure contains:
 
 - inference and search code;
-- the exact quantized weight file;
-- a model manifest;
-- `main.py`, `run.sh`, and any deterministic build input.
+- the exact float32 TorchScript weight files (`artifact/model.pt` plus the
+  `model_policy.pt` / `model_policy_wdl.pt` online entry points);
+- the model manifest (`artifact/manifest.json`);
+- `main.py`, `run.sh`, `deployment.json`, and any deterministic build input.
 
 The manifest identifies the tensor schema, action schema, architecture,
-quantization, training run, and full weight SHA-256.
+quantization (currently `none` — float32), training run, and full weight
+SHA-256 per exported graph.
 
 Every file that affects play must exist under the bot closure at hash time.
 The existing fingerprint includes binary assets in the bot directory. A

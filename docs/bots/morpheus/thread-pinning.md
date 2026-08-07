@@ -15,6 +15,12 @@ correctness constraint, not a tuning parameter — there is deliberately no knob
 
 ## Why: search was completely dead without it
 
+The numbers in this section and the tables below come from the one-off
+isolation experiment recorded in commit `5b110d0`; they are not republished
+under `docs/research/measurements/`. The component forecasts they rest on are
+published in
+[`morpheus-float32-p99.md`](../../research/measurements/morpheus-float32-p99.md).
+
 Two bot subprocesses on one host each spawn one thread per core by default.
 Measured on an 11-core M3 Pro, that oversubscription pushed a 4-leaf batch of
 network forwards to **154 ms — more than the entire 140 ms turn budget**.
