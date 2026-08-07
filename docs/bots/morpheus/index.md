@@ -13,8 +13,18 @@ probability. It treats a simultaneous capture as a draw and models deathtouch
 from turn 800.
 
 The policy has no fixed expansion, castle, or strike phase. The network and
-search compare all legal actions on each turn. Hard rules apply only to action
-legality, the competition transition, and the reply deadline.
+search compare all legal actions on each turn.
+
+Two layers sit between the network and the emitted move, and both are documented
+config rather than incidental behavior:
+
+- **Hard rules** — action legality, the play mask, the never-pass and
+  general-capture rules, the competition transition, and the reply deadline.
+  These are not negotiable and no knob turns them off.
+- **[Prior shaping](prior-shaping.md)** — a *bounded* heuristic nudge on the
+  root prior only, with one trust knob per phase and a clip that limits any
+  heuristic to a fixed multiplicative factor. Leaf and enemy priors are never
+  shaped.
 
 ## Design
 
@@ -24,6 +34,7 @@ legality, the competition transition, and the reply deadline.
 - [Action space](action-space.md) defines policy logits and legal masks.
 - [Network](network.md) defines the model family and heads.
 - [Search](search.md) defines simultaneous information-set MCTS.
+- [Prior shaping](prior-shaping.md) defines the bounded root-prior blend.
 - [Runtime](runtime.md) defines deadline control and degraded operation.
 - [Training](training.md) defines reward, curriculum, and opponent sampling.
 - [Curriculum](curriculum.md) defines executable class and confidence rules.

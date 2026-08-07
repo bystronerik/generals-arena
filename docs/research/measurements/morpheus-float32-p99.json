@@ -1,0 +1,88 @@
+{
+  "cpu": {
+    "cpu_brand": "Apple M3 Pro",
+    "cpu_count": 11,
+    "machine": "arm64",
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "processor": "arm",
+    "python": "3.12.11"
+  },
+  "host": "macOS-26.5.2-arm64-arm-64bit",
+  "per_seed": {
+    "0": {
+      "backup": 1.576084061525762,
+      "belief_proposal": 3.4350829664617777,
+      "belief_tensor": 1.9938750192523003,
+      "enemy_prior_batch": 29.973416007123888,
+      "hashing": 0.0006670597940683365,
+      "leaf_batch": 35.34958302043378,
+      "particle_transitions": 87.37337496131659,
+      "reply": 0.0005409820005297661,
+      "root_inference": 11.538667022250593,
+      "selection": 1.2939580483362079
+    },
+    "100": {
+      "backup": 1.0929169366136193,
+      "belief_proposal": 3.820750047452748,
+      "belief_tensor": 2.7985000051558018,
+      "enemy_prior_batch": 30.08620801847428,
+      "hashing": 0.00100000761449337,
+      "leaf_batch": 34.074291004799306,
+      "particle_transitions": 99.48408394120634,
+      "reply": 0.0006670597940683365,
+      "root_inference": 11.861292063258588,
+      "selection": 1.8081249436363578
+    },
+    "200": {
+      "backup": 1.7847500275820494,
+      "belief_proposal": 3.7086670054122806,
+      "belief_tensor": 1.9724579760804772,
+      "enemy_prior_batch": 29.801332973875105,
+      "hashing": 0.0008749775588512421,
+      "leaf_batch": 34.69633299391717,
+      "particle_transitions": 74.50291700661182,
+      "reply": 0.0007080379873514175,
+      "root_inference": 11.681083007715642,
+      "selection": 1.840416924096644
+    }
+  },
+  "routine": "training.morpheus.measure_online._calibrate_offline_p99",
+  "scheduler": {
+    "affinity": null,
+    "affinity_supported": false,
+    "requested_core": 0,
+    "scheduler_note": "sched_setaffinity unavailable; Torch threads set to 1 only",
+    "torch_num_threads": 1
+  },
+  "seeds": [
+    0,
+    100,
+    200
+  ],
+  "selected_max_over_seeds": {
+    "backup": 1.7847500275820494,
+    "belief_proposal": 3.820750047452748,
+    "belief_tensor": 2.7985000051558018,
+    "enemy_prior_batch": 30.08620801847428,
+    "hashing": 0.00100000761449337,
+    "leaf_batch": 35.34958302043378,
+    "particle_transitions": 99.48408394120634,
+    "reply": 0.0007080379873514175,
+    "root_inference": 11.861292063258588,
+    "selection": 1.840416924096644
+  },
+  "shipped_before": {
+    "backup": 2.257166081108153,
+    "belief_proposal": 2.4965839693322778,
+    "belief_tensor": 2.103540929965675,
+    "enemy_prior_batch": 19.779082969762385,
+    "hashing": 0.0,
+    "leaf_batch": 21.18849998805672,
+    "particle_transitions": 0.0,
+    "reply": 0.0,
+    "root_inference": 5.881791934370995,
+    "selection": 7.308125030249357
+  },
+  "side": 18,
+  "torch_threads": 1
+}

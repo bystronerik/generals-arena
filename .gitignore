@@ -45,3 +45,9 @@ data/morpheus/*
 # Curriculum manifests are rebuilt from trajectories; keep the directory.
 training/morpheus/manifests/*
 !training/morpheus/manifests/.gitkeep
+
+# Morpheus shaping variants (scripts/morpheus_shaping_variant.py) are measurement
+# arms, not bots: materialized for one comparison, then deleted. The settings
+# that define them live in the plan and the measurement report, so a variant
+# directory is derived data even though it sits under bots/.
+bots/morpheus-*/

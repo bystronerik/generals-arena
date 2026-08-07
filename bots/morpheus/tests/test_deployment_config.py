@@ -137,3 +137,43 @@ def test_deployment_rejects_unknown_evaluator(tmp_path: Path):
     path.write_text(json.dumps(data))
     with pytest.raises(ValueError, match="evaluator"):
         load_deployment(path)
+
+
+def test_shaping_variant_is_a_distinct_closure(tmp_path: Path):
+    """Part 17 C1/C2 arms must fork the content hash, not read an env var."""
+    import shutil
+    import subprocess
+    import sys
+
+    from arena.records.fingerprint import content_hash_for_dir
+
+    script = REPO_ROOT / "scripts" / "morpheus_shaping_variant.py"
+    name = "pytestarm"
+    dest = REPO_ROOT / "bots" / f"morpheus-{name}"
+    if dest.exists():
+        shutil.rmtree(dest)
+    try:
+        subprocess.run(
+            [sys.executable, str(script), name, "--evaluator", "uniform",
+             "--lambda", "0.25"],
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+        )
+        cfg = load_deployment(dest / "deployment.json")
+        assert cfg.evaluator == "uniform"
+        assert cfg.shaping_lambda_pre_contact == pytest.approx(0.25)
+        assert cfg.shaping_lambda_post_contact == pytest.approx(0.25)
+        # Everything not overridden must match the source closure exactly.
+        base = load_deployment(DEFAULT_DEPLOYMENT_PATH)
+        assert cfg.offline_p99_ms == base.offline_p99_ms
+        assert cfg.target_simulations == base.target_simulations
+        assert cfg.shaping_log_clip == base.shaping_log_clip
+        # Same model bytes (symlinked artifact), different rated identity.
+        assert (dest / "artifact").is_symlink()
+        assert (dest / "artifact" / "manifest.json").is_file()
+        assert content_hash_for_dir(dest) != content_hash_for_dir(BOT_DIR)
+        # Bot-local tests must not ride along into a measurement arm.
+        assert not (dest / "tests").exists()
+    finally:
+        shutil.rmtree(dest, ignore_errors=True)
