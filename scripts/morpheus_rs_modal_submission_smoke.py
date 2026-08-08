@@ -14,6 +14,10 @@ things M0.5 is trying to falsify are all environmental:
 
 - does `build.sh` work with **no network at all** (`block_network=True`, which
   is stricter than `cargo --offline` asserting it needs none),
+- does an offline build work when there is genuinely something to resolve —
+  the two shipping variants have no dependencies, so `--offline` cannot fail
+  for them; the `vendor-probe` zip carries a transitive graph and a build
+  script precisely to close that gap,
 - does the vendored tree build on a *different* toolchain installation than the
   one that packaged it,
 - does the static musl binary run on x86-64 Linux, which the arm64 macOS
@@ -37,6 +41,11 @@ MEASUREMENTS = REPO / "docs" / "research" / "measurements"
 
 VENDORED_ZIP = BUNDLES / "morpheus-rs-vendored.zip"
 STATIC_ZIP = BUNDLES / "morpheus-rs-static.zip"
+# Built by tools/vendor_probe.py. Carries a real transitive dependency graph
+# with a build script, which the two shipping variants deliberately do not —
+# so this is the only zip here that actually exercises offline registry
+# resolution. See the probe's module docstring for why that gap mattered.
+PROBE_ZIP = BUNDLES / "morpheus-rs-vendor-probe.zip"
 
 # Rust installed at *image build* time, where network is allowed — the judge's
 # sandbox likewise has a toolchain preinstalled and no network at intake. The
@@ -51,6 +60,7 @@ IMAGE = (
     .env({"PATH": "/root/.cargo/bin:/usr/local/bin:/usr/bin:/bin"})
     .add_local_file(str(VENDORED_ZIP), "/root/morpheus-rs-vendored.zip", copy=True)
     .add_local_file(str(STATIC_ZIP), "/root/morpheus-rs-static.zip", copy=True)
+    .add_local_file(str(PROBE_ZIP), "/root/morpheus-rs-vendor-probe.zip", copy=True)
 )
 
 app = modal.App("morpheus-rs-sandbox-smoke")
@@ -154,6 +164,7 @@ def smoke_sandbox() -> dict:
         "results": [
             _smoke_one("/root/morpheus-rs-vendored.zip", "vendored"),
             _smoke_one("/root/morpheus-rs-static.zip", "static"),
+            _smoke_one("/root/morpheus-rs-vendor-probe.zip", "vendor-probe"),
         ],
     }
 
@@ -191,9 +202,17 @@ def _markdown(report: dict) -> str:
     failed = [r for r in report["results"] if not r.get("ok")]
     lines += [
         "",
-        "Both variants build with no network and answer the protocol."
+        "Every variant builds with no network and answers the protocol."
         if not failed
         else "**Failures:** " + ", ".join(r["variant"] for r in failed) + ".",
+        "",
+        "`vendor-probe` is not a shipping variant. The two that are have no",
+        "dependencies, so their `--offline` build proves less than it appears",
+        "to — with nothing to resolve, `--offline` cannot fail. The probe adds",
+        "a real transitive graph (`sha2` → `digest` → `block-buffer` →",
+        "`generic-array` → `typenum`) and a build script, so registry",
+        "replacement and intake-time build scripts are exercised before M3",
+        "depends on ninety crates.",
         "",
         "The judge's limits are 50 MB zipped, 512 MB unpacked, 10,000 files. The",
         "file count is the binding one for a Rust bot (`cargo vendor` over a fat",

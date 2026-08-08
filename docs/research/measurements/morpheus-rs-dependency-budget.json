@@ -1,0 +1,82 @@
+{
+  "measured_at": "2026-08-08T16:16:11+00:00",
+  "cargo": "cargo 1.97.1 (c980f4866 2026-06-30)",
+  "limits": {
+    "files": 10000,
+    "unpacked_bytes": 536870912
+  },
+  "crates": [
+    {
+      "crate": "sha2",
+      "version": "0.10",
+      "crates": 10,
+      "files": 565,
+      "bytes": 6253895,
+      "files_pct_of_cap": 5.65,
+      "bytes_pct_of_cap": 1.16,
+      "heaviest": [
+        {
+          "crate": "libc-0.2.189",
+          "files": 404,
+          "bytes": 4544578
+        },
+        {
+          "crate": "sha2-0.10.9",
+          "files": 32,
+          "bytes": 117005
+        },
+        {
+          "crate": "typenum-1.20.1",
+          "files": 25,
+          "bytes": 1233510
+        },
+        {
+          "crate": "digest-0.10.7",
+          "files": 22,
+          "bytes": 89432
+        },
+        {
+          "crate": "generic-array-0.14.7",
+          "files": 17,
+          "bytes": 69382
+        }
+      ]
+    },
+    {
+      "crate": "candle-core",
+      "version": "0.9",
+      "crates": 91,
+      "files": 3888,
+      "bytes": 51454379,
+      "files_pct_of_cap": 38.88,
+      "bytes_pct_of_cap": 9.58,
+      "heaviest": [
+        {
+          "crate": "libc-0.2.189",
+          "files": 404,
+          "bytes": 4544578
+        },
+        {
+          "crate": "zerocopy-0.8.56",
+          "files": 316,
+          "bytes": 1705339
+        },
+        {
+          "crate": "windows-sys-0.61.2",
+          "files": 258,
+          "bytes": 18212638
+        },
+        {
+          "crate": "libm-0.2.16",
+          "files": 156,
+          "bytes": 682315
+        },
+        {
+          "crate": "zerocopy-derive-0.8.56",
+          "files": 135,
+          "bytes": 1018782
+        }
+      ]
+    }
+  ]
+}

@@ -1,16 +1,17 @@
 """
-Tier-1 parity, smoke slice: the Rust port must match the Python oracle exactly.
+Parity, smoke slice: the Rust port must match the Python oracle exactly.
 
 The CI-sized half of the harness in `parity_cases.py`. It runs the committed
 seven-frame slice plus the synthetic states through every ported surface, in
 under a second. The full corpus — tens of thousands of cases — runs from
 `tools/run_parity.sh` before a milestone gate.
 
-What "exact" means here is bit-exact, and the reason is that everything
-downstream inherits it: the belief filter's likelihood is *observations match
-or they do not*, so a fog rule off by one cell turns a correct particle into a
-rejected one, and a search built on a transition that rounds differently
-explores a game nobody is playing.
+What "exact" means here is bit-exact — including the 49-plane tensor, whose
+tier-2 budget is 1e-6 but which matches to the last bit. Everything downstream
+inherits it: the belief filter's likelihood is *observations match or they do
+not*, so a fog rule off by one cell turns a correct particle into a rejected
+one, a node key that differs is a different node, and a search built on a
+transition that rounds differently explores a game nobody is playing.
 
 Skips with a named reason when the release binary is absent — a cold checkout
 has not built it yet, and a silently-passing parity test is worse than none.
@@ -28,7 +29,10 @@ if str(TESTS_DIR) not in sys.path:
 
 import parity_cases as pc  # noqa: E402
 
-KINDS = ("transition", "order", "observe", "mask", "cost")
+KINDS = (
+    "transition", "order", "observe", "mask", "cost",
+    "memory", "hash", "tensor", "symmetry",
+)
 
 
 @pytest.fixture(scope="module")

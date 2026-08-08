@@ -1,7 +1,7 @@
 # Morpheus-rs rewrite plan
 
-Status: **confirmed 2026-08-08 — implementation under way. M0, M0.5, and M1
-are done (§14–§16); M0.5 awaits a submission only the account holder can make.**
+Status: **confirmed 2026-08-08 — implementation under way. M0, M0.5, M1, and M2
+are done (§14–§17); M0.5 awaits a submission only the account holder can make.**
 Revised against the declared-final morpheus state at commit `9d6f186`
 (oracle `morpheus@73967d2125cc`, registry step 18 — see §14; the
 `17c8ac2684ec` this plan first named was the *previous* registry head, the
@@ -94,8 +94,15 @@ All facts below were checked against the working tree on 2026-08-08.
 - `build.sh` runs once at intake, **no network ever** — all crates vendored in
   the zip.
 - Zip ≤ 50 MB, unpacked ≤ 512 MB, **≤ 10,000 files**. The file count is the
-  binding constraint on the dependency tree: `cargo vendor` with a fat graph
-  blows past 10k files easily. Every crate dependency must earn its place.
+  binding constraint on the dependency tree. *Measured at M2 (§17), because
+  this line originally asserted that `cargo vendor` "blows past 10k files
+  easily" and that is not what the numbers say:* `sha2` vendors to **565 files
+  / 6.3 MB** (5.6% of the cap) and `candle-core` — M3's likely pick — to
+  **3,888 files / 51.5 MB across 91 crates** (39%). Both fit; two more crates
+  the size of candle would not. Every dependency must still earn its place, but
+  against a budget that binds at the inference crate, not at a hash.
+  Figures and method:
+  [`morpheus-rs-dependency-budget.md`](../../research/measurements/morpheus-rs-dependency-budget.md).
 
 These limits immediately disqualify libtorch FFI (CPU libtorch alone is
 ~100–200 MB of shared libraries) and make `ort`/ONNX Runtime awkward (the
@@ -656,11 +663,19 @@ sandbox's own rustc 1.97.1 — vendored in 3.3 s at 10 files / 8.7 KB, static in
 
 **The exit gate is not met, and cannot be met here.** It reads "the sandbox
 builds and runs it", and only the account holder can submit to generals.bot.
-Everything the rehearsal can falsify has been falsified: offline build, file
-count, toolchain version, and — the one the packaging host genuinely could not
-answer — that the musl binary an arm64 Mac cross-builds actually executes on
-x86-64 Linux. What remains is the sandbox's own image agreeing, which is
-exactly what R4's tripwire is for.
+What the rehearsal can falsify has been falsified: offline build, file count,
+toolchain version, and — the one the packaging host genuinely could not answer
+— that the musl binary an arm64 Mac cross-builds actually executes on x86-64
+Linux. What remains is the sandbox's own image agreeing, which is exactly what
+R4's tripwire is for.
+
+*Corrected during M2:* the "offline build" claim above originally rested on
+zips with **no dependencies**, where `--offline` cannot fail because there is
+nothing to resolve. It never exercised `.cargo/config.toml` source
+replacement, a transitive graph, or a build script running at intake. A third
+`vendor-probe` variant now carries all three (`tools/vendor_probe.py`) and
+rides the same offline container — 571 files, builds in 2.5 s. The claim is
+now worth what it appeared to be worth.
 
 Four things nearly broke it, each now a rule in `packaging.md`: shipping
 `rust-toolchain.toml` would make an offline sandbox try to *download* the
@@ -720,3 +735,77 @@ Two smaller notes for later milestones:
 - `transition` currently clones a ~3 KB state per call. §6's slab allocation is
   a search and belief concern (M4/M5), but the kernel is called per particle
   *and* per simulation, so M4 should measure before assuming the clone is free.
+
+## 17. M2 — done
+
+Delivered 2026-08-08. `hashing`, `memory`'s update rule, `symmetry`, and the
+49-plane `tensor` builder are ported, with SHA-256 written out by hand to keep
+the crate zero-dependency. Harness detail: [`parity-harness.md`](parity-harness.md).
+
+**Exit gate met, and tier 2 exceeded.** Parity is exact over the full corpus —
+1,328 heavy frames, **500,072 cases** across nine surfaces (the five from M1
+plus `memory` 1,399, `hash` 1,399, `tensor` 1,399, `symmetry` 8), zero
+mismatches. The matchup gate still finishes under `--mode competition`.
+
+The tensor's float planes match **bit-for-bit**, not merely inside §5's 1e-6.
+That is deliberate: the widths are mirrored site by site, because the Python
+mixes `float64` and `float32` on purpose and the network was trained on the
+rounding it actually does. Computing everything in double would be more
+accurate and would diverge.
+
+**§5's 1e-6 is too loose to be the gate, and M2 proves it.** A mutation
+computing `army_value` in single precision stayed inside 1e-6 on every case and
+survived. The harness therefore enforces bit-exactness and reports the 1e-6
+figure separately, so a future platform's genuine drift is a deliberate
+decision with a number attached rather than a check that silently never fires.
+Later milestones with float surfaces (M3's network heads at 1e-5, M4's belief
+weights at 1e-9) should assume their budgets are similarly unable to see
+precision bugs, and enforce the tightest agreement actually achieved.
+
+Mutation coverage grew to 32; **28 caught**, four equivalent mutants
+documented. Two of M2's new mutations found real holes rather than confirming
+the port: no case had a **remembered castle observed as plain fog** — an
+emitted board cannot produce one, since a castle in fog encodes as type 5 — and
+no previous action carried a **half-split**, leaving the tensor's move-kind
+plane constant at 1.0. Both are now crafted cases. This is the second milestone
+running where the mutation pass, not the parity pass, was what found the gap.
+
+Two notes for M3 and M4:
+
+- `hashing` narrows `remembered_owner` and `remembered_castle_owner` to one
+  signed byte on the way into the digest, because the Python arrays are `int8`
+  while this crate stores `i32`. The mutation that widened them is caught, but
+  the trap will recur wherever a NumPy dtype is narrower than its Rust
+  counterpart — check the dtype, not the semantic type, whenever a new payload
+  is hashed.
+- `particle_summary.py` is *not* ported. `tensor` takes a `BeliefSummary` as an
+  input and the harness feeds it from Python, which keeps the M2/M4 boundary
+  clean. M4 ports the aggregation and joins the two halves.
+
+### M2 addendum — two corrections found by asking "why?"
+
+Neither came from a failing gate; both came from a question about a decision
+that had already been made and written down.
+
+**The dependency-budget claim in §1 was wrong.** It asserted that `cargo
+vendor` "blows past 10k files easily", and that assertion had been reused to
+justify hand-writing SHA-256. Measured: `sha2` is **565 files, 5.6% of the
+cap**; candle-core, M3's likely pick, is **3,888 files, 39%**. Both fit. §1 now
+carries the numbers and `tools/dependency_budget.py` re-derives them, so the
+next dependency argument starts from a measurement rather than a memory.
+
+The hand-written SHA-256 stays, on reasons that survive the correction:
+hashing costs 0.001 ms p99, so a library's speed advantage buys nothing
+measurable; the digests are dictionary keys, not a security boundary; the
+implementation is verified against the NIST vectors *and* 6,995 digest
+comparisons against Python's `hashlib`; and `sha2` drags `libc` in for CPU
+detection — 404 of those 565 files — inside a static musl binary.
+
+**M0.5's offline-build proof was weaker than it read.** Both shipping zips have
+no dependencies, so their `--offline` build could not have failed. §15 is
+amended above and the gap is closed by a probe rather than by a permanent
+dependency the shipped bot does not need.
+
+The pattern worth keeping: both of these were *documented* conclusions that no
+test covered. A gate proves what it exercises; a justification proves nothing
+at all until someone measures it.

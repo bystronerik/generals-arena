@@ -162,6 +162,112 @@ MUTATIONS: tuple[Mutation, ...] = (
         "if dest_t == TYPE_MOUNTAIN || dest_t == TYPE_STRUCTURE_FOG {",
         "if false {",
     ),
+    # --- M2: memory, hashing, tensor, symmetry ---
+    Mutation(
+        "a fogged structure is always a mountain",
+        "memory.rs",
+        "next.known_castle[i] = was_passable;\n                next.known_mountain[i] = !was_passable;",
+        "next.known_castle[i] = false;\n                next.known_mountain[i] = true;",
+    ),
+    Mutation(
+        "plain fog erases a known castle",
+        "memory.rs",
+        "next.known_passable_base[i] = true;\n                next.known_mountain[i] = false;\n            }",
+        "next.known_passable_base[i] = true;\n                next.known_mountain[i] = false;\n                next.known_castle[i] = false;\n            }",
+    ),
+    Mutation(
+        "castle owner refreshes on any sighting",
+        "memory.rs",
+        "if t == TYPE_CASTLE {\n                next.remembered_castle_owner[i] = owner;\n            }",
+        "next.remembered_castle_owner[i] = owner;",
+    ),
+    Mutation(
+        "dynamic memory refreshes through fog",
+        "memory.rs",
+        "if visible {\n            next.ever_visible[i] = true;",
+        "if true {\n            next.ever_visible[i] = true;",
+    ),
+    Mutation(
+        "owner planes hashed as int32",
+        "hashing.rs",
+        "hasher.update(&[value as i8 as u8]);\n    }\n    for &value in &memory.remembered_army[..n] {",
+        "hasher.update(&value.to_le_bytes());\n    }\n    for &value in &memory.remembered_army[..n] {",
+    ),
+    Mutation(
+        "board dimensions left out of the digest",
+        "hashing.rs",
+        "hasher.update(&(memory.h as i32).to_le_bytes());",
+        "hasher.update(&[]);",
+    ),
+    Mutation(
+        "army compression in single precision",
+        "tensor.rs",
+        "let out = x.max(0.0).ln_1p() / denom;",
+        "let out = ((x.max(0.0) as f32).ln_1p() / denom as f32) as f64;",
+    ),
+    Mutation(
+        "coordinate planes in double precision",
+        "tensor.rs",
+        "set(P_ROW_FROM_GENERAL, r, c, (r as f32 - gr as f32) / 20.0);",
+        "set(P_ROW_FROM_GENERAL, r, c, ((r as f64 - gr as f64) / 20.0) as f32);",
+        note=(
+            "Equivalent on this board: rows run 0..20 and the general sits on "
+            "an integer cell, so (r - gr)/20 is exactly representable in f32 "
+            "and the two widths agree bit for bit. The width still matters as "
+            "documentation of what the Python does — a plane with non-integer "
+            "inputs would diverge."
+        ),
+    ),
+    Mutation(
+        "sight age left unclamped",
+        "tensor.rs",
+        "set(P_SIGHT_AGE, r, c, age.clamp(0.0, 1.0) as f32);",
+        "set(P_SIGHT_AGE, r, c, age as f32);",
+        note=(
+            "Unreachable by construction. Age is only computed for a cell that "
+            "has been seen, so `last_seen_turn` is a real turn in [0, turn]; "
+            "the numerator is therefore in [0, 1200] and the quotient already "
+            "in [0, 1]. The clamp can only bind on a memory the game cannot "
+            "produce. Faithful to the Python, which clamps for the same "
+            "belt-and-braces reason."
+        ),
+    ),
+    Mutation(
+        "neutral plane ignores mountains",
+        "tensor.rs",
+        "let passable_vis = visible && !memory.known_mountain[i];",
+        "let passable_vis = visible;",
+    ),
+    Mutation(
+        "half-splits paint as full moves",
+        "tensor.rs",
+        "if split == 1 { 0.5 } else { 1.0 };",
+        "1.0;",
+    ),
+    Mutation(
+        "bulk growth countdown off by one",
+        "tensor.rs",
+        "(((50 - ((turn + 1) % 50)) % 50) as f64) / 49.0",
+        "(((50 - (turn % 50)) % 50) as f64) / 49.0",
+    ),
+    Mutation(
+        "constants painted over the padding",
+        "tensor.rs",
+        "for r in 0..h {\n            for c in 0..w {\n                tensor[plane * PLANE_CELLS + r * PAD + c] = v;",
+        "for r in 0..PAD {\n            for c in 0..PAD {\n                tensor[plane * PLANE_CELLS + r * PAD + c] = v;",
+    ),
+    Mutation(
+        "rot90+flip composed in the other order",
+        "symmetry.rs",
+        "Symmetry::Rot90FlipH => {\n                let (r2, c2) = rot90_rc(r, c);\n                flip_h_rc(r2, c2)\n            }",
+        "Symmetry::Rot90FlipH => {\n                let (r2, c2) = flip_h_rc(r, c);\n                rot90_rc(r2, c2)\n            }",
+    ),
+    Mutation(
+        "directions do not follow rotations",
+        "symmetry.rs",
+        "Symmetry::Rot90 => rot90[d],",
+        "Symmetry::Rot90 => d,",
+    ),
 )
 
 

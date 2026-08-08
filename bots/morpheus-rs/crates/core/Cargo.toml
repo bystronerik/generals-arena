@@ -4,8 +4,12 @@ version.workspace = true
 edition.workspace = true
 publish.workspace = true
 
-# No dependencies, deliberately. The binding sandbox constraint is not zip size
-# but the 10,000-file cap on the unpacked submission, and `cargo vendor` over a
-# fat graph passes it easily (rewrite-plan §1, R6). Every crate added here has
-# to earn its place against that budget.
+# No dependencies so far — because none has been needed, not because the
+# budget forbids them. Measured (morpheus-rs-dependency-budget.md): `sha2` is
+# 565 vendored files (5.6% of the 10,000-file cap), candle-core 3,888 (39%).
+# The cap is real and binds at M3's inference crate; it is not an argument
+# against a small dependency here.
+#
+# What a dependency actually costs at this size is the offline build path, so
+# `tools/vendor_probe.py` keeps that path proven even while this list is empty.
 [dependencies]

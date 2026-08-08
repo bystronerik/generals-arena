@@ -85,6 +85,81 @@
       "name": "moves into mountains are legal",
       "outcome": "caught",
       "note": ""
+    },
+    {
+      "name": "a fogged structure is always a mountain",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "plain fog erases a known castle",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "castle owner refreshes on any sighting",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "dynamic memory refreshes through fog",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "owner planes hashed as int32",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "board dimensions left out of the digest",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "army compression in single precision",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "coordinate planes in double precision",
+      "outcome": "survived",
+      "note": "Equivalent on this board: rows run 0..20 and the general sits on an integer cell, so (r - gr)/20 is exactly representable in f32 and the two widths agree bit for bit. The width still matters as documentation of what the Python does \u2014 a plane with non-integer inputs would diverge."
+    },
+    {
+      "name": "sight age left unclamped",
+      "outcome": "survived",
+      "note": "Unreachable by construction. Age is only computed for a cell that has been seen, so `last_seen_turn` is a real turn in [0, turn]; the numerator is therefore in [0, 1200] and the quotient already in [0, 1]. The clamp can only bind on a memory the game cannot produce. Faithful to the Python, which clamps for the same belt-and-braces reason."
+    },
+    {
+      "name": "neutral plane ignores mountains",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "half-splits paint as full moves",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "bulk growth countdown off by one",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "constants painted over the padding",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "rot90+flip composed in the other order",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "directions do not follow rotations",
+      "outcome": "caught",
+      "note": ""
     }
   ]
 }

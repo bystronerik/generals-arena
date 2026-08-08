@@ -39,6 +39,12 @@ DEFAULT_CORPUS = REPO / "data" / "morpheus" / "morpheus-rs" / "morpheus-rs-m0"
 
 PASS = (1, 0, 0, 0, 0)
 
+# Tier 2 (rewrite-plan §5): tensor float planes must agree to 1e-6. Tighter
+# than the network cares about, loose enough to survive the last bit of a
+# float32 log — and the bit-pattern transport means a failure here is a real
+# arithmetic difference, never a formatting one.
+FLOAT_TOLERANCE = 1e-6
+
 
 # --- corpus -> python objects ----------------------------------------------
 
@@ -442,6 +448,179 @@ def order_pairs(state) -> list[tuple[tuple, tuple]]:
     return pairs
 
 
+def _decode_memory(values: list[int]) -> dict:
+    """Inverse of `encode_memory`, keyed by field name."""
+    h, w = values[0], values[1]
+    n = h * w
+    names = (
+        "known_mountain", "known_passable_base", "known_castle", "own_general",
+        "known_enemy_general", "ever_visible", "last_seen_turn", "remembered_owner",
+        "remembered_army", "remembered_was_castle", "remembered_castle_owner",
+    )
+    out, at = {}, 2
+    for name in names:
+        out[name] = np.asarray(values[at : at + n], dtype=np.int64).reshape(h, w)
+        at += n
+    return out
+
+
+def encode_belief(belief) -> list[int]:
+    """Belief planes as f32 bit patterns; see `Ints::floats` on the Rust side."""
+    out: list[int] = []
+    for plane in (
+        belief.enemy_owner,
+        belief.enemy_army_mean,
+        belief.enemy_army_std,
+        belief.enemy_general,
+        belief.enemy_castle_owner,
+        belief.enemy_visibility,
+    ):
+        out += [
+            int(v) for v in np.asarray(plane, dtype=np.float32).ravel().view(np.uint32)
+        ]
+    out.append(int(np.float32(belief.ess_fraction).view(np.uint32)))
+    return out
+
+
+def _belief_summary_for(obs):
+    """
+    A deterministic, non-trivial belief summary for the tensor cases.
+
+    Zeros would leave seven of the 49 planes constant and prove nothing about
+    them — including `belief_owner_entropy`, whose whole shape lives strictly
+    between 0 and 1. The values are arbitrary but reproducible, and chosen to
+    put probabilities at 0, 1 and points in between so the entropy plane sees
+    both its clamped ends and its interior.
+    """
+    from tensor import BeliefSummary
+
+    h, w = int(obs.H), int(obs.W)
+    n = h * w
+    ramp = (np.arange(n, dtype=np.float32) % 11) / 10.0
+    army = (np.arange(n, dtype=np.float32) % 97) * 3.5
+    return BeliefSummary(
+        enemy_owner=ramp.reshape(h, w),
+        enemy_army_mean=army.reshape(h, w),
+        enemy_army_std=(army / 4.0).reshape(h, w),
+        enemy_general=(ramp * ramp).reshape(h, w),
+        enemy_castle_owner=(1.0 - ramp).reshape(h, w),
+        enemy_visibility=((np.arange(n, dtype=np.float32) % 3) / 2.0).reshape(h, w),
+        ess_fraction=0.375,
+    )
+
+
+def _memory_pairs(frame, synthetic: bool):
+    """`(obs, memory, prev_digest, action)` for the memory/hash/tensor kinds."""
+    pairs = []
+    if frame is None:
+        if not synthetic:
+            return pairs
+        from observe import emit_observation
+
+        for state in synthetic_states():
+            for seat in (0, 1):
+                obs = emit_observation(state, seat, as_arrays=True)
+                for explored in (True, False):
+                    pairs.append((obs, memory_for(state, seat, explored=explored)))
+    elif "memory" in frame:
+        pairs.append((_obs_from_capture(frame["obs"]), _memory_from_capture(frame["memory"])))
+
+    if frame is None and synthetic:
+        pairs.extend(_crafted_memory_pairs())
+
+    out = []
+    for i, (obs, memory) in enumerate(pairs):
+        # A previous digest that is not all-zero on some cases, so the rolling
+        # history is exercised rather than always starting fresh.
+        prev = bytes((i * 7 + j) % 256 for j in range(32)) if i % 2 else bytes(32)
+        # The half-split is not decoration: without an action carrying
+        # `split=1`, the tensor's previous-move-kind plane is constant at 1.0
+        # and painting every move as a full one is undetectable. Mutation
+        # testing found exactly that.
+        action = [
+            (0, 1, 1, 3, 0),
+            (2, 0, 0, 0, 0),
+            (1, 0, 0, 0, 0),
+            (0, 1, 1, 3, 1),
+        ][i % 4]
+        out.append((obs, memory, prev, tuple(action)))
+    return out
+
+
+def _crafted_memory_pairs():
+    """
+    Observation/memory pairs no emitted board produces.
+
+    `emit_observation` cannot show a remembered castle as plain fog — a castle
+    out of sight encodes as type 5, never type 0 — so the rule that a type-0
+    frame must *not* erase `known_castle` is unreachable from replay and from
+    the synthetic states alike. Mutation testing found it: deleting the rule
+    changed nothing anywhere. These pairs are built by hand to reach it.
+    """
+    from memory import VisibleMemory
+    from observe import ArrayObservation
+
+    def blank_memory(h, w):
+        return VisibleMemory(
+            H=h, W=w,
+            known_mountain=np.zeros((h, w), bool),
+            known_passable_base=np.zeros((h, w), bool),
+            known_castle=np.zeros((h, w), bool),
+            own_general=np.zeros((h, w), bool),
+            known_enemy_general=np.zeros((h, w), bool),
+            ever_visible=np.zeros((h, w), bool),
+            last_seen_turn=np.full((h, w), -1, np.int32),
+            remembered_owner=np.zeros((h, w), np.int8),
+            remembered_army=np.zeros((h, w), np.int32),
+            remembered_was_castle=np.zeros((h, w), bool),
+            remembered_castle_owner=np.zeros((h, w), np.int8),
+        )
+
+    def obs_of(types, owners, armies, turn, h, w):
+        return ArrayObservation(
+            H=h, W=w, turn=turn,
+            my_land=3, my_army=40, opp_land=4, opp_army=55,
+            type_grid=np.asarray(types, np.int32).reshape(h, w),
+            owner_grid=np.asarray(owners, np.int32).reshape(h, w),
+            army_grid=np.asarray(armies, np.int32).reshape(h, w),
+        )
+
+    h, w = 1, 6
+    pairs = []
+
+    # A remembered castle observed as plain fog. The castle must survive.
+    m = blank_memory(h, w)
+    m.known_castle[0, 0] = True
+    m.ever_visible[0, 0] = True
+    m.last_seen_turn[0, 0] = 30
+    m.remembered_was_castle[0, 0] = True
+    m.remembered_castle_owner[0, 0] = 2
+    pairs.append((obs_of([0, 0, 0, 0, 0, 0], [0] * 6, [0] * 6, 90, h, w), m))
+
+    # Every wire type at once, over ground with mixed history: exercises each
+    # branch of the terrain inference in one frame.
+    m2 = blank_memory(h, w)
+    m2.known_passable_base[0, 1] = True   # a structure here is a new castle
+    m2.ever_visible[0, 2] = True          # ...and here too
+    m2.known_mountain[0, 3] = True
+    pairs.append((
+        obs_of([5, 5, 5, 1, 3, 4], [0, 0, 0, 1, 2, 1], [0, 0, 0, 9, 44, 1], 120, h, w),
+        m2,
+    ))
+
+    # A cell seen long ago, so sight age is large but still inside the cap.
+    m3 = blank_memory(h, w)
+    m3.ever_visible[0, :] = True
+    m3.last_seen_turn[0, :] = 5
+    m3.remembered_owner[0, :] = np.array([0, 1, 2, 1, 2, 0], np.int8)
+    m3.remembered_army[0, :] = np.array([0, 3, 900, 12, 4096, 1], np.int32)
+    m3.remembered_was_castle[0, 2] = True
+    m3.remembered_castle_owner[0, 2] = 2
+    pairs.append((obs_of([0] * 6, [0] * 6, [0] * 6, 1150, h, w), m3))
+
+    return pairs
+
+
 def build_cases(
     frames: list[dict], kind: str, *, pairs_per_state: int = 12, synthetic: bool = True
 ) -> tuple[list[int], list]:
@@ -503,6 +682,70 @@ def build_cases(
                 expected.append(
                     legal_mask(obs, memory) if kind == "mask" else live_build_cost(obs, memory)
                 )
+        elif kind in ("memory", "hash", "tensor"):
+            from hashing import (
+                child_edge_key,
+                enemy_info_hash_prehashed,
+                info_state_key_prehashed,
+                memory_digest,
+                roll_history_digest,
+            )
+            from memory import update_memory
+            from observe import observation_hash
+            from tensor import build_tensor
+
+            for obs, memory, prev_digest, action in _memory_pairs(frame, synthetic):
+                stream += encode_observation(obs) + encode_memory(memory)
+                if kind == "memory":
+                    # Memory *before* the fold goes in; the fold is what is
+                    # being checked, so feeding the post-fold memory would
+                    # test nothing.
+                    expected.append(update_memory(memory, obs))
+                elif kind == "hash":
+                    stream += list(prev_digest) + list(action)
+                    payload = observation_hash(obs)
+                    digest = memory_digest(memory)
+                    expected.append(
+                        digest
+                        + info_state_key_prehashed(
+                            int(obs.turn), digest, payload, bytes(prev_digest)
+                        )
+                        + enemy_info_hash_prehashed(payload, digest)
+                        + child_edge_key(action, payload)
+                        + roll_history_digest(bytes(prev_digest), action, payload)
+                    )
+                else:
+                    belief = _belief_summary_for(obs)
+                    stream += encode_belief(belief)
+                    stream += [1] + list(action)
+                    expected.append(
+                        build_tensor(
+                            obs, memory, belief=belief, previous_action=action
+                        )
+                    )
+        elif kind == "symmetry":
+            from symmetry import (
+                SYMMETRIES,
+                decode_action as _decode,
+                encode_action as _encode,
+                transform_action_tuple,
+            )
+            from action import N_ACTIONS as _N
+
+            if frame is not None:
+                continue  # the group is a fixed object; one pass is enough
+            for index, sym in enumerate(SYMMETRIES):
+                stream += [index]
+                out: list[int] = []
+                for r in range(21):
+                    for c in range(21):
+                        nr, nc = sym.transform_rc(r, c)
+                        out += [nr, nc]
+                out += [sym.transform_dir(d) for d in range(4)]
+                for idx in range(_N):
+                    act = _decode(idx) if idx != _N - 1 else (1, 0, 0, 0, 0)
+                    out.append(_encode(transform_action_tuple(act, sym)))
+                expected.append(out)
         else:
             raise ValueError(f"unknown kind {kind!r}")
 
@@ -595,6 +838,69 @@ def compare(kind: str, expected: list, actual: list[list[int]]) -> list[str]:
         elif kind == "order":
             if got != [want]:
                 problems.append(f"order[{i}]: seat {got} != {want}")
+        elif kind == "memory":
+            got_memory = _decode_memory(got)
+            for name in (
+                "known_mountain", "known_passable_base", "known_castle", "own_general",
+                "known_enemy_general", "ever_visible", "last_seen_turn",
+                "remembered_owner", "remembered_army", "remembered_was_castle",
+                "remembered_castle_owner",
+            ):
+                a = np.asarray(getattr(want, name)).ravel()
+                b = np.asarray(got_memory[name]).ravel()
+                if not np.array_equal(a.astype(np.int64), b.astype(np.int64)):
+                    diff = np.flatnonzero(a.astype(np.int64) != b.astype(np.int64))
+                    problems.append(
+                        f"memory[{i}]: {name} differs at {diff.size} cell(s), "
+                        f"first {int(diff[0])} ({b[diff[0]]} != {a[diff[0]]})"
+                    )
+        elif kind == "hash":
+            want_bytes = list(want)
+            if got != want_bytes:
+                names = ["memory", "info_state_key", "enemy_info", "child_edge", "history"]
+                for k, name in enumerate(names):
+                    lo, hi = k * 32, (k + 1) * 32
+                    if got[lo:hi] != want_bytes[lo:hi]:
+                        problems.append(
+                            f"hash[{i}]: {name} digest differs "
+                            f"({bytes(got[lo:hi]).hex()[:16]}… != "
+                            f"{bytes(want_bytes[lo:hi]).hex()[:16]}…)"
+                        )
+        elif kind == "tensor":
+            # Tier 2: floats arrive as f32 bit patterns, so the channel is
+            # lossless and the tolerance is the only thing being judged.
+            from tensor import PLANE_NAMES
+
+            got_tensor = (
+                np.asarray(got, dtype=np.uint32).view(np.float32).reshape(49, 21, 21)
+            )
+            want_tensor = np.asarray(want, dtype=np.float32)
+            if got_tensor.shape != want_tensor.shape:
+                problems.append(f"tensor[{i}]: shape {got_tensor.shape}")
+                continue
+            delta = np.abs(got_tensor - want_tensor)
+            worst = float(delta.max())
+            # Tier 2 asks for 1e-6; the port achieves **bit-identical**, so
+            # that is what is enforced. The looser figure is not a free pass:
+            # at 1e-6 a mutation computing `army_value` in single precision
+            # was invisible, which means the specified tolerance cannot tell
+            # the two arithmetics apart. Should a platform ever produce real
+            # drift here, the message says so and §5's 1e-6 is the floor to
+            # fall back to — deliberately, not silently.
+            if worst > 0.0:
+                plane = int(np.unravel_index(int(delta.argmax()), delta.shape)[0])
+                over_spec = int((delta > FLOAT_TOLERANCE).sum())
+                problems.append(
+                    f"tensor[{i}]: not bit-identical, max |Δ| {worst:.3g} on plane "
+                    f"{plane} ({PLANE_NAMES[plane]}); {over_spec} cell(s) also exceed "
+                    f"the §5 tolerance {FLOAT_TOLERANCE:g}"
+                )
+        elif kind == "symmetry":
+            if got != list(want):
+                diff = next(
+                    (k for k, (a, b) in enumerate(zip(got, want)) if a != b), None
+                )
+                problems.append(f"symmetry[{i}]: first difference at position {diff}")
         elif kind == "cost":
             want_cost = np.asarray(want, dtype=np.int32).ravel()
             got_cost = np.asarray(got, dtype=np.int32)
@@ -647,7 +953,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--limit", type=int, default=0, help="cap heavy frames")
     parser.add_argument("--pairs", type=int, default=12, help="action pairs per state")
     parser.add_argument(
-        "--kinds", nargs="*", default=["transition", "order", "observe", "mask", "cost"]
+        "--kinds", nargs="*", default=["transition", "order", "observe", "mask", "cost", "memory", "hash", "tensor", "symmetry"]
     )
     args = parser.parse_args(argv)
 

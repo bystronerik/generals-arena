@@ -20,10 +20,18 @@
 
 use std::io::{BufRead, Write};
 
-use crate::action::{legal_mask, live_build_cost, N_ACTIONS};
-use crate::memory::VisibleMemory;
+use crate::action::{
+    decode_action, encode_action, legal_mask, live_build_cost, N_ACTIONS, PAD,
+};
+use crate::hashing::{
+    child_edge_key, enemy_info_hash_prehashed, info_state_key_prehashed, memory_digest,
+    observation_payload, roll_history_digest,
+};
+use crate::memory::{update_memory, VisibleMemory};
 use crate::observe::emit_observation;
 use crate::state::GameState;
+use crate::symmetry;
+use crate::tensor::{build_tensor, BeliefSummary, ARMY_SCALE};
 use crate::transition::{determine_move_order, transition, Actions};
 use crate::wire::Observation;
 
@@ -67,6 +75,21 @@ impl Ints {
         let mut out = Vec::with_capacity(count);
         for _ in 0..count {
             out.push(self.next()? as i32);
+        }
+        Ok(out)
+    }
+
+    /// Floats travel as their raw `f32` bit patterns, as integers.
+    ///
+    /// Not as decimal text: a float that round-trips through formatting is a
+    /// float whose last bits depend on two languages agreeing about printing,
+    /// which is exactly the argument tier-2 parity is trying not to have. Bit
+    /// patterns make the channel lossless and leave the tolerance decision
+    /// entirely to the comparison.
+    fn floats(&mut self, count: usize) -> Result<Vec<f32>, String> {
+        let mut out = Vec::with_capacity(count);
+        for _ in 0..count {
+            out.push(f32::from_bits(self.next()? as u32));
         }
         Ok(out)
     }
@@ -197,6 +220,31 @@ fn read_memory(ints: &mut Ints) -> Result<VisibleMemory, String> {
     Ok(memory)
 }
 
+fn write_memory(out: &mut Vec<i64>, memory: &VisibleMemory) {
+    let n = memory.cells();
+    out.push(memory.h as i64);
+    out.push(memory.w as i64);
+    for plane in [
+        &memory.known_mountain[..n],
+        &memory.known_passable_base[..n],
+        &memory.known_castle[..n],
+        &memory.own_general[..n],
+        &memory.known_enemy_general[..n],
+        &memory.ever_visible[..n],
+    ] {
+        out.extend(plane.iter().map(|&v| v as i64));
+    }
+    for plane in [
+        &memory.last_seen_turn[..n],
+        &memory.remembered_owner[..n],
+        &memory.remembered_army[..n],
+    ] {
+        out.extend(plane.iter().map(|&v| v as i64));
+    }
+    out.extend(memory.remembered_was_castle[..n].iter().map(|&v| v as i64));
+    out.extend(memory.remembered_castle_owner[..n].iter().map(|&v| v as i64));
+}
+
 /// Run one parity kind end to end over stdin, writing one line per case.
 pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> Result<(), String> {
     let mut ints = Ints::read_all(reader)?;
@@ -255,6 +303,83 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
                 let memory = read_memory(&mut ints)?;
                 let cost = live_build_cost(&obs, &memory);
                 out.extend(cost[..obs.h * obs.w].iter().map(|&v| v as i64));
+            }
+            // observation + memory -> memory after folding the observation in
+            "memory" => {
+                let obs = read_observation(&mut ints)?;
+                let memory = read_memory(&mut ints)?;
+                write_memory(&mut out, &update_memory(&memory, &obs));
+            }
+            // observation + memory + prev-history digest + action -> every
+            // digest the search keys on
+            "hash" => {
+                let obs = read_observation(&mut ints)?;
+                let memory = read_memory(&mut ints)?;
+                let mut prev = [0u8; 32];
+                for slot in prev.iter_mut() {
+                    *slot = ints.next()? as u8;
+                }
+                let action = ints.action()?;
+                let payload = observation_payload(&obs);
+                let mem_digest = memory_digest(&memory);
+                for digest in [
+                    mem_digest,
+                    info_state_key_prehashed(obs.turn, &mem_digest, &payload, &prev),
+                    enemy_info_hash_prehashed(&payload, &mem_digest),
+                    child_edge_key(action, &payload),
+                    roll_history_digest(&prev, action, &payload),
+                ] {
+                    out.extend(digest.iter().map(|&b| b as i64));
+                }
+            }
+            // observation + memory + belief summary + previous action -> the
+            // 49x21x21 tensor, as f32 bit patterns
+            "tensor" => {
+                let obs = read_observation(&mut ints)?;
+                let memory = read_memory(&mut ints)?;
+                let n = obs.h * obs.w;
+                let belief = BeliefSummary {
+                    enemy_owner: ints.floats(n)?,
+                    enemy_army_mean: ints.floats(n)?,
+                    enemy_army_std: ints.floats(n)?,
+                    enemy_general: ints.floats(n)?,
+                    enemy_castle_owner: ints.floats(n)?,
+                    enemy_visibility: ints.floats(n)?,
+                    ess_fraction: ints.floats(1)?[0],
+                };
+                let has_prev = ints.next()? != 0;
+                let action = ints.action()?;
+                let tensor = build_tensor(
+                    &obs,
+                    &memory,
+                    Some(&belief),
+                    if has_prev { Some(action) } else { None },
+                    ARMY_SCALE,
+                );
+                out.extend(tensor.iter().map(|&v| v.to_bits() as i64));
+            }
+            // symmetry index -> the coordinate map, direction map, and the
+            // permutation it induces on the 3970 policy logits
+            "symmetry" => {
+                let which = ints.n()?;
+                let sym = symmetry::ALL[which % symmetry::ALL.len()];
+                for r in 0..PAD {
+                    for c in 0..PAD {
+                        let (nr, nc) = sym.transform_rc(r, c);
+                        out.push(nr as i64);
+                        out.push(nc as i64);
+                    }
+                }
+                for d in 0..4 {
+                    out.push(sym.transform_dir(d) as i64);
+                }
+                // Where each logit index lands. A permutation compares as
+                // integers, so this stays tier 1 even though it serves the
+                // float tensor path.
+                for index in 0..N_ACTIONS {
+                    let action = decode_action(index).unwrap_or([1, 0, 0, 0, 0]);
+                    out.push(encode_action(symmetry::transform_action(action, sym)) as i64);
+                }
             }
             other => return Err(format!("unknown parity kind {other:?}")),
         }

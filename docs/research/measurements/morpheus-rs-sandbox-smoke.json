@@ -11,12 +11,12 @@
   "results": [
     {
       "variant": "vendored",
-      "files": 10,
-      "unpacked_bytes": 18182,
-      "zip_bytes": 8705,
+      "files": 20,
+      "unpacked_bytes": 139059,
+      "zip_bytes": 46813,
       "build_returncode": 0,
-      "build_seconds": 3.31,
-      "build_stderr_tail": "   Compiling morpheus-core v0.1.0 (/tmp/vendored/crates/core)\n   Compiling morpheus-rs v0.1.0 (/tmp/vendored/crates/bot)\n    Finished `release` profile [optimized] target(s) in 3.21s\n",
+      "build_seconds": 4.62,
+      "build_stderr_tail": "   Compiling morpheus-core v0.1.0 (/tmp/vendored/crates/core)\n   Compiling morpheus-rs v0.1.0 (/tmp/vendored/crates/bot)\n    Finished `release` profile [optimized] target(s) in 4.52s\n",
       "reply_lines": [
         "1 0 0 0 0",
         "1 0 0 0 0"
@@ -28,8 +28,8 @@
     {
       "variant": "static",
       "files": 3,
-      "unpacked_bytes": 501558,
-      "zip_bytes": 225874,
+      "unpacked_bytes": 590646,
+      "zip_bytes": 268243,
       "build_returncode": 0,
       "build_seconds": 0.03,
       "build_stderr_tail": "",
@@ -39,6 +39,22 @@
       ],
       "run_returncode": 0,
       "run_stderr_tail": "",
+      "ok": true
+    },
+    {
+      "variant": "vendor-probe",
+      "files": 571,
+      "unpacked_bytes": 6258671,
+      "zip_bytes": 1360046,
+      "build_returncode": 0,
+      "build_seconds": 2.52,
+      "build_stderr_tail": "   Compiling version_check v0.9.5\n   Compiling typenum v1.20.1\n   Compiling cfg-if v1.0.4\n   Compiling cpufeatures v0.2.17\n   Compiling generic-array v0.14.7\n   Compiling crypto-common v0.1.7\n   Compiling block-buffer v0.10.4\n   Compiling digest v0.10.7\n   Compiling sha2 v0.10.9\n   Compiling vendor-probe v0.0.0 (/tmp/vendor-probe)\n    Finished `release` profile [optimized] target(s) in 2.46s\n",
+      "reply_lines": [
+        "1 0 0 0 0",
+        "1 0 0 0 0"
+      ],
+      "run_returncode": 0,
+      "run_stderr_tail": "[vendor-probe] sha256 of handshake starts 36\n",
       "ok": true
     }
   ]
