@@ -5,24 +5,23 @@ Upload trajectories + manifest once, then run one-core shards:
 
     modal volume put morpheus-training data/trajectories /morpheus/trajectories
     modal volume put morpheus-training \\
-      training/morpheus/manifests/scraped-classes15.json \\
-      /morpheus/manifests/scraped-classes15.json
+      training/morpheus/manifests/scraped-classes13.json \\
+      /morpheus/manifests/scraped-classes13.json
 
-    # Reuse existing class 1–3 buffer files; write only 4 and 5:
+    # Purge orphans not in the manifest, then write only missing IDs:
     modal run scripts/morpheus_modal_materialize.py \\
-      --shards 96 --n-particles 4 --classes 4,5
+      --shards 96 --n-particles 4
 
 Smoke (2 shards, 32 items):
 
     modal run scripts/morpheus_modal_materialize.py \\
-      --shards 2 --n-particles 4 --max-items 32 --classes 4,5
+      --shards 2 --n-particles 4 --max-items 32
 
 Writes shard-private samples under ``/vol/morpheus/buffer_shards/<i>/``, then
-merges into ``/vol/morpheus/buffer`` for Part 14 train. Merge keeps existing
-buffer samples whose ids are not rewritten (class filter reuse path).
-
-Rematerialize after the per-game belief-seed contract; do not reuse samples
-built under the old per-prefix seed.
+merges into ``/vol/morpheus/buffer`` for Part 14 train. With
+``skip_existing=True`` (default), a sample is skipped when it already exists
+in ``/vol/morpheus/buffer`` or in the shard dir. ``purge_first`` (default)
+deletes buffer samples whose ids are not in the manifest.
 """
 from __future__ import annotations
 
@@ -140,6 +139,7 @@ def materialize_shard(
         output=out,
         max_items=None if int(max_items) <= 0 else int(max_items),
         skip_existing=bool(skip_existing),
+        skip_existing_dirs=[VOL_BUFFER],
         n_particles=int(n_particles),
         class_ids=class_ids,
         shard_index=int(shard_index),
@@ -199,22 +199,91 @@ def merge_buffer() -> dict:
     }
 
 
+@app.function(
+    image=IMAGE,
+    cpu=1,
+    memory=512,
+    timeout=60 * 30,
+    volumes={"/vol": VOLUME},
+)
+def purge_orphans(manifest_vol_path: str) -> dict:
+    """Delete buffer samples whose ids are not in the volume manifest."""
+    sys.path.insert(0, "/root/scripts")
+    from morpheus_materialize import merge_buffer_index
+    from training.morpheus.curriculum.schema import CurriculumManifest
+    from training.morpheus.trainer.buffer import SAMPLE_SUFFIX
+
+    manifest = CurriculumManifest.load(_resolve_manifest(manifest_vol_path))
+    keep: set[str] = set()
+    for item in manifest.items:
+        if int(item.class_id) == 5 and item.sample_seat is None:
+            keep.add(f"{item.item_id}_s0")
+            keep.add(f"{item.item_id}_s1")
+        else:
+            keep.add(str(item.item_id))
+
+    VOL_BUFFER.mkdir(parents=True, exist_ok=True)
+    deleted = 0
+    kept = 0
+    for path in list(VOL_BUFFER.glob(f"*{SAMPLE_SUFFIX}")):
+        sample_id = path.name[: -len(SAMPLE_SUFFIX)]
+        if sample_id in keep:
+            kept += 1
+            continue
+        path.unlink()
+        deleted += 1
+
+    index_path = merge_buffer_index(VOL_BUFFER)
+    sample_count = len(list(VOL_BUFFER.glob(f"*{SAMPLE_SUFFIX}")))
+    VOLUME.commit()
+    return {
+        "ok": True,
+        "kept": kept,
+        "deleted": deleted,
+        "sample_count": sample_count,
+        "manifest_ids": len(keep),
+        "index": str(index_path),
+    }
+
+
 @app.local_entrypoint()
 def main(
-    shards: int = 64,
+    shards: int = 96,
     n_particles: int = 4,
     max_items: int = 0,
     skip_existing: bool = True,
-    manifest: str = "/vol/morpheus/manifests/scraped-classes15.json",
+    manifest: str = "/vol/morpheus/manifests/scraped-classes13.json",
     classes: str = "",
+    purge_first: bool = True,
 ) -> None:
     """Fan out materialize shards, then merge into the Part 14 buffer.
 
     ``classes`` is a comma-separated filter (e.g. ``4,5``). Empty keeps all
     classes. Filtered runs leave other class files in ``/vol/morpheus/buffer``.
+    When ``purge_first`` is true, delete buffer samples absent from the manifest.
     """
     n_shards = max(1, int(shards))
     class_ids = _parse_classes(classes)
+    print(
+        json.dumps(
+            {
+                "shards": n_shards,
+                "n_particles": int(n_particles),
+                "max_items": int(max_items) if int(max_items) > 0 else None,
+                "skip_existing": bool(skip_existing),
+                "manifest": str(manifest),
+                "classes": sorted(class_ids) if class_ids is not None else None,
+                "purge_first": bool(purge_first),
+            },
+            indent=2,
+        ),
+        flush=True,
+    )
+    purge_report = None
+    if bool(purge_first):
+        purge_report = purge_orphans.remote(str(manifest))
+        print(json.dumps({"purge": purge_report}, indent=2), flush=True)
+
     args = [
         (
             i,
@@ -227,20 +296,6 @@ def main(
         )
         for i in range(n_shards)
     ]
-    print(
-        json.dumps(
-            {
-                "shards": n_shards,
-                "n_particles": int(n_particles),
-                "max_items": int(max_items) if int(max_items) > 0 else None,
-                "skip_existing": bool(skip_existing),
-                "manifest": str(manifest),
-                "classes": sorted(class_ids) if class_ids is not None else None,
-            },
-            indent=2,
-        ),
-        flush=True,
-    )
     shard_reports = list(materialize_shard.starmap(args))
     failures = [r for r in shard_reports if not r.get("ok")]
     merge_report = merge_buffer.remote()
@@ -253,6 +308,7 @@ def main(
             int(r.get("skipped_existing") or 0) for r in shard_reports
         ),
         "failure_count": sum(int(r.get("failure_count") or 0) for r in shard_reports),
+        "purge": purge_report,
         "merge": merge_report,
         "shard_failures_head": failures[:8],
     }

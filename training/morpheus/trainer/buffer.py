@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator, Mapping, Sequence
@@ -210,6 +212,88 @@ def iter_sample_paths(directory: Path) -> Iterator[Path]:
     if not directory.is_dir():
         return iter(())
     return iter(sorted(directory.glob(f"*{SAMPLE_SUFFIX}")))
+
+
+def stage_replay_buffer(
+    source: Path,
+    destination: Path,
+    *,
+    workers: int = 32,
+    progress_every: int = 500,
+) -> dict[str, Any]:
+    """Concurrent-copy ``*.sample.npz`` onto local disk for fast training loads.
+
+    Modal volumes are slow per small file. Stage once onto container SSD
+    (``/tmp/...``), then call ``load_replay_buffer`` on ``destination``.
+    """
+    source = Path(source)
+    destination = Path(destination)
+    if not source.is_dir():
+        raise BufferError(f"buffer source missing: {source}")
+    destination.mkdir(parents=True, exist_ok=True)
+    paths = list(iter_sample_paths(source))
+    if not paths:
+        raise BufferError(f"no samples under {source}")
+
+    workers = max(1, int(workers))
+    every = max(1, int(progress_every))
+    total = len(paths)
+    copied = 0
+    skipped = 0
+    bytes_copied = 0
+    t0 = time.perf_counter()
+    print(
+        f"[buffer] stage start src={source} dst={destination} "
+        f"files={total} workers={workers}",
+        flush=True,
+    )
+
+    def _one(src: Path) -> tuple[str, int, bool]:
+        dest = destination / src.name
+        size = int(src.stat().st_size)
+        if dest.is_file() and dest.stat().st_size == size:
+            return src.name, size, False
+        shutil.copyfile(src, dest)
+        return src.name, size, True
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(_one, path) for path in paths]
+        for i, fut in enumerate(as_completed(futures), start=1):
+            _name, size, did_copy = fut.result()
+            if did_copy:
+                copied += 1
+                bytes_copied += size
+            else:
+                skipped += 1
+            if i == total or i % every == 0:
+                elapsed = time.perf_counter() - t0
+                rate = i / elapsed if elapsed > 0 else 0.0
+                print(
+                    f"[buffer] stage {i}/{total} copied={copied} skipped={skipped} "
+                    f"elapsed_s={elapsed:.1f} files_per_s={rate:.1f}",
+                    flush=True,
+                )
+
+    elapsed = time.perf_counter() - t0
+    report = {
+        "ok": True,
+        "source": str(source),
+        "destination": str(destination),
+        "files": total,
+        "copied": copied,
+        "skipped_existing": skipped,
+        "bytes_copied": bytes_copied,
+        "workers": workers,
+        "wall_s": elapsed,
+        "files_per_s": (total / elapsed) if elapsed > 0 else 0.0,
+    }
+    print(
+        f"[buffer] stage done files={total} copied={copied} "
+        f"skipped={skipped} wall_s={elapsed:.1f} "
+        f"files_per_s={report['files_per_s']:.1f}",
+        flush=True,
+    )
+    return report
 
 
 def load_replay_buffer(

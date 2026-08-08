@@ -1,22 +1,24 @@
-# Scraped classes 1–3 → Part 14 research train
+# Scraped classes 1–5 → Part 14 research train
 
-Build a stratified classes 1–3 curriculum from all reconstruction rounds,
-materialize the sample buffer on Modal (64 CPU shards), and train with class-1
-sampling weight only.
+Build a stratified classes 1–4 curriculum from reconstruction rounds, add
+class-5 full starts, materialize on Modal (96 CPU shards), and train with equal
+class weights on 1, 2, 3, 4, and 5.
 
 ## Defaults (locked)
 
-- **Classes:** 1–3 (`--full-start-count 0`).
-- **Stratify:** global 1:1 queried-player wins and losses (`n = n_lose`).
-- **Top wins:** exactly 50% of kept wins from **ResBot**, **Kubic**, **thor**,
-  split in equal thirds (remainder by sorted name: Kubic, ResBot, thor).
-- **Other wins:** remaining 50% from all other reconstruction players.
+- **Classes:** 1, 2, 3, 4, and 5 (`--full-start-count 512` → 1024 class-5
+  seat samples).
+- **Stratify:** global 1:1 queried-player wins and losses (`n = n_lose`, then
+  capped to the largest n the top/other win pools can fill); draws excluded.
+- **Top wins:** exactly 75% of kept wins from **Kubic**, **ResBot**, **bca**,
+  **nanomena**, **thor**, **Mattz**, split equally (remainder by sorted name).
+- **Other wins:** remaining 25% from all other reconstruction players.
 - **Seats:** `corpus-index.sample_seat` / queried player.
-- **Materialize:** `n_particles=4`; 64 Modal containers × `cpu=1` × `memory=512`.
-  One reconstruct pass per `game_id` continues belief across prefixes (seed is
-  per game+seat, not per `prefix_len`). Rematerialize the buffer after that
-  seed contract change; do not reuse `*.sample.npz` built under the old seed.
-- **Train:** `class_balance: {"1": 1.0, "2": 1.0, "3": 1.0}`; `promotable_main_run: false`.
+- **Materialize:** `n_particles=4`; 96 Modal containers × `cpu=1` × `memory=512`.
+  Skip samples already under `/vol/morpheus/buffer`. Purge orphans not in the
+  new manifest before writing.
+- **Train:** `class_balance` for classes 1–5; `window_size` ≥ buffer size;
+  `promotable_main_run: false`.
 
 ## Operator sequence
 
@@ -24,12 +26,12 @@ sampling weight only.
 python scripts/morpheus_curriculum.py build \
   --panel scripts/configs/morpheus/scraped-classes13.json \
   --trajectories-parent data/trajectories \
-  --classes 1 2 3 \
-  --full-start-count 0 \
+  --classes 1 2 3 4 5 \
+  --full-start-count 512 \
   --require-sample-seat \
   --stratify-global-wdl \
-  --top-win-players ResBot Kubic thor \
-  --top-win-fraction 0.5 \
+  --top-win-players Kubic ResBot bca nanomena thor Mattz \
+  --top-win-fraction 0.75 \
   --output training/morpheus/manifests/scraped-classes13.json
 
 python scripts/morpheus_curriculum.py verify \
@@ -41,20 +43,12 @@ modal volume put morpheus-training \
   training/morpheus/manifests/scraped-classes13.json \
   /morpheus/manifests/scraped-classes13.json
 
-# Smoke (optional):
-# modal run scripts/morpheus_modal_materialize.py \
-#   --shards 2 --n-particles 4 --max-items 32
-
-modal run scripts/morpheus_modal_materialize.py --shards 64 --n-particles 4
+modal run scripts/morpheus_modal_materialize.py --shards 96 --n-particles 4
 
 modal run scripts/morpheus_modal.py::train \
   --config training/morpheus/configs/scraped-classes13-run.json \
   --run-id scraped-classes13-<date>
 ```
-
-Local materialize (`scripts/morpheus_materialize.py` → `data/morpheus/trainer/buffer`)
-remains available for debugging. The Modal path writes `/vol/morpheus/buffer`
-on volume `morpheus-training` for Part 14 train.
 
 ## Related
 

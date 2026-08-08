@@ -34,9 +34,11 @@ from training.morpheus.scraped_rebuild.infer import infer_joint_actions
 from training.morpheus.scraped_rebuild.source import source_label_for
 from training.morpheus.scraped_rebuild.write_trajectory import (
     corpus_index_payload,
+    game_id_for,
     round_directory,
     write_trajectory_from_inference,
 )
+from arena.records.trajectories import trajectory_path
 
 
 VALID_OUTCOMES = frozenset({"win", "lose", "draw", "all"})
@@ -146,6 +148,19 @@ def rebuild_player(
     )
     # One index per round, keyed by the queried player's outcome.
     games_index: dict[str, dict[str, dict[str, Any]]] = {o: {} for o in OUTCOMES}
+    prior_index: dict[str, dict[str, dict[str, Any]]] = {}
+    for round_outcome in OUTCOMES:
+        prior_path = round_directory(output, player_name, round_outcome) / "corpus-index.json"
+        if prior_path.is_file():
+            try:
+                prior_payload = json.loads(prior_path.read_text(encoding="utf-8"))
+                prior_games = prior_payload.get("games") or {}
+                if isinstance(prior_games, dict):
+                    prior_index[round_outcome] = {
+                        str(k): dict(v) for k, v in prior_games.items() if isinstance(v, dict)
+                    }
+            except (OSError, json.JSONDecodeError, TypeError):
+                pass
 
     paths = list(iter_replay_paths(player_name, folder="all", root=loader_root))
     # max_games caps scanned files; keep continues until N kept unless capped.
@@ -167,6 +182,44 @@ def rebuild_player(
             report.skipped_forfeit += 1
             continue
 
+        # Route by the player's own derived result, not `folder`. `replay.folder`
+        # is provenance only; see arena.instrument.replay.loader.
+        game_outcome = replay.outcome
+        round_dir = round_directory(output, player_name, game_outcome)
+        game_id = game_id_for(player_name, replay.match_id)
+        # Skip expensive joint-action inference when the trajectory already exists.
+        if not force and trajectory_path(game_id, round_dir).is_file():
+            report.kept += 1
+            report.kept_by_outcome[game_outcome] += 1
+            report.kept_game_ids.append(game_id)
+            prior_row = (prior_index.get(game_outcome) or {}).get(game_id)
+            if prior_row is not None:
+                games_index[game_outcome][game_id] = prior_row
+            else:
+                winner = "draw"
+                if replay.winner == 0:
+                    winner = "a"
+                elif replay.winner == 1:
+                    winner = "b"
+                games_index[game_outcome][game_id] = {
+                    "source_label": label,
+                    "match_id": replay.match_id,
+                    "bot_a": replay.players[0],
+                    "bot_b": replay.players[1],
+                    "queried_player": player_name,
+                    "sample_seat": int(replay.seat_of(player_name)),
+                    "queried_outcome": replay.outcome,
+                    "seed": replay.seed,
+                    "mode": "competition",
+                    "engine_version": engine,
+                    "winner": winner,
+                    "turns": int(replay.total_ticks),
+                    "ambiguous_ticks": 0,
+                    "folder": folder,
+                    "skipped_existing": True,
+                }
+            continue
+
         inference = infer_joint_actions(replay)
         report.ambiguous_tick_total += len(inference.ambiguous)
         if not inference.ok:
@@ -180,10 +233,6 @@ def rebuild_player(
             )
             continue
 
-        # Route by the player's own derived result, not `folder`. `replay.folder`
-        # is provenance only; see arena.instrument.replay.loader.
-        game_outcome = replay.outcome
-        round_dir = round_directory(output, player_name, game_outcome)
         result = write_trajectory_from_inference(
             inference,
             player=player_name,

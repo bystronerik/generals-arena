@@ -327,13 +327,28 @@ def test_scraped_classes13_panel_and_config_load():
 
     panel = load_panel(REPO / "scripts/configs/morpheus/scraped-classes13.json")
     assert panel["kind"] == "provenance"
-    assert panel["top_win_players"] == ["ResBot", "Kubic", "thor"]
-    assert float(panel["top_win_fraction"]) == 0.5
+    assert panel["top_win_players"] == [
+        "Kubic",
+        "ResBot",
+        "bca",
+        "nanomena",
+        "thor",
+        "Mattz",
+    ]
+    assert float(panel["top_win_fraction"]) == 0.75
+    assert panel["classes"] == [1, 2, 3, 4, 5]
+    assert int(panel["full_start_count"]) == 512
     cfg = load_train_run_config(
         REPO / "training/morpheus/configs/scraped-classes13-run.json"
     )
     assert cfg.promotable_main_run is False
-    assert cfg.replay.class_balance == {"1": 1.0, "2": 1.0, "3": 1.0}
+    assert cfg.replay.class_balance == {
+        "1": 1.0,
+        "2": 1.0,
+        "3": 1.0,
+        "4": 1.0,
+        "5": 1.0,
+    }
     assert cfg.replay.window_size >= 65536
 
 

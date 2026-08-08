@@ -5,7 +5,7 @@
   "part13_verdict": "no",
   "part13_fallback": "narrower_non_promotable_research_scope",
   "seed": 0,
-  "batch_size": 2,
+  "batch_size": 32,
   "n_blocks": 12,
   "objective_path": "training/morpheus/configs/pilot-objective.json",
   "optimizer": {
@@ -25,14 +25,16 @@
     "class_balance": {
       "1": 1.0,
       "2": 1.0,
-      "3": 1.0
+      "3": 1.0,
+      "4": 1.0,
+      "5": 1.0
     },
     "augment_symmetries": false
   },
   "cadence": {
-    "snapshot_every_steps": 200,
-    "log_every_steps": 50,
-    "max_steps": 6000,
+    "snapshot_every_steps": 500,
+    "log_every_steps": 100,
+    "max_steps": 10000,
     "games_per_checkpoint": 54484,
     "checkpoint_count": 4,
     "stopping_rule": "max_steps"
@@ -90,9 +92,9 @@
   "run_root": "data/morpheus/runs",
   "require_deployment_calibration": true,
   "notes": [
-    "Research-scope Part 14 run on stratified scraped classes 1–3.",
-    "class_balance samples classes 1–3 with equal weight.",
-    "window_size 65536 must cover the active class mixture after materialize.",
+    "Research-scope Part 14 run on stratified scraped classes 1–4 plus class 5.",
+    "class_balance samples classes 1–5 with equal weight.",
+    "window_size must be at least the final buffer sample count after materialize.",
     "Part 13 verdict remains no; promotable_main_run stays false.",
     "Clone of promotable-run.json with scraped-classes13 buffer intent."
   ]

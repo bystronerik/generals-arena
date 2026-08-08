@@ -73,6 +73,38 @@ def split_equal_thirds(total: int, players: Sequence[str]) -> dict[str, int]:
     return quotas
 
 
+def _max_feasible_pairs(
+    *,
+    n_lose: int,
+    top_win_counts: Mapping[str, int],
+    other_win_count: int,
+    top_win_players: Sequence[str],
+    top_win_fraction: float,
+) -> int:
+    """Largest n <= n_lose that top/other win pools can fill at the locked split."""
+    if n_lose < 1:
+        return 0
+    lo = 1
+    hi = int(n_lose)
+    best = 0
+    names = tuple(sorted(str(p) for p in top_win_players))
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        top_quota = int(mid * float(top_win_fraction) // 1)
+        other_quota = mid - top_quota
+        per_player = split_equal_thirds(top_quota, names)
+        ok = other_win_count >= other_quota and all(
+            int(top_win_counts.get(name, 0)) >= int(quota)
+            for name, quota in per_player.items()
+        )
+        if ok:
+            best = mid
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return best
+
+
 def stratify_global_wdl(
     candidates: Sequence[GameCandidate],
     *,
@@ -83,10 +115,11 @@ def stratify_global_wdl(
     """
     Keep equal wins and losses globally.
 
-    ``n = n_lose`` (optionally capped by ``max_pairs``). Exactly
-    ``floor(n * top_win_fraction)`` wins come from ``top_win_players``, split in
-    equal thirds (remainder by sorted name). Remaining wins come from other
-    players. Fail closed if any pool is too small.
+    ``n = n_lose`` (optionally capped by ``max_pairs``), then further capped to
+    the largest n the top/other win pools can fill. Exactly
+    ``floor(n * top_win_fraction)`` wins come from ``top_win_players``, split
+    equally (remainder by sorted name). Remaining wins come from other players.
+    Fail closed if no positive feasible n exists.
     """
     top = tuple(sorted(str(p) for p in top_win_players))
     if not top:
@@ -98,7 +131,8 @@ def stratify_global_wdl(
 
     losses = [c for c in candidates if c.outcome == "lose"]
     wins = [c for c in candidates if c.outcome == "win"]
-    n = len(losses)
+    n_lose = len(losses)
+    n = n_lose
     if max_pairs is not None:
         n = min(n, int(max_pairs))
     if n < 1:
@@ -107,9 +141,25 @@ def stratify_global_wdl(
     top_set = set(top)
     top_wins = [c for c in wins if c.player in top_set]
     other_wins = [c for c in wins if c.player not in top_set]
+    top_win_counts = {
+        name: sum(1 for c in top_wins if c.player == name) for name in top
+    }
+    feasible = _max_feasible_pairs(
+        n_lose=n,
+        top_win_counts=top_win_counts,
+        other_win_count=len(other_wins),
+        top_win_players=top,
+        top_win_fraction=float(top_win_fraction),
+    )
+    if feasible < 1:
+        raise StratifyError(
+            "no feasible n: top/other win pools cannot fill floor(n * "
+            f"{top_win_fraction}) equal split against n_lose={n_lose}"
+        )
+    capped_from = n
+    n = feasible
 
     top_quota = int(n * float(top_win_fraction) // 1)  # floor(n * fraction)
-    # Plan locks floor(n/2) when fraction is 0.5; keep generic floor(n * f).
     other_quota = n - top_quota
     per_player = split_equal_thirds(top_quota, top)
 
@@ -141,8 +191,12 @@ def stratify_global_wdl(
     notes = [
         f"global 1:1 WDL with n_pairs={n}",
         f"top_win_fraction={top_win_fraction} top_quota={top_quota}",
-        f"top_win_players={list(top)} equal thirds={per_player}",
+        f"top_win_players={list(top)} equal_split={per_player}",
     ]
+    if n < capped_from:
+        notes.append(
+            f"capped n from {capped_from} to {n} so top/other win pools can fill"
+        )
     return StratifyResult(
         kept=kept,
         n_pairs=n,

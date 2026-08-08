@@ -31,6 +31,23 @@ if str(REPO) not in sys.path:
 DEFAULT_OUTPUT = REPO / "data" / "morpheus" / "trainer" / "buffer"
 
 
+def _sample_already_present(
+    sample_id: str,
+    *,
+    output: Path,
+    skip_existing: bool,
+    skip_existing_dirs: list[Path],
+    suffix: str,
+) -> bool:
+    """True when skip is on and the sample exists under output or lookup dirs."""
+    if not skip_existing:
+        return False
+    name = f"{sample_id}{suffix}"
+    if (output / name).is_file():
+        return True
+    return any((Path(d) / name).is_file() for d in skip_existing_dirs)
+
+
 def _materialize_game_group(
     payload: dict[str, Any],
 ) -> dict[str, Any]:
@@ -45,6 +62,7 @@ def _materialize_game_group(
     output = Path(payload["output"])
     n_particles = int(payload["n_particles"])
     skip_existing = bool(payload["skip_existing"])
+    skip_existing_dirs = [Path(p) for p in (payload.get("skip_existing_dirs") or [])]
     items = [CurriculumItem.from_dict(d) for d in payload["items"]]
 
     written: list[str] = []
@@ -73,8 +91,13 @@ def _materialize_game_group(
                     if item.sample_seat is not None
                     else f"{item.item_id}_s{seat}"
                 )
-                out_path = output / f"{sample_id}{SAMPLE_SUFFIX}"
-                if skip_existing and out_path.is_file():
+                if _sample_already_present(
+                    sample_id,
+                    output=output,
+                    skip_existing=skip_existing,
+                    skip_existing_dirs=skip_existing_dirs,
+                    suffix=SAMPLE_SUFFIX,
+                ):
                     written.append(sample_id)
                     skipped += 1
                     continue
@@ -88,8 +111,13 @@ def _materialize_game_group(
             failures.append(f"{item.item_id}: missing sample_seat")
             continue
         sample_id = str(item.item_id)
-        out_path = output / f"{sample_id}{SAMPLE_SUFFIX}"
-        if skip_existing and out_path.is_file():
+        if _sample_already_present(
+            sample_id,
+            output=output,
+            skip_existing=skip_existing,
+            skip_existing_dirs=skip_existing_dirs,
+            suffix=SAMPLE_SUFFIX,
+        ):
             written.append(sample_id)
             skipped += 1
             continue
@@ -182,6 +210,7 @@ def materialize_manifest(
     output: Path,
     max_items: int | None = None,
     skip_existing: bool = True,
+    skip_existing_dirs: list[Path] | None = None,
     n_particles: int = 4,
     class_ids: set[int] | None = None,
     shard_index: int = 0,
@@ -195,6 +224,7 @@ def materialize_manifest(
     manifest = CurriculumManifest.load(manifest_path)
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
+    lookup_dirs = [Path(p) for p in (skip_existing_dirs or [])]
 
     items = list(manifest.items)
     if class_ids is not None:
@@ -224,6 +254,7 @@ def materialize_manifest(
                 "output": str(output),
                 "n_particles": int(n_particles),
                 "skip_existing": bool(skip_existing),
+                "skip_existing_dirs": [str(p) for p in lookup_dirs],
                 "game_id": game_id,
                 "items": [it.to_dict() for it in group],
             }

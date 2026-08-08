@@ -76,8 +76,8 @@
     "policy_wdl": "model_policy_wdl.pt"
   },
   "online_weights_sha256": {
-    "policy": "d6f57835b7e067315c7fa86bfdddeb1b4dbf06956159ecb7a08794af65dc1aec",
-    "policy_wdl": "640d4af26b321d2d9dfeeaa898fc345a2a8470844e8b74a9e5f6726e7f244b2d"
+    "policy": "7087317e54cb759bc3d841ed779d738c7d8333fd4232ea765a92a61912e29ed4",
+    "policy_wdl": "b20d64eb175c200136bd417032325b23521870194ca1f5a0a0fa3ae75bbee37d"
   },
   "quantization": {
     "engine": "none",
@@ -113,8 +113,8 @@
   "runtime": "torch.jit.script+float32",
   "tensor_schema": "morpheus-tensor-v1",
   "training_run": {
-    "checkpoint_id": "ckpt-00100000-e5b415184274",
-    "run_id": "scraped-classes15-2026-08-06-1"
+    "checkpoint_id": "ckpt-00010000-300811cf4add",
+    "run_id": "scraped-classes13-2026-08-08"
   },
-  "weights_sha256": "531dbd7b37f1fa9af6d3a8274a36a85bd8130d35c6bb5ac1f3fa9f1bbe907c3b"
+  "weights_sha256": "9d02e3d0bb4f51efcb8eb1eca50156126aae870f8076b71fa11d7a9d7c19f228"
 }

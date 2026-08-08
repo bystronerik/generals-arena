@@ -1,17 +1,22 @@
 {
   "kind": "provenance",
   "name": "scraped-classes13",
-  "selection_date": "2026-08-05",
+  "selection_date": "2026-08-08",
   "round_seed": 7,
   "source_label": "scraped_classes13",
-  "top_win_players": ["ResBot", "Kubic", "thor"],
-  "top_win_fraction": 0.5,
+  "top_win_players": ["Kubic", "ResBot", "bca", "nanomena", "thor", "Mattz"],
+  "top_win_fraction": 0.75,
+  "full_start_count": 512,
+  "classes": [1, 2, 3, 4, 5],
   "stratify": "global_1to1_wdl",
   "notes": [
-    "Provenance stub for scraped classes 1–3 research training.",
-    "Global equal queried-player wins and losses (n = n_lose).",
-    "Exactly 50% of kept wins from ResBot, Kubic, thor (equal thirds).",
-    "Remaining wins from all other reconstruction players.",
+    "Provenance stub for scraped classes 1–4 plus class-5 full starts.",
+    "Global equal queried-player wins and losses (n = n_lose, capped to",
+    "feasible top/other win pools); draws excluded.",
+    "Exactly 75% of kept wins from Kubic, ResBot, bca, nanomena, thor, Mattz",
+    "(equal sixths; remainder by sorted name).",
+    "Remaining 25% wins from all other reconstruction players.",
+    "Class 5: full_start_count=512 (512 seeds x both seats = 1024 samples).",
     "Not a heuristic match panel; members are intentionally empty."
   ]
 }

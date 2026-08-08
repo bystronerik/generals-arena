@@ -188,6 +188,32 @@ def test_buffer_sample_round_trip(tmp_path: Path):
     assert loaded.tensor.shape == sample.tensor.shape
 
 
+def test_stage_replay_buffer_copies_samples(tmp_path: Path):
+    from training.morpheus.trainer.buffer import (
+        load_replay_buffer,
+        stage_replay_buffer,
+    )
+
+    src = tmp_path / "vol_buf"
+    dst = tmp_path / "local_buf"
+    for i in range(5):
+        write_sample(
+            src,
+            _tiny_sample(item_id=f"tiny-{i}"),
+            sample_id=f"s{i}",
+            class_id=str((i % 3) + 1),
+        )
+    report = stage_replay_buffer(src, dst, workers=4, progress_every=2)
+    assert report["ok"] is True
+    assert report["files"] == 5
+    assert report["copied"] == 5
+    again = stage_replay_buffer(src, dst, workers=4, progress_every=2)
+    assert again["copied"] == 0
+    assert again["skipped_existing"] == 5
+    buf = load_replay_buffer(dst, window_size=16)
+    assert len(buf) == 5
+
+
 def test_promotable_run_config_loads_research_scope():
     path = REPO / "training/morpheus/configs/promotable-run.json"
     from training.morpheus.trainer.config import load_train_run_config

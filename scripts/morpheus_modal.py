@@ -327,31 +327,52 @@ def qualify_compute(
     print(f"verdict={summary['verdict']}")
 
 
+LOCAL_BUFFER = Path("/tmp/morpheus-buffer")
+VOLUME_BUFFER = Path("/vol/morpheus/buffer")
+
+
+def _stage_volume_buffer_to_local(*, workers: int = 64) -> dict:
+    """Copy ``*.sample.npz`` off the Modal volume onto container SSD."""
+    from training.morpheus.trainer.buffer import stage_replay_buffer
+
+    return stage_replay_buffer(
+        VOLUME_BUFFER,
+        LOCAL_BUFFER,
+        workers=int(workers),
+        progress_every=1000,
+    )
+
+
 @app.function(
     image=IMAGE,
     gpu="A100",
     timeout=60 * 60 * 6,
+    # Modal ephemeral_disk minimum is 512 GiB (524288 MiB).
+    ephemeral_disk=512 * 1024,
     volumes={"/vol": VOLUME},
 )
 def train_remote(config_json: str, run_id: str, engine_version: str = "") -> dict:
     """Part 14 training loop. A100 wall charges to main_training."""
     print(f"[train_remote] container_start run_id={run_id}", flush=True)
+    from dataclasses import replace
+
     from training.morpheus.trainer.config import load_train_run_config
     from training.morpheus.trainer.loop import run_training
 
     cfg_path = Path("/tmp/promotable-run.json")
     cfg_path.write_text(config_json, encoding="utf-8")
     cfg = load_train_run_config(cfg_path)
-    # Force volume-backed run root on Modal.
-    from dataclasses import replace
-
-    cfg = replace(cfg, run_root="/vol/morpheus/runs", buffer_dir="/vol/morpheus/buffer")
+    # Keep run artifacts on the volume; stage samples onto local SSD first.
+    stage_report = _stage_volume_buffer_to_local()
+    print(json.dumps({"buffer_stage": stage_report}, indent=2), flush=True)
+    cfg = replace(cfg, run_root="/vol/morpheus/runs", buffer_dir=str(LOCAL_BUFFER))
     import torch as _torch
 
     device = "cuda" if _torch.cuda.is_available() else "cpu"
     print(
         f"[train_remote] run_id={run_id} device={device} scope={cfg.scope} "
-        f"promotable={cfg.promotable_main_run} engine={engine_version or 'unset'}",
+        f"promotable={cfg.promotable_main_run} engine={engine_version or 'unset'} "
+        f"buffer={cfg.buffer_dir}",
         flush=True,
     )
     result = run_training(
@@ -422,6 +443,7 @@ def train(
     image=IMAGE,
     gpu="A100",
     timeout=60 * 60 * 6,
+    ephemeral_disk=512 * 1024,
     volumes={"/vol": VOLUME},
 )
 def resume_remote(
@@ -436,7 +458,9 @@ def resume_remote(
     cfg_path = Path("/tmp/promotable-run.json")
     cfg_path.write_text(config_json, encoding="utf-8")
     cfg = load_train_run_config(cfg_path)
-    cfg = replace(cfg, run_root="/vol/morpheus/runs", buffer_dir="/vol/morpheus/buffer")
+    stage_report = _stage_volume_buffer_to_local()
+    print(json.dumps({"buffer_stage": stage_report}, indent=2), flush=True)
+    cfg = replace(cfg, run_root="/vol/morpheus/runs", buffer_dir=str(LOCAL_BUFFER))
     import torch as _torch
 
     device = "cuda" if _torch.cuda.is_available() else "cpu"

@@ -10,8 +10,10 @@ Usage:
     python scripts/morpheus_curriculum.py build \\
       --panel scripts/configs/morpheus/scraped-classes13.json \\
       --trajectories-parent data/trajectories \\
-      --classes 1 2 3 --full-start-count 0 --require-sample-seat \\
-      --stratify-global-wdl --top-win-players ResBot Kubic thor \\
+      --classes 1 2 3 4 5 --full-start-count 512 --require-sample-seat \\
+      --stratify-global-wdl \\
+      --top-win-players Kubic ResBot bca nanomena thor Mattz \\
+      --top-win-fraction 0.75 \\
       --output training/morpheus/manifests/scraped-classes13.json
 
     python scripts/morpheus_curriculum.py classify \\
