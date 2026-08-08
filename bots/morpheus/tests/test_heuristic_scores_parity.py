@@ -70,12 +70,17 @@ def reference_scores(obs, memory, mask):
 
     turn = int(getattr(obs, "turn", 0))
     castle_w = castle_timing_weight(turn)
+    from action import BASE_COST, live_build_cost
+
+    cost_g = np.asarray(live_build_cost(obs, memory))
     for idx in np.flatnonzero(mask_a):
         idx = int(idx)
         action = decode_action(idx)
         if int(action[0]) != 2:
             continue
         r, c = int(action[1]), int(action[2])
+        if int(cost_g[r, c]) != BASE_COST:
+            continue  # surcharged builds are never rewarded
         army = float(max(int(armies[r, c]), 1))
         out[idx] = max(out[idx], castle_w * (10.0 + 0.2 * min(army, 100.0)))
 
@@ -148,6 +153,8 @@ def reference_scores(obs, memory, mask):
                     + 8.0 * float(reveal)
                 ) * hunt_factor
             elif dest_owner == 1:
+                from tactics import CASTLE_CATCHMENT, castle_build_site
+
                 k_prog = 0.0
                 if king_dist is not None and not is_committed_army(
                     army_i, max_own, tot, share
@@ -155,6 +162,16 @@ def reference_scores(obs, memory, mask):
                     k_prog = path_progress(
                         sr, sc, tr, tc, king_dist, fallback_target=king
                     )
+                site = castle_build_site(obs, memory)
+                if site is not None:
+                    b_dist = path_distance_field(obs, [site])
+                    if 0 <= int(b_dist[sr, sc]) <= CASTLE_CATCHMENT:
+                        if is_committed_army(army_i, max_own, tot, share):
+                            k_prog = 0.0
+                        else:
+                            k_prog = path_progress(
+                                sr, sc, tr, tc, b_dist, fallback_target=site
+                            )
                 if k_prog > 0.0 and share < GATHER_SHARE_MIN:
                     score = (
                         attack_weight(army_i)

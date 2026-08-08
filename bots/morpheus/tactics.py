@@ -21,6 +21,7 @@ from typing import Any, Optional, Sequence
 import numpy as np
 
 from action import (
+    BASE_COST,
     PASS_INDEX,
     decode_action,
     encode_action,
@@ -91,6 +92,26 @@ GARRISON_FLOOR_CAP = 18
 # Once the garrison reaches RELEASE x floor, constrain redirects to the best
 # legal general half-move. Self-limiting: one ship drops it below the bar.
 GARRISON_RELEASE_FACTOR = 2.0
+
+# Castle economics. Payback is 2x price in turns (+1 army every other turn),
+# so a base-price castle built by mid-game returns 2-5x in our typical game
+# lengths — and the attrition losses vs blitz/macaria are exactly an income
+# gap (they build none either). Measured triple lock before this: a legal
+# build existed on 8/256 turns (no 35-army piles form), the castle score
+# peaked at 5% of the top action, and the NN gives builds ~0 mass (p90
+# exactly 0), which the blend clip cannot resurrect — so building works only
+# as a savings plan plus a hard rule. Full-price builds are never rewarded:
+# the site must cost exactly BASE_COST (Manhattan >= 7 from every own
+# structure; surcharges stack per structure, so castles also spread out).
+CASTLE_TARGET = 2
+CASTLE_WINDOW_UNTIL = 500
+CASTLE_SAFE_ENEMY_DIST = 4
+CASTLE_CATCHMENT = 6
+# One-action-per-turn play means rear logistics can never win the global
+# argmax (a ~70-score gather vs ~600-score front takes — measured: the site's
+# pile sat at 2-3 army for 340 straight turns). Every Nth turn while a site
+# is underfunded, constrain dedicates the turn to one gather-step toward it.
+CASTLE_TITHE_PERIOD = 3
 
 # Aggression bases (tuned vs blitz/macaria, who out-tempo a defensive bot).
 # Post-contact: an enemy take is a 2-cell income swing, so it outranks a
@@ -337,6 +358,139 @@ def _movable_exclude_cell(obs, memory: VisibleMemory) -> Optional[tuple[int, int
     if not (GARRISON_FLOOR_FROM <= turn < DEATHTOUCH_TURN):
         return None
     return own_general_cell(obs, memory)
+
+
+def _apply_castle_anchor(obs, memory: VisibleMemory, mask: Array) -> Array:
+    """Pin the savings pile: no non-combat move leaves an underfunded site.
+
+    Without this the pile leaked — tips gathered to the site and the wave
+    scores marched the stack away before it reached the price (live probe:
+    zero builds in a full game). Combat moves stay legal, and the ban is
+    keyed to the *current* site: if an enemy closes in, site selection moves
+    elsewhere and the old pile is free the same turn. Skipped when it would
+    leave no non-pass action.
+    """
+    site = castle_build_site(obs, memory)
+    if site is None:
+        return mask
+    _types, owners, armies = _as_grids(obs)
+    if int(armies[site]) >= BASE_COST:
+        return mask
+    kind_t, sr_t, sc_t, tr_t, tc_t = _decode_tables()
+    src_is_site = (
+        mask[:PASS_INDEX]
+        & (kind_t == 0)
+        & (sr_t == site[0])
+        & (sc_t == site[1])
+    )
+    if not np.any(src_is_site):
+        return mask
+    H, W = int(obs.H), int(obs.W)
+    tr = tr_t.astype(np.int64)
+    tc = tc_t.astype(np.int64)
+    inb = (tr >= 0) & (tr < H) & (tc >= 0) & (tc < W)
+    dest_enemy = np.zeros(PASS_INDEX, dtype=bool)
+    dest_enemy[inb] = owners[tr[inb], tc[inb]] == OWNER_ENEMY
+    ban = src_is_site & ~dest_enemy
+    if not np.any(ban):
+        return mask
+    out = mask.copy()
+    out[np.flatnonzero(ban)] = False
+    nonpass = out.copy()
+    nonpass[PASS_INDEX] = False
+    if not np.any(nonpass):
+        return mask
+    return out
+
+
+def castle_build_site(obs, memory: VisibleMemory) -> Optional[tuple[int, int]]:
+    """Savings/build site: the base-price own plain cell nearest the general.
+
+    Active only inside the build window with fewer than ``CASTLE_TARGET`` own
+    castles. The site must cost exactly ``BASE_COST`` (never pay a surcharge)
+    and sit at least ``CASTLE_SAFE_ENEMY_DIST`` Manhattan from any visible
+    enemy cell — a castle on the front is a gift. ``None`` while own
+    territory is too small to hold a surcharge-free cell.
+    """
+    turn = int(getattr(obs, "turn", 0))
+    if not (GARRISON_FLOOR_FROM <= turn <= CASTLE_WINDOW_UNTIL):
+        return None
+    types, owners, _armies = _as_grids(obs)
+    own_castles = int(np.sum((types == TYPE_CASTLE) & (owners == 1)))
+    latched = np.asarray(memory.known_castle, dtype=bool) & (owners == 1)
+    own_castles = max(own_castles, int(latched.sum()))
+    if own_castles >= CASTLE_TARGET:
+        return None
+    from action import live_build_cost
+
+    cost = np.asarray(live_build_cost(obs, memory))
+    candidate = (owners == 1) & (cost == BASE_COST) & (types != TYPE_GENERAL)
+    candidate &= types != TYPE_CASTLE
+    candidate &= types != TYPE_MOUNTAIN
+    if not np.any(candidate):
+        return None
+    enemy_cells = np.argwhere(owners == OWNER_ENEMY)
+    gcell = own_general_cell(obs, memory)
+    best = None
+    best_key = None
+    for r, c in np.argwhere(candidate):
+        r, c = int(r), int(c)
+        if enemy_cells.size:
+            d_enemy = int(
+                np.min(np.abs(enemy_cells[:, 0] - r) + np.abs(enemy_cells[:, 1] - c))
+            )
+            if d_enemy < CASTLE_SAFE_ENEMY_DIST:
+                continue
+        d_gen = (
+            abs(gcell[0] - r) + abs(gcell[1] - c) if gcell is not None else 0
+        )
+        # Sticky: a cell already holding a pile outranks a marginally closer
+        # empty one, so the site does not churn and strand its savings.
+        pile = min(int(_armies[r, c]), BASE_COST)
+        key = (-pile, d_gen, r, c)
+        if best_key is None or key < best_key:
+            best_key = key
+            best = (r, c)
+    return best
+
+
+def castle_tithe_move(
+    obs, memory: VisibleMemory, site: tuple[int, int]
+) -> Optional[Action5]:
+    """One gather-step toward the savings site: biggest catchment tip moves.
+
+    Full move along the BFS gradient through own land only — the tithe is
+    logistics, never combat. ``None`` when no useful tip exists.
+    """
+    _types, owners, armies = _as_grids(obs)
+    H, W = int(obs.H), int(obs.W)
+    dist = path_distance_field(obs, [site])
+    gcell = own_general_cell(obs, memory)
+    best = None
+    best_army = 1
+    for r, c in np.argwhere(owners == 1):
+        r, c = int(r), int(c)
+        if (r, c) == site or (r, c) == gcell:
+            continue
+        d0 = int(dist[r, c])
+        if not (1 <= d0 <= CASTLE_CATCHMENT):
+            continue
+        a = int(armies[r, c])
+        if a <= best_army:
+            continue
+        for d in range(4):
+            nr = r + int(DIRECTIONS[d, 0])
+            nc = c + int(DIRECTIONS[d, 1])
+            if not (0 <= nr < H and 0 <= nc < W):
+                continue
+            if int(dist[nr, nc]) != d0 - 1:
+                continue
+            if int(owners[nr, nc]) != 1:
+                continue
+            best = (0, r, c, d, 0)
+            best_army = a
+            break
+    return best
 
 
 def wave_assembly_cell(
@@ -839,6 +993,7 @@ def play_mask(
         mask[PASS_INDEX] = False
 
     mask = _apply_garrison_floor(obs, memory, mask)
+    mask = _apply_castle_anchor(obs, memory, mask)
 
     if enemy_is_visible(obs, memory):
         if not np.any(mask):
@@ -1046,11 +1201,20 @@ def heuristic_action_scores(
     legal = np.flatnonzero(mask_a[:PASS_INDEX])
     build_idx = legal[kind_t[legal] == 2]
     if build_idx.size:
+        from action import live_build_cost
+
+        cost_g = np.asarray(live_build_cost(obs, memory))
         b_army = np.maximum(
             armies[sr_t[build_idx], sc_t[build_idx]], 1
         ).astype(np.float64)
+        # Base-price builds only — a surcharged castle is never rewarded.
+        at_base = (
+            cost_g[sr_t[build_idx], sc_t[build_idx]] == BASE_COST
+        ).astype(np.float64)
         # Prefer cells that can still hold a useful remnant after the spend.
-        out[build_idx] = castle_w * (10.0 + 0.2 * np.minimum(b_army, 100.0))
+        out[build_idx] = (
+            castle_w * (10.0 + 0.2 * np.minimum(b_army, 100.0)) * at_base
+        )
 
     move_all = legal[kind_t[legal] == 0]
     sr = sr_t[move_all].astype(np.int64)
@@ -1140,6 +1304,18 @@ def heuristic_action_scores(
                 )
             else:
                 k_prog = np.zeros(len(move_idx), dtype=np.float64)
+            # Castle savings: tips inside the site's catchment gather to the
+            # build site instead of the front assembly, until the pile
+            # reaches BASE_COST and the hard rule builds.
+            savings_site = castle_build_site(obs, memory)
+            if savings_site is not None:
+                b_dist = path_distance_field(obs, [savings_site])
+                b_prog = _path_progress_v(sr, sc, tr, tc, b_dist, savings_site)
+                src_b = b_dist[sr, sc]
+                in_catch = (src_b >= 0) & (src_b <= CASTLE_CATCHMENT)
+                k_prog = np.where(
+                    in_catch, np.where(committed, 0.0, b_prog), k_prog
+                )
             # Army-weighted: a 100-army hinterland stack's gather move must
             # outrank a 3-army tip shuffle, so weight by attack_weight (caps
             # at 200) rather than the wave cap.
@@ -1717,6 +1893,21 @@ def constrain_nn_action(
         idx = encode_action(kill_step)
         if bool(mask[idx]):
             return kill_step
+
+    # Castle build (hard rule): the NN gives builds ~zero prior mass, which
+    # the blend clip cannot resurrect, so an affordable base-price build on
+    # the savings site is forced. Kills always outrank it.
+    site = castle_build_site(obs, memory)
+    if site is not None:
+        build_idx = encode_action((2, site[0], site[1], 0, 0))
+        if bool(mask[build_idx]):
+            return (2, int(site[0]), int(site[1]), 0, 0)
+        # Tithe: every Nth turn one gather-step funds the site (rear
+        # logistics can never win the global argmax on its own).
+        if int(getattr(obs, "turn", 0)) % CASTLE_TITHE_PERIOD == 0:
+            tithe = castle_tithe_move(obs, memory, site)
+            if tithe is not None and bool(mask[encode_action(tithe)]):
+                return tithe
 
     chosen: Action5 = tuple(int(x) for x in action)  # type: ignore[assignment]
     nonpass = np.asarray(mask, dtype=bool).copy()
