@@ -339,6 +339,45 @@ def _movable_exclude_cell(obs, memory: VisibleMemory) -> Optional[tuple[int, int
     return own_general_cell(obs, memory)
 
 
+def wave_assembly_cell(
+    obs,
+    memory: VisibleMemory,
+    belief: Optional[Any] = None,
+    *,
+    exclude: Optional[tuple[int, int]] = None,
+) -> Optional[tuple[int, int]]:
+    """Where the attack wave forms: frontmost own cell toward the hunt target.
+
+    Gathering used to target the largest movable stack — a target that moves
+    every time any cell's army changes, so flows chased it around the map and
+    the army stayed dribbled at ~4/cell while blitz-style bots massed and
+    struck. The assembly point is deterministic: the own cell closest (path
+    distance) to the known/believed enemy general, ties broken by larger army
+    then row-major. It is stable while the front is stable and rolls forward
+    with each take. Falls back to ``king_cell`` when there is no hunt target.
+    """
+    hunt_cell = known_enemy_general_cell(obs, memory) or believed_enemy_general(
+        belief
+    )
+    if hunt_cell is None:
+        return king_cell(obs, exclude=exclude)
+    _types, owners, armies = _as_grids(obs)
+    own = (owners == 1).copy()
+    if exclude is not None and bool(own[exclude]) and int(own.sum()) > 1:
+        own[exclude] = False
+    if not np.any(own):
+        return None
+    dist = path_distance_field(obs, [hunt_cell])
+    d = np.where(own & (dist >= 0), dist, np.iinfo(np.int32).max)
+    dmin = int(d.min())
+    if dmin == np.iinfo(np.int32).max:
+        return king_cell(obs, exclude=exclude)
+    front = own & (d == dmin)
+    max_a = int(armies[front].max())
+    locs = np.argwhere(front & (armies == max_a))
+    return int(locs[0, 0]), int(locs[0, 1])
+
+
 def is_committed_army(
     army: int, max_army: int, total: int, share: float
 ) -> bool:
@@ -1027,7 +1066,7 @@ def heuristic_action_scores(
         goals = seek_goals(obs, memory, belief)
         dist_field = path_distance_field(obs, goals) if goals else None
         movable_exclude = _movable_exclude_cell(obs, memory)
-        king = king_cell(obs, exclude=movable_exclude)
+        king = wave_assembly_cell(obs, memory, belief, exclude=movable_exclude)
         king_dist = path_distance_field(obs, [king]) if king is not None else None
         share, max_own, tot = army_concentration(obs, exclude=movable_exclude)
         gen_known = enemy_general_visible(obs, memory)

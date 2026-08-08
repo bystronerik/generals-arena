@@ -83,10 +83,10 @@ def reference_scores(obs, memory, mask):
         target = enemy_seek_target(obs, memory)
         goals = seek_goals(obs, memory)
         dist_field = path_distance_field(obs, goals) if goals else None
-        from tactics import _movable_exclude_cell
+        from tactics import _movable_exclude_cell, wave_assembly_cell
 
         movable_exclude = _movable_exclude_cell(obs, memory)
-        king = king_cell(obs, exclude=movable_exclude)
+        king = wave_assembly_cell(obs, memory, exclude=movable_exclude)
         king_dist = path_distance_field(obs, [king]) if king is not None else None
         share, max_own, tot = army_concentration(obs, exclude=movable_exclude)
         gen_known = enemy_general_visible(obs, memory)
