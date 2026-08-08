@@ -26,6 +26,7 @@ from typing import IO
 import jax.numpy as jnp
 import numpy as np
 
+from arena.instrument.capture import capture_module_from_env
 from arena.paths import REPO_ROOT
 from arena.records.fingerprint import PROBE_FILENAME
 from arena.records.trajectories import (
@@ -89,7 +90,9 @@ def has_probe(run_sh: Path) -> bool:
     return (run_sh.parent / PROBE_FILENAME).is_file()
 
 
-def agent_command(run_sh: Path, trace: Path | None) -> tuple[list[str], Path]:
+def agent_command(
+    run_sh: Path, trace: Path | None, capture_out: Path | None = None
+) -> tuple[list[str], Path]:
     """
     The command and working directory for one seat.
 
@@ -98,6 +101,11 @@ def agent_command(run_sh: Path, trace: Path | None) -> tuple[list[str], Path]:
     drives the identical protocol from the identical parsing code and
     additionally samples the bot's probe. The runner needs `arena` importable,
     so it runs from the repo root.
+
+    `capture_out` names this seat's rich-capture destination when a capture
+    module is armed. It is passed explicitly rather than derived from `trace`
+    because traces are written to a scratch directory that the harness deletes;
+    a capture goes straight to its final home.
     """
     if trace is None:
         return ["bash", str(run_sh)], run_sh.parent
@@ -109,6 +117,8 @@ def agent_command(run_sh: Path, trace: Path | None) -> tuple[list[str], Path]:
         "--trace",
         str(trace),
     ]
+    if capture_out is not None:
+        command += ["--capture-out", str(capture_out)]
     return command, REPO_ROOT
 
 
@@ -123,9 +133,10 @@ def spawn_agent(
     *,
     log_tag: str,
     trace: Path | None = None,
+    capture_out: Path | None = None,
 ) -> subprocess.Popen:
     """Spawn a stdio bot; stderr goes to a temp file (avoids PIPE deadlock)."""
-    command, cwd = agent_command(run_sh, trace)
+    command, cwd = agent_command(run_sh, trace, capture_out)
     proc = subprocess.Popen(
         command,
         stdin=subprocess.PIPE,
@@ -245,21 +256,28 @@ def run_stdio_match(
     # jsonl here; the harness gzips them into the trajectory directory once the
     # process is closed.
     trace_scratch: list[Path | None] = [None, None]
+    # Captures are opt-in per run and go straight to the trajectory directory,
+    # already gzipped by the capture module. Armed for every traced seat; a
+    # capture module that does not recognize a bot simply records nothing.
+    capture_out: list[Path | None] = [None, None]
+    armed = capture_module_from_env() is not None
     if recorder is not None:
         recorder.set_dims(H, W)
         scratch_root = Path(tempfile.mkdtemp(prefix="arena-trace-"))
         for index, path in enumerate((a0_path, a1_path)):
             if has_probe(path):
                 trace_scratch[index] = scratch_root / f"{SEATS[index]}.jsonl"
+                if armed:
+                    capture_out[index] = recorder.capture_destination(SEATS[index])
 
     agents = [
         spawn_agent(
             a0_path, 0, H, W, labels[0], venv_env, stderr_files[0],
-            log_tag=log_tag, trace=trace_scratch[0],
+            log_tag=log_tag, trace=trace_scratch[0], capture_out=capture_out[0],
         ),
         spawn_agent(
             a1_path, 1, H, W, labels[1], venv_env, stderr_files[1],
-            log_tag=log_tag, trace=trace_scratch[1],
+            log_tag=log_tag, trace=trace_scratch[1], capture_out=capture_out[1],
         ),
     ]
 

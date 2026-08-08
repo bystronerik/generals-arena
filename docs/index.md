@@ -51,6 +51,8 @@ Small topic files for the Generals Arena research repo.
 - [macaria](bots/macaria.md) — vendored blitz core + a scoped tactical search
 - [sosipolis](bots/sosipolis.md) — dual-mode MCTS general search with pocket skip and section priors
 - [morpheus](bots/morpheus/index.md) — RL policy/value network + belief-aware simultaneous MCTS
+- [morpheus-rs rewrite plan](bots/morpheus-rs/rewrite-plan.md) — Rust sibling of morpheus: milestones, gates, risks
+- [morpheus-rs parity corpus](bots/morpheus-rs/parity-corpus.md) — recorded frames and RNG streams the Rust port is checked against
 
 ## Arena
 

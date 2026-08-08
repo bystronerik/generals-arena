@@ -72,6 +72,19 @@ def trace_path(game_id: str, seat: str, directory: Path) -> Path:
     return directory / f"{game_id}.trace.{seat}.jsonl.gz"
 
 
+def capture_path(game_id: str, seat: str, directory: Path) -> Path:
+    """
+    Where a seat's rich capture belongs (see `arena.instrument.capture`).
+
+    Unlike a trace, a capture is written straight here rather than into the
+    harness's scratch directory: the capture module gzips it itself, and the
+    files are large enough that a copy afterwards is worth avoiding.
+    """
+    if seat not in SEATS:
+        raise ValueError(f"seat must be one of {SEATS} (got {seat!r})")
+    return directory / f"{game_id}.capture.{seat}.jsonl.gz"
+
+
 # --- gzipped jsonl io -------------------------------------------------------
 
 
@@ -200,6 +213,10 @@ class TrajectoryRecorder:
     def trace_destination(self, seat: str) -> Path:
         """Where this game's probe trace for `seat` belongs."""
         return trace_path(self.game_id, seat, self.directory)
+
+    def capture_destination(self, seat: str) -> Path:
+        """Where this game's rich capture for `seat` belongs, if one is armed."""
+        return capture_path(self.game_id, seat, self.directory)
 
     def header(self) -> dict[str, Any]:
         return {

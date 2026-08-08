@@ -1,8 +1,11 @@
 # Morpheus-rs rewrite plan
 
-Status: **confirmed 2026-08-08 — implementation may begin, starting at M0.**
+Status: **confirmed 2026-08-08 — implementation may begin. M0 is done
+(§14).**
 Revised against the declared-final morpheus state at commit `9d6f186`
-(oracle lineage head `morpheus@17c8ac2684ec`, 17 registry steps). The three
+(oracle `morpheus@73967d2125cc`, registry step 18 — see §14; the
+`17c8ac2684ec` this plan first named was the *previous* registry head, the
+tree at `d57b545`, one commit before the declared-final state). The three
 post-plan commits (`b152147` kill-window planner, `d57b545` castle savings
 pipeline, `9d6f186` emergency defense) changed only `tactics.py` (+644 lines),
 one line of `runtime.py`, and tests/fixtures — no architecture change, details
@@ -573,15 +576,66 @@ nothing more.
 ## 13. Open items
 
 The post-commit revision pass is done (2026-08-08): parity surfaces
-re-verified against `9d6f186`, oracle frozen at `morpheus@17c8ac2684ec`,
+re-verified against `9d6f186`, oracle frozen at `morpheus@73967d2125cc`,
 line counts and the tactics/belief coupling updated in §1, §5, §7, §9. The
 rewrite was confirmed as a committed decision — §9 was reworded from kill
 criteria to tripwire + fallback. `deployment.json` and the artifact did not
 change. Remaining open items:
 
-- Run the M0 Modal CPU-feature probe (`scripts/morpheus_rs_modal_cpu_probe.py`,
-  Python SDK `@app.function(cpu=1)`) and fix the `target-cpu` level from its
-  report; the sandbox itself cannot be probed, so runtime feature detection
-  backs any SIMD path regardless.
 - Decide the effort window that arms R5's tripwire (proposed: review after
   M4 with measured kernels in hand).
+
+## 14. M0 — done
+
+Delivered 2026-08-08. Numbers and their caveats live in the reports, not here.
+
+- **Oracle content hash: `morpheus@73967d2125cc`**, registry step 18. This
+  plan originally named `17c8ac2684ec`, which is step 17 — the tree at
+  `d57b545`, *before* the `9d6f186` emergency-defense commit the same
+  paragraph calls the declared-final state. The frozen oracle is the
+  declared-final tree, and it is now a registered lineage step rather than an
+  unregistered working tree.
+- **Baselines:**
+  [M3 Pro, 20 games](../../research/measurements/morpheus-rs-baseline.md) and
+  [one x86 core, 6 games](../../research/measurements/morpheus-rs-baseline-modal.md).
+  Both carry an uncaptured control arm, so the cost of measuring is bounded
+  rather than assumed (M3 Pro: 1.01× at p99).
+
+  The headline correction to §1: **the shipped `offline_p99_ms` table
+  understates live cost across the board**, and the gap is worst exactly where
+  the rewrite bets. On the M3 Pro, belief update + root inference is
+  **166.7 ms at p99** against a 140 ms internal deadline — §1 estimated ~110 —
+  so at p99 the deadline is spent before search is admitted at all. On one x86
+  core it is worse: `particle_transitions` alone measures **357.5 ms** at p99
+  (3.6× shipped), simulations per normal move fall from 12 to 8, and the
+  belief update is deferred on 86.9% of turns against 81.2% on the laptop.
+
+  Two component ratios deserve their own note, because they are not in §7's
+  expectations at all: `selection` measures 9.6× its shipped p99 on the M3 Pro
+  and 13.5× on x86, and `backup` 2.9×/4.7×. §7 has both as "small absolute
+  numbers, 5–15× gain"; they are neither small nor previously measured under
+  live play. M5's port should treat them as first-class, not as the tail of
+  the search work.
+
+  The plan's arithmetic direction survives — transitions dominate, inference
+  does not — but every knob in `deployment.json` was fitted against numbers
+  that are wrong by 1.4× to 13×. That is M7's problem, and M7 now has a
+  measured floor to re-derive from.
+- **CPU probe:**
+  [`morpheus-rs-cpu-probe.md`](../../research/measurements/morpheus-rs-cpu-probe.md).
+  **Compile target: `x86-64-v3`** — the floor across sampled hosts. Modal
+  placed containers launched together on one fleet generation, and separate
+  runs landed on different ones, including an AMD generation without AVX-512.
+  So `target-cpu` stays at v3 and §9's runtime feature detection requirement
+  stands on evidence rather than caution.
+- **Corpus:** captured through a new generic capture hook in
+  `arena.instrument` plus `bots/morpheus-rs/tools/capture_morpheus.py`. Format,
+  strata, and the recorded-RNG contract:
+  [`parity-corpus.md`](parity-corpus.md). Committed smoke slice:
+  `bots/morpheus-rs/tests/fixtures/parity-smoke.jsonl.gz`; the full corpus is
+  derived data under `data/morpheus/morpheus-rs/`.
+- **Not settled by M0:** the x86 arm is six games on one Modal fleet, not the
+  twenty this section asks for, and the container reports 17 visible CPUs
+  against its one-core reservation — so it is a *shape* result (Linux, x86,
+  contended, no AVX-512 guaranteed) rather than a deployment qualification.
+  M7 needs the full suite on the reference host before any knob is accepted.

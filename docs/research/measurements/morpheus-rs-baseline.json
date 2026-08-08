@@ -1,0 +1,253 @@
+{
+  "round": "morpheus-rs-m0",
+  "captured_at": "2026-08-08T11:45:32+00:00",
+  "oracle": {
+    "bot_id": "morpheus",
+    "content_hash": "73967d2125cc"
+  },
+  "host": {
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "machine": "arm64",
+    "python": "3.12.11",
+    "processor": "arm",
+    "cpu_brand": "Apple M3 Pro"
+  },
+  "panel": [
+    "cm_expander",
+    "macaria",
+    "sosipolis",
+    "castle_builder",
+    "metro"
+  ],
+  "capture_files": [
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T112156Z_morpheus_vs_cm_expander_s1000_2c111e8c.capture.a.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T112321Z_macaria_vs_morpheus_s1001_82e5954c.capture.b.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T112359Z_morpheus_vs_sosipolis_s1002_5f5a06c4.capture.a.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T112526Z_castle_builder_vs_morpheus_s1003_9c908340.capture.b.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T112705Z_morpheus_vs_metro_s1004_56868d5e.capture.a.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T112813Z_cm_expander_vs_morpheus_s1005_a6f1d12b.capture.b.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T112859Z_morpheus_vs_macaria_s1006_935a57d6.capture.a.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T113021Z_sosipolis_vs_morpheus_s1007_d32e1f4b.capture.b.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T113148Z_morpheus_vs_castle_builder_s1008_af4f0b70.capture.a.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T113257Z_metro_vs_morpheus_s1009_9df1f364.capture.b.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T113432Z_morpheus_vs_cm_expander_s1010_885b2178.capture.a.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T113540Z_macaria_vs_morpheus_s1011_443d4b0a.capture.b.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T113648Z_morpheus_vs_sosipolis_s1012_f3587edd.capture.a.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T113717Z_castle_builder_vs_morpheus_s1013_249cf9ad.capture.b.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T113803Z_morpheus_vs_metro_s1014_af3ace34.capture.a.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T114014Z_cm_expander_vs_morpheus_s1015_028b9598.capture.b.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T114055Z_morpheus_vs_macaria_s1016_17fb525f.capture.a.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T114208Z_sosipolis_vs_morpheus_s1017_db29d7f3.capture.b.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T114246Z_morpheus_vs_castle_builder_s1018_2387bc78.capture.a.jsonl.gz",
+    "data/morpheus/morpheus-rs/morpheus-rs-m0/20260808T114332Z_metro_vs_morpheus_s1019_a02fbba7.capture.b.jsonl.gz"
+  ],
+  "shipped_offline_p99_ms": {
+    "backup": 1.7847500275820494,
+    "belief_proposal": 3.820750047452748,
+    "belief_tensor": 2.7985000051558018,
+    "enemy_prior_batch": 30.08620801847428,
+    "hashing": 0.00100000761449337,
+    "leaf_batch": 35.34958302043378,
+    "particle_transitions": 99.48408394120634,
+    "reply": 0.0007080379873514175,
+    "root_inference": 11.861292063258588,
+    "selection": 1.840416924096644
+  },
+  "measured": {
+    "games": 20,
+    "frames": 10102,
+    "normal_frames": 10082,
+    "move_ms": {
+      "n": 10102,
+      "mean": 130.0012,
+      "p50": 133.0,
+      "p99": 165.0,
+      "p999": 209.0,
+      "max": 272.0
+    },
+    "normal_move_ms": {
+      "n": 10082,
+      "mean": 129.8468,
+      "p50": 133.0,
+      "p99": 164.0,
+      "p999": 177.0,
+      "max": 272.0
+    },
+    "moves_over_judge_limit": 883,
+    "moves_over_judge_limit_frac": 0.08758,
+    "completed_simulations_normal": {
+      "n": 10082,
+      "mean": 12.8646,
+      "p50": 12.0,
+      "p99": 16.0,
+      "p999": 16.0,
+      "max": 16.0
+    },
+    "forward_equivalents_normal": {
+      "n": 10082,
+      "mean": 14.6938,
+      "p50": 17.0,
+      "p99": 19.0,
+      "p999": 20.0,
+      "max": 20.0
+    },
+    "offline_p99_ms": {
+      "particle_transitions": 142.5778,
+      "leaf_batch": 106.6267,
+      "enemy_prior_batch": 48.8603,
+      "root_inference": 17.5513,
+      "belief_proposal": 4.1316,
+      "belief_tensor": 2.4395,
+      "selection": 17.722,
+      "backup": 5.159,
+      "hashing": 0.0009,
+      "reply": 0.0007
+    },
+    "component_ms": {
+      "backup": {
+        "n": 9950,
+        "mean": 2.7642,
+        "p50": 2.7492,
+        "p99": 5.159,
+        "p999": 5.6195,
+        "max": 7.3605
+      },
+      "belief_proposal": {
+        "n": 1879,
+        "mean": 2.9739,
+        "p50": 2.8873,
+        "p99": 4.1316,
+        "p999": 8.1555,
+        "max": 11.5747
+      },
+      "belief_tensor": {
+        "n": 20,
+        "mean": 2.1972,
+        "p50": 2.169,
+        "p99": 2.4395,
+        "p999": 2.4395,
+        "max": 2.4395
+      },
+      "enemy_prior_batch": {
+        "n": 10102,
+        "mean": 5.6771,
+        "p50": 0.0,
+        "p99": 48.8603,
+        "p999": 69.957,
+        "max": 74.1852
+      },
+      "hashing": {
+        "n": 10063,
+        "mean": 0.0004,
+        "p50": 0.0004,
+        "p99": 0.0009,
+        "p999": 0.0016,
+        "max": 0.0341
+      },
+      "leaf_batch": {
+        "n": 9951,
+        "mean": 87.6611,
+        "p50": 97.023,
+        "p99": 106.6267,
+        "p999": 115.2576,
+        "max": 153.1928
+      },
+      "particle_transitions": {
+        "n": 1879,
+        "mean": 12.5787,
+        "p50": 1.1728,
+        "p99": 142.5778,
+        "p999": 255.3395,
+        "max": 258.9629
+      },
+      "reply": {
+        "n": 8015,
+        "mean": 0.0002,
+        "p50": 0.0002,
+        "p99": 0.0007,
+        "p999": 0.001,
+        "max": 0.007
+      },
+      "root_inference": {
+        "n": 10063,
+        "mean": 13.3706,
+        "p50": 14.0513,
+        "p99": 17.5513,
+        "p999": 29.0516,
+        "max": 40.2884
+      },
+      "selection": {
+        "n": 9998,
+        "mean": 10.6032,
+        "p50": 11.1559,
+        "p99": 17.722,
+        "p999": 23.4825,
+        "max": 25.4751
+      }
+    },
+    "component_calls_mean": {
+      "backup": 13.067,
+      "belief_proposal": 1.0,
+      "belief_tensor": 1.0,
+      "enemy_prior_batch": 2.382,
+      "hashing": 1.0,
+      "leaf_batch": 3.272,
+      "particle_transitions": 1.0,
+      "reply": 1.0,
+      "root_inference": 1.0,
+      "selection": 14.726
+    },
+    "strata": {
+      "post_contact+recovery": 6738,
+      "pre_contact": 1602,
+      "pre_contact+recovery": 1310,
+      "post_contact": 272,
+      "late_game+recovery": 140,
+      "first_move": 20,
+      "first_contact": 20
+    },
+    "heavy_strata": {
+      "post_contact+recovery": 851,
+      "pre_contact": 208,
+      "pre_contact+recovery": 172,
+      "post_contact": 37,
+      "first_move": 20,
+      "first_contact": 20,
+      "late_game+recovery": 20
+    },
+    "fallback_level": {
+      "average": 6295,
+      "policy": 3807
+    },
+    "recovery_frames": 8203,
+    "recovery_frac": 0.81202,
+    "belief_plus_root_ok_frac": 0.18412,
+    "rng_draws": {
+      "choice": 547303,
+      "integers": 8748,
+      "random": 6507
+    },
+    "rng_draws_per_turn": 55.69,
+    "rng_unrecorded": {}
+  },
+  "control": {
+    "games": 4,
+    "normal_move_ms": {
+      "n": 1860,
+      "mean": 128.2973,
+      "p50": 133.0,
+      "p99": 162.0,
+      "p999": 171.0,
+      "max": 172.0
+    },
+    "completed_simulations_normal": {
+      "n": 1860,
+      "mean": 13.4237,
+      "p50": 16.0,
+      "p99": 16.0,
+      "p999": 16.0,
+      "max": 16.0
+    },
+    "moves_over_judge_limit_frac": 0.0672
+  }
+}

@@ -1,0 +1,248 @@
+{
+  "capture_returncode": 0,
+  "report_returncode": 0,
+  "capture_wall_s": 581.8,
+  "capture_stdout_tail": "[m0] oracle morpheus@73967d2125cc\n[m0] control game 1/2 vs cm_expander seed=2000 morpheus_seat=a\n[run_match] stored /root/data/games/20260808T113154Z_morpheus_vs_cm_expander_s2000_a701449e.json\n[run_match] winner=a turns=541 terminated=True truncated=False\n[run_match] recorded trajectory under /root/data/morpheus/morpheus-rs/morpheus-rs-m0-modal-control\n[m0] control game 2/2 vs macaria seed=2001 morpheus_seat=b\n[run_match] stored /root/data/games/20260808T113303Z_macaria_vs_morpheus_s2001_3e2dca5e.json\n[run_match] winner=b turns=602 terminated=True truncated=False\n[run_match] recorded trajectory under /root/data/morpheus/morpheus-rs/morpheus-rs-m0-modal-control\n[m0] capture game 1/6 vs cm_expander seed=2000 morpheus_seat=a\n[run_match] stored /root/data/games/20260808T113429Z_morpheus_vs_cm_expander_s2000_63002b22.json\n[run_match] winner=a turns=100 terminated=True truncated=False\n[run_match] recorded trajectory under /root/data/morpheus/morpheus-rs/morpheus-rs-m0-modal\n[m0] capture game 2/6 vs macaria seed=2001 morpheus_seat=b\n[run_match] stored /root/data/games/20260808T113446Z_macaria_vs_morpheus_s2001_fbb03829.json\n[run_match] winner=a turns=581 terminated=True truncated=False\n[run_match] recorded trajectory under /root/data/morpheus/morpheus-rs/morpheus-rs-m0-modal\n[m0] capture game 3/6 vs castle_builder seed=2002 morpheus_seat=a\n[run_match] stored /root/data/games/20260808T113601Z_morpheus_vs_castle_builder_s2002_472fc04f.json\n[run_match] winner=a turns=355 terminated=True truncated=False\n[run_match] recorded trajectory under /root/data/morpheus/morpheus-rs/morpheus-rs-m0-modal\n[m0] capture game 4/6 vs metro seed=2003 morpheus_seat=b\n[run_match] stored /root/data/games/20260808T113647Z_metro_vs_morpheus_s2003_394313fa.json\n[run_match] winner=b turns=436 terminated=True truncated=False\n[run_match] recorded trajectory under /root/data/morpheus/morpheus-rs/morpheus-rs-m0-modal\n[m0] capture game 5/6 vs cm_expander seed=2004 morpheus_seat=a\n[run_match] stored /root/data/games/20260808T113748Z_morpheus_vs_cm_expander_s2004_c2a80b22.json\n[run_match] winner=a turns=531 terminated=True truncated=False\n[run_match] recorded trajectory under /root/data/morpheus/morpheus-rs/morpheus-rs-m0-modal\n[m0] capture game 6/6 vs macaria seed=2005 morpheus_seat=b\n[run_match] stored /root/data/games/20260808T113903Z_macaria_vs_morpheus_s2005_710dc263.json\n[run_match] winner=b turns=969 terminated=True truncated=False\n[run_match] recorded trajectory under /root/data/morpheus/morpheus-rs/morpheus-rs-m0-modal\n[m0] wrote /root/data/morpheus/morpheus-rs/morpheus-rs-m0-modal/manifest.json\n",
+  "capture_stderr_tail": "[competition_match] spawned morpheus as player 0 (pid=92, instrumented)\n[competition_match] spawned cm_expander as player 1 (pid=93, /root/bots/cm_expander/run.sh)\n[competition_match] spawned macaria as player 0 (pid=184, instrumented)\n[competition_match] spawned morpheus as player 1 (pid=185, instrumented)\n[competition_match] spawned morpheus as player 0 (pid=186, instrumented)\n[competition_match] spawned cm_expander as player 1 (pid=187, /root/bots/cm_expander/run.sh)\n[competition_match] spawned macaria as player 0 (pid=278, instrumented)\n[competition_match] spawned morpheus as player 1 (pid=279, instrumented)\n[competition_match] spawned morpheus as player 0 (pid=280, instrumented)\n[competition_match] spawned castle_builder as player 1 (pid=281, instrumented)\n[competition_match] spawned metro as player 0 (pid=282, instrumented)\n[competition_match] spawned morpheus as player 1 (pid=283, instrumented)\n[competition_match] spawned morpheus as player 0 (pid=284, instrumented)\n[competition_match] spawned cm_expander as player 1 (pid=285, /root/bots/cm_expander/run.sh)\n[competition_match] spawned macaria as player 0 (pid=376, instrumented)\n[competition_match] spawned morpheus as player 1 (pid=377, instrumented)\n",
+  "report_stderr_tail": "",
+  "cpuinfo_model": "unknown",
+  "online_cpus": 17,
+  "report": {
+    "round": "morpheus-rs-m0-modal",
+    "captured_at": "2026-08-08T11:41:33+00:00",
+    "oracle": {
+      "bot_id": "morpheus",
+      "content_hash": "73967d2125cc"
+    },
+    "host": {
+      "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+      "machine": "x86_64",
+      "python": "3.12.10",
+      "processor": ""
+    },
+    "panel": [
+      "cm_expander",
+      "macaria",
+      "castle_builder",
+      "metro"
+    ],
+    "capture_files": [
+      "data/morpheus/morpheus-rs/morpheus-rs-m0-modal/20260808T113429Z_morpheus_vs_cm_expander_s2000_63002b22.capture.a.jsonl.gz",
+      "data/morpheus/morpheus-rs/morpheus-rs-m0-modal/20260808T113446Z_macaria_vs_morpheus_s2001_fbb03829.capture.b.jsonl.gz",
+      "data/morpheus/morpheus-rs/morpheus-rs-m0-modal/20260808T113601Z_morpheus_vs_castle_builder_s2002_472fc04f.capture.a.jsonl.gz",
+      "data/morpheus/morpheus-rs/morpheus-rs-m0-modal/20260808T113647Z_metro_vs_morpheus_s2003_394313fa.capture.b.jsonl.gz",
+      "data/morpheus/morpheus-rs/morpheus-rs-m0-modal/20260808T113748Z_morpheus_vs_cm_expander_s2004_c2a80b22.capture.a.jsonl.gz",
+      "data/morpheus/morpheus-rs/morpheus-rs-m0-modal/20260808T113903Z_macaria_vs_morpheus_s2005_710dc263.capture.b.jsonl.gz"
+    ],
+    "shipped_offline_p99_ms": {
+      "backup": 1.7847500275820494,
+      "belief_proposal": 3.820750047452748,
+      "belief_tensor": 2.7985000051558018,
+      "enemy_prior_batch": 30.08620801847428,
+      "hashing": 0.00100000761449337,
+      "leaf_batch": 35.34958302043378,
+      "particle_transitions": 99.48408394120634,
+      "reply": 0.0007080379873514175,
+      "root_inference": 11.861292063258588,
+      "selection": 1.840416924096644
+    },
+    "measured": {
+      "games": 6,
+      "frames": 2972,
+      "normal_frames": 2966,
+      "move_ms": {
+        "n": 2972,
+        "mean": 122.1117,
+        "p50": 119.0,
+        "p99": 193.0,
+        "p999": 407.0,
+        "max": 412.0
+      },
+      "normal_move_ms": {
+        "n": 2966,
+        "mean": 121.709,
+        "p50": 119.0,
+        "p99": 182.0,
+        "p999": 407.0,
+        "max": 412.0
+      },
+      "moves_over_judge_limit": 483,
+      "moves_over_judge_limit_frac": 0.16285,
+      "completed_simulations_normal": {
+        "n": 2966,
+        "mean": 7.7185,
+        "p50": 8.0,
+        "p99": 12.0,
+        "p999": 12.0,
+        "max": 12.0
+      },
+      "forward_equivalents_normal": {
+        "n": 2966,
+        "mean": 9.0394,
+        "p50": 9.0,
+        "p99": 13.0,
+        "p999": 13.0,
+        "max": 14.0
+      },
+      "offline_p99_ms": {
+        "particle_transitions": 357.5287,
+        "leaf_batch": 92.003,
+        "enemy_prior_batch": 36.0373,
+        "root_inference": 26.9389,
+        "belief_proposal": 7.832,
+        "belief_tensor": 5.2605,
+        "selection": 24.7907,
+        "backup": 8.349,
+        "hashing": 0.0016,
+        "reply": 0.0009
+      },
+      "component_ms": {
+        "backup": {
+          "n": 2924,
+          "mean": 3.9489,
+          "p50": 3.4444,
+          "p99": 8.349,
+          "p999": 13.3382,
+          "max": 13.6605
+        },
+        "belief_proposal": {
+          "n": 384,
+          "mean": 6.6277,
+          "p50": 6.507,
+          "p99": 7.832,
+          "p999": 7.9746,
+          "max": 7.9746
+        },
+        "belief_tensor": {
+          "n": 6,
+          "mean": 4.6473,
+          "p50": 4.5281,
+          "p99": 5.2605,
+          "p999": 5.2605,
+          "max": 5.2605
+        },
+        "enemy_prior_batch": {
+          "n": 2972,
+          "mean": 2.5852,
+          "p50": 0.0,
+          "p99": 36.0373,
+          "p999": 91.9871,
+          "max": 115.1951
+        },
+        "hashing": {
+          "n": 2931,
+          "mean": 0.0009,
+          "p50": 0.0009,
+          "p99": 0.0016,
+          "p999": 0.0176,
+          "max": 0.0234
+        },
+        "leaf_batch": {
+          "n": 2924,
+          "mean": 60.3024,
+          "p50": 59.5289,
+          "p99": 92.003,
+          "p999": 150.1114,
+          "max": 171.2192
+        },
+        "particle_transitions": {
+          "n": 384,
+          "mean": 26.5377,
+          "p50": 3.0308,
+          "p99": 357.5287,
+          "p999": 397.9369,
+          "max": 397.9369
+        },
+        "reply": {
+          "n": 2316,
+          "mean": 0.0005,
+          "p50": 0.0005,
+          "p99": 0.0009,
+          "p999": 0.0018,
+          "max": 0.0156
+        },
+        "root_inference": {
+          "n": 2931,
+          "mean": 20.2625,
+          "p50": 21.1577,
+          "p99": 26.9389,
+          "p999": 27.9125,
+          "max": 28.5642
+        },
+        "selection": {
+          "n": 2928,
+          "mean": 13.4504,
+          "p50": 13.2277,
+          "p99": 24.7907,
+          "p999": 59.477,
+          "max": 62.719
+        }
+      },
+      "component_calls_mean": {
+        "backup": 7.862,
+        "belief_proposal": 1.0,
+        "belief_tensor": 1.0,
+        "enemy_prior_batch": 1.436,
+        "hashing": 1.0,
+        "leaf_batch": 1.97,
+        "particle_transitions": 1.0,
+        "reply": 1.0,
+        "root_inference": 1.0,
+        "selection": 9.174
+      },
+      "strata": {
+        "post_contact+recovery": 2185,
+        "pre_contact": 334,
+        "pre_contact+recovery": 224,
+        "late_game+recovery": 169,
+        "post_contact": 48,
+        "first_move": 6,
+        "first_contact": 6
+      },
+      "heavy_strata": {
+        "post_contact+recovery": 276,
+        "pre_contact": 42,
+        "pre_contact+recovery": 30,
+        "late_game+recovery": 22,
+        "post_contact": 7,
+        "first_move": 6,
+        "first_contact": 6
+      },
+      "fallback_level": {
+        "policy": 1512,
+        "average": 1459,
+        "pass": 1
+      },
+      "recovery_frames": 2582,
+      "recovery_frac": 0.86878,
+      "belief_plus_root_ok_frac": 0.11743,
+      "rng_draws": {
+        "choice": 98484,
+        "integers": 1199,
+        "random": 671
+      },
+      "rng_draws_per_turn": 33.77,
+      "rng_unrecorded": {}
+    },
+    "control": {
+      "games": 2,
+      "normal_move_ms": {
+        "n": 1141,
+        "mean": 110.7283,
+        "p50": 101.0,
+        "p99": 197.0,
+        "p999": 423.0,
+        "max": 479.0
+      },
+      "completed_simulations_normal": {
+        "n": 1141,
+        "mean": 5.0421,
+        "p50": 4.0,
+        "p99": 8.0,
+        "p999": 8.0,
+        "max": 8.0
+      },
+      "moves_over_judge_limit_frac": 0.1376
+    }
+  }
+}

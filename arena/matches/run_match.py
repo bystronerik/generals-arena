@@ -62,6 +62,7 @@ def run_and_store(
     update_ratings: bool = False,
     record_trajectory: bool = False,
     trajectories_dir: Path | None = None,
+    engine: str | None = None,
 ) -> GameRecord:
     """Run one competition match, store JSON, optionally refit ratings."""
     a_path = bot_a_run.resolve()
@@ -70,7 +71,12 @@ def run_and_store(
     bot_b = bot_b_id or bot_id_from_run_sh(b_path)
     hash_a = bot_a_content_hash or _register(a_path)
     hash_b = bot_b_content_hash or _register(b_path)
-    engine = engine_version()
+    # Supplied the same way the content hashes are: by a caller that already
+    # knows the identity because it put the checkout there. Unsupplied it is
+    # still read from the submodule's own HEAD, which still raises when it
+    # cannot be — a record with a guessed engine era would pool ratings across
+    # a rules change.
+    engine = engine or engine_version()
     game_id = make_game_id(bot_a, bot_b, seed)
 
     record_request = None

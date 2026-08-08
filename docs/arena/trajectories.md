@@ -85,6 +85,31 @@ Rules that make this safe:
   aborts the recorded match rather than logging a partial trace that looks like
   evidence.
 
+## Captures
+
+A **capture module** is the heavy sibling of a probe: instead of a handful of
+declared scalars it writes whole arrays per turn — observations, belief
+particles, network tensors, RNG draw logs — to
+`<game_id>.capture.<seat>.jsonl.gz` beside the trajectory. Nothing it writes
+reaches `GameRecord.metrics` or the rating fit; a capture is a side file for
+one analysis. See `arena/instrument/capture.py`, and
+[the morpheus-rs parity corpus](../bots/morpheus-rs/parity-corpus.md) for the
+case it was built for.
+
+The same safety rules apply — loaded by path under a private name, outside
+every bot's closure, errors never swallowed — with three differences that
+follow from the size and the purpose:
+
+- **Untyped.** Its consumer is a specific analysis, not the telemetry schema,
+  so there is no key registry to declare against.
+- **Opt-in per run.** Armed by exporting `ARENA_CAPTURE_MODULE`; unset, a
+  recorded match behaves exactly as before.
+- **May wrap, not only read.** A capture may proxy agent internals — the
+  morpheus one wraps the RNG to log draws — strictly to observe them. Frames
+  are written as they arrive rather than buffered to exit, because a whole
+  game's tensors do not serialize inside the three seconds the matchup harness
+  gives a closing agent.
+
 ## From series to metrics
 
 On a recorded game, each key's declared reducers collapse its series into

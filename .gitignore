@@ -51,3 +51,10 @@ training/morpheus/manifests/*
 # that define them live in the plan and the measurement report, so a variant
 # directory is derived data even though it sits under bots/.
 bots/morpheus-*/
+
+# ...but morpheus-rs is a real sibling bot with its own lineage, not a variant
+# (docs/bots/morpheus-rs/rewrite-plan.md §10). Carve it back out of the rule
+# above, and keep its build output and vendored crates out of the tree.
+!bots/morpheus-rs/
+bots/morpheus-rs/target/
+bots/morpheus-rs/vendor/
