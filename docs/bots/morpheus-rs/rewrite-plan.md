@@ -1,7 +1,7 @@
 # Morpheus-rs rewrite plan
 
-Status: **confirmed 2026-08-08 — implementation may begin. M0 is done
-(§14).**
+Status: **confirmed 2026-08-08 — implementation under way. M0, M0.5, and M1
+are done (§14–§16); M0.5 awaits a submission only the account holder can make.**
 Revised against the declared-final morpheus state at commit `9d6f186`
 (oracle `morpheus@73967d2125cc`, registry step 18 — see §14; the
 `17c8ac2684ec` this plan first named was the *previous* registry head, the
@@ -676,3 +676,47 @@ the third for the reason `probe.py` is excluded: the capture module and the
 packager never play, so editing them must not re-identify the bot. No existing
 bot's hash moved.
 
+
+## 16. M1 — done
+
+Delivered 2026-08-08. The deterministic board layer is ported and proved:
+`state`, `transition`, `action` (codec, legal mask, live build cost),
+`observe`, and the `VisibleMemory` container. Harness and its own validation:
+[`parity-harness.md`](parity-harness.md).
+
+**Exit gate met.** Tier-1 parity is bit-exact over the full corpus — 1,328
+heavy frames from 20 games, **495,867 cases** across five surfaces
+(`transition` 127,692, `order` 344,101, `observe` 21,282, `mask` 1,396, `cost`
+1,396), zero mismatches. The matchup gate finishes under `--mode competition`
+against `cm_expander` (loss at turn 215, a normal end). The bot plays the first
+legal move from the ported mask and nothing else: M1 asks for "legal
+prior-free moves", and a hand-written heuristic here would be code nobody
+intends to keep.
+
+**A green parity run was not enough, and that is the milestone's real finding.**
+Mutation testing — break one behaviour in the real source, check the harness
+notices — caught two behaviours that no recorded case could distinguish:
+
+- Deleting the 50-tick army growth passed every recorded transition case; no
+  sampled state sat at `time % 50 == 49`.
+- Deleting the NumPy negative-index wrap in `_determine_move_order` passed even
+  after 1,528 cases aimed at move ordering. The wrap reads row `h-1`, and the
+  preset pads smaller boards to 21×21 with mountains, so on a padded board that
+  row is border and can never be owned. **The corpus cannot tell the two
+  implementations apart there** — a limit of §5's replay-only design, not of
+  this port.
+
+The response was `synthetic_states()`, positions built to reach what replay
+cannot, plus `tools/mutation_check.py` as a standing check: 15 of 17 mutations
+caught, the two survivors documented as equivalent mutants. §5 should be read
+with this correction — **replay proves agreement, mutation proves the proof** —
+and every later milestone's parity claim needs both halves.
+
+Two smaller notes for later milestones:
+
+- The parity stream is integers, not JSON (§5 said JSON). Rust has no std JSON,
+  and the crate stays zero-dependency to protect the 10,000-file budget.
+  Rationale in `parity-harness.md`; the tier-1 guarantee is unaffected.
+- `transition` currently clones a ~3 KB state per call. §6's slab allocation is
+  a search and belief concern (M4/M5), but the kernel is called per particle
+  *and* per simulation, so M4 should measure before assuming the clone is free.

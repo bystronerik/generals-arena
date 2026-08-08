@@ -1,0 +1,677 @@
+#!/usr/bin/env python3
+"""Tier-1 parity: run a ported surface in both languages over recorded cases.
+
+    python bots/morpheus-rs/tests/parity_cases.py --smoke
+    python bots/morpheus-rs/tests/parity_cases.py --corpus data/morpheus/morpheus-rs/morpheus-rs-m0
+
+Milestone M1 of docs/bots/morpheus-rs/rewrite-plan.md, §5 tier 1: transition
+next-state, legal masks, observation emission, and the action codec must be
+**bit-exact**, not close.
+
+The inputs are real: board states come from the belief particles recorded in
+the M0 corpus, so every case is a position morpheus actually reasoned about.
+Both implementations then run fresh on those inputs — the corpus supplies
+states, not expected answers, so a case can exercise action pairs the recorded
+game never played (a build, a deathtouch, a move from an unowned cell).
+
+Wire format is a flat stream of integers, documented in
+`crates/core/src/parity.rs`. Layouts here and there are positional and must be
+edited together.
+"""
+from __future__ import annotations
+
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+
+import numpy as np
+
+BOT_DIR = Path(__file__).resolve().parents[1]
+REPO = BOT_DIR.parents[1]
+for entry in (REPO, REPO / "bots", REPO / "bots" / "morpheus"):
+    if str(entry) not in sys.path:
+        sys.path.insert(0, str(entry))
+
+BINARY = BOT_DIR / "target" / "release" / "morpheus-rs"
+SMOKE_FIXTURE = BOT_DIR / "tests" / "fixtures" / "parity-smoke.jsonl.gz"
+DEFAULT_CORPUS = REPO / "data" / "morpheus" / "morpheus-rs" / "morpheus-rs-m0"
+
+PASS = (1, 0, 0, 0, 0)
+
+
+# --- corpus -> python objects ----------------------------------------------
+
+
+def _state_from_capture(raw: dict) -> object:
+    from state import GameState
+
+    return GameState(
+        armies=np.asarray(raw["armies"], dtype=np.int32),
+        ownership=np.asarray(raw["ownership"], dtype=bool),
+        ownership_neutral=np.asarray(raw["ownership_neutral"], dtype=bool),
+        generals=np.asarray(raw["generals"], dtype=bool),
+        castles=np.asarray(raw["castles"], dtype=bool),
+        mountains=np.asarray(raw["mountains"], dtype=bool),
+        passable=np.asarray(raw["passable"], dtype=bool),
+        general_positions=np.asarray(raw["general_positions"], dtype=np.int32),
+        time=int(raw["time"]),
+        winner=int(raw["winner"]),
+        pool_idx=0,
+    )
+
+
+def _memory_from_capture(raw: dict) -> object:
+    from memory import VisibleMemory
+
+    return VisibleMemory(
+        H=int(raw["H"]),
+        W=int(raw["W"]),
+        known_mountain=np.asarray(raw["known_mountain"], dtype=bool),
+        known_passable_base=np.asarray(raw["known_passable_base"], dtype=bool),
+        known_castle=np.asarray(raw["known_castle"], dtype=bool),
+        own_general=np.asarray(raw["own_general"], dtype=bool),
+        known_enemy_general=np.asarray(raw["known_enemy_general"], dtype=bool),
+        ever_visible=np.asarray(raw["ever_visible"], dtype=bool),
+        last_seen_turn=np.asarray(raw["last_seen_turn"], dtype=np.int32),
+        remembered_owner=np.asarray(raw["remembered_owner"], dtype=np.int8),
+        remembered_army=np.asarray(raw["remembered_army"], dtype=np.int32),
+        remembered_was_castle=np.asarray(raw["remembered_was_castle"], dtype=bool),
+        remembered_castle_owner=np.asarray(raw["remembered_castle_owner"], dtype=np.int8),
+    )
+
+
+def _obs_from_capture(raw: dict) -> object:
+    from observe import ArrayObservation
+
+    return ArrayObservation(
+        H=int(raw["H"]),
+        W=int(raw["W"]),
+        turn=int(raw["turn"]),
+        my_land=int(raw["my_land"]),
+        my_army=int(raw["my_army"]),
+        opp_land=int(raw["opp_land"]),
+        opp_army=int(raw["opp_army"]),
+        type_grid=np.asarray(raw["type"], dtype=np.int32),
+        owner_grid=np.asarray(raw["owner"], dtype=np.int32),
+        army_grid=np.asarray(raw["army"], dtype=np.int32),
+    )
+
+
+def load_frames(paths: list[Path], limit: int = 0) -> list[dict]:
+    """Heavy frames from capture files, newest-first cap applied per file."""
+    from arena.instrument.capture import read_frames
+
+    frames: list[dict] = []
+    for path in paths:
+        for frame in read_frames(path):
+            if not frame.get("heavy"):
+                continue
+            frames.append(frame)
+            if limit and len(frames) >= limit:
+                return frames
+    return frames
+
+
+# --- serialization (mirrors crates/core/src/parity.rs) ----------------------
+
+
+def encode_state(state) -> list[int]:
+    h, w = state.armies.shape
+    out = [h, w, int(state.time), int(state.winner)]
+    out += [int(v) for v in np.asarray(state.general_positions).ravel()]
+    out += [int(v) for v in state.armies.ravel()]
+    for plane in (
+        state.ownership[0],
+        state.ownership[1],
+        state.ownership_neutral,
+        state.generals,
+        state.castles,
+        state.mountains,
+        state.passable,
+    ):
+        out += [int(bool(v)) for v in np.asarray(plane).ravel()]
+    return out
+
+
+def decode_state(values: list[int]) -> tuple[object, tuple, int]:
+    """Inverse of `encode_state`, plus the trailing `GameInfo` seven."""
+    from state import GameState
+
+    h, w = values[0], values[1]
+    time, winner = values[2], values[3]
+    gp = np.asarray(values[4:8], dtype=np.int32).reshape(2, 2)
+    n = h * w
+    at = 8
+    armies = np.asarray(values[at : at + n], dtype=np.int32).reshape(h, w)
+    at += n
+    planes = []
+    for _ in range(7):
+        planes.append(np.asarray(values[at : at + n], dtype=bool).reshape(h, w))
+        at += n
+    info = tuple(values[at : at + 7])
+    state = GameState(
+        armies=armies,
+        ownership=np.stack([planes[0], planes[1]]),
+        ownership_neutral=planes[2],
+        generals=planes[3],
+        castles=planes[4],
+        mountains=planes[5],
+        passable=planes[6],
+        general_positions=gp,
+        time=time,
+        winner=winner,
+        pool_idx=0,
+    )
+    return state, info, at + 7
+
+
+def encode_observation(obs) -> list[int]:
+    types = np.asarray(obs.type_grid, dtype=np.int32)
+    owners = np.asarray(obs.owner_grid, dtype=np.int32)
+    armies = np.asarray(obs.army_grid, dtype=np.int32)
+    return (
+        [
+            int(obs.H),
+            int(obs.W),
+            int(obs.turn),
+            int(obs.my_land),
+            int(obs.my_army),
+            int(obs.opp_land),
+            int(obs.opp_army),
+        ]
+        + [int(v) for v in types.ravel()]
+        + [int(v) for v in owners.ravel()]
+        + [int(v) for v in armies.ravel()]
+    )
+
+
+def encode_memory(memory) -> list[int]:
+    out = [int(memory.H), int(memory.W)]
+    for plane in (
+        memory.known_mountain,
+        memory.known_passable_base,
+        memory.known_castle,
+        memory.own_general,
+        memory.known_enemy_general,
+        memory.ever_visible,
+        memory.last_seen_turn,
+        memory.remembered_owner,
+        memory.remembered_army,
+        memory.remembered_was_castle,
+        memory.remembered_castle_owner,
+    ):
+        out += [int(v) for v in np.asarray(plane).ravel()]
+    return out
+
+
+# --- synthetic states -------------------------------------------------------
+
+
+def _blank(h: int, w: int):
+    from state import GameState
+
+    return GameState(
+        armies=np.zeros((h, w), np.int32),
+        ownership=np.zeros((2, h, w), bool),
+        ownership_neutral=np.zeros((h, w), bool),
+        generals=np.zeros((h, w), bool),
+        castles=np.zeros((h, w), bool),
+        mountains=np.zeros((h, w), bool),
+        passable=np.ones((h, w), bool),
+        general_positions=np.array([[0, 0], [h - 1, w - 1]], np.int32),
+        time=0,
+        winner=-1,
+        pool_idx=0,
+    )
+
+
+def synthetic_states() -> list:
+    """
+    Hand-built states for branches the recorded corpus provably cannot reach.
+
+    Mutation testing found two. Dropping the 50-tick growth survived every
+    recorded case, because no sampled state sat at `time % 50 == 49`. Dropping
+    the NumPy negative-index wrap in `_determine_move_order` survived too, for
+    a subtler reason: the wrap reads row `h-1`, and the competition preset pads
+    smaller boards to 21×21 with mountains, so on a padded board that row is
+    border and can never be owned.
+
+    Neither gap is a reason to relax the check — they are a reason to stop
+    relying on replay alone. These states own the wrap cell deliberately, sit
+    on the growth and deathtouch boundaries, and can afford a build.
+    """
+    states = []
+
+    for time in (0, 1, 48, 49, 98, 99, 799, 800, 801, 1199):
+        s = _blank(5, 5)._replace(time=time)
+        s.generals[0, 0] = True
+        s.ownership[0][0, 0] = True
+        s.armies[0, 0] = 12
+        s.generals[4, 4] = True
+        s.ownership[1][4, 4] = True
+        s.armies[4, 4] = 12
+        s.ownership[0][0, 1] = True
+        s.armies[0, 1] = 6
+        s.ownership[1][4, 3] = True
+        s.armies[4, 3] = 6
+        s.castles[2, 2] = True
+        s.ownership[0][2, 2] = True
+        s.armies[2, 2] = 40
+        s.ownership_neutral[:] = ~(s.ownership[0] | s.ownership[1])
+        states.append(s)
+
+    # The wrap cell: `di = -1` resolves to row h-1, column 0. Own it, one seat
+    # at a time, so `p0_reinforcing` and `p1_reinforcing` actually differ.
+    for owner in (0, 1, 2):
+        s = _blank(5, 5)._replace(time=10)
+        s.generals[0, 0] = True
+        s.ownership[0][0, 0] = True
+        s.armies[0, 0] = 9
+        s.generals[0, 4] = True
+        s.ownership[1][0, 4] = True
+        s.armies[0, 4] = 9
+        if owner in (0, 2):
+            s.ownership[0][4, 0] = True
+            s.armies[4, 0] = 3
+        if owner in (1, 2):
+            cell = (4, 0) if owner == 1 else (4, 1)
+            s.ownership[1][cell] = True
+            s.armies[cell] = 3
+        s.ownership_neutral[:] = ~(s.ownership[0] | s.ownership[1])
+        states.append(s)
+
+    # Deathtouch shapes on a corridor: adjacent generals, and both seats one
+    # step from the other's general.
+    for time in (799, 800):
+        s = _blank(1, 4)._replace(time=time)
+        s.general_positions[:] = np.array([[0, 0], [0, 3]], np.int32)
+        s.generals[0, 0] = True
+        s.ownership[0][0, 0] = True
+        s.armies[0, 0] = 5
+        s.generals[0, 3] = True
+        s.ownership[1][0, 3] = True
+        s.armies[0, 3] = 5
+        s.ownership[0][0, 2] = True
+        s.armies[0, 2] = 2
+        s.ownership[1][0, 1] = True
+        s.armies[0, 1] = 2
+        states.append(s)
+
+    # A plain owned cell rich enough to build on, far from any structure.
+    # Without one, every build in the synthetic set is refused for being
+    # unaffordable or for sitting on a general or castle, and the
+    # `known_passable_base` gate — the only thing that stops a build on ground
+    # never actually seen — never gets to decide anything.
+    s = _blank(7, 7)._replace(time=200)
+    s.generals[0, 0] = True
+    s.ownership[0][0, 0] = True
+    s.armies[0, 0] = 5
+    s.generals[6, 6] = True
+    s.ownership[1][6, 6] = True
+    s.armies[6, 6] = 5
+    for cell, army in (((3, 3), 200), ((3, 4), 36), ((3, 2), 34)):
+        s.ownership[0][cell] = True
+        s.armies[cell] = army
+    s.ownership_neutral[:] = ~(s.ownership[0] | s.ownership[1])
+    states.append(s)
+
+    # A finished game: every branch downstream of `winner >= 0` must agree.
+    s = _blank(3, 3)._replace(winner=0, time=120)
+    s.generals[0, 0] = True
+    s.ownership[0][0, 0] = True
+    s.armies[0, 0] = 4
+    states.append(s)
+
+    return states
+
+
+def memory_for(state, seat: int = 0, *, explored: bool = True):
+    """
+    A memory for a synthetic state — fully informed, or never explored.
+
+    `explored=False` blanks `known_passable_base`, which is the only thing
+    standing between an owned, affordable cell and a build. Mutation testing
+    found that gate unreachable otherwise: owned cells in real games have
+    always been seen, so deleting the check changed nothing anywhere in the
+    corpus. A cell can be owned and still unproven — captured through fog by a
+    move whose destination was never in vision — so the branch is real, and
+    without this variant nothing would notice if the port lost it.
+    """
+    from memory import VisibleMemory
+
+    h, w = state.armies.shape
+    own = np.asarray(state.ownership[seat])
+    passable_base = (np.asarray(state.passable) & ~np.asarray(state.castles)
+                     & ~np.asarray(state.generals))
+    if not explored:
+        passable_base = np.zeros((h, w), bool)
+    return VisibleMemory(
+        H=h,
+        W=w,
+        known_mountain=np.asarray(state.mountains).copy(),
+        known_passable_base=passable_base,
+        known_castle=np.asarray(state.castles).copy(),
+        own_general=(np.asarray(state.generals) & own),
+        known_enemy_general=(np.asarray(state.generals) & ~own),
+        ever_visible=np.ones((h, w), bool),
+        last_seen_turn=np.full((h, w), int(state.time), np.int32),
+        remembered_owner=np.where(own, 1, 0).astype(np.int8),
+        remembered_army=np.asarray(state.armies).copy(),
+        remembered_was_castle=np.asarray(state.castles).copy(),
+        remembered_castle_owner=np.where(own & np.asarray(state.castles), 1, 0).astype(np.int8),
+    )
+
+
+# --- case generation --------------------------------------------------------
+
+
+def action_pairs(state, cap: int = 12) -> list[tuple[tuple, tuple]]:
+    """
+    A deterministic spread of joint actions for one state.
+
+    Includes moves the recorded game never played — from unowned cells, into
+    walls, half-splits, builds — because `transition` has to agree on invalid
+    input too: it validates internally and silently no-ops, and "silently" is
+    exactly where two implementations drift apart without anyone noticing.
+
+    Every generated action keeps its source **and** destination on the board.
+    That is not tidiness: `_determine_move_order` indexes with raw
+    `row + dr`, and NumPy raises on positive overflow while wrapping negatives.
+    Pass (`[1,0,0,0,0]`) is the wrap case and is always included; positive
+    overflow is outside the Python's domain, so it is outside the contract.
+    """
+    h, w = state.armies.shape
+    dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    per_seat: list[list[tuple]] = [[PASS], [PASS]]
+
+    for seat in (0, 1):
+        owned = np.argwhere(np.asarray(state.ownership[seat]))
+        for r, c in owned[: max(1, cap // 2)]:
+            r, c = int(r), int(c)
+            for d, (dr, dc) in enumerate(dirs):
+                if not (0 <= r + dr < h and 0 <= c + dc < w):
+                    continue
+                per_seat[seat].append((0, r, c, d, 0))
+                per_seat[seat].append((0, r, c, d, 1))
+            per_seat[seat].append((2, r, c, 0, 0))  # build, usually unaffordable
+        # A move from a cell this seat does not own: must be a silent no-op.
+        unowned = np.argwhere(~np.asarray(state.ownership[seat]))
+        if len(unowned):
+            r, c = (int(x) for x in unowned[0])
+            d = next((i for i, (dr, dc) in enumerate(dirs) if 0 <= r + dr < h and 0 <= c + dc < w), 0)
+            per_seat[seat].append((0, r, c, d, 0))
+
+    pairs = []
+    for i in range(cap):
+        a = per_seat[0][i % len(per_seat[0])]
+        b = per_seat[1][(i * 3 + 1) % len(per_seat[1])]
+        pairs.append((a, b))
+    return pairs
+
+
+def order_pairs(state) -> list[tuple[tuple, tuple]]:
+    """
+    Action pairs chosen to make *move order* observable.
+
+    Replaying recorded positions barely tests this. Move order only changes the
+    board when the two moves interact, so a mutation that broke the NumPy
+    negative-index wrap in `_determine_move_order` — the rule that decides who
+    resolves first whenever either seat passes — survived 672 end-to-end
+    transition cases untouched. These pairs hit the ordering rules directly:
+    pass against move (the wrap case), reinforce against capture, and equal and
+    unequal source armies for the size tiebreak.
+    """
+    h, w = state.armies.shape
+    dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    moves: list[list[tuple]] = [[], []]
+    for seat in (0, 1):
+        for r, c in np.argwhere(np.asarray(state.ownership[seat]))[:6]:
+            r, c = int(r), int(c)
+            for d, (dr, dc) in enumerate(dirs):
+                if 0 <= r + dr < h and 0 <= c + dc < w:
+                    moves[seat].append((0, r, c, d, 0))
+
+    pairs = [(PASS, PASS)]
+    for a in moves[0][:8]:
+        pairs.append((a, PASS))       # only seat 1 passes
+        pairs.append((PASS, a))       # only seat 0 passes -> the wrap case
+    for a, b in zip(moves[0][:8], moves[1][:8]):
+        pairs.append((a, b))
+        pairs.append((b, a))
+    return pairs
+
+
+def build_cases(
+    frames: list[dict], kind: str, *, pairs_per_state: int = 12, synthetic: bool = True
+) -> tuple[list[int], list]:
+    """`(int stream, python-side expectations)` for one parity kind."""
+    from action import legal_mask
+    from observe import emit_observation
+    from transition import transition
+    from action import live_build_cost
+
+    stream: list[int] = []
+    expected: list = []
+
+    from transition import _determine_move_order
+
+    def _states_of(frame) -> list:
+        if frame is None:  # the synthetic block
+            return synthetic_states()
+        return [
+            _state_from_capture(p["state"])
+            for p in (frame.get("belief") or {}).get("particles", [])
+        ]
+
+    # `None` stands for the synthetic block, appended so every kind sees the
+    # branches replay cannot reach.
+    for frame in list(frames) + ([None] if synthetic else []):
+        if kind in ("transition", "observe", "order"):
+            for state in _states_of(frame):
+                if kind == "transition":
+                    for a, b in action_pairs(state, pairs_per_state):
+                        actions = np.asarray([a, b], dtype=np.int32)
+                        nxt, info = transition(state, actions)
+                        stream += encode_state(state) + list(a) + list(b)
+                        expected.append((nxt, info))
+                elif kind == "order":
+                    for a, b in order_pairs(state):
+                        actions = np.asarray([a, b], dtype=np.int32)
+                        stream += encode_state(state) + list(a) + list(b)
+                        expected.append(int(_determine_move_order(state, actions)))
+                else:
+                    for seat in (0, 1):
+                        obs = emit_observation(state, seat, as_arrays=True)
+                        stream += encode_state(state) + [seat]
+                        expected.append(obs)
+        elif kind in ("mask", "cost"):
+            pairs = []
+            if frame is None:
+                # Synthetic: emit each seat's own view and a memory that knows
+                # the board, so builds are priceable and actually reachable.
+                for state in synthetic_states():
+                    for seat in (0, 1):
+                        obs = emit_observation(state, seat, as_arrays=True)
+                        for explored in (True, False):
+                            pairs.append((obs, memory_for(state, seat, explored=explored)))
+            elif "memory" in frame:
+                pairs.append((_obs_from_capture(frame["obs"]),
+                              _memory_from_capture(frame["memory"])))
+            for obs, memory in pairs:
+                stream += encode_observation(obs) + encode_memory(memory)
+                expected.append(
+                    legal_mask(obs, memory) if kind == "mask" else live_build_cost(obs, memory)
+                )
+        else:
+            raise ValueError(f"unknown kind {kind!r}")
+
+    return [len(expected)] + stream, expected
+
+
+# --- running ----------------------------------------------------------------
+
+
+def run_binary(kind: str, stream: list[int]) -> list[list[int]]:
+    if not BINARY.is_file():
+        raise FileNotFoundError(BINARY)
+    text = " ".join(str(v) for v in stream)
+    result = subprocess.run(
+        [str(BINARY), "parity", kind],
+        input=text,
+        capture_output=True,
+        text=True,
+        timeout=1800,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"parity {kind} failed: {result.stderr[-2000:]}")
+    return [
+        [int(t) for t in line.split()]
+        for line in result.stdout.splitlines()
+        if line.strip()
+    ]
+
+
+def compare(kind: str, expected: list, actual: list[list[int]]) -> list[str]:
+    """Every mismatch, described well enough to act on without a debugger."""
+    problems: list[str] = []
+    if len(actual) != len(expected):
+        return [f"{kind}: {len(actual)} results for {len(expected)} cases"]
+
+    for i, (want, got) in enumerate(zip(expected, actual)):
+        if kind == "transition":
+            nxt, info = want
+            rust_state, rust_info, _ = decode_state(got)
+            from state import states_equal
+
+            if not states_equal(nxt, rust_state):
+                fields = [
+                    name
+                    for name in ("armies", "ownership", "ownership_neutral",
+                                 "generals", "castles", "mountains", "passable")
+                    if not np.array_equal(getattr(nxt, name), getattr(rust_state, name))
+                ]
+                if nxt.time != rust_state.time:
+                    fields.append(f"time({nxt.time}!={rust_state.time})")
+                if nxt.winner != rust_state.winner:
+                    fields.append(f"winner({nxt.winner}!={rust_state.winner})")
+                problems.append(f"transition[{i}]: {', '.join(fields) or 'state'}")
+            want_info = (
+                int(info.army[0]), int(info.army[1]),
+                int(info.land[0]), int(info.land[1]),
+                int(bool(info.is_done)), int(info.winner), int(info.time),
+            )
+            if tuple(rust_info) != want_info:
+                problems.append(f"transition[{i}]: info {rust_info} != {want_info}")
+        elif kind == "observe":
+            h, w = want.H, want.W
+            n = h * w
+            head = got[:7]
+            if head != [h, w, want.turn, want.my_land, want.my_army, want.opp_land, want.opp_army]:
+                problems.append(f"observe[{i}]: scalars {head}")
+            grids = {
+                "type": np.asarray(want.type_grid).ravel(),
+                "owner": np.asarray(want.owner_grid).ravel(),
+                "army": np.asarray(want.army_grid).ravel(),
+            }
+            for k, (name, plane) in enumerate(grids.items()):
+                chunk = np.asarray(got[7 + k * n : 7 + (k + 1) * n], dtype=np.int32)
+                if not np.array_equal(chunk, plane.astype(np.int32)):
+                    bad = int(np.argmax(chunk != plane.astype(np.int32)))
+                    problems.append(
+                        f"observe[{i}]: {name} differs first at cell {bad} "
+                        f"({chunk[bad]} != {plane[bad]})"
+                    )
+        elif kind == "mask":
+            want_mask = np.asarray(want, dtype=bool)
+            got_mask = np.asarray(got, dtype=bool)
+            if got_mask.shape != want_mask.shape:
+                problems.append(f"mask[{i}]: length {got_mask.shape} != {want_mask.shape}")
+            elif not np.array_equal(want_mask, got_mask):
+                diff = np.flatnonzero(want_mask != got_mask)
+                problems.append(
+                    f"mask[{i}]: {diff.size} action(s) differ, first index {int(diff[0])}"
+                )
+        elif kind == "order":
+            if got != [want]:
+                problems.append(f"order[{i}]: seat {got} != {want}")
+        elif kind == "cost":
+            want_cost = np.asarray(want, dtype=np.int32).ravel()
+            got_cost = np.asarray(got, dtype=np.int32)
+            if not np.array_equal(want_cost, got_cost):
+                diff = np.flatnonzero(want_cost != got_cost)
+                problems.append(
+                    f"cost[{i}]: {diff.size} cell(s) differ, first {int(diff[0])} "
+                    f"({got_cost[diff[0]]} != {want_cost[diff[0]]})"
+                )
+    return problems
+
+
+def check(
+    kind: str,
+    frames: list[dict],
+    *,
+    pairs_per_state: int = 12,
+    batch: int = 25,
+) -> tuple[int, list[str]]:
+    """
+    Run one kind over all frames, in batches.
+
+    Batched because the whole corpus does not fit in one invocation: ~780 heavy
+    frames times eight particles times a dozen action pairs is tens of
+    thousands of cases, and a board state serializes to about 3,500 integers.
+    One stream would be hundreds of megabytes of text through a pipe. Frames
+    are independent, so splitting changes nothing about what is checked.
+    """
+    total = 0
+    problems: list[str] = []
+    chunks = [frames[i : i + batch] for i in range(0, len(frames), batch)] or [[]]
+    for n, chunk in enumerate(chunks):
+        # The synthetic block rides the first chunk only; it is appended inside
+        # `build_cases` and would otherwise be re-run for every batch.
+        stream, expected = build_cases(
+            chunk, kind, pairs_per_state=pairs_per_state, synthetic=(n == 0)
+        )
+        if not expected:
+            continue
+        total += len(expected)
+        for problem in compare(kind, expected, run_binary(kind, stream)):
+            problems.append(f"batch {n}: {problem}")
+    return total, problems
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--corpus", type=Path, default=DEFAULT_CORPUS)
+    parser.add_argument("--smoke", action="store_true", help="use the committed slice")
+    parser.add_argument("--limit", type=int, default=0, help="cap heavy frames")
+    parser.add_argument("--pairs", type=int, default=12, help="action pairs per state")
+    parser.add_argument(
+        "--kinds", nargs="*", default=["transition", "order", "observe", "mask", "cost"]
+    )
+    args = parser.parse_args(argv)
+
+    if args.smoke:
+        paths = [SMOKE_FIXTURE]
+    else:
+        paths = sorted(Path(args.corpus).rglob("*.capture.*.jsonl.gz"))
+    if not paths:
+        print(f"no captures under {args.corpus}", file=sys.stderr)
+        return 1
+
+    frames = load_frames(paths, limit=args.limit)
+    print(f"{len(frames)} heavy frame(s) from {len(paths)} file(s)")
+
+    failed = False
+    for kind in args.kinds:
+        count, problems = check(kind, frames, pairs_per_state=args.pairs)
+        status = "ok" if not problems else f"{len(problems)} MISMATCH"
+        print(f"  {kind:<11} {count:>6} case(s)  {status}")
+        for problem in problems[:20]:
+            print(f"      {problem}")
+        failed = failed or bool(problems)
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

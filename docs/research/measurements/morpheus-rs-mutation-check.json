@@ -1,0 +1,90 @@
+{
+  "scope": "smoke",
+  "results": [
+    {
+      "name": "50-tick army growth",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "even-tick structure growth",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "numpy negative-index wrap",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "deathtouch turn boundary",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "attacker wins ties",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "half-split rounds up",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "a move may empty its source",
+      "outcome": "survived",
+      "note": "Equivalent mutant, not a harness hole. `army_to_move` guards its invariant twice over \u2014 once in the `raw` formula and again in the clamp \u2014 so either alone is sufficient and deleting either is unobservable. The Python is written the same way; the redundancy is being ported faithfully, not introduced here."
+    },
+    {
+      "name": "build ignores affordability",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "build proximity surcharge dropped",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "loser cells not transferred",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "neutral flag survives a loss",
+      "outcome": "survived",
+      "note": "Unobservable by construction: `ownership_neutral` and `ownership[seat]` are disjoint on every well-formed state, so the mask it clears is always empty. Faithful to the Python, and only a malformed state could tell the difference."
+    },
+    {
+      "name": "visibility is 4-neighbour",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "structures under fog read as fog",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "fogged armies leak",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "half-split legal at two army",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "build on unexplored ground",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "moves into mountains are legal",
+      "outcome": "caught",
+      "note": ""
+    }
+  ]
+}
