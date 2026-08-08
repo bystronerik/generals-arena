@@ -1565,6 +1565,112 @@ def _capture_moved_army(idx: int, armies: Array) -> int:
     return src // 2 if int(action[4]) == 1 else src - 1
 
 
+# Max length of a forced finishing march on a visible enemy general. Neither
+# the 2-ply search nor any score term can represent "walk the 7-stack through
+# the 2-stack and arrive with more than the garrison" — a field-observed miss
+# where the opponent's general sat at 2 army with our stacks 1-3 cells away.
+KILL_HORIZON = 6
+
+
+def winning_kill_move(obs, memory: VisibleMemory) -> Optional[Action5]:
+    """First step of a winning march on the visible enemy general, if any.
+
+    Simulates a greedy descent of the BFS gradient from each nearby own
+    stack: full moves that collect own armies en route, pay for neutral and
+    enemy cells, and must arrive with strictly more than the garrison plus
+    its growth (+1 every other turn) over the march. From ``DEATHTOUCH_TURN``
+    any arrival wins, so the requirement drops to reaching the tile. Replans
+    every turn; if the window closes, the plan silently disappears.
+    """
+    types, owners, armies = _as_grids(obs)
+    gcell = known_enemy_general_cell(obs, memory)
+    if gcell is None or int(owners[gcell]) != OWNER_ENEMY:
+        return None
+    g = int(armies[gcell])
+    turn = int(getattr(obs, "turn", 0))
+    H, W = int(obs.H), int(obs.W)
+    dist = path_distance_field(obs, [gcell])
+
+    def _walk(sr: int, sc: int) -> Optional[tuple[int, int, Action5]]:
+        """Greedy gradient walk; returns ``(turns, margin, first_move)``."""
+        army = int(armies[sr, sc])
+        cur = (sr, sc)
+        first: Optional[Action5] = None
+        steps = 0
+        while int(dist[cur]) > 1:
+            # Prefer collecting own armies; else the cheapest cell to cross.
+            best_n = None
+            best_key = None
+            for d in range(4):
+                nr = cur[0] + int(DIRECTIONS[d, 0])
+                nc = cur[1] + int(DIRECTIONS[d, 1])
+                if not (0 <= nr < H and 0 <= nc < W):
+                    continue
+                if int(dist[nr, nc]) != int(dist[cur]) - 1:
+                    continue
+                # Fogged cells hide their army — a march priced on unknown
+                # costs is a doomed march. Visible cells only.
+                if int(types[nr, nc]) in (TYPE_FOG, TYPE_STRUCTURE_FOG):
+                    continue
+                o = int(owners[nr, nc])
+                a_n = int(armies[nr, nc])
+                key = (0, -a_n) if o == 1 else (1, a_n)
+                if best_key is None or key < best_key:
+                    best_key = key
+                    best_n = (nr, nc, d)
+            if best_n is None:
+                return None
+            nr, nc, d = best_n
+            moved = army - 1
+            if moved <= 0:
+                return None
+            o = int(owners[nr, nc])
+            a_n = int(armies[nr, nc])
+            if o == 1:
+                army = moved + a_n
+            else:
+                if moved <= a_n:
+                    return None
+                army = moved - a_n
+            if first is None:
+                first = (0, cur[0], cur[1], d, 0)
+            cur = (nr, nc)
+            steps += 1
+        # The touch itself.
+        moved = army - 1
+        steps += 1
+        need = 0 if turn >= DEATHTOUCH_TURN else g + (steps + 1) // 2
+        if moved <= need:
+            return None
+        if first is None:
+            # Already adjacent: the touch is the first move.
+            for d in range(4):
+                nr = cur[0] + int(DIRECTIONS[d, 0])
+                nc = cur[1] + int(DIRECTIONS[d, 1])
+                if (nr, nc) == gcell:
+                    first = (0, cur[0], cur[1], d, 0)
+        if first is None:
+            return None
+        return steps, moved - need, first
+
+    best: Optional[tuple[int, int, Action5]] = None
+    own_cells = np.argwhere((owners == 1) & (armies >= 2))
+    for r, c in own_cells:
+        r, c = int(r), int(c)
+        d0 = int(dist[r, c])
+        if not (1 <= d0 <= KILL_HORIZON):
+            continue
+        plan = _walk(r, c)
+        if plan is None:
+            continue
+        steps, margin, first = plan
+        if best is None or (steps, -margin) < (best[0], -best[1]):
+            best = (steps, margin, first)
+    if best is None:
+        return None
+    return best[2]
+
+
 def constrain_nn_action(
     obs,
     memory: VisibleMemory,
@@ -1603,6 +1709,14 @@ def constrain_nn_action(
         if caps:
             best_cap = max(caps, key=lambda i: _capture_moved_army(i, armies))
             return tuple(int(x) for x in decode_action(best_cap))  # type: ignore[return-value]
+
+    # Kill window: a winning multi-turn march on the visible general is
+    # forced step by step (replanned every turn; see winning_kill_move).
+    kill_step = winning_kill_move(obs, memory)
+    if kill_step is not None:
+        idx = encode_action(kill_step)
+        if bool(mask[idx]):
+            return kill_step
 
     chosen: Action5 = tuple(int(x) for x in action)  # type: ignore[assignment]
     nonpass = np.asarray(mask, dtype=bool).copy()
