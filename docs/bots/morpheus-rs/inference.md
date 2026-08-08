@@ -34,9 +34,9 @@ not less:
 
 | batch | TorchScript p99 | morpheus-rs p99 | speedup |
 | ---: | ---: | ---: | ---: |
-| 1 | 5.55 ms | 5.07 ms | 1.10× |
-| 4 | 65.63 ms | 19.52 ms | 3.36× |
-| 8 | 121.72 ms | 40.60 ms | 3.00× |
+| 1 | 6.72 ms | 4.09 ms | 1.64× |
+| 4 | 67.29 ms | 16.23 ms | 4.15× |
+| 8 | 119.71 ms | 32.38 ms | 3.70× |
 
 Batch 1 is nearly a tie; the batch wins are large because TorchScript's batched
 call scales *superlinearly* on this host (4× the work for 11.8× the time) while
@@ -102,7 +102,10 @@ tests. No dependencies, no `unsafe`, no intrinsics.
 - **Pointwise layers.** `gemm_bias`, a 4×16 register-tiled kernel with `n`
   outermost so the 16-column strip of activations stays in L1 across every row
   block of weights.
-- **Depthwise.** Per channel, per row, nine taps into a row-local accumulator.
+- **Depthwise.** The plane is copied into a 29×29 haloed frame, where a tap
+  becomes a uniform shift and off-board reads land in zeros. All nine taps then
+  run over one contiguous 601-element span instead of 21 rows of 21. Worth
+  1.52 → 0.66 ms on x86 and nothing at all on arm64 — see below.
 - **Heads.** 1×1 convolutions are the same GEMM with a row tail; the scalar
   heads are a matvec over the 128-wide masked global feature vector.
 - **Batch is a loop.** Four sequential forwards, not a widened tensor. It costs
@@ -120,6 +123,19 @@ losing to TorchScript by 1.8× to beating it.
 
 Everything else measured smaller. GroupNorm's statistics went from 1.37 ms to
 0.44 by splitting one serial `sum +=` chain into eight lanes.
+
+The depthwise halo is the one optimisation whose value is platform-specific.
+Laying the plane out with a four-cell border turns each tap into a single
+601-element axpy rather than 21 rows of 21, at the cost of 36% arithmetic spent
+on halo columns that get dropped. On the M3 Pro that trade is a wash —
+0.284 ms before, 0.287 ms after; NEON was already handling five-and-a-bit
+vectors per row fine. On one x86 core it is 1.52 ms → 0.66 ms, taking the layer
+from a third of the forward to a seventh and the whole batch-1 forward from
+5.07 ms to 4.09 ms.
+
+The lesson is not about halos. It is that the arm64 development machine had
+been saying this layer was fine, and it was fine *there*. The stage table below
+is the laptop's; the one in the x86 report is the one that decides.
 
 | stage | ms (batch 1) | share |
 | --- | ---: | ---: |
@@ -248,9 +264,11 @@ is not float noise, it is an entry point computing something else.
   reservation, which is as consistent with contention as with kernels. Batch 1,
   where there is nothing to contend over, is only 1.10×. M7 needs the reference
   host before any of these numbers is treated as a deployment figure.
-- **The depthwise layer on x86.** 1.52 ms there against 0.28 ms on arm64 —
-  a third of the forward. The haloed-plane rewrite that was optional on arm64
-  is worth more on the machine that matters.
+- **How much further the depthwise layer can go.** The halo took it to 0.66 ms
+  on x86, still 16% of the forward for 6% of the arithmetic, and 36% of what it
+  now computes is halo columns thrown away. Narrowing the frame per dilation
+  (a 1-cell border is enough for eight of the twelve blocks) would recover most
+  of that waste. Not measured, so not claimed.
 - Why an unrelated edit moved the depthwise stage 4×. Refuting three
   hypotheses narrowed it to whole-crate LTO, but narrowing is not identifying,
   and the next person to optimise a stage here should know that.

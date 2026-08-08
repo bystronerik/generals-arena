@@ -553,59 +553,99 @@ fn im2col_3x3(src: &[f32], channels: usize, dilation: usize, dst: &mut [f32]) {
 
 /// Depthwise 3×3 with dilation: one 9-tap filter per channel, zero padded.
 ///
-/// **This layer's cost is not stable across builds, and that is worth knowing
-/// before optimising it.** It currently measures 0.28 ms, 8% of a forward for
-/// 6% of the multiply-accumulates, which is fine. Earlier in M3 the same
-/// source measured 1.10 ms — four times as much — and the change came from
-/// edits *elsewhere in the crate*, not from this function.
+/// **The plane is copied into a haloed frame so each tap is one long axpy.**
+/// The board is 21×21; the frame is 29×29, the board with `MAX_DILATION` cells
+/// of zero on every side. In that frame a tap is a *uniform shift*: output
+/// cell `i` reads `i + dy·29 + dx`, and off-board reads land in the halo,
+/// which is zero, which is exactly what the padding means. So all nine taps
+/// run over one contiguous 601-element span instead of 21 rows of 21.
 ///
-/// Three candidate causes were tested and all three refuted: the softmax width
-/// change, the profiler's stage ordering, and three different formulations of
-/// the loop below (nine read-modify-write passes, clamped column ranges, and
-/// the padded-row form here) which all measured within 1% of each other at
-/// both speeds. The remaining explanation is the build: `lto = "fat"` with
-/// `codegen-units = 1` means any new code path can shift inlining and
-/// vectorisation decisions globally.
+/// The 601 covers a little more than the 441 real cells — the halo columns
+/// between rows come along for the ride and are dropped on the way out. That
+/// is 36% wasted arithmetic traded for vector length: 21 floats is five
+/// vectors and a remainder, and the remainder was the problem.
 ///
-/// So: re-measure this stage, never remember it, and be suspicious of a
-/// per-stage number quoted from a different build. The whole-forward figure is
-/// the one to hold onto.
+/// **It pays on x86 and does nothing on arm64.** The layer goes 1.52 ms →
+/// 0.66 ms on one x86 core — a third of the forward down to a seventh, and the
+/// whole batch-1 forward from 5.07 ms to 4.09 ms — while the M3 Pro moves
+/// 0.284 ms → 0.287 ms. NEON was already handling five-and-a-bit vectors per
+/// row fine. x86 is the platform the competition runs on, so this ships; the
+/// laptop would have voted to skip it, and did, until someone measured the
+/// other machine.
+///
+/// The frame is sized by `MAX_DILATION`, and the arithmetic below depends on
+/// that: the widest tap reads `4·29 + 4 = 120` cells either side of the span,
+/// and the span plus that reach is exactly 841. A wider dilation cycle needs a
+/// wider halo, which is why `MAX_DILATION` is asserted rather than assumed.
+/// The assert is documentation; the real guard is that an over-wide dilation
+/// drives `base` negative, and the slice index panics rather than quietly
+/// reading the wrong cells.
+///
+/// A note for whoever profiles this next: **per-stage numbers here are not
+/// stable across builds.** Earlier in M3 the previous implementation measured
+/// 1.10 ms and then 0.28 ms on the same host from edits *elsewhere in the
+/// crate*; three candidate causes were tested and refuted, leaving whole-crate
+/// LTO (`lto = "fat"`, `codegen-units = 1`) as the unproven remainder. Compare
+/// implementations in the same build, and trust the whole-forward figure.
 fn depthwise_3x3(src: &[f32], channels: usize, dilation: usize, weight: &[f32], dst: &mut [f32]) {
-    let d = dilation as isize;
-    // The source row with `MAX_DILATION` zeros on each side, so the three
-    // column taps become three whole-row slices of known length instead of
-    // three loops with runtime bounds. Hoisted out of the loops because the
-    // halo never changes and only the middle is ever rewritten.
-    let mut padded = [0f32; BOARD + 2 * MAX_DILATION];
+    /// Zero cells on each side of the board in the working frame.
+    const HALO: usize = MAX_DILATION;
+    /// Row stride of the haloed frame.
+    const HW: usize = BOARD + 2 * HALO;
+    /// Cells in the haloed frame.
+    const FRAME: usize = HW * HW;
+    /// Where the board's cell (0, 0) sits in the frame.
+    const RUN_START: usize = HALO * HW + HALO;
+    /// From the board's first cell through its last, halo columns included.
+    const RUN_LEN: usize = (BOARD - 1) * HW + BOARD;
+
+    debug_assert!(dilation <= MAX_DILATION, "halo is sized for {MAX_DILATION}");
+
+    // Zeroed once for the whole call: every channel overwrites the interior
+    // and nothing ever writes the halo, so it stays zero by construction.
+    let mut frame = [0f32; FRAME];
+    let mut acc = [0f32; FRAME];
+
     for c in 0..channels {
+        for r in 0..BOARD {
+            let from = c * STRIDE + r * BOARD;
+            let to = RUN_START + r * HW;
+            frame[to..to + BOARD].copy_from_slice(&src[from..from + BOARD]);
+        }
+
         let w = &weight[c * 9..c * 9 + 9];
-        for r in 0..BOARD as isize {
-            // One output row accumulated locally and stored once, rather than
-            // nine read-modify-write passes over the destination plane. Chosen
-            // for clarity, not for speed — the two measured the same.
-            let mut acc = [0f32; BOARD];
-            for ky in 0..3usize {
-                let sr = r + (ky as isize - 1) * d;
-                if sr < 0 || sr >= BOARD as isize {
-                    continue; // row falls off the board: a pad zero
+        for tap in 0..9usize {
+            let dy = (tap / 3) as isize - 1;
+            let dx = (tap % 3) as isize - 1;
+            // Non-negative by construction: the most negative shift is
+            // -(4·29 + 4) = -120, and the span starts at 120.
+            let base = (RUN_START as isize
+                + dy * dilation as isize * HW as isize
+                + dx * dilation as isize) as usize;
+            let read: &[f32; RUN_LEN] = frame[base..].first_chunk().unwrap();
+            let write: &mut [f32; RUN_LEN] = acc[RUN_START..].first_chunk_mut().unwrap();
+            let wv = w[tap];
+            if tap == 0 {
+                // Store rather than accumulate, which zeroes the span for free
+                // — and, less obviously, stops the halo cells inside it from
+                // carrying a previous channel's values forward.
+                for i in 0..RUN_LEN {
+                    write[i] = wv * read[i];
                 }
-                padded[MAX_DILATION..MAX_DILATION + BOARD]
-                    .copy_from_slice(&src[c * STRIDE + sr as usize * BOARD..][..BOARD]);
-                for kx in 0..3usize {
-                    let wv = w[ky * 3 + kx];
-                    let off = (MAX_DILATION as isize + (kx as isize - 1) * d) as usize;
-                    let srow: &[f32; BOARD] = padded[off..].first_chunk().unwrap();
-                    for i in 0..BOARD {
-                        acc[i] = wv.mul_add(srow[i], acc[i]);
-                    }
+            } else {
+                for i in 0..RUN_LEN {
+                    write[i] = wv.mul_add(read[i], write[i]);
                 }
             }
-            dst[c * STRIDE + r as usize * BOARD..][..BOARD].copy_from_slice(&acc);
         }
-        // Pad columns of this plane are never read downstream, but leaving a
-        // previous call's values there would make the buffer's contents depend
-        // on history — and a stale value is one aliasing bug away from being
-        // read. Cheap to keep the invariant true.
+
+        for r in 0..BOARD {
+            let from = RUN_START + r * HW;
+            let to = c * STRIDE + r * BOARD;
+            dst[to..to + BOARD].copy_from_slice(&acc[from..from + BOARD]);
+        }
+        // Pad columns are never read downstream, but leaving a previous call's
+        // values there would make the buffer depend on history.
         dst[c * STRIDE + CELLS..(c + 1) * STRIDE].fill(0.0);
     }
 }

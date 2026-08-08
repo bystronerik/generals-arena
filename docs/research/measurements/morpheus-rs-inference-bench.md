@@ -7,7 +7,7 @@ from `scripts/morpheus_rs_modal_inference_bench.py`.
 
 - Host: macOS-26.5.2-arm64-arm-64bit, arm64
 - Every thread pool pinned to one; torch 2.13.0
-- 200 timed forwards per cell, nearest-rank percentiles,
+- 300 timed forwards per cell, nearest-rank percentiles,
   identical LCG inputs for every engine
 - 106.0 MMAC per forward (212 MFLOP)
 
@@ -18,24 +18,24 @@ better; the ratio is against TorchScript, so above 1.00 is a loss.
 
 | engine | b1 p99 (ms) | ×TS | b4 p99 (ms) | ×TS | b8 p99 (ms) | ×TS |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| TorchScript (the oracle) | 6.09 | 1.00× | 20.70 | 1.00× | 45.78 | 1.00× |
-| **morpheus-rs (shipped)** | 3.62 | 0.59× | 14.31 | 0.69× | 33.33 | 0.73× |
-| candle | 27.84 | 4.57× | 127.77 | 6.17× | 236.33 | 5.16× |
-| tract | 8.53 | 1.40× | 48.26 | 2.33× | 96.57 | 2.11× |
+| TorchScript (the oracle) | 6.34 | 1.00× | 24.34 | 1.00× | 40.90 | 1.00× |
+| **morpheus-rs (shipped)** | 4.21 | 0.66× | 16.70 | 0.69× | 33.14 | 0.81× |
+| candle | 27.84 | 4.39× | 127.77 | 5.25× | 236.33 | 5.78× |
+| tract | 8.53 | 1.34× | 48.26 | 1.98× | 96.57 | 2.36× |
 
 ## Where the time goes in the shipped engine
 
 | stage | ms (batch 1) | share |
 | --- | ---: | ---: |
-| im2col | 0.025 | 1% |
-| stem_gemm | 0.299 | 9% |
-| pointwise | 2.302 | 66% |
-| depthwise | 0.284 | 8% |
-| group_norm | 0.439 | 13% |
-| elementwise | 0.153 | 4% |
+| im2col | 0.026 | 1% |
+| stem_gemm | 0.308 | 8% |
+| pointwise | 2.337 | 58% |
+| depthwise | 0.780 | 19% |
+| group_norm | 0.444 | 11% |
+| elementwise | 0.155 | 4% |
 
-Batch-1 p50 is 3.55 ms, about 60 GFLOP/s on one core.
-Load 3.9 ms plus warmup 21.6 ms,
+Batch-1 p50 is 4.10 ms, about 52 GFLOP/s on one core.
+Load 4.8 ms plus warmup 24.9 ms,
 against TorchScript's 72 ms of module loading — which matters for the first-move grace window, not for a turn.
 
 ## What these numbers are and are not

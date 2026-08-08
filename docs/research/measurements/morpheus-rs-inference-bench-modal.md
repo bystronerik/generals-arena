@@ -13,23 +13,23 @@ shoot-out is in [`morpheus-rs-inference-bench.md`](morpheus-rs-inference-bench.m
 
 | batch | TorchScript p99 (ms) | morpheus-rs p99 (ms) | speedup |
 | ---: | ---: | ---: | ---: |
-| 1 | 5.55 | 5.07 | 1.10× |
-| 4 | 65.63 | 19.52 | 3.36× |
-| 8 | 121.72 | 40.60 | 3.00× |
+| 1 | 6.72 | 4.09 | 1.64× |
+| 4 | 67.29 | 16.23 | 4.15× |
+| 8 | 119.71 | 32.38 | 3.70× |
 
 ## Stage breakdown (batch 1, morpheus-rs)
 
 | stage | ms |
 | --- | ---: |
-| im2col | 0.039 |
-| stem_gemm | 0.394 |
-| pointwise | 2.537 |
-| depthwise | 1.518 |
-| group_norm | 0.367 |
-| elementwise | 0.147 |
+| im2col | 0.033 |
+| stem_gemm | 0.375 |
+| pointwise | 2.497 |
+| depthwise | 0.657 |
+| group_norm | 0.359 |
+| elementwise | 0.139 |
 
-Load 13.5 ms + warmup 31.7 ms
-against TorchScript's 228 ms of module loading.
+Load 13.1 ms + warmup 25.9 ms
+against TorchScript's 237 ms of module loading.
 
 **Modal is a proxy.** The generals.bot sandbox cannot be probed, and the
 M0 CPU probe found separate runs landing on different fleet generations.

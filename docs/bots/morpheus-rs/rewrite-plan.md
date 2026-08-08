@@ -826,7 +826,7 @@ detail: [`inference.md`](inference.md). Figures:
 [`morpheus-rs-inference-bench.md`](../../research/measurements/morpheus-rs-inference-bench.md).
 
 **Exit gate met.** The shipped engine beats TorchScript at batch 1 and batch 4
-on both hosts — 1.68×/1.44× on the M3 Pro, 1.10×/3.36× on one x86 core — and
+on both hosts — 1.68×/1.44× on the M3 Pro, 1.64×/4.15× on one x86 core — and
 all eleven heads agree with the oracle inside §5's 1e-5 MAE over the full
 corpus. The x86 batch wins are large because TorchScript's batched call goes
 superlinear there (4× the work for 11.8× the time) while a loop of single
@@ -915,6 +915,20 @@ observed |Δ| so the headroom stays a number.
 more accurate — and disagreed with the oracle in the eighth decimal, because
 `torch.softmax` runs at the tensor's dtype and every decision the oracle has
 ever made was made on that f32 rounding. Mirroring the width fixed it.
+
+**Addendum: the depthwise halo, and half a measurement.** The x86 report put
+the depthwise layer at 1.52 ms — a third of the forward for 6% of its
+arithmetic — against 0.28 ms on the M3 Pro. Laying its plane out with a
+four-cell halo, so a tap becomes one contiguous 601-element axpy instead of 21
+rows of 21, took it to 0.66 ms on x86 and left arm64 unchanged at 0.29 ms. The
+whole batch-1 forward went 5.07 ms → 4.09 ms there.
+
+The rewrite is worth having; the reason it was nearly skipped is worth more.
+Three formulations of that loop had been compared *on arm64*, found within 1%
+of each other, and written up as evidence that the layer's cost was structural
+and not worth chasing. All three were fine on arm64. None of that transferred.
+An arm64-only profile is half a measurement, and M4 and M5 should treat it as
+one.
 
 Two notes for M4 and M5:
 
