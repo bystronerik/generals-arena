@@ -17,9 +17,14 @@ from action import PASS_INDEX, decode_action
 from memory import OWNER_ENEMY, OWNER_NEUTRAL
 from tactics import (
     DEATHTOUCH_SCORE,
+    ENEMY_TAKE_BASE,
     GATHER_SHARE_MIN,
     GENERAL_CHEW_DAMP,
     HUNT_PROGRESS_BONUS,
+    NEUTRAL_CARVE_BASE,
+    PRE_EFFICIENCY_WEIGHT,
+    PRE_PROGRESS_WEIGHT,
+    PRE_REVEAL_WEIGHT,
     STRUCTURE_IDLE_ARMY,
     army_concentration,
     attack_weight,
@@ -124,7 +129,7 @@ def reference_scores(obs, memory, mask):
             hunt_factor = 1.0 + HUNT_PROGRESS_BONUS * max(hunt_prog, 0.0)
             if dest_owner == OWNER_ENEMY and surplus > 0.0:
                 score = atk_w * thrash * bias * (
-                    120.0
+                    ENEMY_TAKE_BASE
                     + 40.0 * max(progress, 0.0)
                     + 8.0 * float(reveal)
                     + 3.5 * min(surplus, 200.0)
@@ -134,7 +139,7 @@ def reference_scores(obs, memory, mask):
                 score *= hunt_factor
             elif dest_owner == OWNER_NEUTRAL:
                 score = atk_w * thrash * bias * (
-                    45.0
+                    NEUTRAL_CARVE_BASE
                     + 30.0 * max(progress, 0.0)
                     + 12.0 * efficiency
                     + 8.0 * float(reveal)
@@ -188,7 +193,10 @@ def reference_scores(obs, memory, mask):
             progress = path_progress(sr, sc, tr, tc, fog_dist, fallback_target=fog_target)
             bias = direction_bias(progress, OWNER_NEUTRAL)
             score = ew * urgency * bias * (
-                4.0 + 12.0 * float(reveal) + 7.0 * eff + 6.0 * max(progress, 0.0)
+                4.0
+                + PRE_REVEAL_WEIGHT * float(reveal)
+                + PRE_EFFICIENCY_WEIGHT * eff
+                + PRE_PROGRESS_WEIGHT * max(progress, 0.0)
             )
             if bool(own_struct[sr, sc]) and src_army >= STRUCTURE_IDLE_ARMY:
                 score *= 2.5 + 0.04 * float(min(src_army, 80))

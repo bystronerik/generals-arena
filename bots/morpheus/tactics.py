@@ -64,6 +64,20 @@ GENERAL_CHEW_DAMP = 0.3
 # promptly lost its own general — incursions near home stopped counting as
 # progress, so defense collapsed along with broad border pressure.
 HUNT_PROGRESS_BONUS = 0.75
+
+# Aggression bases (tuned vs blitz/macaria, who out-tempo a defensive bot).
+# Post-contact: an enemy take is a 2-cell income swing, so it outranks a
+# neutral carve by design; raised from 120 to keep morpheus trading instead
+# of sitting in defense.
+ENEMY_TAKE_BASE = 160.0
+NEUTRAL_CARVE_BASE = 45.0
+# Pre-contact explore terms: reveal-per-step leads, beacon-chasing follows.
+# Raised reveal / lowered progress from (12, 7, 6): the directional pull made
+# early exploration wander after the (still-churning) posterior mode instead
+# of opening the most fog per move.
+PRE_REVEAL_WEIGHT = 20.0
+PRE_EFFICIENCY_WEIGHT = 10.0
+PRE_PROGRESS_WEIGHT = 4.0
 # Post-DEATHTOUCH_TURN, any executed move onto the general wins outright, so a
 # touch outranks every other action. The blend clip saturates this to the top
 # of the shaped prior; the adjacency hard rule makes the touch itself forced.
@@ -980,7 +994,7 @@ def heuristic_action_scores(
                 * thrash
                 * bias
                 * (
-                    120.0
+                    ENEMY_TAKE_BASE
                     + 40.0 * np.maximum(progress, 0.0)
                     + 8.0 * reveal
                     + 3.5 * np.minimum(surplus, 200.0)
@@ -1011,7 +1025,7 @@ def heuristic_action_scores(
                 * thrash
                 * bias
                 * (
-                    45.0
+                    NEUTRAL_CARVE_BASE
                     + 30.0 * np.maximum(progress, 0.0)
                     + 12.0 * efficiency
                     + 8.0 * reveal
@@ -1088,9 +1102,9 @@ def heuristic_action_scores(
                 * bias_f
                 * (
                     4.0
-                    + 12.0 * reveal
-                    + 7.0 * eff
-                    + 6.0 * np.maximum(progress, 0.0)
+                    + PRE_REVEAL_WEIGHT * reveal
+                    + PRE_EFFICIENCY_WEIGHT * eff
+                    + PRE_PROGRESS_WEIGHT * np.maximum(progress, 0.0)
                 )
             )
             # Leaving a fat structure into fog is the right pre-contact move.
