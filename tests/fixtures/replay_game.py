@@ -1,7 +1,7 @@
 """
 Hand-built stand-ins for scraped leaderboard replays.
 
-A real replay is ~0.6 MB and the suite budget is 7 s (AGENTS.md tester §4), so
+A real replay is ~0.6 MB and the suite budget is 12 s (AGENTS.md tester §4), so
 no test opens `competition-replays/`. These builders emit the same JSON shape
 as the scraper (docs/engine/leaderboard-replays.md) on boards small enough that
 every expected number can be counted by hand.

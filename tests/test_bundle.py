@@ -121,7 +121,7 @@ def test_bundle_runs_standalone(tmp_path):
     info = write_bundle("smoke", tmp_path / "smoke.zip")
     # Digest-keyed extract dir survives across runs so macOS's first-exec
     # script assessment (~0.4 s) is a cold-cache cost, not part of the warm
-    # 7 s budget. Keyed on the zip bytes, not the source hash: the bundler
+    # 12 s budget. Keyed on the zip bytes, not the source hash: the bundler
     # itself changing must invalidate the cache too.
     digest = hashlib.sha256(info.zip_path.read_bytes()).hexdigest()[:12]
     extract_dir = Path(tempfile.gettempdir()) / f"generals-bundle-smoke-{digest}"

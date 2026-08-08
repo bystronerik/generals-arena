@@ -36,7 +36,7 @@ are checked. Tier 1 is bit-exact by specification; tier 2 allows 1e-6 — and is
 The smoke slice grew from ~1.5 s to ~7 s at M3, almost all of it importing
 torch and loading three TorchScript modules. That is the price of having the
 network oracle in CI at all, and it buys the surface the milestone exists for.
-AGENTS.md's 7 s ceiling governs the repo's `tests/`, which this is not part of;
+AGENTS.md's 12 s ceiling governs the repo's `tests/`, which this is not part of;
 if this suite is ever folded in, the torch import is the thing to move behind a
 marker rather than the coverage to drop.
 

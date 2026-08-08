@@ -75,7 +75,7 @@ trainer, or data schema.
 Answer `yes` if `AGENTS.md`, `.gitignore`, and `pytest.ini` agree; fixture bots
 live under `tests/fixtures/`; the default suite excludes heavy Morpheus tests;
 the explicit marker is registered and selectable; and the warm default suite
-stays below 7 seconds.
+stays below 12 seconds.
 
 Answer `no` for an unregistered marker, unowned path, committed derived shard,
 or suite-budget regression.

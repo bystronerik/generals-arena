@@ -72,7 +72,7 @@ def sandbox(repo, request, monkeypatch):
     A fresh bot per test, so tests can edit sources without colliding.
 
     Left uncommitted — only the two dirty-tree tests care, and `git commit` is
-    expensive enough per test to matter against the suite's 7 s budget.
+    expensive enough per test to matter against the suite's 12 s budget.
     """
     name = f"toy_{abs(hash(request.node.name)) % 10**8}"
     bot_dir = repo / "bots" / name

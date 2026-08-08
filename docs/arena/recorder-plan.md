@@ -737,6 +737,11 @@ cheap (A11). `@pytest.mark.replay`, excluded from the default run, mandatory
 in the verification gate for recorder-touching commits (§6 T7). The
 raise-the-ceiling alternative was declined.
 
+*Superseded in part on 2026-08-09: the ceiling was raised to 12 s (AGENTS.md
+tester §4). The marker placement stands — it was never the ceiling alone that
+justified it — but the numbers above are measurements against the old 7 s
+ceiling, kept as written.*
+
 **O4 — Hash fork timing: fold into the next measurement round, confirmed.**
 §5 step 2 forks all ~20 bot entities and needs a regeneration round to
 repopulate the leaderboard. Step 2 lands immediately before the next planned

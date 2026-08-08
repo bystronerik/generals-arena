@@ -364,7 +364,7 @@ emitting canonical JSON; pytest tests under `bots/morpheus-rs/tests/`
 invoke the binary, and compare. Rust-side unit tests run under `cargo test`
 independently.
 
-**CI and the 7 s budget.** The repo's 7 s ceiling guards the core suite; the
+**CI and the suite budget.** The repo's 12 s ceiling guards the core suite; the
 full corpus (hundreds of frames × full search) cannot and should not fit it.
 Split: a **smoke slice** — ≤10 frames through tier-1 checks plus one full
 `decide` — runs with the bot's pytest suite in <1 s and skips with a named
