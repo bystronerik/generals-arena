@@ -707,6 +707,7 @@ class RuntimeController:
                 prev_action=self._last_action,
                 recent_actions=tuple(self._recent_actions),
                 prior=self.search.last_root_prior,
+                belief=belief,
             )
             if constrained != action:
                 action = constrained

@@ -111,7 +111,17 @@ CASTLE_CATCHMENT = 6
 # argmax (a ~70-score gather vs ~600-score front takes — measured: the site's
 # pile sat at 2-3 army for 340 straight turns). Every Nth turn while a site
 # is underfunded, constrain dedicates the turn to one gather-step toward it.
-CASTLE_TITHE_PERIOD = 3
+# Raised from 3: the tax showed up as a mid-game land collapse (diag-60:
+# -30..-118 cells in every recorded game, onset at the t=100 window), and the
+# tithe also now yields to enemy takes rather than overriding them.
+CASTLE_TITHE_PERIOD = 5
+
+# A forced "strike march" hard rule (blitz-style wave sized against the
+# opponent's mobile army) was tried here in three gating variants and never
+# cleared the bad-change filter — ungated it marched the early field army
+# one-way to its death; gated tight it never fired; gated loose it still
+# went 0-5 vs blitz. Wave pressure stays with the assembly + hysteresis
+# scoring path. ``opponent_mobile`` below survives for future sizing logic.
 
 # Aggression bases (tuned vs blitz/macaria, who out-tempo a defensive bot).
 # Post-contact: an enemy take is a 2-cell income swing, so it outranks a
@@ -373,6 +383,10 @@ def _apply_castle_anchor(obs, memory: VisibleMemory, mask: Array) -> Array:
     site = castle_build_site(obs, memory)
     if site is None:
         return mask
+    if general_threat(obs, memory) is not None:
+        # Defense of the general outranks castle savings: the anchored pile
+        # may be the reinforcement that saves the game.
+        return mask
     _types, owners, armies = _as_grids(obs)
     if int(armies[site]) >= BASE_COST:
         return mask
@@ -452,6 +466,13 @@ def castle_build_site(obs, memory: VisibleMemory) -> Optional[tuple[int, int]]:
             best_key = key
             best = (r, c)
     return best
+
+
+def opponent_mobile(obs) -> int:
+    """Opponent army free to move: scoreboard total minus one pinned per cell."""
+    return max(0, int(getattr(obs, "opp_army", 0)) - int(getattr(obs, "opp_land", 0)))
+
+
 
 
 def castle_tithe_move(
@@ -1282,6 +1303,11 @@ def heuristic_action_scores(
                 )
             enemy_score = enemy_score * hunt_factor
             # Fog carve that shortens the path to enemy is a real attack prep.
+            # NOTE: a scoreboard-driven "expansion recovery" multiplier lived
+            # here briefly and went 0-10 vs blitz across two probes — at a
+            # land deficit it pulled front-line stacks into neutral land
+            # while under attack, a dispersion feedback loop. If expansion
+            # recovery returns, it must target rear/quiet cells only.
             neutral_score = (
                 atk_w
                 * thrash
@@ -1625,7 +1651,9 @@ def _apply_garrison_floor(obs, memory: VisibleMemory, mask: Array) -> Array:
         return mask
     _types, owners, armies = _as_grids(obs)
     own_total = int(armies[owners == 1].sum())
-    floor = garrison_floor(own_total)
+    # Threat-aware floor: the static floor guards fog rushes; a VISIBLE
+    # stack nearby raises the bar to what survives its arrival.
+    floor = max(garrison_floor(own_total), max_threat_arrival(obs, memory) + 1)
     ga = int(armies[gcell])
     kind_t, sr_t, sc_t, tr_t, tc_t = _decode_tables()
     idx = np.arange(PASS_INDEX)
@@ -1741,6 +1769,134 @@ def _capture_moved_army(idx: int, armies: Array) -> int:
     return src // 2 if int(action[4]) == 1 else src - 1
 
 
+# Emergency defense. Field-observed loss: an enemy stack bigger than the
+# garrison sat two steps from our general while a field stack right next to
+# the general could have reinforced it — no score term made that trade, and
+# the bot ignored the threat and died. Detection and response are hard rules,
+# the defensive mirror of the kill window below. Detection reaches
+# DEFENSE_RADIUS (interlocks: garrison release pauses, castle anchor frees),
+# but the forced reinforcement fires only when arrival is imminent — a wave
+# loitering at the detection edge must not divert the army every turn.
+DEFENSE_RADIUS = 4
+DEFENSE_FORCE_WITHIN = 3
+
+
+def max_threat_arrival(obs, memory: VisibleMemory) -> int:
+    """Largest arrival army any visible stack can land on our general.
+
+    A stack at path distance ``d`` sheds one per hop, so its arrival is
+    ``army - d``. This is what the garrison must strictly exceed to survive
+    — the threat-aware floor below keeps the mask from ever letting search
+    split the garrison beneath it (field-observed loss: 44 garrison, 40-army
+    stack two steps away, a legal half-split to 22, dead).
+    """
+    gcell = own_general_cell(obs, memory)
+    if gcell is None:
+        return 0
+    _types, owners, armies = _as_grids(obs)
+    dist = path_distance_field(obs, [gcell])
+    worst = 0
+    for r, c in np.argwhere(owners == OWNER_ENEMY):
+        r, c = int(r), int(c)
+        d = int(dist[r, c])
+        if not (1 <= d <= DEFENSE_RADIUS):
+            continue
+        worst = max(worst, int(armies[r, c]) - d)
+    return worst
+
+
+def general_threat(
+    obs, memory: VisibleMemory
+) -> Optional[tuple[tuple[int, int], int]]:
+    """Visible enemy stack that can take our general: ``(cell, arrival_steps)``.
+
+    A stack at path distance ``d`` arrives with ``army - d`` after full-move
+    hops while the garrison grows ``d // 2``. Ties count as threats — the
+    attacker may collect en route, so the estimate errs toward defense. From
+    ``DEATHTOUCH_TURN`` any stack that can reach with one army is lethal.
+    """
+    gcell = own_general_cell(obs, memory)
+    if gcell is None:
+        return None
+    _types, owners, armies = _as_grids(obs)
+    garrison = int(armies[gcell])
+    turn = int(getattr(obs, "turn", 0))
+    dist = path_distance_field(obs, [gcell])
+    best: Optional[tuple[tuple[int, int], int]] = None
+    for r, c in np.argwhere(owners == OWNER_ENEMY):
+        r, c = int(r), int(c)
+        d = int(dist[r, c])
+        if not (1 <= d <= DEFENSE_RADIUS):
+            continue
+        arrival = int(armies[r, c]) - d
+        if turn >= DEATHTOUCH_TURN:
+            lethal = arrival >= 1
+        else:
+            lethal = arrival >= garrison + d // 2
+        if not lethal:
+            continue
+        if best is None or (d, -int(armies[r, c])) < (best[1], -int(armies[best[0]])):
+            best = ((r, c), d)
+    return best
+
+
+def defend_general_move(
+    obs, memory: VisibleMemory, threat: tuple[tuple[int, int], int]
+) -> Optional[Action5]:
+    """Best emergency response: capture the threat stack, else reinforce.
+
+    Reinforcement only counts if it lands on the general before the threat
+    does (``r <= d - 1``); the biggest such stack moves one gradient step
+    through own land toward the general.
+    """
+    tcell, d = threat
+    gcell = own_general_cell(obs, memory)
+    if gcell is None:
+        return None
+    _types, owners, armies = _as_grids(obs)
+    H, W = int(obs.H), int(obs.W)
+    t_army = int(armies[tcell])
+    # (a) Kill the threat outright from an adjacent own cell.
+    best_cap = None
+    for dd in range(4):
+        sr = tcell[0] - int(DIRECTIONS[dd, 0])
+        sc = tcell[1] - int(DIRECTIONS[dd, 1])
+        if not (0 <= sr < H and 0 <= sc < W):
+            continue
+        if int(owners[sr, sc]) != 1 or (sr, sc) == gcell:
+            continue
+        moved = int(armies[sr, sc]) - 1
+        if moved > t_army and (best_cap is None or moved > best_cap[0]):
+            best_cap = (moved, (0, sr, sc, dd, 0))
+    if best_cap is not None:
+        return best_cap[1]
+    # (b) Reinforce the general in time.
+    gdist = path_distance_field(obs, [gcell])
+    best = None
+    for r, c in np.argwhere((owners == 1) & (armies >= 2)):
+        r, c = int(r), int(c)
+        if (r, c) == gcell:
+            continue
+        rr = int(gdist[r, c])
+        if not (1 <= rr <= d - 1):
+            continue
+        a = int(armies[r, c])
+        if best is not None and a <= best[0]:
+            continue
+        for dd in range(4):
+            nr = r + int(DIRECTIONS[dd, 0])
+            nc = c + int(DIRECTIONS[dd, 1])
+            if not (0 <= nr < H and 0 <= nc < W):
+                continue
+            if int(gdist[nr, nc]) != rr - 1:
+                continue
+            if int(owners[nr, nc]) != 1:
+                continue
+            best = (a, (0, r, c, dd, 0))
+            break
+    return best[1] if best else None
+
+
 # Max length of a forced finishing march on a visible enemy general. Neither
 # the 2-ply search nor any score term can represent "walk the 7-stack through
 # the 2-stack and arrive with more than the garrison" — a field-observed miss
@@ -1748,8 +1904,10 @@ def _capture_moved_army(idx: int, armies: Array) -> int:
 KILL_HORIZON = 6
 
 
-def winning_kill_move(obs, memory: VisibleMemory) -> Optional[Action5]:
-    """First step of a winning march on the visible enemy general, if any.
+def kill_plan(
+    obs, memory: VisibleMemory
+) -> Optional[tuple[int, int, Action5]]:
+    """Best winning march on the visible enemy general: ``(steps, margin, first)``.
 
     Simulates a greedy descent of the BFS gradient from each nearby own
     stack: full moves that collect own armies en route, pay for neutral and
@@ -1842,9 +2000,13 @@ def winning_kill_move(obs, memory: VisibleMemory) -> Optional[Action5]:
         steps, margin, first = plan
         if best is None or (steps, -margin) < (best[0], -best[1]):
             best = (steps, margin, first)
-    if best is None:
-        return None
-    return best[2]
+    return best
+
+
+def winning_kill_move(obs, memory: VisibleMemory) -> Optional[Action5]:
+    """First step of the best winning kill march (see ``kill_plan``)."""
+    plan = kill_plan(obs, memory)
+    return plan[2] if plan is not None else None
 
 
 def constrain_nn_action(
@@ -1855,6 +2017,7 @@ def constrain_nn_action(
     prev_action: Optional[Action5] = None,
     recent_actions: Sequence[Action5] = (),
     prior: Optional[Array] = None,
+    belief: Optional[Any] = None,
 ) -> Action5:
     """Keep NN/search choice except for hard rules + prior re-rank.
 
@@ -1886,13 +2049,22 @@ def constrain_nn_action(
             best_cap = max(caps, key=lambda i: _capture_moved_army(i, armies))
             return tuple(int(x) for x in decode_action(best_cap))  # type: ignore[return-value]
 
-    # Kill window: a winning multi-turn march on the visible general is
-    # forced step by step (replanned every turn; see winning_kill_move).
-    kill_step = winning_kill_move(obs, memory)
-    if kill_step is not None:
+    # Kill window vs. emergency defense: whoever connects first wins, so the
+    # race is explicit. A tie goes to the KILL — blitz-style opponents park
+    # waves near our general in endgames, and yielding on ties froze our
+    # finishing marches for entire endgames (probed 0-5). Forced defense
+    # additionally requires the threat to be imminent, not radius loitering.
+    threat = general_threat(obs, memory)
+    plan = kill_plan(obs, memory)
+    if plan is not None and (threat is None or plan[0] <= threat[1]):
+        kill_step = plan[2]
         idx = encode_action(kill_step)
         if bool(mask[idx]):
             return kill_step
+    if threat is not None and threat[1] <= DEFENSE_FORCE_WITHIN:
+        defend = defend_general_move(obs, memory, threat)
+        if defend is not None and bool(mask[encode_action(defend)]):
+            return defend
 
     # Castle build (hard rule): the NN gives builds ~zero prior mass, which
     # the blend clip cannot resurrect, so an affordable base-price build on
@@ -1902,9 +2074,23 @@ def constrain_nn_action(
         build_idx = encode_action((2, site[0], site[1], 0, 0))
         if bool(mask[build_idx]):
             return (2, int(site[0]), int(site[1]), 0, 0)
+
+    if site is not None:
         # Tithe: every Nth turn one gather-step funds the site (rear
-        # logistics can never win the global argmax on its own).
-        if int(getattr(obs, "turn", 0)) % CASTLE_TITHE_PERIOD == 0:
+        # logistics can never win the global argmax on its own). It yields
+        # to an enemy take — never trade a capture for a shuffle.
+        chosen_ends = move_dest(tuple(int(x) for x in action))  # type: ignore[arg-type]
+        chosen_is_take = False
+        if chosen_ends is not None:
+            _csr, _csc, ctr, ctc = chosen_ends
+            H_c, W_c = int(obs.H), int(obs.W)
+            if 0 <= ctr < H_c and 0 <= ctc < W_c:
+                owners_c = np.asarray(obs.owner_grid, dtype=np.int32)
+                chosen_is_take = int(owners_c[ctr, ctc]) == OWNER_ENEMY
+        if (
+            not chosen_is_take
+            and int(getattr(obs, "turn", 0)) % CASTLE_TITHE_PERIOD == 0
+        ):
             tithe = castle_tithe_move(obs, memory, site)
             if tithe is not None and bool(mask[encode_action(tithe)]):
                 return tithe
@@ -1915,10 +2101,11 @@ def constrain_nn_action(
     is_pass = int(chosen[0]) == 1 or chosen == (1, 0, 0, 0, 0)
 
     # Garrison release (hard rule; see GARRISON_RELEASE_FACTOR). Fires only
-    # while the floor is active, the garrison holds >= release x floor, and
-    # the chosen action is not already shipping from the general.
+    # while the floor is active, the garrison holds >= release x floor, the
+    # chosen action is not already shipping from the general, and no live
+    # threat is bearing down on it (never ship the garrison mid-emergency).
     turn = int(getattr(obs, "turn", 0))
-    if GARRISON_FLOOR_FROM <= turn < DEATHTOUCH_TURN:
+    if threat is None and GARRISON_FLOOR_FROM <= turn < DEATHTOUCH_TURN:
         gcell = own_general_cell(obs, memory)
         if gcell is not None:
             _tg, owners_g, armies_g = _as_grids(obs)
