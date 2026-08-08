@@ -104,6 +104,22 @@ impl Session {
         }
         let network = Network::from_safetensors(&st)?;
 
+        // Loading the weights means something is about to run the graph, and a
+        // build without a hardware fused multiply-add runs it ~49× slower —
+        // `f32::mul_add` becomes a libm call. It still produces correct
+        // output, which is what makes it dangerous: nothing else in a match
+        // log would say why every move timed out. Not fatal here, because M3's
+        // bot does not yet infer on the play path; revisit refusing to play
+        // when it does.
+        if !crate::gemm::HAS_HARDWARE_FMA {
+            eprintln!(
+                "[morpheus-rs] WARNING: built without hardware FMA; inference will be \
+                 roughly 50x slower than it should be. Build with \
+                 bots/morpheus-rs as the working directory so .cargo/config.toml \
+                 applies its target-cpu."
+            );
+        }
+
         let checkpoint_id = manifest
             .get("training_run")
             .and_then(|r| r.get("checkpoint_id"))

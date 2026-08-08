@@ -825,16 +825,15 @@ of the frozen artifact, faster than the TorchScript it replaces. Engine
 detail: [`inference.md`](inference.md). Figures:
 [`morpheus-rs-inference-bench.md`](../../research/measurements/morpheus-rs-inference-bench.md).
 
-**Exit gate: met on arm64, x86 outstanding.** The shipped engine beats
-TorchScript at batch 1 (1.68×) and batch 4 (1.44×) on the M3 Pro, and all
-eleven heads agree with the oracle inside §5's 1e-5 MAE over the full corpus.
-The gate is written against **x86** and that arm is not in hand: the run is
-`scripts/morpheus_rs_modal_inference_bench.py`, which builds the crate and
-times both engines in a one-core Linux container. Until it lands, what is
-proved is the correctness half plus an arm64 win, and the open question is
-narrow but real — x86 TorchScript dispatches to oneDNN kernels that are tuned
-harder than anything the NEON path gets, so the 1.68× is an upper bound on
-what to expect there.
+**Exit gate met.** The shipped engine beats TorchScript at batch 1 and batch 4
+on both hosts — 1.68×/1.44× on the M3 Pro, 1.10×/3.36× on one x86 core — and
+all eleven heads agree with the oracle inside §5's 1e-5 MAE over the full
+corpus. The x86 batch wins are large because TorchScript's batched call goes
+superlinear there (4× the work for 11.8× the time) while a loop of single
+forwards stays flat; batch 1 is nearly a tie, and the container reports 17
+visible CPUs against a one-core reservation, so some of that penalty may be
+contention. A shape, not a qualification — M7 owes the reference host a full
+suite.
 
 **§3 chose the wrong engine, by its own decision rule.** The plan ranked candle
 first, tract second, and a bespoke fixed-shape kernel last — to be "entered
@@ -881,6 +880,27 @@ refuted, leaving whole-crate LTO as the only remaining explanation and no
 proof of it. Per-stage numbers here are build-sensitive and must be
 re-measured, not quoted. The whole-forward figure was stable to 0.01 ms across
 every run, which is why it is the one the gate uses.
+
+**The x86 run found a bug that would have shipped.** Its first attempt
+measured 277 ms per forward against TorchScript's 5.69 ms — 49× slower.
+`f32::mul_add` promises a single rounding, so a target without a hardware FMA
+calls libm's `fmaf()` to emulate it. The binary compiles, passes parity, and
+returns correct answers fifty times too slowly.
+
+`.cargo/config.toml` sets `target-cpu=x86-64-v3` to prevent exactly that, but
+cargo discovers that file by walking up from the **working directory**, not
+from `--manifest-path`. The benchmark had the bug, and so did
+`tools/submission/build.sh` — the script the judge runs at intake, which
+resolved its own directory into `$DIR`, passed `--manifest-path`, and never
+`cd`-ed. Run from any other directory, the submitted bot would have spent
+277 ms per inference against a 150 ms deadline: correct moves, all of them too
+late, with nothing in a match log to say why.
+
+Both launchers now `cd` first, `gemm::HAS_HARDWARE_FMA` records what the binary
+compiled with, `bench` prints it, the x86 script refuses to publish a report
+without it, and `Session::load` warns on stderr. The packager's static-musl
+path was already correct. §1's `target-cpu` line should be read as a
+correctness requirement, not a tuning preference.
 
 **Parity: the first surface with a real tolerance.** `net` (all eleven heads
 through all three entry points) and `prior` (`legal_normalized_policy` plus

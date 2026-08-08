@@ -1,0 +1,192 @@
+{
+  "avx2": true,
+  "avx512f": false,
+  "cpu_model": "unknown",
+  "flags": [
+    "3dnowprefetch",
+    "abm",
+    "adx",
+    "aes",
+    "apic",
+    "avx",
+    "avx2",
+    "bmi1",
+    "bmi2",
+    "clflush",
+    "clwb",
+    "cmov",
+    "cmp_legacy",
+    "cr8_legacy",
+    "cx16",
+    "cx8",
+    "de",
+    "f16c",
+    "fma",
+    "fpu",
+    "fsgsbase",
+    "fxsr",
+    "fxsr_opt",
+    "ht",
+    "hypervisor",
+    "invpcid",
+    "lahf_lm",
+    "lm",
+    "mca",
+    "mce",
+    "misalignsse",
+    "mmx",
+    "mmxext",
+    "movbe",
+    "msr",
+    "mtrr",
+    "nx",
+    "pae",
+    "pat",
+    "pcid",
+    "pclmulqdq",
+    "pdpe1gb",
+    "pge",
+    "pni",
+    "popcnt",
+    "pse",
+    "pse36",
+    "rdpid",
+    "rdrand",
+    "rdseed",
+    "rdtscp",
+    "sep",
+    "sha_ni",
+    "smap",
+    "smep",
+    "sse",
+    "sse2",
+    "sse4_1",
+    "sse4_2",
+    "sse4a",
+    "ssse3",
+    "syscall",
+    "topoext",
+    "tsc",
+    "vaes",
+    "vme",
+    "vpclmulqdq",
+    "x2apic",
+    "xgetbv1",
+    "xsave",
+    "xsavec",
+    "xsaveopt"
+  ],
+  "machine": "x86_64",
+  "online_cpus": 17,
+  "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+  "rust": {
+    "full_b1": {
+      "min": 4.833,
+      "p50": 4.865,
+      "p99": 4.903
+    },
+    "full_b4": {
+      "min": 19.457,
+      "p50": 19.526,
+      "p99": 19.653
+    },
+    "full_b8": {
+      "min": 38.774,
+      "p50": 38.907,
+      "p99": 39.244
+    },
+    "hardware_fma": true,
+    "load_ms": 13.463,
+    "policy_b1": {
+      "min": 4.835,
+      "p50": 4.947,
+      "p99": 5.106
+    },
+    "policy_b4": {
+      "min": 19.407,
+      "p50": 19.658,
+      "p99": 21.345
+    },
+    "policy_b8": {
+      "min": 38.589,
+      "p50": 38.755,
+      "p99": 39.575
+    },
+    "policy_wdl_b1": {
+      "min": 4.809,
+      "p50": 4.854,
+      "p99": 5.065
+    },
+    "policy_wdl_b4": {
+      "min": 19.265,
+      "p50": 19.335,
+      "p99": 19.52
+    },
+    "policy_wdl_b8": {
+      "min": 38.756,
+      "p50": 38.934,
+      "p99": 40.598
+    },
+    "stages": {
+      "depthwise": 1.5181,
+      "elementwise": 0.1474,
+      "group_norm": 0.3671,
+      "im2col": 0.0389,
+      "pointwise": 2.5369,
+      "stem_gemm": 0.3942
+    },
+    "warmup_ms": 31.71
+  },
+  "rust_build_ok": true,
+  "rust_build_seconds": 11.863939006999999,
+  "rustc_version": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+  "torchscript": {
+    "full_b1": {
+      "min": 5.3508370000088235,
+      "p50": 5.399737999994159,
+      "p99": 5.541870000016047
+    },
+    "full_b4": {
+      "min": 18.10559800000533,
+      "p50": 48.44098699999222,
+      "p99": 72.21109000002457
+    },
+    "full_b8": {
+      "min": 99.73508900000638,
+      "p50": 116.70663099999956,
+      "p99": 125.63844100000665
+    },
+    "load_ms": 227.6028870000033,
+    "policy_b1": {
+      "min": 5.237543999996319,
+      "p50": 5.315515000006599,
+      "p99": 5.490039999997975
+    },
+    "policy_b4": {
+      "min": 17.62723699999924,
+      "p50": 50.67008799998973,
+      "p99": 67.90975500000229
+    },
+    "policy_b8": {
+      "min": 31.821093999994332,
+      "p50": 125.63787199999865,
+      "p99": 142.91070199999467
+    },
+    "policy_wdl_b1": {
+      "min": 5.219022999995104,
+      "p50": 5.272873999999206,
+      "p99": 5.550532000000885
+    },
+    "policy_wdl_b4": {
+      "min": 16.201473000009514,
+      "p50": 43.92826899999136,
+      "p99": 65.62947300000133
+    },
+    "policy_wdl_b8": {
+      "min": 97.91895800000816,
+      "p50": 109.62621400000216,
+      "p99": 121.72401000000832
+    },
+    "torch_version": "2.13.0+cpu"
+  }
+}

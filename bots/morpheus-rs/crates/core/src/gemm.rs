@@ -31,6 +31,28 @@
 //! for these shapes: `B` is the activation plane (up to 441×448 for the stem,
 //! 790 KB) while `A` is the weight matrix (at most 128×128).
 
+/// Is there a hardware fused multiply-add in this build?
+///
+/// **`mul_add` is a catastrophic pessimisation without one.** `f32::mul_add`
+/// promises a single rounding, so a target with no FMA instruction cannot
+/// approximate it with a multiply and an add — it calls libm's `fmaf()`, which
+/// emulates the exact result in software. Measured on a one-core x86 container
+/// built at baseline `x86-64`: **277 ms per forward against 5.6 ms**, a 49×
+/// slowdown that compiles cleanly, produces correct output, and would blow the
+/// 150 ms deadline on every move of every game.
+///
+/// The build is supposed to prevent this — `.cargo/config.toml` sets
+/// `target-cpu=x86-64-v3`, which implies FMA — but cargo discovers that file
+/// from the *working directory*, not from `--manifest-path`, so a build
+/// launched from the wrong cwd silently ignores it. That is exactly how the
+/// 277 ms measurement happened. The launchers now `cd` first; this constant
+/// exists so the binary can also say what it actually got.
+pub const HAS_HARDWARE_FMA: bool = cfg!(any(
+    target_feature = "fma",  // x86-64-v3 and up
+    target_feature = "neon", // every aarch64
+    target_arch = "aarch64",
+));
+
 /// Columns per register tile. Four NEON/AVX f32 vectors' worth.
 pub const NR: usize = 16;
 /// Rows per register tile. `MR × NR` accumulators must stay in registers.

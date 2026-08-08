@@ -92,6 +92,10 @@ fn run_bench(iters: usize) -> ! {
     let warm = Instant::now();
     session.warmup();
     println!("load_ms {load_ms:.3}");
+    // Print the one build flag that can change this measurement by 49x. A
+    // benchmark that does not say what it compiled is a benchmark that can be
+    // wrong twice.
+    println!("hardware_fma {}", morpheus_core::gemm::HAS_HARDWARE_FMA);
     println!("warmup_ms {:.3}", warm.elapsed().as_secs_f64() * 1e3);
 
     // The same deterministic stream the candle and tract spikes used, so the

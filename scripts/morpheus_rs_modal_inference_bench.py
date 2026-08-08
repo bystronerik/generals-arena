@@ -95,8 +95,15 @@ def bench() -> dict:
 
     # --- Rust ---------------------------------------------------------------
     build = time.perf_counter()
+    # `cwd`, not just `--manifest-path`: cargo reads `.cargo/config.toml` from
+    # the working directory upward, and that file sets `target-cpu=x86-64-v3`.
+    # The first run of this script omitted the cwd and measured a baseline
+    # x86-64 build at 277 ms per forward — `f32::mul_add` without a hardware
+    # FMA becomes a libm call. The bench now records the target features it
+    # actually compiled with so that mistake cannot be made silently twice.
     built = subprocess.run(
         ["cargo", "build", "--release", "--manifest-path", "/root/morpheus-rs/Cargo.toml"],
+        cwd="/root/morpheus-rs",
         capture_output=True, text=True,
     )
     out["rust_build_seconds"] = time.perf_counter() - build
@@ -120,6 +127,8 @@ def bench() -> dict:
         parts = line.split()
         if parts[:1] == ["load_ms"]:
             rust["load_ms"] = float(parts[1])
+        elif parts[:1] == ["hardware_fma"]:
+            rust["hardware_fma"] = parts[1] == "true"
         elif parts[:1] == ["warmup_ms"]:
             rust["warmup_ms"] = float(parts[1])
         elif parts[:1] == ["stage"]:
@@ -191,7 +200,8 @@ def _markdown(payload: dict) -> str:
         f"- AVX2 {payload.get('avx2')}, AVX-512F {payload.get('avx512f')}",
         f"- {payload.get('rustc_version', 'rustc ?')}, "
         f"torch {ts.get('torch_version', '?')}",
-        f"- Release build from source in {payload.get('rust_build_seconds', 0):.1f} s",
+        f"- Release build from source in {payload.get('rust_build_seconds', 0):.1f} s, "
+        f"hardware FMA compiled in: **{rust.get('hardware_fma')}**",
         "",
         "## policy_wdl — the entry point root and leaf evaluation use",
         "",
@@ -238,3 +248,12 @@ def main() -> None:
     print(f"wrote {out_md.relative_to(REPO)}")
     if not payload.get("rust_build_ok"):
         raise SystemExit("rust build failed in the container")
+    # The first run of this script measured a build with no hardware FMA and
+    # reported a 49x slowdown as if it were the engine's speed. Refusing to
+    # publish that quietly is cheaper than noticing it a second time.
+    if payload.get("rust", {}).get("hardware_fma") is False:
+        raise SystemExit(
+            "built without hardware FMA — every f32::mul_add is a libm call. "
+            "Check that cargo ran with bots/morpheus-rs as its working "
+            "directory so .cargo/config.toml applies."
+        )

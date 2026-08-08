@@ -28,6 +28,24 @@ whose MAE ≤ 1e-5". So all three were measured.
 M3 Pro, one thread, identical inputs. Full figures and method:
 [`morpheus-rs-inference-bench.md`](../../research/measurements/morpheus-rs-inference-bench.md).
 
+On one x86 core — which is what the exit gate is written against, and where
+TorchScript reaches its best-tuned kernels — the shipped engine wins by more,
+not less:
+
+| batch | TorchScript p99 | morpheus-rs p99 | speedup |
+| ---: | ---: | ---: | ---: |
+| 1 | 5.55 ms | 5.07 ms | 1.10× |
+| 4 | 65.63 ms | 19.52 ms | 3.36× |
+| 8 | 121.72 ms | 40.60 ms | 3.00× |
+
+Batch 1 is nearly a tie; the batch wins are large because TorchScript's batched
+call scales *superlinearly* on this host (4× the work for 11.8× the time) while
+a loop of single forwards scales flat. That is the shape the search actually
+needs — a leaf batch evaluated, by whatever means. Caveat worth keeping: the
+container reports 17 visible CPUs against a one-core reservation, so some of
+TorchScript's batch penalty may be contention rather than kernels.
+[Full report](../../research/measurements/morpheus-rs-inference-bench-modal.md).
+
 R1's tripwire is "best pure-Rust option ≥1.3× TorchScript p99 at batch 1 **and**
 4". candle trips it at 4.6×/6.2× and tract at 1.40×/2.34×, so the fallback
 ladder — candle → tract → bespoke → vendored `ort` — was walked to its third
@@ -112,6 +130,46 @@ Everything else measured smaller. GroupNorm's statistics went from 1.37 ms to
 | elementwise | 0.15 | 4% |
 | im2col | 0.02 | 1% |
 
+### The build flag that is worth 49×
+
+The first x86 run measured **277 ms** per forward against TorchScript's
+5.69 ms. Not a tuning gap — a broken build.
+
+`f32::mul_add` promises a single rounding, so a target with no FMA instruction
+cannot approximate it with a multiply and an add. It calls libm's `fmaf()`,
+which emulates the exact result in software. Every FMA in the inference kernels
+becomes a function call. The binary compiles cleanly, passes parity, produces
+correct output, and takes fifty times as long.
+
+The build is supposed to prevent that: `.cargo/config.toml` sets
+`target-cpu=x86-64-v3`, which implies FMA. But **cargo discovers that file by
+walking up from the working directory, not from `--manifest-path`** — so a
+build launched from elsewhere silently ignores it.
+
+The benchmark had that bug. So did `tools/submission/build.sh`, which is the
+script the judge runs at intake: it resolved its own directory into `$DIR`,
+passed `--manifest-path "$DIR/Cargo.toml"`, and never `cd`-ed. Run from any
+other directory — the normal case — it would have produced a baseline x86-64
+binary, and the submitted bot would have spent 277 ms on an inference against a
+150 ms deadline. Correct moves, every one of them too late.
+
+Four things now stand between that and a repeat:
+
+- `build.sh` and the repo `run.sh` `cd` before building.
+- `gemm::HAS_HARDWARE_FMA` records what the binary actually compiled with.
+- `morpheus-rs bench` prints it, and the x86 benchmark script refuses to
+  publish a report from a build without it.
+- `Session::load` warns on stderr, because the symptom in a match log would
+  otherwise be "every move is slow" with no cause attached.
+
+The packaging script's static-musl path was already correct — it builds with
+the bot directory as its cwd and sets `target-cpu` explicitly in the
+environment.
+
+This is also the strongest argument yet for M0's insistence that `target-cpu`
+be chosen from a measurement. It is not a tuning knob for this bot; it is the
+difference between playing and timing out.
+
 ### Do not trust a per-stage number from a different build
 
 The depthwise row above says 0.28 ms. Earlier in M3 the same source measured
@@ -185,12 +243,14 @@ is not float noise, it is an entry point computing something else.
 
 ## What M3 did not settle
 
-- **The x86 measurement itself.** M3's exit gate is written against x86 and
-  the arm64 win above does not settle it: x86 TorchScript dispatches to oneDNN
-  kernels tuned harder than anything the NEON path gets. The run is
-  `scripts/morpheus_rs_modal_inference_bench.py`. Even when it lands it is one
-  Modal container, and M0 found separate runs on different fleet generations —
-  a shape, not a qualification. M7 accepts deployment numbers.
+- **How much of the x86 batch win is real.** TorchScript's batched call went
+  superlinear on a container reporting 17 visible CPUs against a one-core
+  reservation, which is as consistent with contention as with kernels. Batch 1,
+  where there is nothing to contend over, is only 1.10×. M7 needs the reference
+  host before any of these numbers is treated as a deployment figure.
+- **The depthwise layer on x86.** 1.52 ms there against 0.28 ms on arm64 —
+  a third of the forward. The haloed-plane rewrite that was optional on arm64
+  is worth more on the machine that matters.
 - Why an unrelated edit moved the depthwise stage 4×. Refuting three
   hypotheses narrowed it to whole-crate LTO, but narrowing is not identifying,
   and the next person to optimise a stage here should know that.

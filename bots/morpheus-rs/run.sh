@@ -43,7 +43,10 @@ if [[ ! -x "$BIN" || ! -f "$STAMP" || "$(cat "$STAMP")" != "$WANT" ]]; then
   # Stderr, not stdout: stdout is the wire. A cold checkout pays this once,
   # outside any match, at the caller's leisure.
   echo "[morpheus-rs] building (sources changed or no binary)" >&2
-  cargo build --release --manifest-path "$DIR/Cargo.toml" >&2
+  # `cd` first: cargo finds .cargo/config.toml from the working directory,
+  # not from --manifest-path, and that file carries the Linux target-cpu.
+  # See tools/submission/build.sh for what building from the wrong cwd costs.
+  (cd "$DIR" && cargo build --release --manifest-path "$DIR/Cargo.toml") >&2
   mkdir -p "$(dirname "$STAMP")"
   printf '%s' "$WANT" > "$STAMP"
 fi
