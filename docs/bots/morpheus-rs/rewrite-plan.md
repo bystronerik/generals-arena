@@ -1,8 +1,13 @@
 # Morpheus-rs rewrite plan
 
-Status: **draft for review — no code lands until this is accepted.** After the
-in-flight morpheus diff is committed, this plan gets one revision pass against
-the new committed state.
+Status: **confirmed 2026-08-08 — implementation may begin, starting at M0.**
+Revised against the declared-final morpheus state at commit `9d6f186`
+(oracle lineage head `morpheus@17c8ac2684ec`, 17 registry steps). The three
+post-plan commits (`b152147` kill-window planner, `d57b545` castle savings
+pipeline, `9d6f186` emergency defense) changed only `tactics.py` (+644 lines),
+one line of `runtime.py`, and tests/fixtures — no architecture change, details
+folded in below. The rewrite is a committed decision: §9 carries tripwires
+and fallbacks, not exits.
 
 Goal: maximize playing strength inside the fixed per-turn deadline. Rust is the
 means: more completed simulations and more particles inside the internal
@@ -62,8 +67,20 @@ All facts below were checked against the working tree on 2026-08-08.
 - `numpy` in 20 modules; `torch` in 6, of which 5 execute at match time
   (`agent`, `deployment`, `evaluator`, `inference`, `network`) — `export.py`
   is offline tooling.
-- 28 non-test modules, 9,659 lines; 31 test files plus `conftest.py` and
-  `shaping_boards.py`.
+- 28 non-test modules, 10,303 lines; 35 test files plus `conftest.py` and
+  `shaping_boards.py`. The final pre-rewrite commits grew `tactics.py` from
+  1,639 to 2,283 lines (63 → 77 functions): kill-window planner (forced
+  collecting march on a visible general), castle savings pipeline (sticky
+  base-price site, tithe, anchor, forced build), and emergency defense
+  (threat-aware garrison floor, forced response, kill race). All of it is
+  pure functions of `(obs, memory, prior, recent_actions, belief)` — no new
+  cross-turn state — but `constrain_nn_action` now takes the **belief** as an
+  input (`runtime.py` passes it), which the parity harness must account for
+  (§5). The four new test files (`test_kill_window.py`,
+  `test_castle_savings.py`, `test_emergency_defense.py`,
+  `test_strike_and_recovery.py`) plus the re-captured `shaping-parity.json`
+  are the behavioral spec the Rust port of these subsystems is written
+  against.
 
 ### Competition environment (from RULES.md + generals.bot/docs)
 
@@ -176,25 +193,42 @@ than the roofline estimate for the same shapes.
 Order follows risk and value: the biggest latency win (transitions) and the
 hardest correctness surface (exact competition transition) go first; the
 runtime controller and tactics — pure translation, no speedup story — go last.
-Each milestone has an exit gate; the project can stop at any gate with the
-findings banked and Python still playing.
+Each milestone has an exit gate. **The rewrite itself is a committed decision
+— there is no "keep Python" outcome.** A failed gate therefore never ends the
+project; it triggers the named fallback in §9 and, if the fallback also
+fails, a re-plan of that milestone. Python morpheus remains the frozen oracle
+and the arena baseline throughout, nothing more.
 
-**M0 — baselines and corpus (no Rust yet).**
+**M0 — baselines, corpus, and CPU-feature probe (no Rust yet).**
 Re-measure the Python bot: per-component p99s and per-move wall time
 (p50/p99/max), completed simulations per normal move, over ≥20 instrumented
 competition games on the M3 Pro, and the same suite on a single-core Modal
 x86 CPU container (torch already runs there for training). Capture the parity
-frame corpus (§5) in the same runs. Publish under
+frame corpus (§5) in the same runs.
+
+M0 also includes the **Modal CPU-feature probe**: Modal's SDKs are
+Python/Go/JS only, so this is a Python `@app.function(cpu=1)` following the
+repo's `scripts/morpheus_modal_*.py` pattern — proposed
+`scripts/morpheus_rs_modal_cpu_probe.py`. It reports `/proc/cpuinfo` flags,
+`lscpu`, the derived x86-64 microarchitecture level (v2/v3/v4), cache sizes,
+and the CPU model, across several runs to sample host variety. Its output
+decides the compile target: `target-cpu` is set to the highest level every
+observed host supports (expected x86-64-v3; AVX-512 paths only if v4 shows up
+consistently), with the caveat recorded that Modal is a *proxy* for "x86
+server CPU" — the generals.bot sandbox cannot be probed directly (no network,
+no visible logs), so the binary additionally does runtime feature detection
+on any hand-written SIMD path rather than trusting the compile target alone.
+Publish everything under
 `docs/research/measurements/morpheus-rs-baseline.md`.
-*Exit gate: baseline numbers published; corpus fixtures committed; oracle
-content hash recorded.*
+*Exit gate: baseline numbers and CPU-feature report published; compile
+target chosen; corpus fixtures committed; oracle content hash recorded.*
 
 **M0.5 — sandbox smoke test.**
 Submit a trivial Rust bot (reads frames, replies pass) to generals.bot as a
 zip with vendored deps and `build.sh`, to validate the offline build path,
 file-count budget, and binary compatibility before any real porting.
-*Exit gate: the sandbox builds and runs it. Kill criterion for risk R4 lives
-here.*
+*Exit gate: the sandbox builds and runs it. Risk R4's tripwire lives here —
+failing it forces the static-binary fallback (§9) before any real porting.*
 
 **M1 — walking skeleton + transition kernel.**
 Crate `bots/morpheus-rs/` (workspace: `core` lib + `bot` bin). Stdio wire
@@ -218,7 +252,8 @@ Safetensors converter, candle graph, warmup, the `inference.py`/
 `evaluator.py`/`network.py` equivalents; tract spike; benchmark shoot-out
 (§3). All 11 heads MAE ≤1e-5 vs TorchScript on corpus tensors.
 *Exit gate: chosen engine beats TorchScript batch-1 and batch-4 p99 on x86,
-or R1's kill criterion triggers.*
+or R1's fallback ladder (§9) has been walked to its end and the best
+available engine is accepted with the shortfall documented.*
 
 **M4 — belief filter.**
 `belief.py`, `proposal.py` (uniform proposal is the deployed path; the policy
@@ -298,6 +333,11 @@ control-flow divergences.
    RNG and fixed simulation count; every divergence machine-enumerated with
    the tie margin, and accepted only if traced to a within-tolerance tie
    flip. No-search frames (policy-fallback decisions) must agree exactly.
+   Note the final-state wrinkle: the hard-rule layer (`constrain_nn_action`)
+   consumes the **belief**, so decision parity on any frame requires the
+   captured belief snapshot as an input, not just the observation — the
+   capture format in this section already includes it, but the `decide`
+   parity subcommand must accept it explicitly rather than re-deriving it.
 
 **Mechanics.** The Rust binary exposes parity subcommands
 (`morpheus-rs parity transition|tensor|belief|decide --frames <file>`)
@@ -357,8 +397,8 @@ meaningful latency win.
 | `belief.py`/`recovery.py`/`proposal.py`/`reservoir.py` (1,487) | real-turn filter, rejuvenation | large, mostly inherited from the transition kernel | Filter logic itself is cheap; replay of 8-turn histories × beam 8 rides the kernel. |
 | `tensor.py` (425) | ≥1 build per turn + per leaf/enemy-prior tensor | 5–20× | 2.8 ms → sub-ms; matters because it is on every inference call's critical path. |
 | `search.py`/`tree.py`/`matrix.py` (1,574) | per simulation | 5–15× on selection+backup (1.8 ms each today) | Small absolute numbers but they are *per simulation*; at 30+ sims/turn the per-sim overhead is what caps throughput. Arena layout (§6) removes dict/np overhead per node. |
-| network inference (`inference/evaluator/network`, 853) | root + leaf batches + enemy priors | **1.5–4×** | TorchScript is already C++; the win is dispatch overhead and fixed-shape specialization, not FLOPs. Root 11.9 ms → target 3–6 ms; leaf batch 35 ms → target 10–15 ms. The most uncertain estimate in the plan; measured at M3 with a kill criterion. |
-| `tactics.py` (1,639) | root prior shaping, play mask, hard rules — roughly once per turn | 2–10×, small absolute | **Pure translation, little gain, highest port effort per line.** It must be ported anyway (decisions depend on it, and no-PyO3 means it can't stay in Python), but it is scheduled last-with-search and its parity is fixture-driven (`shaping-parity` pattern already exists). |
+| network inference (`inference/evaluator/network`, 853) | root + leaf batches + enemy priors | **1.5–4×** | TorchScript is already C++; the win is dispatch overhead and fixed-shape specialization, not FLOPs. Root 11.9 ms → target 3–6 ms; leaf batch 35 ms → target 10–15 ms. The most uncertain estimate in the plan; measured at M3, with R1's fallback ladder behind it. |
+| `tactics.py` (2,283) | root prior shaping, play mask, hard rules, kill-window/castle/defense planners — roughly once per turn | 2–10×, small absolute | **Pure translation, little gain, highest port effort per line.** It must be ported anyway (decisions depend on it, and no-PyO3 means it can't stay in Python), but it is scheduled last-with-search and its parity is fixture-driven (`shaping-parity` plus the four planner test files). The planners include BFS/path-field walks (`kill_plan`, `path_distance_field`) that are cheap in Rust but behavior-dense; port them test-first from their fixtures. |
 | `runtime.py` (1,051) | admission control, telemetry | none | Translation only. Ported faithfully because the controller *is* the deadline behavior; its telemetry schema is kept identical so existing analysis tooling reads both bots. |
 | `hashing.py` (107) | node keys | none (0.001 ms) | SHA-256 kept for parity; already negligible. |
 | `observe.py`/`memory.py`/`state.py`/`symmetry.py`/`action.py` (963) | per turn / per simulation | 3–10×, small absolute | Straightforward; symmetry is play-time-irrelevant (training-side concept) but cheap to port for tensor parity checks. |
@@ -397,49 +437,71 @@ is expected well under 1 s vs Python's ~8.5 s; measured explicitly at M6 (the
 grace window could then fund a deeper first-move search — noted as a
 follow-up, not in this plan's scope).
 
-## 9. Risks, ordered, with kill criteria
+## 9. Risks, ordered, each with a tripwire and a fallback
+
+The rewrite is a committed decision, so no tripwire ends the project. Each
+risk carries a measurable tripwire and the fallback it forces; a fallback
+that also fails forces a re-plan of that milestone, never a retreat to
+Python. Python morpheus stays the frozen oracle and the arena baseline —
+nothing more.
 
 1. **Rust inference is not faster (R1).** TorchScript's CPU kernels are
-   mature; candle/tract could lose at batch 4 on x86. *Mitigation:* M3
-   shoot-out including the tract spike; bespoke kernel path. *Kill:* best
-   Rust option ≥1.3× TorchScript p99 at batch 1 **and** 4 on x86 after the
-   bespoke attempt → stop; without an inference win the search-throughput
-   thesis still holds (transitions dominate), so this kill only triggers a
-   stop if combined with R3.
+   mature; candle/tract could lose at batch 4 on x86. *Tripwire:* best
+   pure-Rust option ≥1.3× TorchScript p99 at batch 1 **and** 4 on x86.
+   *Fallback ladder:* candle → tract → bespoke fixed-shape kernels →
+   vendored `ort` (accepting the ~20–30 MB `.so` and C++ ABI cost inside the
+   zip budget). If the end of the ladder still trails TorchScript, ship the
+   best Rust engine anyway: the throughput thesis (§7) rests on transitions
+   and per-simulation overhead, not on an inference win. The shortfall is
+   documented in the M3 report and revisited after M7 shows where the
+   deadline budget actually binds.
 2. **Decision parity unreachable (R2).** Float-order divergence cascades
    through prior shaping and regret matching could push corpus agreement
    below target. *Mitigation:* f64 on comparison-sensitive heuristic paths
    (Python already does this in numpy defaults), frozen-RNG harness,
-   divergence enumeration by tie margin. *Kill:* <95% root-decision agreement
-   on **no-search** frames after tier-1/2 all pass — that would mean a logic
-   bug we cannot find, or the two implementations are not the same bot; stop
-   and keep Python.
+   divergence enumeration by tie margin. *Tripwire:* <95% root-decision
+   agreement on **no-search** frames after tier-1/2 all pass — that means an
+   unfound logic bug, not float noise. *Fallback:* bisect by stage — the
+   parity subcommands localize which module first diverges per frame; that
+   module's port is redone line-by-line against its Python source before M5
+   may exit. The parity targets are not relaxed to make the gate pass.
 3. **Strength regression at the gate (R3).** *Mitigation:* M6 runs at parity
    knobs where "same decisions" is the expectation, isolating porting bugs
-   from tuning. *Kill:* verdict `regression` per `decision-rule.md` at parity
-   knobs after R2's enumeration is clean, or verdict worse than `no change`
-   after the M7 re-tune → keep Python, publish the measurement.
+   from tuning. *Tripwire:* verdict `regression` per `decision-rule.md` at
+   parity knobs after R2's enumeration is clean, or worse than `no change`
+   after the M7 re-tune. *Fallback:* at parity knobs a regression is by
+   definition an unfound divergence — return to R2's bisection; after the
+   re-tune it is a qualification error — return to M7 with the failing
+   games' telemetry. Until the contrast reads `improvement`, Python keeps
+   playing rated games while morpheus-rs iterates: a schedule consequence,
+   not an exit.
 4. **Sandbox build failure (R4).** Vendored-crate build breaks offline, file
    count exceeded, CPU-feature mismatch (build host vs match host flags).
-   *Mitigation:* M0.5 smoke submission before any porting; compile with
-   conservative `target-cpu` (x86-64-v2/v3 decided by what M0.5 reports) and
-   runtime feature detection where it matters. *Kill:* the sandbox cannot
-   build a vendored Rust zip within limits and a self-contained static binary
-   submission is also rejected — then the Rust bot can never compete, and the
-   project stops before M1.
-5. **Effort overrun on the translation slog (R5).** `tactics.py` + `runtime.py`
-   + `search.py` are ~3,600 lines of behavior-dense code with no speed story
-   to motivate them. *Mitigation:* they are gated behind M1–M4 wins, so the
+   *Mitigation:* M0.5 smoke submission before any porting; `target-cpu`
+   chosen from the M0 Modal CPU probe, with runtime feature detection on any
+   hand-written SIMD path. *Tripwire:* the sandbox rejects the
+   vendored-source zip. *Fallback:* ship a self-contained static binary
+   (`x86_64-unknown-linux-musl`, conservative `target-cpu`) with `build.sh`
+   reduced to a no-op — the generals.bot docs explicitly allow a
+   self-contained binary. The M8 packaging script produces both variants
+   from day one, so the fallback stays tested rather than theoretical.
+5. **Effort overrun on the translation slog (R5).** `tactics.py` +
+   `runtime.py` + `search.py` are ~4,200 lines of behavior-dense code with no
+   speed story to motivate them, and the final pre-rewrite commits grew
+   tactics by 40%. *Mitigation:* they are gated behind M1–M4 wins, so the
    sunk cost when reaching them is already justified by measured kernels; the
-   fixture-driven parity pattern (`shaping-parity.json`) ports test-first.
-   *Kill:* soft — M5's exit gate not met after the allotted effort window;
-   the milestone structure means stopping here banks M0 measurements and a
-   validated transition/inference kernel design for a future attempt.
+   fixture-driven parity pattern (`shaping-parity.json` plus the four planner
+   test files) ports test-first. *Tripwire:* M5's exit gate not met after the
+   allotted effort window (set at the post-M4 review, §13). *Fallback:*
+   re-scope M5 into per-subsystem slices (play mask → shaping → hard rules →
+   planners), each with its own parity gate, and re-estimate — the slog gets
+   more checkpoints, not a smaller destination.
 6. **Memory/size ceilings (R6).** 2 GB runtime and 512 MB unpacked are
    comfortable (the bot targets ~100 MB resident); the 10k vendored-file
    count is the real one. *Mitigation:* dependency budget reviewed at every
    `cargo add`; `cargo vendor` file count checked in the M8 packaging script
-   and in the M0.5 smoke test.
+   and in the M0.5 smoke test. *Fallback:* R4's static-binary variant
+   sidesteps the vendored-file count entirely.
 
 ## 10. Build, packaging, and repo integration
 
@@ -508,12 +570,18 @@ follow-up, not in this plan's scope).
   step in `export.py`) and where the capture probe (§5) needs telemetry —
   both inside the edits approved during plan review.
 
-## 13. Open items deferred to the post-commit revision
+## 13. Open items
 
-- Re-verify the parity surfaces against the committed in-flight diff
-  (`tactics.py`, `shaping-parity.json`, `test_heuristic_scores_parity.py`
-  are all touched by it) and re-freeze the oracle hash.
-- Confirm the exact x86 CPU features available in the sandbox from the M0.5
-  smoke run (decides `target-cpu` and whether AVX-512 paths are worth having).
-- Decide the effort window that arms R5's soft kill (proposed: review after
+The post-commit revision pass is done (2026-08-08): parity surfaces
+re-verified against `9d6f186`, oracle frozen at `morpheus@17c8ac2684ec`,
+line counts and the tactics/belief coupling updated in §1, §5, §7, §9. The
+rewrite was confirmed as a committed decision — §9 was reworded from kill
+criteria to tripwire + fallback. `deployment.json` and the artifact did not
+change. Remaining open items:
+
+- Run the M0 Modal CPU-feature probe (`scripts/morpheus_rs_modal_cpu_probe.py`,
+  Python SDK `@app.function(cpu=1)`) and fix the `target-cpu` level from its
+  report; the sandbox itself cannot be probed, so runtime feature detection
+  backs any SIMD path regardless.
+- Decide the effort window that arms R5's tripwire (proposed: review after
   M4 with measured kernels in hand).
