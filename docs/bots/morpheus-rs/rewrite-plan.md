@@ -639,3 +639,40 @@ Delivered 2026-08-08. Numbers and their caveats live in the reports, not here.
   against its one-core reservation — so it is a *shape* result (Linux, x86,
   contended, no AVX-512 guaranteed) rather than a deployment qualification.
   M7 needs the full suite on the reference host before any knob is accepted.
+
+## 15. M0.5 — rehearsed, not yet submitted
+
+Delivered 2026-08-08. Layout, hash rules, and the traps below:
+[`packaging.md`](packaging.md). Rehearsal results:
+[`morpheus-rs-sandbox-smoke.md`](../../research/measurements/morpheus-rs-sandbox-smoke.md).
+
+The walking skeleton exists: a zero-dependency Cargo workspace
+(`crates/core` + `crates/bot`) speaking the stdio protocol and replying pass.
+It finishes the AGENTS.md gate against `cm_expander` under `--mode competition`
+(truncation at 1200, a normal end), and both submission variants build and play
+inside a one-core Linux x86 container with `block_network=True` and the
+sandbox's own rustc 1.97.1 — vendored in 3.3 s at 10 files / 8.7 KB, static in
+0.03 s at 3 files / 226 KB, against limits of 10,000 files and 50 MB.
+
+**The exit gate is not met, and cannot be met here.** It reads "the sandbox
+builds and runs it", and only the account holder can submit to generals.bot.
+Everything the rehearsal can falsify has been falsified: offline build, file
+count, toolchain version, and — the one the packaging host genuinely could not
+answer — that the musl binary an arm64 Mac cross-builds actually executes on
+x86-64 Linux. What remains is the sandbox's own image agreeing, which is
+exactly what R4's tripwire is for.
+
+Four things nearly broke it, each now a rule in `packaging.md`: shipping
+`rust-toolchain.toml` would make an offline sandbox try to *download* the
+pinned patch release; a `build.sh` beside `run.sh` breaks the repo's own gate
+through an unguarded `relative_to` in `matchup.py::build_agent`; cross-linking
+musl from macOS needs the toolchain's `rust-lld`; and a *comment* naming
+`bots/morpheus/run.sh` in a shell script put the Python bot inside the Rust
+bot's content hash, because `_SHELL_REF_RE` cannot tell prose from a `source`
+line.
+
+§10's approved `_SKIP_DIRS` edit landed as `target`, `vendor`, **and `tools`** —
+the third for the reason `probe.py` is excluded: the capture module and the
+packager never play, so editing them must not re-identify the bot. No existing
+bot's hash moved.
+

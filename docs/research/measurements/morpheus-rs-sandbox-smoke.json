@@ -1,0 +1,45 @@
+{
+  "host": {
+    "kernel": "4.19.0-gvisor",
+    "arch": "x86_64",
+    "online_cpus": 17,
+    "network_blocked": true,
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "network_probe_returncode": 6,
+    "network_probe_stderr": "curl: (6) Could not resolve host: static.crates.io"
+  },
+  "results": [
+    {
+      "variant": "vendored",
+      "files": 10,
+      "unpacked_bytes": 18182,
+      "zip_bytes": 8705,
+      "build_returncode": 0,
+      "build_seconds": 3.31,
+      "build_stderr_tail": "   Compiling morpheus-core v0.1.0 (/tmp/vendored/crates/core)\n   Compiling morpheus-rs v0.1.0 (/tmp/vendored/crates/bot)\n    Finished `release` profile [optimized] target(s) in 3.21s\n",
+      "reply_lines": [
+        "1 0 0 0 0",
+        "1 0 0 0 0"
+      ],
+      "run_returncode": 0,
+      "run_stderr_tail": "",
+      "ok": true
+    },
+    {
+      "variant": "static",
+      "files": 3,
+      "unpacked_bytes": 501558,
+      "zip_bytes": 225874,
+      "build_returncode": 0,
+      "build_seconds": 0.03,
+      "build_stderr_tail": "",
+      "reply_lines": [
+        "1 0 0 0 0",
+        "1 0 0 0 0"
+      ],
+      "run_returncode": 0,
+      "run_stderr_tail": "",
+      "ok": true
+    }
+  ]
+}

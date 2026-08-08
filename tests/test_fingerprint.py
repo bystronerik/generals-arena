@@ -231,3 +231,45 @@ def test_the_guard_also_catches_a_cross_bot_probe_import(sandbox):
 
     with pytest.raises(fingerprint.ProbeInClosureError, match="one/probe.py"):
         fingerprint.content_hash_for_dir(root / "two")
+
+
+# --- compiled bots ----------------------------------------------------------
+
+
+def test_a_compiled_bots_identity_is_its_sources_not_its_build():
+    """
+    morpheus-rs is Rust: the same sources produce `target/` on every build, and
+    `vendor/` is a copy of crates.io that `Cargo.lock` already pins exactly.
+    Hashing either would fork the rating identity on every `cargo build` and
+    put ten thousand vendored files behind one bot's hash (rewrite-plan §10).
+    """
+    names = closure_names("morpheus-rs")
+    assert names, "morpheus-rs is the live fixture for the compiled-bot rules"
+    assert not any("target" in name.split("/") for name in names)
+    assert not any("vendor" in name.split("/") for name in names)
+    # What *is* the identity: the Rust sources, the lock file, the launcher,
+    # and the pins that decide how they compile.
+    assert "morpheus-rs/run.sh" in names
+    assert "morpheus-rs/Cargo.lock" in names
+    assert any(name.endswith(".rs") for name in names)
+
+
+def test_developer_tooling_does_not_fork_a_rating_identity():
+    """
+    Same rule as `probe.py`, one directory up: the capture module the arena
+    loads for a corpus run and the submission packager ship nowhere and never
+    play, so editing them must not re-identify the bot.
+    """
+    assert (BOTS_DIR / "morpheus-rs" / "tools").is_dir()
+    assert not any("tools" in name.split("/") for name in closure_names("morpheus-rs"))
+
+
+def test_a_shell_comment_cannot_drag_in_another_bot():
+    """
+    `_SHELL_REF_RE` scans shell sources for bot-relative paths and cannot tell
+    a comment from a `source` line, so naming another bot's launcher in prose
+    would put that bot inside this one's hash — and editing Python morpheus
+    would silently re-identify the Rust one. This caught exactly that.
+    """
+    names = closure_names("morpheus-rs")
+    assert not any(name.startswith("morpheus/") for name in names)

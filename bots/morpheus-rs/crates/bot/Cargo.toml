@@ -1,0 +1,12 @@
+[package]
+name = "morpheus-rs"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "morpheus-rs"
+path = "src/main.rs"
+
+[dependencies]
+morpheus-core = { path = "../core" }

@@ -1,0 +1,11 @@
+[package]
+name = "morpheus-core"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# No dependencies, deliberately. The binding sandbox constraint is not zip size
+# but the 10,000-file cap on the unpacked submission, and `cargo vendor` over a
+# fat graph passes it easily (rewrite-plan §1, R6). Every crate added here has
+# to earn its place against that budget.
+[dependencies]

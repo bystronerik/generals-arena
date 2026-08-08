@@ -53,6 +53,7 @@ Small topic files for the Generals Arena research repo.
 - [morpheus](bots/morpheus/index.md) — RL policy/value network + belief-aware simultaneous MCTS
 - [morpheus-rs rewrite plan](bots/morpheus-rs/rewrite-plan.md) — Rust sibling of morpheus: milestones, gates, risks
 - [morpheus-rs parity corpus](bots/morpheus-rs/parity-corpus.md) — recorded frames and RNG streams the Rust port is checked against
+- [morpheus-rs packaging](bots/morpheus-rs/packaging.md) — crate layout, content hash, and the two submission variants
 
 ## Arena
 

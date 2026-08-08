@@ -55,6 +55,21 @@ _SKIP_DIRS = {
     ".pytest_cache",
     ".ruff_cache",
     "tests",
+    # Compiled bots (morpheus-rs) keep build output and vendored crates inside
+    # the bot directory. Neither is source: `target/` is what the sources
+    # compile *to*, and `vendor/` is a copy of crates.io that `Cargo.lock`
+    # already pins exactly. Hashing either would fork the rating identity on
+    # every build and put ten thousand vendored files behind one bot's hash.
+    "target",
+    "vendor",
+    # Developer tooling that ships nowhere and never plays: artifact
+    # converters, submission packagers, the capture module the arena loads for
+    # a corpus run. Same rule as `probe.py` — arena-owned introspection and
+    # build scripts must not fork a rating identity when they are edited. Note
+    # this is a *directory* rule, so a bot that put play code under `tools/`
+    # and imported it would go unhashed; nothing does, and the closure walk
+    # below would not resolve such an import to a hashed file anyway.
+    "tools",
 }
 _SKIP_SUFFIXES = {".pyc", ".pyo"}
 
