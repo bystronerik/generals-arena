@@ -65,6 +65,33 @@ GENERAL_CHEW_DAMP = 0.3
 # progress, so defense collapsed along with broad border pressure.
 HUNT_PROGRESS_BONUS = 0.75
 
+# Garrison floor. Benchmarked losses vs blitz/macaria were all the own
+# general falling; a probe showed the garrison marching to the front (26->7)
+# with an enemy squad camped 4 cells away, and a reactive visible-threat
+# defense measured no better because rushes arrive through fog with 1-3 turns
+# of warning. The floor is fog-proof: from GARRISON_FLOOR_FROM until
+# deathtouch, a move may leave the general only if the army left behind stays
+# at or above the floor. Half-splits become the natural release valve (a
+# half-move ships once the stack reaches ~2x floor), and a winning capture of
+# the enemy general is always exempt.
+# Field-tested correction: the first cut (min 12 / 6% / cap 40) hoarded — a
+# half-move off the general only became legal at ~2x cap, and the gather
+# machinery kept feeding the locked stack (king == general), so waves never
+# formed and every attack tip got thrash-crushed against an immovable "king".
+# The floor stays small, and all king/gather/commitment logic excludes the
+# floored general so army assembles FORWARD (see _movable_exclude_cell).
+GARRISON_FLOOR_FROM = 100
+GARRISON_FLOOR_MIN = 10
+GARRISON_FLOOR_FRAC = 0.04
+GARRISON_FLOOR_CAP = 18
+# Release is a HARD RULE, not a score: the trained policy assigns almost no
+# mass to split moves, and the bounded blend can lift an action at most 10x,
+# so the legal half-release was top of the heuristic ranking yet never got
+# played (probe: general hoarded 12 -> 185 while the front starved at ~14).
+# Once the garrison reaches RELEASE x floor, constrain redirects to the best
+# legal general half-move. Self-limiting: one ship drops it below the bar.
+GARRISON_RELEASE_FACTOR = 2.0
+
 # Aggression bases (tuned vs blitz/macaria, who out-tempo a defensive bot).
 # Post-contact: an enemy take is a 2-cell income swing, so it outranks a
 # neutral carve by design; raised from 120 to keep morpheus trading instead
@@ -259,10 +286,20 @@ def attack_weight(army: int) -> float:
     return 1.0 + 0.85 * float(np.log1p(a))
 
 
-def king_cell(obs) -> Optional[tuple[int, int]]:
-    """Cell holding the largest own army (ties: first in row-major order)."""
+def king_cell(
+    obs, *, exclude: Optional[tuple[int, int]] = None
+) -> Optional[tuple[int, int]]:
+    """Cell holding the largest own army (ties: first in row-major order).
+
+    ``exclude`` drops one cell (the floored general) from consideration so
+    gather targets a stack that can actually march; falls back to the full
+    board when no other own cell exists.
+    """
     _types, owners, armies = _as_grids(obs)
-    own = owners == 1
+    own = (owners == 1).copy()
+    if exclude is not None and bool(own[exclude]):
+        if int(own.sum()) > 1:
+            own[exclude] = False
     if not np.any(own):
         return None
     max_a = int(armies[own].max())
@@ -270,17 +307,36 @@ def king_cell(obs) -> Optional[tuple[int, int]]:
     return int(locs[0, 0]), int(locs[0, 1])
 
 
-def army_concentration(obs) -> tuple[float, int, int]:
-    """Return ``(max_share, max_army, total_army)`` on own land."""
+def army_concentration(
+    obs, *, exclude: Optional[tuple[int, int]] = None
+) -> tuple[float, int, int]:
+    """Return ``(max_share, max_army, total_army)`` on own land.
+
+    ``max_army`` ignores ``exclude`` (the floored general) so the commitment
+    and thrash logic measures against the largest *movable* stack — an
+    immovable garrison must not make every attack tip look uncommitted.
+    ``total_army`` stays the full total.
+    """
     _types, owners, armies = _as_grids(obs)
     own = owners == 1
     if not np.any(own):
         return 0.0, 0, 0
     total = int(armies[own].sum())
-    max_a = int(armies[own].max())
+    movable = own.copy()
+    if exclude is not None and bool(movable[exclude]) and int(movable.sum()) > 1:
+        movable[exclude] = False
+    max_a = int(armies[movable].max())
     if total <= 0:
         return 0.0, max_a, 0
     return float(max_a) / float(total), max_a, total
+
+
+def _movable_exclude_cell(obs, memory: VisibleMemory) -> Optional[tuple[int, int]]:
+    """The general cell while the garrison floor pins it, else ``None``."""
+    turn = int(getattr(obs, "turn", 0))
+    if not (GARRISON_FLOOR_FROM <= turn < DEATHTOUCH_TURN):
+        return None
+    return own_general_cell(obs, memory)
 
 
 def is_committed_army(
@@ -743,6 +799,8 @@ def play_mask(
     if np.any(nonpass):
         mask[PASS_INDEX] = False
 
+    mask = _apply_garrison_floor(obs, memory, mask)
+
     if enemy_is_visible(obs, memory):
         if not np.any(mask):
             return np.asarray(base, dtype=bool).copy()
@@ -968,9 +1026,10 @@ def heuristic_action_scores(
         target = enemy_seek_target(obs, memory, belief=belief)
         goals = seek_goals(obs, memory, belief)
         dist_field = path_distance_field(obs, goals) if goals else None
-        king = king_cell(obs)
+        movable_exclude = _movable_exclude_cell(obs, memory)
+        king = king_cell(obs, exclude=movable_exclude)
         king_dist = path_distance_field(obs, [king]) if king is not None else None
-        share, max_own, tot = army_concentration(obs)
+        share, max_own, tot = army_concentration(obs, exclude=movable_exclude)
         gen_known = enemy_general_visible(obs, memory)
         if move_idx.size:
             army_i = armies[sr, sc].astype(np.int64)
@@ -1313,6 +1372,81 @@ def enemy_general_visible(obs, memory: VisibleMemory) -> bool:
     return bool(np.any(memory.known_enemy_general))
 
 
+def own_general_cell(obs, memory: VisibleMemory) -> Optional[tuple[int, int]]:
+    """Latched (else visible) own general cell."""
+    own = np.argwhere(np.asarray(memory.own_general, dtype=bool))
+    if own.size:
+        return (int(own[0, 0]), int(own[0, 1]))
+    types, owners, _ = _as_grids(obs)
+    gen = np.argwhere((types == TYPE_GENERAL) & (owners == 1))
+    if gen.size:
+        return (int(gen[0, 0]), int(gen[0, 1]))
+    return None
+
+
+def garrison_floor(own_total_army: int) -> int:
+    """Minimum army to keep on the own general once the floor is active."""
+    return int(
+        min(
+            GARRISON_FLOOR_CAP,
+            max(GARRISON_FLOOR_MIN, int(GARRISON_FLOOR_FRAC * max(own_total_army, 0))),
+        )
+    )
+
+
+def _apply_garrison_floor(obs, memory: VisibleMemory, mask: Array) -> Array:
+    """Ban general-sourced moves that would drop the garrison below the floor.
+
+    Active from ``GARRISON_FLOOR_FROM`` until ``DEATHTOUCH_TURN`` (the kill
+    phase is all-in). A winning capture of the visible enemy general stays
+    legal. If banning would leave no non-pass action, the ban is skipped —
+    protocol safety over garrison policy.
+    """
+    turn = int(getattr(obs, "turn", 0))
+    if not (GARRISON_FLOOR_FROM <= turn < DEATHTOUCH_TURN):
+        return mask
+    gcell = own_general_cell(obs, memory)
+    if gcell is None:
+        return mask
+    _types, owners, armies = _as_grids(obs)
+    own_total = int(armies[owners == 1].sum())
+    floor = garrison_floor(own_total)
+    ga = int(armies[gcell])
+    kind_t, sr_t, sc_t, tr_t, tc_t = _decode_tables()
+    idx = np.arange(PASS_INDEX)
+    gen_src = mask[:PASS_INDEX] & (kind_t == 0) & (sr_t == gcell[0]) & (sc_t == gcell[1])
+    if not np.any(gen_src):
+        return mask
+    # Remaining army on the general after each move variant. Channels 0-3 are
+    # full moves (leave 1 behind), 4-7 half splits (leave ceil(a/2)).
+    channel = idx // (PASS_INDEX // 9)
+    is_half = (channel >= 4) & (channel <= 7)
+    remaining = np.where(is_half, ga - ga // 2, 1)
+    ban = gen_src & (remaining < floor)
+    # Exempt a winning capture of the enemy general.
+    gen_cell = known_enemy_general_cell(obs, memory)
+    if gen_cell is not None:
+        H, W = int(obs.H), int(obs.W)
+        tr = tr_t.astype(np.int64)
+        tc = tc_t.astype(np.int64)
+        onto_gen = (tr == gen_cell[0]) & (tc == gen_cell[1])
+        inb = (tr >= 0) & (tr < H) & (tc >= 0) & (tc < W)
+        moved = np.where(is_half, ga // 2, ga - 1)
+        defender = np.zeros(PASS_INDEX, dtype=np.int64)
+        defender[inb] = armies[tr[inb], tc[inb]]
+        winning = onto_gen & (moved > defender)
+        ban = ban & ~winning
+    if not np.any(ban):
+        return mask
+    out = mask.copy()
+    out[np.flatnonzero(ban)] = False
+    nonpass = out.copy()
+    nonpass[PASS_INDEX] = False
+    if not np.any(nonpass):
+        return mask
+    return out
+
+
 def known_enemy_general_cell(
     obs, memory: VisibleMemory
 ) -> Optional[tuple[int, int]]:
@@ -1435,6 +1569,34 @@ def constrain_nn_action(
     nonpass = np.asarray(mask, dtype=bool).copy()
     nonpass[PASS_INDEX] = False
     is_pass = int(chosen[0]) == 1 or chosen == (1, 0, 0, 0, 0)
+
+    # Garrison release (hard rule; see GARRISON_RELEASE_FACTOR). Fires only
+    # while the floor is active, the garrison holds >= release x floor, and
+    # the chosen action is not already shipping from the general.
+    turn = int(getattr(obs, "turn", 0))
+    if GARRISON_FLOOR_FROM <= turn < DEATHTOUCH_TURN:
+        gcell = own_general_cell(obs, memory)
+        if gcell is not None:
+            _tg, owners_g, armies_g = _as_grids(obs)
+            ga = int(armies_g[gcell])
+            floor = garrison_floor(int(armies_g[owners_g == 1].sum()))
+            chosen_from_gen = (
+                int(chosen[0]) == 0
+                and (int(chosen[1]), int(chosen[2])) == gcell
+            )
+            if ga >= GARRISON_RELEASE_FACTOR * floor and not chosen_from_gen:
+                releases = [
+                    encode_action((0, gcell[0], gcell[1], d, 1))
+                    for d in range(4)
+                ]
+                releases = [i for i in releases if bool(mask[i])]
+                if releases:
+                    if prior is not None:
+                        prior_a = np.asarray(prior, dtype=np.float64).reshape(-1)
+                        best = max(releases, key=lambda i: float(prior_a[i]))
+                    else:
+                        best = releases[0]
+                    return tuple(int(x) for x in decode_action(best))  # type: ignore[return-value]
 
     def _redirect(*, require_progress: bool) -> Optional[Action5]:
         if prior is None:
