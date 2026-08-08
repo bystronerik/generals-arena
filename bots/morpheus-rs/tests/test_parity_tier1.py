@@ -31,7 +31,7 @@ import parity_cases as pc  # noqa: E402
 
 KINDS = (
     "transition", "order", "observe", "mask", "cost",
-    "memory", "hash", "tensor", "symmetry",
+    "memory", "hash", "tensor", "symmetry", "net", "prior",
 )
 
 

@@ -28,6 +28,7 @@ use crate::hashing::{
     observation_payload, roll_history_digest,
 };
 use crate::memory::{update_memory, VisibleMemory};
+use crate::network;
 use crate::observe::emit_observation;
 use crate::state::GameState;
 use crate::symmetry;
@@ -246,10 +247,26 @@ fn write_memory(out: &mut Vec<i64>, memory: &VisibleMemory) {
 }
 
 /// Run one parity kind end to end over stdin, writing one line per case.
+/// f32 out as its raw bit pattern, the same lossless channel `Ints::floats`
+/// reads in.
+fn push_f32(out: &mut Vec<i64>, values: &[f32]) {
+    out.extend(values.iter().map(|v| v.to_bits() as i64));
+}
+
+/// f64 the same way. `to_bits()` is a `u64`, so the top bit rides as a
+/// negative `i64` and the Python side reinterprets — the stream is a bit
+/// channel, not a number channel.
+fn push_f64(out: &mut Vec<i64>, values: &[f64]) {
+    out.extend(values.iter().map(|v| v.to_bits() as i64));
+}
+
 pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> Result<(), String> {
     let mut ints = Ints::read_all(reader)?;
     let cases = ints.n()?;
     let mut out: Vec<i64> = Vec::new();
+    // Loading the artifact costs a few milliseconds and only the `net` kind
+    // needs it, so it is paid on first use rather than on every subcommand.
+    let mut net_session: Option<crate::inference::Session> = None;
 
     for case in 0..cases {
         out.clear();
@@ -380,6 +397,69 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
                     let action = decode_action(index).unwrap_or([1, 0, 0, 0, 0]);
                     out.push(encode_action(symmetry::transform_action(action, sym)) as i64);
                 }
+            }
+            // a 49×441 tensor -> every head, through all three entry points
+            //
+            // Running `Policy`, `PolicyWdl`, and `All` on the same tensor and
+            // emitting all three answers costs two extra forwards per case and
+            // checks something no single entry point can: that the switch in
+            // `forward_into` returns early without changing what it already
+            // wrote. The Python side runs its three separate TorchScript
+            // modules, so the comparison is entry point against entry point.
+            "net" => {
+                let session = net_session.get_or_insert_with(|| {
+                    crate::inference::Session::load_default()
+                        .unwrap_or_else(|e| panic!("loading the artifact: {e}"))
+                });
+                let tensor = ints.floats(network::IN_CHANNELS * network::CELLS)?;
+
+                let policy_only = session.forward(&tensor, network::Heads::Policy).clone();
+                push_f32(&mut out, &policy_only.policy);
+                push_f32(&mut out, &[policy_only.pass_logit]);
+
+                let pw = session.forward(&tensor, network::Heads::PolicyWdl).clone();
+                push_f32(&mut out, &pw.policy);
+                push_f32(&mut out, &[pw.pass_logit]);
+                push_f32(&mut out, &pw.wdl_logits);
+
+                let all = session.forward(&tensor, network::Heads::All);
+                push_f32(&mut out, &all.policy);
+                push_f32(&mut out, &[all.pass_logit]);
+                push_f32(&mut out, &all.wdl_logits);
+                push_f32(&mut out, &all.hidden_owner);
+                push_f32(&mut out, &all.enemy_army_bins);
+                push_f32(&mut out, &all.enemy_general);
+                push_f32(&mut out, &all.hidden_castle);
+                push_f32(
+                    &mut out,
+                    &[
+                        all.land_margin,
+                        all.army_margin,
+                        all.castle_margin,
+                        all.turns_to_termination,
+                    ],
+                );
+            }
+            // logits + mask + WDL -> the legal-normalized prior and the backup
+            // value, in f64
+            //
+            // The arithmetic between the network and the search, split out
+            // from the network itself so a divergence lands on one of them.
+            // It is also the only surface that checks the flat policy layout
+            // end to end: a channel-major/row-major swap leaves every head
+            // bit-identical and moves every prior mass to the wrong action.
+            "prior" => {
+                let logits = ints.floats(network::N_ACTIONS)?;
+                let mask_ints = ints.ints(network::N_ACTIONS)?;
+                let mask: Vec<bool> = mask_ints.iter().map(|v| *v != 0).collect();
+                let wdl = ints.floats(3)?;
+                let from_root = ints.next()? != 0;
+                let prior = network::legal_normalized_policy(&logits, &mask);
+                push_f64(&mut out, &prior);
+                push_f64(
+                    &mut out,
+                    &[network::backup_value([wdl[0], wdl[1], wdl[2]], from_root)],
+                );
             }
             other => return Err(format!("unknown parity kind {other:?}")),
         }

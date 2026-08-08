@@ -160,6 +160,101 @@
       "name": "directions do not follow rotations",
       "outcome": "caught",
       "note": ""
+    },
+    {
+      "name": "group norm epsilon an order of magnitude out",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "group norm sums over the pad columns",
+      "outcome": "survived",
+      "note": "Equivalent, and equivalent for a reason worth having: the seven pad columns per plane are zero, so summing them adds nothing to either accumulator. This mutation surviving is evidence *for* the zero-padding invariant the module doc claims. The observable half of 'include the pad columns' is the divisor, which is the next mutation and is caught."
+    },
+    {
+      "name": "group norm divides by the padded width",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "group norm over the whole layer, not eight groups",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "dilation cycle flattened to 1",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "ReLU6 with no upper clamp",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "residual connection dropped",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "depthwise kernel transposed",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "global mean ignores the board mask",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "global max ignores the board mask",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "global mean channels reversed",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "stem weights laid out with the tap axis outermost",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "1x1 head bias dropped",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "softmax in double precision",
+      "outcome": "survived",
+      "note": "Equivalent at this width. The result is rounded back to f32 immediately, and `exp` is correctly rounded closely enough that computing it in double and narrowing lands on the same float for every logit the network produces. What the f32 contract actually pins is the *sum and the division*, which this does not touch; widening those needs `exps` widened too, which is a rewrite rather than a one-line break, and the `prior` surface's 5e-6 cap is what holds them."
+    },
+    {
+      "name": "illegal actions keep their softmax mass",
+      "outcome": "survived",
+      "note": "Equivalent because the fill underflows. An illegal logit is set to `f32::MIN`, so `exp(MIN - max)` is exactly 0.0 and the multiply by the mask removes nothing. The Python multiplies too, for the same non-reason. Keeping the explicit zero is still right: it makes 'illegal means zero' a property of the code rather than of float underflow, and the harness checks it without tolerance."
+    },
+    {
+      "name": "backup value not negated off the root",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "WDL value is win minus draw",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "GEMM bias applied to the wrong row",
+      "outcome": "caught",
+      "note": ""
+    },
+    {
+      "name": "linear head drops its bias",
+      "outcome": "caught",
+      "note": ""
     }
   ]
 }

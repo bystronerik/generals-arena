@@ -1,0 +1,10 @@
+[package]
+name = "candle-ops"
+version = "0.1.0"
+edition = "2021"
+[dependencies]
+candle-core = "0.9"
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1

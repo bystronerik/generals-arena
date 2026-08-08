@@ -11,10 +11,15 @@
 //! constraint, not a tuning choice, so nothing here may spawn a thread.
 
 pub mod action;
+pub mod gemm;
 pub mod hashing;
+pub mod inference;
+pub mod json;
 pub mod memory;
+pub mod network;
 pub mod observe;
 pub mod parity;
+pub mod safetensors;
 pub mod sha256;
 pub mod state;
 pub mod symmetry;

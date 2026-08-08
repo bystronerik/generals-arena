@@ -16,8 +16,11 @@
 
 use std::io::{self, BufWriter, Write};
 use std::panic::{self, AssertUnwindSafe};
+use std::time::Instant;
 
 use morpheus_core::action::{decode_action, legal_mask, PASS_INDEX};
+use morpheus_core::inference::Session;
+use morpheus_core::network::Heads;
 use morpheus_core::memory::VisibleMemory;
 use morpheus_core::wire::{
     read_handshake, read_observation, write_action, Action, Observation, PASS,
@@ -70,6 +73,77 @@ fn run_parity(kind: &str) -> ! {
     }
 }
 
+/// `morpheus-rs bench [iters]`: the inference half of the M3 shoot-out.
+///
+/// Batch here is a loop, not a tensor dimension, so "batch 4" is four
+/// sequential forwards timed as one unit — which is exactly what the search
+/// pays when it evaluates a leaf batch, and therefore the number that belongs
+/// beside a batched engine's batch-4 figure.
+fn run_bench(iters: usize) -> ! {
+    let load = Instant::now();
+    let mut session = match Session::load_default() {
+        Ok(session) => session,
+        Err(err) => {
+            eprintln!("[morpheus-rs] {err}");
+            std::process::exit(2);
+        }
+    };
+    let load_ms = load.elapsed().as_secs_f64() * 1e3;
+    let warm = Instant::now();
+    session.warmup();
+    println!("load_ms {load_ms:.3}");
+    println!("warmup_ms {:.3}", warm.elapsed().as_secs_f64() * 1e3);
+
+    // The same deterministic stream the candle and tract spikes used, so the
+    // three engines are timed on identical inputs rather than on each
+    // implementation's idea of "random".
+    let mut seed: u32 = 12345;
+    let mut next = || {
+        seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+        ((seed >> 8) as f32 / 16_777_216.0) * 2.0 - 1.0
+    };
+
+    let probe: Vec<f32> = (0..49 * 441).map(|_| next()).collect();
+    for (name, ms) in session.network.profile_forward(&probe, 50) {
+        println!("stage {name} {ms:.4}");
+    }
+
+    for &heads in &[Heads::Policy, Heads::PolicyWdl, Heads::All] {
+        let label = match heads {
+            Heads::Policy => "policy",
+            Heads::PolicyWdl => "policy_wdl",
+            Heads::All => "full",
+        };
+        for &batch in &[1usize, 4, 8] {
+            let inputs: Vec<Vec<f32>> = (0..batch)
+                .map(|_| (0..49 * 441).map(|_| next()).collect())
+                .collect();
+            for _ in 0..5 {
+                for x in &inputs {
+                    std::hint::black_box(session.forward(x, heads));
+                }
+            }
+            let mut times = Vec::with_capacity(iters);
+            for _ in 0..iters {
+                let t = Instant::now();
+                for x in &inputs {
+                    std::hint::black_box(session.forward(x, heads));
+                }
+                times.push(t.elapsed().as_secs_f64() * 1e3);
+            }
+            times.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            let pick = |q: f64| times[((q * times.len() as f64).ceil() as usize).max(1) - 1];
+            println!(
+                "{label} batch {batch} p50 {:.3} p99 {:.3} min {:.3}",
+                pick(0.50),
+                pick(0.99),
+                times[0]
+            );
+        }
+    }
+    std::process::exit(0);
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.first().map(String::as_str) == Some("parity") {
@@ -80,6 +154,10 @@ fn main() {
                 std::process::exit(2);
             }
         }
+    }
+    if args.first().map(String::as_str) == Some("bench") {
+        let iters = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(200);
+        run_bench(iters);
     }
 
     // Panic messages go to stderr, which the harness captures; the process

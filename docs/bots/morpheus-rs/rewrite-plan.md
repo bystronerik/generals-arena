@@ -1,7 +1,8 @@
 # Morpheus-rs rewrite plan
 
-Status: **confirmed 2026-08-08 — implementation under way. M0, M0.5, M1, and M2
-are done (§14–§17); M0.5 awaits a submission only the account holder can make.**
+Status: **confirmed 2026-08-08 — implementation under way. M0, M0.5, M1, M2,
+and M3 are done (§14–§18); M0.5 awaits a submission only the account holder can
+make.**
 Revised against the declared-final morpheus state at commit `9d6f186`
 (oracle `morpheus@73967d2125cc`, registry step 18 — see §14; the
 `17c8ac2684ec` this plan first named was the *previous* registry head, the
@@ -149,6 +150,13 @@ safetensors export. Benchmark against a 1-day `tract-onnx` spike at milestone
 M3 and keep whichever is faster; define a bespoke fixed-shape kernel as a
 measured upgrade path, entered only if profiling shows the framework leaving
 ≥30% on the table at batch 1–4.**
+
+> **Superseded at M3 (§18).** All three were measured and the ranking
+> inverted: candle costs 4.4× TorchScript at batch 1, tract 1.35×, and the
+> bespoke kernel — this section's last resort — is 1.68× *faster*. The decision
+> rule below is what settled it, so read this section for the rule and §18 for
+> the answer. The reasoning that follows about TorchScript being
+> overhead-dominated is also wrong: it runs at 34 GFLOP/s, not 17.
 
 The candidates, weighed on the axes that matter here:
 
@@ -809,3 +817,93 @@ dependency the shipped bot does not need.
 The pattern worth keeping: both of these were *documented* conclusions that no
 test covered. A gate proves what it exercises; a justification proves nothing
 at all until someone measures it.
+
+## 18. M3 — done, and it reversed §3's ranking
+
+Delivered 2026-08-09. The network runs in Rust, from a safetensors conversion
+of the frozen artifact, faster than the TorchScript it replaces. Engine
+detail: [`inference.md`](inference.md). Figures:
+[`morpheus-rs-inference-bench.md`](../../research/measurements/morpheus-rs-inference-bench.md).
+
+**Exit gate: met on arm64, x86 outstanding.** The shipped engine beats
+TorchScript at batch 1 (1.68×) and batch 4 (1.44×) on the M3 Pro, and all
+eleven heads agree with the oracle inside §5's 1e-5 MAE over the full corpus.
+The gate is written against **x86** and that arm is not in hand: the run is
+`scripts/morpheus_rs_modal_inference_bench.py`, which builds the crate and
+times both engines in a one-core Linux container. Until it lands, what is
+proved is the correctness half plus an arm64 win, and the open question is
+narrow but real — x86 TorchScript dispatches to oneDNN kernels that are tuned
+harder than anything the NEON path gets, so the 1.68× is an upper bound on
+what to expect there.
+
+**§3 chose the wrong engine, by its own decision rule.** The plan ranked candle
+first, tract second, and a bespoke fixed-shape kernel last — to be "entered
+only if profiling shows the framework leaving ≥30% on the table". Measured on
+the M3 Pro at `policy_wdl` p99, against TorchScript's 6.09 ms (b1) and 20.61 ms
+(b4):
+
+| engine | batch 1 | batch 4 |
+| --- | ---: | ---: |
+| candle 0.9 | 4.57× slower | 6.20× slower |
+| tract-onnx 0.21 | 1.40× slower | 2.34× slower |
+| **bespoke (shipped)** | **1.68× faster** | **1.44× faster** |
+
+Both library options trip R1's tripwire (≥1.3× at batch 1 **and** 4), so §9's
+ladder was walked candle → tract → bespoke and stops at the third rung; the
+vendored-`ort` rung, with its 20–30 MB `.so`, never has to be argued about.
+
+candle's loss has one cause, and it is worth recording because it generalizes:
+it implements grouped convolution by looping over groups, so the depthwise
+layer becomes 128 separate convolutions costing **1.14 ms** per call where the
+same layer costs 0.02 ms here. Twelve blocks of that is half of candle's forward for
+6% of the network's arithmetic. It is a library tuned for transformers meeting
+a MobileNet-shaped net, not a general statement about frameworks — its
+pointwise GEMMs are fine.
+
+**§3's premise was also wrong, in the direction that matters less.** It
+inferred from the shipped 11.9 ms root inference that TorchScript was
+"overhead-dominated at ~17 effective GFLOPS". Measured directly,
+single-threaded TorchScript does 212 MFLOP in 6.09 ms — **35 GFLOP/s**, a
+competent GEMM library on a fast core, not overhead. The bespoke engine reaches
+60 GFLOP/s, so §3's 3–6 ms target was hit (3.6 ms) for a reason it did not
+give. §7's throughput thesis never rested on inference either way.
+
+**The largest single lever was a language detail, not an algorithm.** Rust
+compiles floating-point with contraction off, so `acc += a * b` never becomes a
+fused multiply-add. Writing `mul_add` explicitly moved the forward from 11.3 ms
+to 5.5 ms — from losing to TorchScript by 1.8× to beating it. Eight accumulator
+lanes in GroupNorm's statistics took another 0.9 ms.
+
+The honest failure of the milestone is a measurement that will not sit still.
+The depthwise stage read 1.10 ms for most of M3 and reads 0.28 ms now, from
+edits elsewhere in the crate; three candidate causes were tested and all three
+refuted, leaving whole-crate LTO as the only remaining explanation and no
+proof of it. Per-stage numbers here are build-sensitive and must be
+re-measured, not quoted. The whole-forward figure was stable to 0.01 ms across
+every run, which is why it is the one the gate uses.
+
+**Parity: the first surface with a real tolerance.** `net` (all eleven heads
+through all three entry points) and `prior` (`legal_normalized_policy` plus
+`backup_value`) add 2,798 cases to the corpus run, for 502,870 across eleven
+surfaces. `net` cannot be bit-exact — two engines, different summation orders,
+fused multiply-adds — so §5's 1e-5 is doing real work for the first time:
+measured worst MAE 4.05e-6, 2.5× under budget, against the *thousandfold* slack
+M2 found beneath the tensor's 1e-6. Every float surface now prints its worst
+observed |Δ| so the headroom stays a number.
+
+`prior` re-taught M2's lesson unprompted. The first version softmaxed in f64 —
+more accurate — and disagreed with the oracle in the eighth decimal, because
+`torch.softmax` runs at the tensor's dtype and every decision the oracle has
+ever made was made on that f32 rounding. Mirroring the width fixed it.
+
+Two notes for M4 and M5:
+
+- The bot still plays M1's first-legal-move. M3 ships the engine, not a
+  decision: `NetworkEvaluator`'s prior shaping needs `tactics.py` (M5) and its
+  tensor needs `particle_summary.py` (M4). Nothing in the *playing* path loads
+  the artifact yet, so the first move that does will be the first real test of
+  the load-and-warmup budget (3.9 ms + 21.4 ms measured standalone, against
+  8.5 s of grace).
+- The x86 arm is one Modal container, and M0 already found separate runs
+  landing on different fleet generations. It is a shape result, not a
+  qualification. M7 still owes the reference host a full suite.

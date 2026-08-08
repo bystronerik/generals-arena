@@ -1,0 +1,92 @@
+{
+  "action_schema": "morpheus-action-v1",
+  "architecture": {
+    "army_bin_edges": [
+      0.0,
+      1.681792830507429,
+      2.82842712474619,
+      4.756828460010883,
+      7.999999999999998,
+      13.454342644059432,
+      22.627416997969508,
+      38.05462768008706,
+      63.99999999999998,
+      107.63474115247539,
+      181.01933598375612,
+      304.4370214406964,
+      511.9999999999995,
+      861.0779292198033,
+      1448.154687870048,
+      2435.4961715255718,
+      4096.0
+    ],
+    "board": 21,
+    "dilation_cycle": [
+      1,
+      2,
+      4
+    ],
+    "expansion": 128,
+    "group_norm_groups": 8,
+    "in_channels": 49,
+    "n_army_bins": 16,
+    "n_blocks": 12,
+    "outputs": {
+      "army_margin": "N\u00d71",
+      "castle_margin": "N\u00d71",
+      "enemy_army_bins": "N\u00d716\u00d721\u00d721",
+      "enemy_general": "N\u00d71\u00d721\u00d721",
+      "hidden_castle": "N\u00d71\u00d721\u00d721",
+      "hidden_owner": "N\u00d71\u00d721\u00d721",
+      "land_margin": "N\u00d71",
+      "pass_logit": "N\u00d71",
+      "policy": "N\u00d79\u00d721\u00d721",
+      "turns_to_termination": "N\u00d71",
+      "wdl_logits": "N\u00d73"
+    },
+    "parameter_count": 249316,
+    "policy_channels": 9,
+    "trunk_channels": 64
+  },
+  "architecture_version": "morpheus-net-v1",
+  "army_bin_edges": [
+    0.0,
+    1.681792830507429,
+    2.82842712474619,
+    4.756828460010883,
+    7.999999999999998,
+    13.454342644059432,
+    22.627416997969508,
+    38.05462768008706,
+    63.99999999999998,
+    107.63474115247539,
+    181.01933598375612,
+    304.4370214406964,
+    511.9999999999995,
+    861.0779292198033,
+    1448.154687870048,
+    2435.4961715255718,
+    4096.0
+  ],
+  "army_scale": 4096.0,
+  "artifact_file": "model.safetensors",
+  "manifest_version": "1",
+  "quantization": {
+    "engine": "none",
+    "format": "float32",
+    "runtime": "morpheus-rs-native+float32"
+  },
+  "runtime": "morpheus-rs-native+float32",
+  "source_artifact": {
+    "bot": "morpheus",
+    "file": "model.pt",
+    "runtime": "torch.jit.script+float32",
+    "sha256": "9d02e3d0bb4f51efcb8eb1eca50156126aae870f8076b71fa11d7a9d7c19f228"
+  },
+  "tensor_schema": "morpheus-tensor-v1",
+  "training_run": {
+    "checkpoint_id": "ckpt-00010000-300811cf4add",
+    "run_id": "scraped-classes13-2026-08-08"
+  },
+  "weights_sha256": "15509ff5cc1aa8bca16062363a9cd65cc4187a666eb71fc8dc200d8180abb0c9"
+}

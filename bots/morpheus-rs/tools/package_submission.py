@@ -67,8 +67,10 @@ _ZIP_DATE = (2020, 1, 1, 0, 0, 0)
 SOURCE_MEMBERS = ("Cargo.toml", "Cargo.lock")
 SOURCE_TREES = ("crates",)
 
-# Included when present. The model artifact does not exist yet (M3 adds the
-# safetensors export), so this is a forward declaration, not dead code.
+# Included when present. As of M3 this is the safetensors weights plus their
+# manifest — about 1 MB, against a 50 MB zip limit. Still optional rather than
+# required: a build that has not run `tools/convert_artifact.py` should produce
+# a zip that fails loudly at load, not a packager that refuses to run.
 OPTIONAL_TREES = ("artifact",)
 
 RUN_SH_VENDORED = """#!/usr/bin/env bash

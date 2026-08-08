@@ -45,6 +45,37 @@ PASS = (1, 0, 0, 0, 0)
 # arithmetic difference, never a formatting one.
 FLOAT_TOLERANCE = 1e-6
 
+# §5 budgets 1e-5 MAE for the network heads against TorchScript. Unlike the
+# tensor, this one *cannot* be bit-exact: the two engines sum the same products
+# in different orders, and the Rust kernels fuse their multiply-adds. So the
+# budget is real here — but it is still far looser than what the port achieves,
+# and M2's lesson was that a tolerance nothing ever approaches is a check that
+# cannot fail. Both are therefore enforced: the specified MAE, and a much
+# tighter cap on the worst single element, set from measurement with headroom.
+# Measured over the full corpus (1,399 cases): worst MAE 4.05e-6 on
+# `pass_logit`, worst single element 1.05e-5 on the auxiliary spatial heads.
+# The MAE budget is §5's and it is genuinely tight — 2.5x headroom, not the
+# thousandfold slack the tensor's 1e-6 turned out to have. The element cap is
+# set from the measurement at ~5x, loose enough for a different vector width
+# on x86 and tight enough that a real graph error cannot hide under it.
+NET_MAE_TOLERANCE = 1e-5
+NET_MAX_ABS_TOLERANCE = 5e-5
+
+# The prior is the one surface where "as tight as achievable" is genuinely
+# loose. Both sides softmax in f32 over 3,970 terms — the width is copied from
+# the Python deliberately (see `network::wdl_value`) — so the two answers
+# differ by the last bit of `exp` and by how the 3,970 terms were summed.
+# Measured worst case is a little over one f32 ulp; the cap is set an order of
+# magnitude above that, and `worst_observed()` reports what a run actually hit
+# so the headroom stays visible rather than becoming folklore. Measured worst
+# over the full corpus: 6.56e-7 on a prior mass, 1.19e-7 on the backup value.
+PRIOR_TOLERANCE = 5e-6
+
+# The three entry points share a trunk. Their common heads must agree exactly —
+# not approximately — on each side, because they are the same arithmetic run
+# twice; anything else is an entry-point switch that changed what it computed.
+ENTRY_POINT_HEADS = ("policy", "pass_logit")
+
 
 # --- corpus -> python objects ----------------------------------------------
 
@@ -621,6 +652,161 @@ def _crafted_memory_pairs():
     return pairs
 
 
+# --- the network oracle ------------------------------------------------------
+
+_SESSION = None
+
+
+def torchscript_session():
+    """The frozen TorchScript artifact, loaded once per process.
+
+    This is the *oracle* for the `net` surface — the three modules the Python
+    bot actually runs, not a re-implementation. The Rust side reads a
+    safetensors conversion of the same weights (`tools/convert_artifact.py`),
+    so a mismatch is arithmetic, never a different checkpoint.
+
+    That last sentence is checked rather than asserted. The converted manifest
+    records the SHA-256 of the `.pt` it was made from; if the two sides have
+    drifted, every head disagrees by a lot and the failure would read like an
+    arithmetic catastrophe instead of a stale artifact. Naming the real cause
+    costs one hash of a one-megabyte file.
+    """
+    global _SESSION
+    if _SESSION is None:
+        import hashlib
+        import json
+
+        import torch
+
+        torch.set_num_threads(1)
+        art = REPO / "bots" / "morpheus" / "artifact"
+        converted = BOT_DIR / "artifact" / "manifest.json"
+        if converted.is_file():
+            claimed = json.loads(converted.read_text()).get("source_artifact", {})
+            source = art / claimed.get("file", "model.pt")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            if claimed.get("sha256") != digest:
+                raise RuntimeError(
+                    f"{converted.relative_to(REPO)} was converted from a "
+                    f"{str(claimed.get('sha256'))[:12]} artifact but "
+                    f"{source.relative_to(REPO)} is now {digest[:12]}; "
+                    "re-run bots/morpheus-rs/tools/convert_artifact.py"
+                )
+        _SESSION = {
+            name: torch.jit.load(str(art / filename), map_location="cpu").eval()
+            for name, filename in (
+                ("policy", "model_policy.pt"),
+                ("policy_wdl", "model_policy_wdl.pt"),
+                ("full", "model.pt"),
+            )
+        }
+    return _SESSION
+
+
+def _network_expectation(tensor: np.ndarray) -> dict:
+    """Every head TorchScript produces for one 49×21×21 tensor."""
+    import torch
+
+    from export import forward_exported
+
+    session = torchscript_session()
+    x = torch.from_numpy(np.ascontiguousarray(tensor, dtype=np.float32)).unsqueeze(0)
+    with torch.no_grad():
+        p_policy, p_pass = session["policy"](x)
+        w_policy, w_pass, w_wdl = session["policy_wdl"](x)
+        # The scripted module returns a bare tuple; `forward_exported` is the
+        # Python bot's own way of naming those eleven tensors, so the head
+        # order in this file is the bot's order and not a second guess at it.
+        full = forward_exported(session["full"], x)
+
+    def flat(t) -> np.ndarray:
+        return np.asarray(t.detach().numpy(), dtype=np.float32).reshape(-1)
+
+    return {
+        "policy_only.policy": flat(p_policy),
+        "policy_only.pass_logit": flat(p_pass),
+        "policy_wdl.policy": flat(w_policy),
+        "policy_wdl.pass_logit": flat(w_pass),
+        "policy_wdl.wdl_logits": flat(w_wdl),
+        "full.policy": flat(full.policy),
+        "full.pass_logit": flat(full.pass_logit),
+        "full.wdl_logits": flat(full.wdl_logits),
+        "full.hidden_owner": flat(full.hidden_owner),
+        "full.enemy_army_bins": flat(full.enemy_army_bins),
+        "full.enemy_general": flat(full.enemy_general),
+        "full.hidden_castle": flat(full.hidden_castle),
+        "full.margins": np.concatenate(
+            [
+                flat(full.land_margin),
+                flat(full.army_margin),
+                flat(full.castle_margin),
+                flat(full.turns_to_termination),
+            ]
+        ),
+    }
+
+
+# Head name -> element count, in the order `parity.rs` writes them. Reading the
+# Rust stream back is positional, so this table and the `"net"` arm over there
+# are one layout described twice and must be edited together.
+NET_LAYOUT = (
+    ("policy_only.policy", 9 * 441),
+    ("policy_only.pass_logit", 1),
+    ("policy_wdl.policy", 9 * 441),
+    ("policy_wdl.pass_logit", 1),
+    ("policy_wdl.wdl_logits", 3),
+    ("full.policy", 9 * 441),
+    ("full.pass_logit", 1),
+    ("full.wdl_logits", 3),
+    ("full.hidden_owner", 441),
+    ("full.enemy_army_bins", 16 * 441),
+    ("full.enemy_general", 441),
+    ("full.hidden_castle", 441),
+    ("full.margins", 4),
+)
+
+
+def _prior_expectation(
+    logits: np.ndarray, mask: np.ndarray, wdl: np.ndarray, from_root: bool
+) -> tuple[np.ndarray, float]:
+    """`legal_normalized_policy` and `backup_value`, through the real Python."""
+    import torch
+    from network import backup_value, legal_normalized_policy
+
+    policy = torch.from_numpy(
+        np.ascontiguousarray(logits[:-1], dtype=np.float32)
+    ).reshape(1, 9, 21, 21)
+    pass_logit = torch.from_numpy(
+        np.ascontiguousarray(logits[-1:], dtype=np.float32)
+    ).reshape(1, 1)
+    mask_t = torch.from_numpy(np.ascontiguousarray(mask, dtype=bool)).unsqueeze(0)
+    prior = (
+        legal_normalized_policy(policy, pass_logit, mask_t)
+        .squeeze(0)
+        .numpy()
+        .astype(np.float64)
+    )
+    value = float(
+        backup_value(
+            torch.from_numpy(np.ascontiguousarray(wdl, dtype=np.float32)).reshape(1, 3),
+            from_root=from_root,
+        ).item()
+    )
+    return prior, value
+
+
+def _f32_bits(values: np.ndarray) -> list[int]:
+    return np.asarray(values, dtype=np.float32).ravel().view(np.uint32).astype(np.int64).tolist()
+
+
+def _decode_f32(values: list[int]) -> np.ndarray:
+    return np.asarray(values, dtype=np.int64).astype(np.uint32).view(np.float32)
+
+
+def _decode_f64(values: list[int]) -> np.ndarray:
+    return np.asarray(values, dtype=np.int64).view(np.float64)
+
+
 def build_cases(
     frames: list[dict], kind: str, *, pairs_per_state: int = 12, synthetic: bool = True
 ) -> tuple[list[int], list]:
@@ -723,6 +909,48 @@ def build_cases(
                             obs, memory, belief=belief, previous_action=action
                         )
                     )
+        elif kind in ("net", "prior"):
+            from action import legal_mask
+            from memory import update_memory
+            from tensor import build_tensor
+
+            for obs, memory, _prev_digest, action in _memory_pairs(frame, synthetic):
+                # The tensor the network sees is the one the `tensor` surface
+                # already proves bit-identical, so a `net` failure is the graph
+                # and never its input.
+                tensor = np.asarray(
+                    build_tensor(
+                        obs,
+                        memory,
+                        belief=_belief_summary_for(obs),
+                        previous_action=action,
+                    ),
+                    dtype=np.float32,
+                )
+                heads = _network_expectation(tensor)
+                if kind == "net":
+                    stream += _f32_bits(tensor)
+                    expected.append(heads)
+                else:
+                    # Feed the *Python* logits to both sides. The softmax and
+                    # the WDL contraction are what is under test here; running
+                    # them on each side's own logits would fold the network's
+                    # tolerance into a check meant to be near-exact.
+                    logits = np.concatenate(
+                        [heads["policy_wdl.policy"], heads["policy_wdl.pass_logit"]]
+                    )
+                    mask = np.asarray(
+                        legal_mask(obs, update_memory(memory, obs)), dtype=bool
+                    )
+                    wdl = heads["policy_wdl.wdl_logits"]
+                    from_root = bool((int(obs.turn) // 2) % 2 == 0)
+                    stream += _f32_bits(logits)
+                    stream += [int(v) for v in mask]
+                    stream += _f32_bits(wdl)
+                    stream += [int(from_root)]
+                    expected.append(
+                        _prior_expectation(logits, mask, wdl, from_root)
+                    )
         elif kind == "symmetry":
             from symmetry import (
                 SYMMETRIES,
@@ -773,6 +1001,25 @@ def run_binary(kind: str, stream: list[int]) -> list[list[int]]:
         for line in result.stdout.splitlines()
         if line.strip()
     ]
+
+
+# Worst |Δ| seen per float surface since the last `reset_stats()`. A tolerance
+# is only meaningful next to the number it is not being reached by; M2 found a
+# real precision bug hiding under a budget that never fired.
+_WORST: dict[str, float] = {}
+
+
+def reset_stats() -> None:
+    _WORST.clear()
+
+
+def worst_observed() -> dict[str, float]:
+    return dict(_WORST)
+
+
+def _note(name: str, value: float) -> None:
+    if value > _WORST.get(name, -1.0):
+        _WORST[name] = value
 
 
 def compare(kind: str, expected: list, actual: list[list[int]]) -> list[str]:
@@ -880,6 +1127,7 @@ def compare(kind: str, expected: list, actual: list[list[int]]) -> list[str]:
                 continue
             delta = np.abs(got_tensor - want_tensor)
             worst = float(delta.max())
+            _note("tensor.max", worst)
             # Tier 2 asks for 1e-6; the port achieves **bit-identical**, so
             # that is what is enforced. The looser figure is not a free pass:
             # at 1e-6 a mutation computing `army_value` in single precision
@@ -894,6 +1142,69 @@ def compare(kind: str, expected: list, actual: list[list[int]]) -> list[str]:
                     f"tensor[{i}]: not bit-identical, max |Δ| {worst:.3g} on plane "
                     f"{plane} ({PLANE_NAMES[plane]}); {over_spec} cell(s) also exceed "
                     f"the §5 tolerance {FLOAT_TOLERANCE:g}"
+                )
+        elif kind == "net":
+            offset = 0
+            heads: dict[str, np.ndarray] = {}
+            for name, count in NET_LAYOUT:
+                heads[name] = _decode_f32(got[offset : offset + count])
+                offset += count
+            if offset != len(got):
+                problems.append(f"net[{i}]: {len(got)} values for a {offset}-value layout")
+                continue
+            for name, _count in NET_LAYOUT:
+                a, b = heads[name], want[name]
+                delta = np.abs(a.astype(np.float64) - b.astype(np.float64))
+                mae = float(delta.mean())
+                worst = float(delta.max())
+                _note(f"net.{name}.mae", mae)
+                _note(f"net.{name}.max", worst)
+                if mae > NET_MAE_TOLERANCE or worst > NET_MAX_ABS_TOLERANCE:
+                    at = int(delta.argmax())
+                    problems.append(
+                        f"net[{i}]: {name} MAE {mae:.3g} (budget {NET_MAE_TOLERANCE:g}), "
+                        f"max |Δ| {worst:.3g} (cap {NET_MAX_ABS_TOLERANCE:g}) at index "
+                        f"{at} ({a[at]!r} != {b[at]!r})"
+                    )
+            # Same trunk, three exits: the shared heads must be *identical*,
+            # on each side independently. A drift here is not float noise, it
+            # is an entry point computing something else.
+            for side, values in (("rust", heads), ("torchscript", want)):
+                for head in ENTRY_POINT_HEADS:
+                    a = values[f"policy_only.{head}"]
+                    b = values[f"policy_wdl.{head}"]
+                    c = values[f"full.{head}"]
+                    if not (np.array_equal(a, b) and np.array_equal(b, c)):
+                        problems.append(
+                            f"net[{i}]: {side} entry points disagree on {head}"
+                        )
+        elif kind == "prior":
+            want_prior, want_value = want
+            got_prior = _decode_f64(got[:-1])
+            got_value = float(_decode_f64(got[-1:])[0])
+            if got_prior.shape != want_prior.shape:
+                problems.append(f"prior[{i}]: length {got_prior.shape}")
+                continue
+            # Illegal actions are not "small", they are zero. A tolerance would
+            # hide a mask that leaked probability onto an unplayable move.
+            leaked = np.flatnonzero((want_prior == 0.0) & (got_prior != 0.0))
+            if leaked.size:
+                problems.append(
+                    f"prior[{i}]: {leaked.size} illegal action(s) got mass, "
+                    f"first index {int(leaked[0])}"
+                )
+            delta = np.abs(got_prior - want_prior)
+            _note("prior.max", float(delta.max()))
+            _note("prior.value", abs(got_value - want_value))
+            if float(delta.max()) > PRIOR_TOLERANCE:
+                at = int(delta.argmax())
+                problems.append(
+                    f"prior[{i}]: max |Δ| {float(delta.max()):.3g} at action {at} "
+                    f"({got_prior[at]!r} != {want_prior[at]!r})"
+                )
+            if abs(got_value - want_value) > PRIOR_TOLERANCE:
+                problems.append(
+                    f"prior[{i}]: value {got_value!r} != {want_value!r}"
                 )
         elif kind == "symmetry":
             if got != list(want):
@@ -953,7 +1264,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--limit", type=int, default=0, help="cap heavy frames")
     parser.add_argument("--pairs", type=int, default=12, help="action pairs per state")
     parser.add_argument(
-        "--kinds", nargs="*", default=["transition", "order", "observe", "mask", "cost", "memory", "hash", "tensor", "symmetry"]
+        "--kinds",
+        nargs="*",
+        default=[
+            "transition", "order", "observe", "mask", "cost",
+            "memory", "hash", "tensor", "symmetry", "net", "prior",
+        ],
     )
     args = parser.parse_args(argv)
 
@@ -968,6 +1284,7 @@ def main(argv: list[str] | None = None) -> int:
     frames = load_frames(paths, limit=args.limit)
     print(f"{len(frames)} heavy frame(s) from {len(paths)} file(s)")
 
+    reset_stats()
     failed = False
     for kind in args.kinds:
         count, problems = check(kind, frames, pairs_per_state=args.pairs)
@@ -976,6 +1293,12 @@ def main(argv: list[str] | None = None) -> int:
         for problem in problems[:20]:
             print(f"      {problem}")
         failed = failed or bool(problems)
+
+    stats = worst_observed()
+    if stats:
+        print("worst observed |\u0394| (the headroom under each budget):")
+        for name in sorted(stats):
+            print(f"  {name:<34} {stats[name]:.3g}")
     return 1 if failed else 0
 
 

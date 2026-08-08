@@ -55,6 +55,7 @@ Small topic files for the Generals Arena research repo.
 - [morpheus-rs parity corpus](bots/morpheus-rs/parity-corpus.md) — recorded frames and RNG streams the Rust port is checked against
 - [morpheus-rs packaging](bots/morpheus-rs/packaging.md) — crate layout, content hash, and the two submission variants
 - [morpheus-rs parity harness](bots/morpheus-rs/parity-harness.md) — how a ported surface is proved equal, and how the proof is itself checked
+- [morpheus-rs inference](bots/morpheus-rs/inference.md) — the hand-written network engine, the artifact contract, and the shoot-out that chose it
 
 ## Arena
 

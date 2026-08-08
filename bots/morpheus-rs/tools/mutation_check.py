@@ -268,6 +268,154 @@ MUTATIONS: tuple[Mutation, ...] = (
         "Symmetry::Rot90 => rot90[d],",
         "Symmetry::Rot90 => d,",
     ),
+    # --- M3: the network graph and the arithmetic around it ------------------
+    #
+    # The `net` surface compares against TorchScript with a *tolerance*, not
+    # bit-exactly, which makes these mutations more load-bearing than the
+    # tier-1 ones: a budget wide enough to absorb a real mistake is a budget
+    # that proves nothing. Several below are deliberately small — an eps, a
+    # padding column, a precision — to find out where the budget stops seeing.
+    Mutation(
+        "group norm epsilon an order of magnitude out",
+        "network.rs",
+        "const GROUP_NORM_EPS: f64 = 1e-5;",
+        "const GROUP_NORM_EPS: f64 = 1e-4;",
+    ),
+    Mutation(
+        "group norm sums over the pad columns",
+        "network.rs",
+        "let plane = &buf[c * STRIDE..c * STRIDE + CELLS];",
+        "let plane = &buf[c * STRIDE..(c + 1) * STRIDE];",
+        note=(
+            "Equivalent, and equivalent for a reason worth having: the seven "
+            "pad columns per plane are zero, so summing them adds nothing to "
+            "either accumulator. This mutation surviving is evidence *for* the "
+            "zero-padding invariant the module doc claims. The observable half "
+            "of 'include the pad columns' is the divisor, which is the next "
+            "mutation and is caught."
+        ),
+    ),
+    Mutation(
+        "group norm divides by the padded width",
+        "network.rs",
+        "let n = (per_group * CELLS) as f64;",
+        "let n = (per_group * STRIDE) as f64;",
+    ),
+    Mutation(
+        "group norm over the whole layer, not eight groups",
+        "network.rs",
+        "pub const GROUP_NORM_GROUPS: usize = 8;",
+        "pub const GROUP_NORM_GROUPS: usize = 4;",
+    ),
+    Mutation(
+        "dilation cycle flattened to 1",
+        "network.rs",
+        "pub const DILATION_CYCLE: [usize; 3] = [1, 2, 4];",
+        "pub const DILATION_CYCLE: [usize; 3] = [1, 1, 1];",
+    ),
+    Mutation(
+        "ReLU6 with no upper clamp",
+        "network.rs",
+        "*v = v.clamp(0.0, 6.0);",
+        "*v = v.max(0.0);",
+    ),
+    Mutation(
+        "residual connection dropped",
+        "network.rs",
+        "s.trunk[i] += s.residual[i];",
+        "s.trunk[i] += 0.0;",
+    ),
+    Mutation(
+        "depthwise kernel transposed",
+        "network.rs",
+        "let wv = w[ky * 3 + kx];",
+        "let wv = w[kx * 3 + ky];",
+    ),
+    Mutation(
+        "global mean ignores the board mask",
+        "network.rs",
+        "sum += (v * mask[p]) as f64;",
+        "sum += v as f64;",
+    ),
+    Mutation(
+        "global max ignores the board mask",
+        "network.rs",
+        "let candidate = if mask[p] < 0.5 { MASK_FILL } else { v };",
+        "let candidate = v;",
+    ),
+    Mutation(
+        "global mean channels reversed",
+        "network.rs",
+        "self.scratch.feat[c] = (sum / safe) as f32;",
+        "self.scratch.feat[TRUNK - 1 - c] = (sum / safe) as f32;",
+    ),
+    Mutation(
+        "stem weights laid out with the tap axis outermost",
+        "network.rs",
+        "stem[oc * IN_CHANNELS * 9 + ic * 9 + k] =",
+        "stem[oc * IN_CHANNELS * 9 + k * IN_CHANNELS + ic] =",
+    ),
+    Mutation(
+        "1x1 head bias dropped",
+        "network.rs",
+        "Some(&head.bias),",
+        "None,",
+    ),
+    Mutation(
+        "softmax in double precision",
+        "network.rs",
+        "let e = (v - max).exp();",
+        "let e = ((v - max) as f64).exp() as f32;",
+        note=(
+            "Equivalent at this width. The result is rounded back to f32 "
+            "immediately, and `exp` is correctly rounded closely enough that "
+            "computing it in double and narrowing lands on the same float for "
+            "every logit the network produces. What the f32 contract actually "
+            "pins is the *sum and the division*, which this does not touch; "
+            "widening those needs `exps` widened too, which is a rewrite "
+            "rather than a one-line break, and the `prior` surface's 5e-6 cap "
+            "is what holds them."
+        ),
+    ),
+    Mutation(
+        "illegal actions keep their softmax mass",
+        "network.rs",
+        ".map(|i| if mask[i] { (exps[i] / total) as f64 } else { 0.0 })",
+        ".map(|i| (exps[i] / total) as f64)",
+        note=(
+            "Equivalent because the fill underflows. An illegal logit is set "
+            "to `f32::MIN`, so `exp(MIN - max)` is exactly 0.0 and the "
+            "multiply by the mask removes nothing. The Python multiplies too, "
+            "for the same non-reason. Keeping the explicit zero is still "
+            "right: it makes 'illegal means zero' a property of the code "
+            "rather than of float underflow, and the harness checks it "
+            "without tolerance."
+        ),
+    ),
+    Mutation(
+        "backup value not negated off the root",
+        "network.rs",
+        "    if from_root {\n        v\n    } else {\n        -v\n    }",
+        "    let _ = from_root;\n    v",
+    ),
+    Mutation(
+        "WDL value is win minus draw",
+        "network.rs",
+        "((exps[0] / total) - (exps[2] / total)) as f64",
+        "((exps[0] / total) - (exps[1] / total)) as f64",
+    ),
+    Mutation(
+        "GEMM bias applied to the wrong row",
+        "gemm.rs",
+        "let add = bias.map_or(0.0, |v| v[m0 + i]);",
+        "let add = bias.map_or(0.0, |v| v[m0]);",
+    ),
+    Mutation(
+        "linear head drops its bias",
+        "gemm.rs",
+        "y[m] = sum + bias[m];",
+        "y[m] = sum;",
+    ),
 )
 
 
@@ -303,11 +451,20 @@ def _parity(args: list[str]) -> tuple[bool, str]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--full", action="store_true", help="use the whole corpus")
+    parser.add_argument(
+        "--only",
+        default=None,
+        help="substring filter on mutation names; for iterating on a new one",
+    )
     parser.add_argument("--output", type=Path, default=None, help="write a JSON report")
     args = parser.parse_args(argv)
     parity_args = [] if args.full else ["--smoke"]
 
-    originals = {name: (SRC / name).read_text() for name in {m.file for m in MUTATIONS}}
+    selected = [m for m in MUTATIONS if not args.only or args.only in m.name]
+    if not selected:
+        print(f"no mutation matches {args.only!r}", file=sys.stderr)
+        return 2
+    originals = {name: (SRC / name).read_text() for name in {m.file for m in selected}}
     results = []
     try:
         if not _build():
@@ -319,12 +476,24 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         print(f"baseline: parity clean ({'corpus' if args.full else 'smoke'})\n")
 
-        for mutation in MUTATIONS:
+        for mutation in selected:
             path = SRC / mutation.file
             source = originals[mutation.file]
             if mutation.before not in source:
                 results.append({"name": mutation.name, "outcome": "stale"})
                 print(f"  STALE     {mutation.name} (pattern no longer in {mutation.file})")
+                continue
+            # A mutation that lands in `#[cfg(test)]` breaks a test instead of
+            # the bot, and then "survives" for a reason that says nothing about
+            # the harness. That happened once — the pad-column mutation matched
+            # a line in `group_norm`'s own unit test, sailed through, and was
+            # about to be written up as a coverage hole. `replace(..., 1)` hits
+            # the first occurrence, so the check is simply whether that
+            # occurrence is below the test module.
+            tests_at = source.find("#[cfg(test)]")
+            if tests_at >= 0 and source.index(mutation.before) > tests_at:
+                results.append({"name": mutation.name, "outcome": "in-test"})
+                print(f"  IN-TEST   {mutation.name} (pattern only matches inside #[cfg(test)])")
                 continue
             path.write_text(source.replace(mutation.before, mutation.after, 1))
             try:
@@ -351,7 +520,7 @@ def main(argv: list[str] | None = None) -> int:
     survived = [r for r in results if r["outcome"] == "survived"]
     print(f"\n{caught}/{len(results)} caught, {len(survived)} survived")
 
-    if args.output:
+    if args.output and not args.only:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(
             json.dumps(
@@ -362,13 +531,19 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
         )
         print(f"wrote {args.output}")
+    elif args.output:
+        print("--only: report not written (it would record a partial run)")
 
     # Survivors with a recorded explanation are accepted; an unexplained one is
     # a hole in the harness and fails the run.
     unexplained = [r for r in survived if not r.get("note")]
     for r in unexplained:
         print(f"unexplained survivor: {r['name']}", file=sys.stderr)
-    return 1 if unexplained else 0
+    # A mutation that never reached production code proves nothing either way.
+    misaimed = [r for r in results if r["outcome"] in ("stale", "in-test")]
+    for r in misaimed:
+        print(f"misaimed mutation: {r['name']} ({r['outcome']})", file=sys.stderr)
+    return 1 if unexplained or misaimed else 0
 
 
 if __name__ == "__main__":

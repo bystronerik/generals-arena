@@ -13,8 +13,9 @@ bots/morpheus-rs/
   Cargo.lock            pins the graph; the reason vendor/ need not be hashed
   rust-toolchain.toml   dev-side pin, deliberately NOT shipped (below)
   .cargo/config.toml    target-cpu for the Linux targets only
-  crates/core/src/      wire protocol today; the port lands here
-  crates/bot/src/       main: read frames, decide, reply
+  crates/core/src/      the ported bot; wire, board, network, parity
+  crates/bot/src/       main: read frames, decide, reply; `parity` and `bench`
+  artifact/             safetensors weights + manifest; inside the content hash
   run.sh                repo launcher — builds when stale, then execs
   tools/                dev tooling; outside the content hash
     submission/build.sh the build.sh copied into the vendored zip
@@ -22,6 +23,9 @@ bots/morpheus-rs/
     vendor_probe.py     proves the offline build with real vendored crates
     dependency_budget.py what a crate would cost in the zip
     capture_morpheus.py the M0 capture module
+    convert_artifact.py TorchScript -> safetensors, reproducibly
+    bench_inference.py  the M3 shoot-out, local half
+    spikes/             candle and tract crates kept as evidence, never linked
   tests/                pytest parity slice; outside the content hash
   target/  vendor/      build output and vendored crates; gitignored, unhashed
 ```
@@ -35,12 +39,23 @@ rustup; `rust-toolchain.toml` pins the channel and carries the
 ## Content hash
 
 `bots/morpheus-rs/` is rated on its sources: the `.rs` files, `Cargo.toml`,
-`Cargo.lock`, `rust-toolchain.toml`, `.cargo/config.toml`, and `run.sh`.
-`fingerprint._SKIP_DIRS` gained `target`, `vendor`, and `tools` for this — the
-first two because build output is what sources compile *to* and vendored
-crates are a copy of crates.io the lock file already pins, the third for the
-same reason `probe.py` is excluded: arena-owned tooling that never plays must
-not fork a rating identity when it is edited.
+`Cargo.lock`, `rust-toolchain.toml`, `.cargo/config.toml`, `run.sh`, and — from
+M3 — `artifact/`. `fingerprint._SKIP_DIRS` gained `target`, `vendor`, and
+`tools` for this — the first two because build output is what sources compile
+*to* and vendored crates are a copy of crates.io the lock file already pins,
+the third for the same reason `probe.py` is excluded: arena-owned tooling that
+never plays must not fork a rating identity when it is edited.
+
+**The artifact is inside the hash, so its bytes have to be reproducible.**
+`artifact/model.safetensors` is a conversion of the frozen Python artifact, and
+a bot that plays different weights is a different bot — so it belongs in the
+identity. That makes byte-reproducibility a hash requirement rather than a
+nicety, and it is the reason `tools/convert_artifact.py` writes the
+safetensors container itself instead of calling `safetensors.torch.save_file`:
+the library serializes its metadata block from a Rust `HashMap` whose order
+varies per process, so two conversions of identical weights would mint two bot
+identities. `convert_artifact.py --check` verifies the committed files
+reproduce exactly.
 
 **A shell comment can widen the closure.** `_SHELL_REF_RE` scans shell sources
 for bot-relative paths and cannot tell a comment from a `source` line. An early

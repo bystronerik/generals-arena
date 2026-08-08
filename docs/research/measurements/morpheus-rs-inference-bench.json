@@ -1,0 +1,191 @@
+{
+  "iters": 200,
+  "mac_per_forward": 106010368,
+  "machine": "arm64",
+  "platform": "macOS-26.5.2-arm64-arm-64bit",
+  "rust": {
+    "full_b1": {
+      "min": 3.565,
+      "p50": 3.621,
+      "p99": 3.992
+    },
+    "full_b4": {
+      "min": 14.275,
+      "p50": 14.376,
+      "p99": 15.093
+    },
+    "full_b8": {
+      "min": 28.539,
+      "p50": 28.6,
+      "p99": 34.731
+    },
+    "load_ms": 3.939,
+    "policy_b1": {
+      "min": 3.545,
+      "p50": 3.548,
+      "p99": 3.643
+    },
+    "policy_b4": {
+      "min": 14.191,
+      "p50": 14.206,
+      "p99": 14.298
+    },
+    "policy_b8": {
+      "min": 28.391,
+      "p50": 28.424,
+      "p99": 28.615
+    },
+    "policy_wdl_b1": {
+      "min": 3.545,
+      "p50": 3.55,
+      "p99": 3.623
+    },
+    "policy_wdl_b4": {
+      "min": 14.201,
+      "p50": 14.219,
+      "p99": 14.314
+    },
+    "policy_wdl_b8": {
+      "min": 28.423,
+      "p50": 28.5,
+      "p99": 33.334
+    },
+    "stages": {
+      "depthwise": 0.2844,
+      "elementwise": 0.1534,
+      "group_norm": 0.439,
+      "im2col": 0.0249,
+      "pointwise": 2.3021,
+      "stem_gemm": 0.2993
+    },
+    "warmup_ms": 21.551
+  },
+  "spikes": {
+    "_note": [
+      "Measured 2026-08-09 on the M3 Pro, RAYON_NUM_THREADS=1, 200 timed forwards",
+      "per cell, on the same LCG input stream the shipped bench uses. Recorded by",
+      "hand because the spikes live outside the workspace and need network to",
+      "build; re-derive with the commands in README.md. Milliseconds.",
+      "The tract rows are the policy_wdl ONNX export at fixed batch; candle is the",
+      "hand-written candle-nn graph over the same safetensors weights."
+    ],
+    "candle": {
+      "b1": {
+        "min": 27.046,
+        "p50": 27.228,
+        "p99": 27.842
+      },
+      "b4": {
+        "min": 124.057,
+        "p50": 126.318,
+        "p99": 127.766
+      },
+      "b8": {
+        "min": 229.086,
+        "p50": 230.684,
+        "p99": 236.334
+      },
+      "engine": "candle-core 0.9.2 + candle-nn 0.9.2",
+      "load_ms": 1.21
+    },
+    "candle_ops_ms_per_call": {
+      "_note": "Why candle loses. Per-op, batch 1 then batch 4.",
+      "clamp_relu6_128ch": {
+        "b1": 0.1008,
+        "b4": 0.3993
+      },
+      "dw_3x3_groups128_d1": {
+        "b1": 1.1351,
+        "b4": 5.9904
+      },
+      "dw_3x3_groups128_d4": {
+        "b1": 1.1684,
+        "b4": 6.1532
+      },
+      "pw_expand_64_128": {
+        "b1": 0.1181,
+        "b4": 0.4826
+      },
+      "pw_project_128_64": {
+        "b1": 0.1346,
+        "b4": 0.5482
+      },
+      "stem_conv3x3_49_64": {
+        "b1": 0.6067,
+        "b4": 2.4076
+      }
+    },
+    "tract": {
+      "b1": {
+        "min": 8.272,
+        "p50": 8.373,
+        "p99": 8.53
+      },
+      "b4": {
+        "min": 46.833,
+        "p50": 47.277,
+        "p99": 48.261
+      },
+      "b8": {
+        "min": 94.459,
+        "p50": 95.144,
+        "p99": 96.574
+      },
+      "compile_ms": {
+        "b1": 54.9,
+        "b4": 41.9,
+        "b8": 41.8
+      },
+      "engine": "tract-onnx 0.21.17, into_optimized() at fixed batch"
+    }
+  },
+  "torchscript": {
+    "full_b1": {
+      "min": 5.9499170165508986,
+      "p50": 6.11974997445941,
+      "p99": 8.004667004570365
+    },
+    "full_b4": {
+      "min": 20.315291942097247,
+      "p50": 21.639792015776038,
+      "p99": 24.3914999300614
+    },
+    "full_b8": {
+      "min": 38.87208306696266,
+      "p50": 39.35924998950213,
+      "p99": 41.52983310632408
+    },
+    "load_ms": 71.63987495005131,
+    "policy_b1": {
+      "min": 5.929208011366427,
+      "p50": 5.971457925625145,
+      "p99": 7.264500018209219
+    },
+    "policy_b4": {
+      "min": 20.24900005199015,
+      "p50": 20.398874999955297,
+      "p99": 23.31520803272724
+    },
+    "policy_b8": {
+      "min": 38.549707969650626,
+      "p50": 39.42724992521107,
+      "p99": 48.63708303309977
+    },
+    "policy_wdl_b1": {
+      "min": 5.964708048850298,
+      "p50": 5.999665940180421,
+      "p99": 6.0903329867869616
+    },
+    "policy_wdl_b4": {
+      "min": 20.433666999451816,
+      "p50": 20.498791942372918,
+      "p99": 20.70091594941914
+    },
+    "policy_wdl_b8": {
+      "min": 38.737041992135346,
+      "p50": 39.31816702242941,
+      "p99": 45.77600001357496
+    },
+    "torch_version": "2.13.0"
+  }
+}
