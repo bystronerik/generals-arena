@@ -35,6 +35,7 @@ pub mod sha256;
 pub mod state;
 pub mod symmetry;
 pub mod tactics;
+pub mod telemetry;
 pub mod tensor;
 pub mod transition;
 pub mod tree;

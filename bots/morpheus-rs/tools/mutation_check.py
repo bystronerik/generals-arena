@@ -70,7 +70,7 @@ FILE_SURFACES: dict[str, tuple[str, ...]] = {
     "tactics.rs": ("playmask", "candidates", "planners", "shaping", "constrain",
                    "decide"),
     "runtime.rs": ("decide", "runtime", "search"),
-    "tree.rs": ("search",),
+    "tree.rs": ("search", "evict"),
     "search.rs": ("search",),
 }
 
@@ -860,6 +860,15 @@ MUTATIONS: tuple[Mutation, ...] = (
         "tactics.rs",
         "let dest_enemy = g.inside(tr, tc) && g.owner(tr, tc) == OWNER_ENEMY;",
         "let dest_enemy = false;",
+        "unreachable by construction, and M6 is where that was established "
+        "rather than assumed. The anchor's exemption asks whether a move off "
+        "the savings site lands on an enemy cell — but `castle_build_site` "
+        "rejects any candidate within `CASTLE_SAFE_ENEMY_DIST` (4) Manhattan "
+        "of a visible enemy cell, and an adjacent cell is at distance 1. Both "
+        "functions read the same observation, so a site with an enemy "
+        "neighbour is not a site. The branch is dead in the Python too; it is "
+        "ported because the day the safe distance changes is the day it stops "
+        "being dead.",
     ),
     Mutation(
         "the build site must cost exactly the base price",
@@ -1166,6 +1175,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "tree.rs",
         "if total > 0.0 {\n            self.prior = positive.iter().map(|&v| v / total).collect();\n        }\n        self.regret.push(0.0);\n        self.avg_strategy.push(0.0);\n        let n_self = self.actions.len();",
         "if false {\n            self.prior = positive.iter().map(|&v| v / total).collect();\n        }\n        self.regret.push(0.0);\n        self.avg_strategy.push(0.0);\n        let n_self = self.actions.len();",
+        "equivalent: `widen_self` is only ever called from "
+        "`expand_self_candidates`, which finishes by calling "
+        "`refresh_self_priors` and overwriting the whole vector from the live "
+        "network prior. Measured by re-running the oracle with the "
+        "normalization deleted: 0 of 43 search setups differ.",
     ),
     Mutation(
         "refresh_self_priors rebuilds mass from the full network prior",
@@ -1185,12 +1199,22 @@ MUTATIONS: tuple[Mutation, ...] = (
         "tree.rs",
         "if table.n_self != n_self {\n                continue;\n            }",
         "if false {\n                continue;\n            }",
+        "unreachable, and the reason is the next mutation. A table's "
+        "width can never lag its node's candidate count: `widen_self` pads "
+        "every table it has, and `get_or_create_enemy_table` pads on install. "
+        "Measured over the search setups: 0 lagging tables in 43 marginal "
+        "aggregations and 680 backups. The two guards are redundant with each "
+        "other, which is why deleting either alone is invisible.",
     ),
     Mutation(
         "backup pads every table to the current candidate width",
         "tree.rs",
         "table.ensure_self_rows(n_self);\n            let n_enemy = table.n_enemy();",
         "let n_enemy = table.n_enemy();",
+        "unreachable for the reason above: nothing ever arrives at a "
+        "backup under-wide, because widening and installation both pad. Kept "
+        "because it is the guard that makes that true if either of the others "
+        "changes.",
     ),
     Mutation(
         "selection stops at an unexpanded node",
@@ -1228,12 +1252,23 @@ MUTATIONS: tuple[Mutation, ...] = (
         "search.rs",
         "let arriving = Particle {\n                        state: Rc::clone(&next_state),\n                        weight: 1.0,",
         "let arriving = Particle {\n                        state: Rc::clone(&next_state),\n                        weight: particle.weight,",
+        "equivalent: `ParticleReservoir::admit` rebuilds the arriving "
+        "particle at weight 1.0 whatever it was handed — measured, 198 of 647 "
+        "admits in the search setups pass a weight that is not 1 and none of "
+        "them survives the call. The only other consumer is the one-particle "
+        "belief a leaf evaluation builds, whose weights are normalized.",
     ),
     Mutation(
         "a terminal leaf takes the seat's own result",
         "search.rs",
         "let seat_win = if state.winner as usize == self.seat {\n                    1.0\n                } else {\n                    -1.0\n                };",
         "let seat_win = 1.0;",
+        "unobservable: this branch tests the state at the *top* of the "
+        "descent, which a transition can never produce — a finishing "
+        "transition returns from the branch below it — so it fires only on a "
+        "root particle that was already finished, at depth 0, where the path "
+        "has no edges and `backup_path` writes nothing. Measured: 24 firings "
+        "in the search setups, all with an empty edge list.",
     ),
     Mutation(
         "a drawn finish scores zero, not a loss",
@@ -1259,6 +1294,11 @@ MUTATIONS: tuple[Mutation, ...] = (
         "search.rs",
         "let prior_for_self: Vec<f64> = if node == root && self.last_root_prior.is_some() {",
         "let prior_for_self: Vec<f64> = if false {",
+        "equivalent: the two branches hold the same vector. "
+        "`ensure_root` sets `last_root_prior` and calls "
+        "`expand_self_candidates` with the same prior, which caches it on the "
+        "node, and `reuse_or_reset` does the same on a reused child. Measured "
+        "over 742 selections in the search setups: they never differ.",
     ),
 )
 
@@ -1311,15 +1351,29 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--only",
         default=None,
-        help="substring filter on mutation names; for iterating on a new one",
+        help=(
+            "comma-separated substring filters on mutation names; for iterating "
+            "on a new one. Several at once share the one baseline build"
+        ),
+    )
+    parser.add_argument(
+        "--file",
+        default=None,
+        help="restrict to mutations in one source file, e.g. tactics.rs",
     )
     parser.add_argument("--output", type=Path, default=None, help="write a JSON report")
     args = parser.parse_args(argv)
     parity_args = [] if args.full else ["--smoke"]
 
-    selected = [m for m in MUTATIONS if not args.only or args.only in m.name]
+    wanted = [part for part in (args.only or "").split(",") if part]
+    selected = [
+        m
+        for m in MUTATIONS
+        if (not wanted or any(part in m.name for part in wanted))
+        and (not args.file or m.file == args.file)
+    ]
     if not selected:
-        print(f"no mutation matches {args.only!r}", file=sys.stderr)
+        print(f"no mutation matches {args.only!r}/{args.file!r}", file=sys.stderr)
         return 2
     originals = {name: (SRC / name).read_text() for name in {m.file for m in selected}}
     results = []
@@ -1400,7 +1454,7 @@ def main(argv: list[str] | None = None) -> int:
     survived = [r for r in results if r["outcome"] == "survived"]
     print(f"\n{caught}/{len(results)} caught, {len(survived)} survived")
 
-    if args.output and not args.only:
+    if args.output and not (args.only or args.file):
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(
             json.dumps(
@@ -1412,7 +1466,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(f"wrote {args.output}")
     elif args.output:
-        print("--only: report not written (it would record a partial run)")
+        print("filtered run: report not written (it would record a partial one)")
 
     # Survivors with a recorded explanation are accepted; an unexplained one is
     # a hole in the harness and fails the run.

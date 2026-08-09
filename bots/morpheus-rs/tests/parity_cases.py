@@ -282,6 +282,24 @@ def _blank(h: int, w: int):
     )
 
 
+def _copy_state(state):
+    """A `GameState` whose arrays are its own.
+
+    `NamedTuple._replace()` copies the tuple and shares every array in it, so
+    two "copies" made that way are one board wearing two names.
+    """
+    return state._replace(
+        armies=np.array(state.armies, np.int32),
+        ownership=np.array(state.ownership, bool),
+        ownership_neutral=np.array(state.ownership_neutral, bool),
+        generals=np.array(state.generals, bool),
+        castles=np.array(state.castles, bool),
+        mountains=np.array(state.mountains, bool),
+        passable=np.array(state.passable, bool),
+        general_positions=np.array(state.general_positions, np.int32),
+    )
+
+
 def synthetic_states() -> list:
     """
     Hand-built states for branches the recorded corpus provably cannot reach.
@@ -458,24 +476,33 @@ def _tactical_memory(obs, *, own_general=None, enemy_general=None, castles=()):
     )
 
 
-def _frame_like(seat=0, prev=PASS, recent=(), action=PASS, believed=()):
+def _frame_like(seat=0, prev=PASS, recent=(), action=PASS, believed=(), prior=None):
     """A synthetic stand-in for a captured frame, carrying only what M5 reads.
 
     `believed` is `((r, c), weight)` per particle: the tactical layer's only
     use of a belief is `believed_enemy_general`, and two cells with unequal
     weights is what makes the weighted mode distinguishable from a count.
+
+    `prior` states the unshaped root prior instead of taking the default ramp.
+    The blend caps a heuristic at a 10x nudge either way, so a rule that only
+    fires when the *network* insists — against a heuristic that scored the
+    action at zero — needs a prior whose spread exceeds that cap. A position
+    cannot reach one by being arranged; it has to be said.
     """
     particles = [
         {"state": {"general_positions": [[0, 0], list(cell)]}, "weight": weight}
         for cell, weight in believed
     ]
-    return {
+    frame = {
         "seat": seat,
         "prev_action": list(prev),
         "recent_actions": [list(a) for a in recent],
         "action": list(action),
         "belief": {"seat": seat, "particles": particles} if particles else None,
     }
+    if prior is not None:
+        frame["root"] = {"unshaped_prior": [float(v) for v in prior]}
+    return frame
 
 
 def tactical_positions() -> list[tuple]:
@@ -597,6 +624,260 @@ def tactical_positions() -> list[tuple]:
     )
     out.append((obs, _tactical_memory(obs, own_general=(5, 5)),
                 _frame_like(prev=(0, 5, 6, 3, 0), action=(0, 5, 6, 3, 0))))
+
+    out.extend(_m6_tactical_positions())
+    return out
+
+
+def _m6_tactical_positions() -> list[tuple]:
+    """M6: the positions M5's eleven could not reach.
+
+    M5 left twenty-nine mutations alive, and the diagnosis in
+    `parity-harness.md` split them three ways: rules needing **two** gates in
+    range at once, rules needing an **exact numeric coincidence**, and
+    exemptions **shadowed by the next exemption**. Each position below is
+    built for one of those, and the arithmetic that puts the gate on its
+    boundary is spelled out rather than tuned by trial — a position that only
+    happens to sit on a boundary stops sitting on it the next time a constant
+    moves, and would then quietly stop testing anything.
+    """
+    out: list[tuple] = []
+
+    # (h) The garrison floor's one exemption: a capture that *wins*. Turn 600
+    # is past the castle window, so the anchor cannot also fire and confuse
+    # which rule moved the mask. Floor is 10 (own total 26 -> the minimum),
+    # every full move off the general leaves 1, and the only one that survives
+    # the ban is the touch on the enemy general with 19 against its 2.
+    obs = _tactical_obs(
+        11, 11, 600,
+        own=[((5, 5), 20), ((2, 2), 6)],
+        enemy=[((5, 6), 2)],
+        types={(5, 5): 4, (5, 6): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(5, 5), enemy_general=(5, 6)),
+                _frame_like(prev=(0, 2, 2, 3, 0), action=(0, 5, 5, 3, 0))))
+
+    # (i) The half-split remainder, on the one garrison where it is decidable.
+    # A split leaves `ceil(a/2)`; the mutation leaves `floor(a/2)`. The two
+    # differ only on an odd garrison, and only change the ban when the floor
+    # falls exactly between them — so the garrison must be `2 * floor - 1`,
+    # here 19 against a floor of 10. Full moves leave 1 and are banned in both.
+    #
+    # The same position is the only one where the release *factor* is
+    # decidable: the release wants `2 x floor` = 20 and the mask needs
+    # `ceil(a/2) >= floor`, and 19 is the single value that fails the first
+    # while passing the second. The chosen action comes from (2, 2) so the
+    # release's "not already shipping from the general" gate is open.
+    obs = _tactical_obs(
+        11, 11, 600,
+        own=[((5, 5), 19), ((2, 2), 6), ((2, 3), 1)],
+        types={(5, 5): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(5, 5)),
+                _frame_like(prev=PASS, action=(0, 2, 2, 3, 0))))
+
+    # (j) The castle anchor standing down for a threat: both windows open at
+    # once. The site is 18 cells from the general (any nearer and the build
+    # surcharge disqualifies it) and 16 from the enemy (the safe-distance rule
+    # wants 4), while a 30-army stack two steps from a garrison of 3 is a live
+    # threat. Without the stand-down the anchor would pin the savings pile
+    # while the general falls.
+    obs = _tactical_obs(
+        15, 15, 200,
+        own=[((1, 1), 3), ((10, 10), 20), ((10, 11), 2), ((11, 10), 1)],
+        enemy=[((1, 3), 30)],
+        types={(1, 1): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(1, 1)),
+                _frame_like(prev=(0, 10, 10, 3, 0))))
+
+    # (k) A threat that ties. Arrival is `army - d` and the bar is
+    # `garrison + d/2`: 13 army at distance 2 arrives with 11 against a
+    # garrison of 10 plus 1. Ties count — the attacker may collect on the way —
+    # and only an exact tie can tell `>=` from `>`.
+    obs = _tactical_obs(
+        11, 11, 600,
+        own=[((5, 5), 10), ((2, 2), 5)],
+        enemy=[((5, 7), 13)],
+        types={(5, 5): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(5, 5)),
+                _frame_like(prev=(0, 2, 2, 3, 0))))
+
+    # (l) Reinforcement must land *before* the threat, not with it. The threat
+    # is three steps out, so the window is `1..=2`; a 3-army tip sits at 1 and
+    # a 50-army stack at exactly 3. Off-by-one and the big stack wins the
+    # "biggest that arrives in time" test — and arrives one turn too late.
+    obs = _tactical_obs(
+        13, 13, 600,
+        own=[((6, 6), 4), ((6, 5), 3), ((6, 4), 1), ((6, 3), 50)],
+        enemy=[((6, 9), 20)],
+        types={(6, 6): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(6, 6)),
+                _frame_like(prev=(0, 6, 5, 3, 0))))
+
+    # (m) A threat inside the defence *radius* (4) but outside the *forced*
+    # window (3): radius loitering, which the hard rule must not answer. The
+    # reinforcement exists and is legal, so deleting the imminence test
+    # commits it.
+    obs = _tactical_obs(
+        13, 13, 600,
+        own=[((6, 6), 4), ((6, 5), 8)],
+        enemy=[((6, 10), 30)],
+        types={(6, 6): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(6, 6)),
+                _frame_like(prev=PASS, action=(0, 6, 5, 2, 0))))
+
+    # (n) The kill/defence race, at a tie. The march reaches the enemy general
+    # in two steps and the enemy stack reaches ours in two: the tie goes to the
+    # kill. Both plans exist and both are legal, so the comparison is the only
+    # thing deciding, which is what `<=` against `<` needs.
+    obs = _tactical_obs(
+        15, 15, 600,
+        own=[((7, 2), 3), ((7, 3), 4), ((7, 4), 20)],
+        enemy=[((7, 6), 1), ((5, 2), 10)],
+        types={(7, 2): 4, (7, 6): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(7, 2), enemy_general=(7, 6)),
+                _frame_like(prev=(0, 7, 4, 3, 0))))
+
+    # (o) The kill march pricing a fogged cell. Two cells sit one step down the
+    # gradient: a fogged one, and a neutral holding 5. A fogged cell *reads* as
+    # army 0, so it looks free and would be chosen — which is exactly the
+    # doomed march the rule refuses. The general is twelve steps away, outside
+    # the kill horizon, so this stack is the only source.
+    obs = _tactical_obs(
+        13, 13, 600,
+        own=[((5, 3), 30), ((0, 0), 5)],
+        enemy=[((6, 6), 1)],
+        neutral_army=[((6, 3), 5)],
+        types={(0, 0): 4, (6, 6): 4, (5, 4): 0},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(0, 0), enemy_general=(6, 6)),
+                _frame_like(prev=(0, 5, 3, 1, 0))))
+
+    # (p) The same fork with the fog removed and the neutral owned: collecting
+    # 5 of our own beats crossing a free empty cell, and the preference is only
+    # visible when the own cell is the *expensive*-looking one.
+    obs = _tactical_obs(
+        13, 13, 600,
+        own=[((5, 3), 30), ((6, 3), 5), ((0, 0), 5)],
+        enemy=[((6, 6), 1)],
+        types={(0, 0): 4, (6, 6): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(0, 0), enemy_general=(6, 6)),
+                _frame_like(prev=(0, 5, 3, 1, 0))))
+
+    # (q) The tithe yielding to a take. Turn 200 is on the tithe period and
+    # inside the castle window, the site holds 20 of the 35 it needs (so the
+    # build rule stays quiet), a gather step exists from (10, 8) — and the
+    # action under test captures an enemy cell. Never trade a capture for a
+    # shuffle.
+    obs = _tactical_obs(
+        15, 15, 200,
+        own=[((1, 1), 12), ((10, 10), 20), ((10, 9), 1), ((10, 8), 9), ((4, 1), 6)],
+        enemy=[((5, 1), 2)],
+        types={(1, 1): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(1, 1)),
+                _frame_like(prev=PASS, action=(0, 4, 1, 1, 0))))
+
+    # (r) The release standing down mid-emergency, which needs a threat the
+    # mask does not answer for us. A lethal threat forces the play mask's floor
+    # above any half of the garrison, so every general move would be banned —
+    # and the ban is skipped wholesale when it would leave nothing legal. The
+    # general is therefore the only cell that can move at all (the other two
+    # hold one army each), the threat loiters at distance 4 so forced defence
+    # stays quiet, and 24 against a floor of 10 clears the release factor.
+    #
+    # The four single-army neighbours are not decoration. The release takes an
+    # argmax over the *splits* and the pass redirect over every legal move, so
+    # the two agree whenever a split is the best action overall — which is what
+    # a bare general produces, and why a first attempt at this position could
+    # not tell the rule from its deletion. Surrounding the general makes the
+    # eastward full move the clear top and the answers separate.
+    obs = _tactical_obs(
+        11, 11, 600,
+        own=[((5, 5), 24), ((4, 4), 1), ((4, 6), 1), ((6, 4), 1), ((6, 6), 1)],
+        enemy=[((5, 9), 40)],
+        types={(5, 5): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(5, 5)), _frame_like(prev=PASS)))
+
+    # (s) A reverse onto enemy land, with the *next* exemption closed. M5's
+    # position for this rule reached the vision exemption first and returned
+    # there, so the enemy-land branch was never the reason. Owning both cells
+    # flanking the enemy makes its whole 3x3 box already visible, so the
+    # reverse reveals nothing and only the enemy-land rule can allow it.
+    obs = _tactical_obs(
+        9, 9, 250,
+        own=[((4, 4), 9), ((4, 6), 5), ((0, 0), 3)],
+        enemy=[((4, 5), 3)],
+        types={(0, 0): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(0, 0)),
+                _frame_like(prev=(0, 4, 5, 2, 0), recent=[(0, 4, 5, 2, 0)],
+                            action=(0, 4, 4, 3, 0))))
+
+    # (t) A reverse that unlocks vision, onto a cell we do not own. M5's
+    # position reversed onto own land, and an owned cell reveals nothing by
+    # definition — the count returns zero before the exemption is reached.
+    # (4, 3) is neutral and its box still holds three unseen cells.
+    obs = _tactical_obs(
+        9, 9, 250,
+        own=[((4, 1), 9), ((4, 2), 6), ((0, 0), 3)],
+        types={(0, 0): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(0, 0)),
+                _frame_like(prev=(0, 4, 3, 2, 0), recent=[(0, 4, 3, 2, 0)],
+                            action=(0, 4, 2, 3, 0))))
+
+    # (u) The oscillation window's *end*. Nine moves, and the one being
+    # reversed is the ninth: inside the last eight, outside the first eight.
+    # M5's corridor had ten moves but reversed the eighth, which both windows
+    # contain — the position was long enough and pointed at the wrong move.
+    obs = _tactical_obs(
+        11, 11, 250,
+        own=[((4, c), 2) for c in range(1, 10)] + [((4, 0), 25)],
+        enemy=[((4, 10), 4)],
+        types={(4, 0): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(4, 0)),
+                _frame_like(prev=(0, 4, 9, 3, 0),
+                            recent=[(0, 4, c, 3, 0) for c in range(1, 10)],
+                            action=(0, 4, 10, 2, 0))))
+
+    # (v) The redirect refusing an own-land retreat. The chosen move retreats
+    # onto own land, which is what summons the redirect in the first place —
+    # and the prior's argmax is *another* retreat, so the rule is the only
+    # thing standing between the two.
+    #
+    # The prior has to say so explicitly. Shaping scores every own-land
+    # non-progressing move at 0.01 against a top of ~309, and the blend clips a
+    # heuristic to a 10x nudge either way, so the heuristic term alone spans
+    # 100x. A prior that merely *prefers* the retreat loses to that; one that
+    # insists by 150x wins, and "the network insists on a retreat" is exactly
+    # the case the rule exists to overrule.
+    obs = _tactical_obs(
+        11, 11, 60,
+        own=[((5, 5), 40), ((5, 6), 3), ((5, 7), 9), ((5, 8), 2), ((4, 7), 6),
+             ((6, 7), 4), ((4, 5), 2), ((5, 4), 2), ((6, 5), 2)],
+        types={(5, 5): 4},
+    )
+    memory = _tactical_memory(obs, own_general=(5, 5))
+    from action import N_ACTIONS, encode_action
+    from tactics import play_mask
+
+    live = np.flatnonzero(np.asarray(play_mask(obs, memory), dtype=bool))
+    insisted = np.zeros(N_ACTIONS, dtype=np.float64)
+    insisted[live] = 1.0
+    insisted[encode_action((0, 5, 7, 3, 0))] = 150.0
+    insisted /= insisted.sum()
+    out.append((obs, memory,
+                _frame_like(prev=(0, 5, 6, 3, 0), action=(0, 5, 6, 3, 0),
+                            prior=insisted)))
 
     return out
 
@@ -2483,12 +2764,12 @@ def build_cases(
                         )
                     )
         elif kind == "search":
-            for obs, memory, belief, cfg, batches, freeze in _search_setups(
+            for obs, memory, belief, cfg, batches, freeze, vary in _search_setups(
                 frame, synthetic
             ):
                 prior = _search_prior_for(frame, obs, memory)
                 case = _search_expectation(
-                    obs, memory, belief, prior, 0.25, cfg, batches, freeze,
+                    obs, memory, belief, prior, 0.25, cfg, batches, freeze, vary,
                     90210 + len(expected),
                 )
                 expected.append(case)
@@ -2498,7 +2779,7 @@ def build_cases(
                 stream += [
                     cfg["depth"], cfg["pending_batch"], cfg["n_particles"],
                     cfg["max_nodes"], cfg["max_enemy_tables"], batches,
-                    int(freeze),
+                    int(freeze), int(vary),
                 ]
                 stream += encode_draws(case["draws"])
         elif kind == "runtime":
@@ -2516,6 +2797,45 @@ def build_cases(
                     p99 = (0, 0.0)
                 expected.append(
                     (p99, tuple(int(v) for v in highest_prior_legal(prior, mask)))
+                )
+        elif kind == "evict":
+            if frame is not None:
+                continue  # the table sets are synthetic; one pass is enough
+            from tree import InfoNode, SearchTree
+
+            for tables, node_n, max_tables, arriving in evict_cases():
+                stream += [len(tables), node_n, max_tables]
+                for seed, last_used, touch, pinned in tables:
+                    stream += [seed, last_used, touch, int(pinned)]
+                stream += [arriving]
+
+                tree = SearchTree(max_nodes=1024, max_enemy_tables=max_tables, seat=0)
+                node = InfoNode(
+                    key=bytes(32), turn=0, memory_digest=bytes(32),
+                    obs_hash=bytes(32), history_digest=bytes(32),
+                )
+                node.reservoir.capacity = 1
+                tree.nodes[node.key] = node
+                tree.root = node
+                pins = []
+                for seed, last_used, touch, pinned in tables:
+                    h = bytes([seed]) * 32
+                    table = tree.get_or_create_enemy_table(node, h, [1], np.array([1.0]))
+                    table.last_used = int(last_used)
+                    table.touch_count = int(touch)
+                    if pinned:
+                        pins.append(h)
+                for h in pins:
+                    tree.pin_enemy(node, h)
+                node.N = int(node_n)
+                tree.get_or_create_enemy_table(
+                    node, bytes([arriving]) * 32, [1], np.array([1.0])
+                )
+                expected.append(
+                    [
+                        (int(t.info_hash[0]), int(t.last_used), int(t.touch_count))
+                        for t in node.enemy_tables.values()
+                    ]
                 )
         elif kind == "matrix":
             if frame is not None:
@@ -2929,7 +3249,34 @@ def _pairwise_aggregate(sigma_self, enemy_weights, enemy_sigmas, q_eff_list):
     return u_self, _np_pairwise(s * u_self)
 
 
-def _run_search(obs, memory, belief, prior, value, cfg, batches, freeze, rng):
+def _varying_evaluator(*, prior, value):
+    """A scripted prior whose *value* depends on the leaf. Mirrors `parity.rs`.
+
+    `ScriptedEvaluator` hands every leaf the same number, and a constant leaf
+    value makes the entire enemy mixture unobservable: every `q` entry ends up
+    equal, so the weights they are averaged with cannot change an answer. That
+    alone hid the enemy-hash cache key, the reservoir's weights and the marginal
+    aggregation from every mutation M5 aimed at them.
+
+    The value stays a deterministic function of the leaf's own observation
+    payload, so nothing the scripted evaluator exists to exclude comes back —
+    no network, no softmax, and the same double on both sides.
+    """
+    from observe import observation_hash
+    from search import ScriptedEvaluator
+
+    class _Varying(ScriptedEvaluator):
+        def evaluate(self, obs, memory, belief, *, from_root, shape=False):
+            got, _ = super().evaluate(
+                obs, memory, belief, from_root=from_root, shape=shape
+            )
+            total = sum(observation_hash(obs))
+            return got, (float(total % 2001) - 1000.0) / 1000.0
+
+    return _Varying(prior=prior, value=value)
+
+
+def _run_search(obs, memory, belief, prior, value, cfg, batches, freeze, vary, rng):
     """Build a tree from one frame and run it, with every draw recorded.
 
     `replace_from_belief` builds `np.random.default_rng(0)` inside itself, so
@@ -2941,7 +3288,9 @@ def _run_search(obs, memory, belief, prior, value, cfg, batches, freeze, rng):
 
     controller = SearchController(
         seat=int(belief.seat),
-        evaluator=ScriptedEvaluator(prior=np.asarray(prior, dtype=np.float64), value=value),
+        evaluator=(_varying_evaluator if vary else ScriptedEvaluator)(
+            prior=np.asarray(prior, dtype=np.float64), value=value
+        ),
         config=SearchConfig(
             depth=cfg["depth"],
             pending_batch=cfg["pending_batch"],
@@ -2966,6 +3315,45 @@ def _run_search(obs, memory, belief, prior, value, cfg, batches, freeze, rng):
 
     tree = controller.tree
     root = tree.root
+
+    def _tables_of(node):
+        out = []
+        for table in node.enemy_tables.values():
+            out.append(
+                {
+                    "actions": [int(a) for a in table.actions],
+                    "prior": np.asarray(table.prior, dtype=np.float64),
+                    "regret": np.asarray(table.regret, dtype=np.float64),
+                    "avg": np.asarray(table.avg_strategy, dtype=np.float64),
+                    "n_self": int(table.visits.shape[0]),
+                    "last_used": int(table.last_used),
+                    "touch_count": int(table.touch_count),
+                    "visits": np.asarray(table.visits, dtype=np.float64).ravel(),
+                    "q": np.asarray(table.q, dtype=np.float64).ravel(),
+                }
+            )
+        return out
+
+    # Every node, in creation order. See the matching comment in `parity.rs`:
+    # a leaf value never travels up through a child's own statistics and
+    # `Replay` hides a changed distribution, so a root-only comparison cannot
+    # see anything a child computes.
+    detail = []
+    for node in tree.nodes.values():
+        detail.append(
+            {
+                "n": int(node.N),
+                "turn": int(node.turn),
+                "memory_digest": bytes(node.memory_digest),
+                "reservoir": int(node.reservoir.n),
+                "actions": [int(a) for a in node.actions],
+                "prior": np.asarray(node.prior, dtype=np.float64),
+                "regret": np.asarray(node.regret, dtype=np.float64),
+                "avg": np.asarray(node.avg_strategy, dtype=np.float64),
+                "tables": _tables_of(node),
+            }
+        )
+
     tables = []
     for table in root.enemy_tables.values():
         tables.append(
@@ -3003,19 +3391,20 @@ def _run_search(obs, memory, belief, prior, value, cfg, batches, freeze, rng):
         "index": index,
         "best": best,
         "degraded": _degradation_tail(controller, int(tree.completed_simulations)),
+        "detail": detail,
         "draws": len(rng.draws),
     }
 
 
-def _search_expectation(obs, memory, belief, prior, value, cfg, batches, freeze, seed):
+def _search_expectation(obs, memory, belief, prior, value, cfg, batches, freeze, vary, seed):
     """Both oracles: the shipped one, and the one whose dots the port shares."""
     blas = _run_search(
-        obs, memory, belief, prior, value, cfg, batches, freeze, recording_rng(seed)
+        obs, memory, belief, prior, value, cfg, batches, freeze, vary, recording_rng(seed)
     )
     rng = recording_rng(seed)
     with _PairwiseDots():
         pairwise = _run_search(
-            obs, memory, belief, prior, value, cfg, batches, freeze, rng
+            obs, memory, belief, prior, value, cfg, batches, freeze, vary, rng
         )
     return {"blas": blas, "pairwise": pairwise, "draws": rng.take()}
 
@@ -3050,6 +3439,42 @@ def _degradation_tail(controller, completed: int) -> list[tuple]:
             (tuple(int(v) for v in action), _LEVEL_ORDER.index(level.value))
         )
     return out
+
+
+def evict_cases() -> list[tuple]:
+    """`(tables, node_n, max_tables, arriving)` for the retention rule.
+
+    Stated rather than played, for the reason the `runtime` surface exists. The
+    retention score is `last_used + 0.25 * ln1p(touch_count)`, and `last_used`
+    is an integer, so the touch term can only ever decide a tie. In a real tree
+    there are no ties: `last_used` is the node's visit counter at the table's
+    last backup, and a backup advances it, so every table at a node carries a
+    different one. Measured over the search setups — 680 backups — the harness
+    never saw two candidates share a `last_used`.
+
+    Each table is `(seed, last_used, touch_count, pinned)`; the eviction runs
+    when the arriving table pushes the node over `max_tables`.
+    """
+    return [
+        # The touch term decides: equal recency, different use. The
+        # *well-used* table is listed first on purpose — with the term deleted
+        # the two scores tie and the first minimum wins, which is the same
+        # answer the term gives in the other order. The order is the test.
+        ([(1, 5, 9, 0), (2, 5, 1, 0)], 5, 2, 3),
+        # An exact tie in both. `min` keeps the *first*, so the order of the
+        # table list is the answer, and `<=` instead of `<` would take the last.
+        ([(1, 5, 3, 0), (2, 5, 3, 0)], 5, 2, 3),
+        # The lowest score is pinned; the next one goes instead.
+        ([(1, 0, 1, 1), (2, 7, 1, 0)], 7, 2, 3),
+        # The lowest score is the table that just arrived.
+        ([(1, 9, 4, 0), (2, 9, 6, 0)], 0, 2, 3),
+        # Two over capacity: the loop evicts twice, lowest first.
+        ([(1, 1, 1, 0), (2, 2, 1, 0), (3, 3, 1, 0)], 4, 2, 4),
+        # Everything pinned: eviction refuses rather than breaking a pin.
+        ([(1, 1, 1, 1), (2, 2, 1, 1)], 3, 1, 3),
+        # Nothing to do — one table, one slot.
+        ([(1, 4, 2, 0)], 4, 4, 2),
+    ]
 
 
 def runtime_cases() -> list[tuple]:
@@ -3109,6 +3534,7 @@ def _search_setups(frame, synthetic: bool):
              "n_particles": int(belief.config.n_particles)},
             3,
             False,
+            False,
         )
         return
     if not synthetic:
@@ -3120,10 +3546,17 @@ def _search_setups(frame, synthetic: bool):
         # Four particles that disagree about the enemy's armies, so their enemy
         # information hashes differ and more than one table is installed —
         # which is the only way eviction and the LRU ever get a decision.
+        #
+        # M5 wrote this and it did not work. `_replace()` on a NamedTuple copies
+        # the *tuple*, not the arrays inside it, so all four "particles" shared
+        # one `armies` and the last write won on every one of them: four
+        # identical states, one enemy hash, one table, and eviction never
+        # reached. That is why every eviction and LRU mutation survived M5 while
+        # the comment above claimed otherwise. `_copy_state` is the fix, and the
+        # `search` case now asserts the four hashes really do differ.
         particles = []
         for k, weight in enumerate((0.4, 0.3, 0.2, 0.1)):
-            state = base._replace()
-            state.armies[:] = base.armies
+            state = _copy_state(base)
             enemy_cells = np.argwhere(np.asarray(state.ownership[1]))
             for j, (r, c) in enumerate(enemy_cells):
                 state.armies[r, c] = int(base.armies[r, c]) + k * (j + 1)
@@ -3145,7 +3578,95 @@ def _search_setups(frame, synthetic: bool):
                  "max_enemy_tables": 2, "n_particles": 4},
                 batches,
                 freeze,
+                False,
             )
+
+    # One *contended* tree, on one board rather than every board, because it is
+    # the most expensive case the harness runs: eight distinct enemy views
+    # against a two-table cap, eight selections per batch so a whole batch's
+    # pins are live at once, and four batches so tables from an earlier batch
+    # are still resident when a later one needs the room.
+    #
+    # Measured on this configuration: seventeen over-capacity evictions, ten of
+    # them where the *protected* table carried the lowest retention score and
+    # four where a *pinned* one did. Those are the two decisions M5's four
+    # particles could never reach — see `_copy_state` above for why they had
+    # only one enemy hash between them.
+    base = synthetic_states()[0]
+    h, w = base.armies.shape
+    particles = []
+    for k in range(8):
+        state = _copy_state(base)
+        for j, (r, c) in enumerate(np.argwhere(np.asarray(state.ownership[1]))):
+            state.armies[r, c] = int(base.armies[r, c]) + (k + 1) * (j + 3)
+        particles.append(
+            Particle(state=state, weight=1.0 / 8.0,
+                     enemy_memory=empty_memory(h, w),
+                     enemy_prev_action=None, history=())
+        )
+    belief = BeliefState(
+        seat=0, particles=particles,
+        config=BeliefConfig(n_particles=8), collapsed=False,
+    )
+    yield (
+        emit_observation(base, 0, as_arrays=True),
+        memory_for(base, 0),
+        belief,
+        {"depth": 6, "pending_batch": 8, "max_nodes": 128,
+         "max_enemy_tables": 2, "n_particles": 8},
+        4,
+        False,
+        True,
+    )
+
+    # And one *fogged* tree, which is a different kind of contention. Every
+    # board above is small enough to see whole, so two particles that disagree
+    # about the enemy produce two different observations of ours, two different
+    # child edges, and two nodes that never meet. Here the generals sit in
+    # opposite corners of a 7x7 with nothing else on it: our seat sees a 3x3
+    # box, every enemy cell is fogged, and all eight particles therefore walk
+    # into the *same* child carrying eight different enemy views.
+    #
+    # That is what reaches a per-node enemy-hash cache going stale — the cache
+    # is keyed on the reservoir version, and only a node whose reservoir grows
+    # between two backups while holding more than one enemy hash can tell the
+    # key from its absence. The memory fold needs the fog for the same reason:
+    # on a board we can already see whole, folding a child's observation into
+    # the root's memory adds nothing.
+    from memory import empty_memory as _empty_memory, update_memory
+
+    fogged = _blank(7, 7)._replace(time=100)
+    fogged.general_positions[:] = np.array([[0, 0], [6, 6]], np.int32)
+    for cell, seat_i in (((0, 0), 0), ((6, 6), 1)):
+        fogged.generals[cell] = True
+        fogged.ownership[seat_i][cell] = True
+        fogged.armies[cell] = 8
+    fogged.ownership_neutral[:] = ~(fogged.ownership[0] | fogged.ownership[1])
+    particles = []
+    for k in range(8):
+        state = _copy_state(fogged)
+        for j, (r, c) in enumerate(np.argwhere(np.asarray(state.ownership[1]))):
+            state.armies[r, c] = int(fogged.armies[r, c]) + (k + 1) * (j + 3)
+        particles.append(
+            Particle(state=state, weight=1.0 / 8.0,
+                     enemy_memory=_empty_memory(7, 7),
+                     enemy_prev_action=None, history=())
+        )
+    obs = emit_observation(fogged, 0, as_arrays=True)
+    yield (
+        obs,
+        # The memory a seat actually has on its first turn: nothing but this
+        # observation. `memory_for` knows the whole board, which is what made
+        # the fold unobservable everywhere else.
+        update_memory(_empty_memory(7, 7), obs),
+        BeliefState(seat=0, particles=particles,
+                    config=BeliefConfig(n_particles=8), collapsed=False),
+        {"depth": 6, "pending_batch": 8, "max_nodes": 128,
+         "max_enemy_tables": 4, "n_particles": 8},
+        6,
+        False,
+        True,
+    )
 
 
 def _search_prior_for(frame, obs, memory):
@@ -3298,6 +3819,67 @@ def _compare_search(i: int, case: dict, got: list[int]) -> list[str]:
                 f"{action}/{_LEVEL_ORDER[level]} != "
                 f"{want_action}/{_LEVEL_ORDER[want_level]}"
             )
+    n_nodes = int(ints(1)[0])
+    if n_nodes != len(want["detail"]):
+        return problems + [
+            f"search[{i}]: {n_nodes} node(s) in the detail block != "
+            f"{len(want['detail'])}"
+        ]
+    for k, node in enumerate(want["detail"]):
+        n, turn = ints(2)
+        digest = bytes(int(v) & 0xFF for v in ints(32))
+        reservoir = int(ints(1)[0])
+        if (int(n), int(turn), reservoir) != (node["n"], node["turn"], node["reservoir"]):
+            problems.append(
+                f"search[{i}]: node {k} (N, turn, reservoir) "
+                f"({n}, {turn}, {reservoir}) != "
+                f"({node['n']}, {node['turn']}, {node['reservoir']})"
+            )
+        if digest != node["memory_digest"]:
+            problems.append(
+                f"search[{i}]: node {k} memory digest {digest.hex()[:16]} != "
+                f"{node['memory_digest'].hex()[:16]}"
+            )
+        n_a = int(ints(1)[0])
+        node_actions = [int(v) for v in ints(n_a)]
+        if node_actions != node["actions"]:
+            problems.append(
+                f"search[{i}]: node {k} candidates {len(node_actions)} vs "
+                f"{len(node['actions'])}; first difference at "
+                f"{_first_diff(node_actions, node['actions'])}"
+            )
+        for name in ("prior", "regret", "avg"):
+            problems += _float_difference(
+                f"search[{i}]: node {k} {name}", node[name], floats(node[name].size)
+            )
+        n_t = int(ints(1)[0])
+        if n_t != len(node["tables"]):
+            return problems + [
+                f"search[{i}]: node {k} has {n_t} table(s) != {len(node['tables'])}"
+            ]
+        for j, table in enumerate(node["tables"]):
+            n_self, last_used, touch = ints(3)
+            if (int(n_self), int(last_used), int(touch)) != (
+                table["n_self"], table["last_used"], table["touch_count"],
+            ):
+                problems.append(
+                    f"search[{i}]: node {k} table {j} shape/LRU "
+                    f"({n_self}, {last_used}, {touch}) != ({table['n_self']}, "
+                    f"{table['last_used']}, {table['touch_count']})"
+                )
+            n_b = int(ints(1)[0])
+            cols = [int(v) for v in ints(n_b)]
+            if cols != table["actions"]:
+                problems.append(
+                    f"search[{i}]: node {k} table {j} columns {len(cols)} vs "
+                    f"{len(table['actions'])}; first difference at "
+                    f"{_first_diff(cols, table['actions'])}"
+                )
+            for name in ("prior", "regret", "avg", "visits", "q"):
+                problems += _float_difference(
+                    f"search[{i}]: node {k} table {j} {name}",
+                    table[name], floats(table[name].size),
+                )
     consumed = ints(1)[0]
     if int(consumed) != want["draws"]:
         problems.append(
@@ -3871,6 +4453,17 @@ def compare(kind: str, expected: list, actual: list[list[int]]) -> list[str]:
                 problems.append(
                     f"runtime[{i}]: highest_prior_legal {got_action} != {want_action}"
                 )
+        elif kind == "evict":
+            count = int(got[0])
+            survivors = [
+                (int(got[1 + 3 * k]), int(got[2 + 3 * k]), int(got[3 + 3 * k]))
+                for k in range(count)
+            ]
+            if survivors != want:
+                problems.append(
+                    f"evict[{i}]: survivors {survivors} != {want} "
+                    f"(seed, last_used, touch_count)"
+                )
         elif kind == "matrix":
             problems += _compare_matrix(i, want, got)
         elif kind == "search":
@@ -3951,7 +4544,7 @@ def main(argv: list[str] | None = None) -> int:
             "memory", "hash", "tensor", "symmetry", "net", "prior",
             "npsum", "argsort", "summary", "propose", "filter",
             "rejuvenate", "maxent", "reservoir", "toplegal", "initbelief",
-            "matrix", "runtime", "playmask", "candidates", "planners",
+            "matrix", "runtime", "evict", "playmask", "candidates", "planners",
             "shaping", "constrain", "search", "decide",
         ],
     )

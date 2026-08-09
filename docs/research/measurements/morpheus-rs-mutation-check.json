@@ -905,7 +905,7 @@
     },
     {
       "name": "the garrison floor exempts a winning capture",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -918,7 +918,7 @@
     },
     {
       "name": "a half-split leaves ceil(a/2) on the general",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -931,7 +931,7 @@
     },
     {
       "name": "the castle anchor yields to a general threat",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -945,7 +945,7 @@
     {
       "name": "the castle anchor lets combat moves through",
       "outcome": "survived",
-      "note": "",
+      "note": "unreachable by construction, and M6 is where that was established rather than assumed. The anchor's exemption asks whether a move off the savings site lands on an enemy cell \u2014 but `castle_build_site` rejects any candidate within `CASTLE_SAFE_ENEMY_DIST` (4) Manhattan of a visible enemy cell, and an adjacent cell is at distance 1. Both functions read the same observation, so a site with an enemy neighbour is not a site. The branch is dead in the Python too; it is ported because the day the safe distance changes is the day it stops being dead.",
       "surfaces": [
         "playmask",
         "candidates",
@@ -996,7 +996,7 @@
     },
     {
       "name": "a threat that ties still counts",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1009,7 +1009,7 @@
     },
     {
       "name": "reinforcement must arrive before the threat",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1022,7 +1022,7 @@
     },
     {
       "name": "the kill march refuses to price a fogged cell",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1048,7 +1048,7 @@
     },
     {
       "name": "the kill march prefers collecting own armies",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1217,7 +1217,7 @@
     },
     {
       "name": "a tie in the kill/defence race goes to the kill",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1230,7 +1230,7 @@
     },
     {
       "name": "forced defence needs an imminent threat",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1243,7 +1243,7 @@
     },
     {
       "name": "the tithe yields to an enemy take",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1256,7 +1256,7 @@
     },
     {
       "name": "the garrison release stands down during a threat",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1269,7 +1269,7 @@
     },
     {
       "name": "the garrison release needs the release factor",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1295,7 +1295,7 @@
     },
     {
       "name": "a reverse onto enemy land is not oscillation",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1308,7 +1308,7 @@
     },
     {
       "name": "a reverse that unlocks vision is not oscillation",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1321,7 +1321,7 @@
     },
     {
       "name": "the oscillation window is the last eight moves",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1334,7 +1334,7 @@
     },
     {
       "name": "the redirect skips own-land retreats",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "playmask",
@@ -1507,34 +1507,38 @@
     },
     {
       "name": "eviction protects the table just installed",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
-        "search"
+        "search",
+        "evict"
       ]
     },
     {
       "name": "eviction spares pinned tables",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
-        "search"
+        "search",
+        "evict"
       ]
     },
     {
       "name": "retention weighs touch count as well as recency",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
-        "search"
+        "search",
+        "evict"
       ]
     },
     {
       "name": "eviction takes the first minimum",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
-        "search"
+        "search",
+        "evict"
       ]
     },
     {
@@ -1542,15 +1546,17 @@
       "outcome": "caught",
       "note": "",
       "surfaces": [
-        "search"
+        "search",
+        "evict"
       ]
     },
     {
       "name": "widening self renormalizes the candidate prior",
       "outcome": "survived",
-      "note": "",
+      "note": "equivalent: `widen_self` is only ever called from `expand_self_candidates`, which finishes by calling `refresh_self_priors` and overwriting the whole vector from the live network prior. Measured by re-running the oracle with the normalization deleted: 0 of 43 search setups differ.",
       "surfaces": [
-        "search"
+        "search",
+        "evict"
       ]
     },
     {
@@ -1558,31 +1564,35 @@
       "outcome": "caught",
       "note": "without it, newly legal expands get prior 0 and the search locks onto pass",
       "surfaces": [
-        "search"
+        "search",
+        "evict"
       ]
     },
     {
       "name": "the enemy-hash cache is keyed on the reservoir version",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
-        "search"
+        "search",
+        "evict"
       ]
     },
     {
       "name": "marginal visits skip tables of the wrong width",
       "outcome": "survived",
-      "note": "",
+      "note": "unreachable, and the reason is the next mutation. A table's width can never lag its node's candidate count: `widen_self` pads every table it has, and `get_or_create_enemy_table` pads on install. Measured over the search setups: 0 lagging tables in 43 marginal aggregations and 680 backups. The two guards are redundant with each other, which is why deleting either alone is invisible.",
       "surfaces": [
-        "search"
+        "search",
+        "evict"
       ]
     },
     {
       "name": "backup pads every table to the current candidate width",
       "outcome": "survived",
-      "note": "",
+      "note": "unreachable for the reason above: nothing ever arrives at a backup under-wide, because widening and installation both pad. Kept because it is the guard that makes that true if either of the others changes.",
       "surfaces": [
-        "search"
+        "search",
+        "evict"
       ]
     },
     {
@@ -1611,7 +1621,7 @@
     },
     {
       "name": "a child's memory folds forward from the root's, not the parent's",
-      "outcome": "survived",
+      "outcome": "caught",
       "note": "",
       "surfaces": [
         "search"
@@ -1628,7 +1638,7 @@
     {
       "name": "a new child arrives at weight 1, not the parent's",
       "outcome": "survived",
-      "note": "",
+      "note": "equivalent: `ParticleReservoir::admit` rebuilds the arriving particle at weight 1.0 whatever it was handed \u2014 measured, 198 of 647 admits in the search setups pass a weight that is not 1 and none of them survives the call. The only other consumer is the one-particle belief a leaf evaluation builds, whose weights are normalized.",
       "surfaces": [
         "search"
       ]
@@ -1636,7 +1646,7 @@
     {
       "name": "a terminal leaf takes the seat's own result",
       "outcome": "survived",
-      "note": "",
+      "note": "unobservable: this branch tests the state at the *top* of the descent, which a transition can never produce \u2014 a finishing transition returns from the branch below it \u2014 so it fires only on a root particle that was already finished, at depth 0, where the path has no edges and `backup_path` writes nothing. Measured: 24 firings in the search setups, all with an empty edge list.",
       "surfaces": [
         "search"
       ]
@@ -1668,7 +1678,7 @@
     {
       "name": "the root prior drives widening at the root",
       "outcome": "survived",
-      "note": "",
+      "note": "equivalent: the two branches hold the same vector. `ensure_root` sets `last_root_prior` and calls `expand_self_candidates` with the same prior, which caches it on the node, and `reuse_or_reset` does the same on a reused child. Measured over 742 selections in the search setups: they never differ.",
       "surfaces": [
         "search"
       ]

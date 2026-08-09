@@ -576,6 +576,40 @@ pub fn bench_belief<R: BufRead, W: Write>(
     Ok(())
 }
 
+/// A scripted prior with a leaf value that depends on the leaf.
+///
+/// M6's correction to the `search` surface, and the second half of the reason
+/// it could not see a child. `ScriptedEvaluator` returns one constant value for
+/// every leaf, and a constant value makes the whole enemy mixture *unobservable*
+/// — every `q` entry is the same number, so the weights it is averaged with
+/// cannot change the result. The enemy-hash cache, the reservoir weights and
+/// the marginal aggregation were all invisible for that reason alone.
+///
+/// The value stays a deterministic function of the leaf's own observation
+/// payload — an integer sum reduced to `[-1, 1]` — so it varies without
+/// reintroducing what the scripted evaluator exists to keep out: no network, no
+/// softmax, and the same double on both sides for the same board.
+struct VaryingEvaluator {
+    inner: crate::search::ScriptedEvaluator,
+}
+
+impl crate::search::SearchEvaluator for VaryingEvaluator {
+    fn evaluate(
+        &mut self,
+        obs: &Observation,
+        memory: &VisibleMemory,
+        belief: &crate::belief::BeliefState,
+        from_root: bool,
+        shape: bool,
+    ) -> (Vec<f64>, f64) {
+        let (prior, _) = self.inner.evaluate(obs, memory, belief, from_root, shape);
+        let payload = observation_payload(obs);
+        let sum: u64 = payload.iter().map(|&b| b as u64).sum();
+        let value = ((sum % 2001) as f64 - 1000.0) / 1000.0;
+        (prior, value)
+    }
+}
+
 pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> Result<(), String> {
     let mut ints = Ints::read_all(reader)?;
     let cases = ints.n()?;
@@ -1464,13 +1498,19 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
                 };
                 let batches = ints.n()?;
                 let freeze = ints.next()? != 0;
+                let vary = ints.next()? != 0;
                 let rng = crate::rng::SharedRng::new(Box::new(Replay::new(read_draws(&mut ints)?)));
-                let mut evaluator = crate::search::ScriptedEvaluator { prior, value };
+                let scripted = crate::search::ScriptedEvaluator { prior, value };
+                let mut evaluator: Box<dyn crate::search::SearchEvaluator> = if vary {
+                    Box::new(VaryingEvaluator { inner: scripted })
+                } else {
+                    Box::new(scripted)
+                };
                 let mut controller =
                     crate::search::SearchController::new(belief.seat, config, rng.handle());
-                controller.ensure_root(&mut evaluator, &obs, &memory, &belief);
+                controller.ensure_root(evaluator.as_mut(), &obs, &memory, &belief);
                 for _ in 0..batches {
-                    controller.run_batch(&mut evaluator, &belief, None, freeze);
+                    controller.run_batch(evaluator.as_mut(), &belief, None, freeze);
                 }
 
                 let tree = &controller.tree;
@@ -1530,7 +1570,93 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
                     out.extend(action.iter().map(|&v| v as i64));
                     out.push(level as i64);
                 }
+
+                // Every node, not only the root — M6's correction to this
+                // surface. A leaf value comes from the evaluator and is applied
+                // unchanged to every edge on the path, so nothing a child
+                // computes ever reaches the root's statistics; and `Replay`
+                // hands back the oracle's sampled index whatever distribution
+                // this side built, so a divergence inside a child does not even
+                // change the tree's shape. Comparing the root alone therefore
+                // could not see the enemy-hash cache, the memory fold, or any
+                // other per-node arithmetic. The nodes are in creation order on
+                // both sides.
+                let tree = &controller.tree;
+                out.push(tree.nodes.len() as i64);
+                for node in &tree.nodes {
+                    out.extend([node.n, node.turn as i64]);
+                    out.extend(node.memory_digest.iter().map(|&b| b as i64));
+                    out.push(node.reservoir.n() as i64);
+                    out.push(node.actions.len() as i64);
+                    out.extend(node.actions.iter().map(|&a| a as i64));
+                    push_f64(&mut out, &node.prior);
+                    push_f64(&mut out, &node.regret);
+                    push_f64(&mut out, &node.avg_strategy);
+                    out.push(node.enemy_tables.len() as i64);
+                    for table in &node.enemy_tables {
+                        out.extend([table.n_self as i64, table.last_used, table.touch_count]);
+                        out.push(table.actions.len() as i64);
+                        out.extend(table.actions.iter().map(|&a| a as i64));
+                        push_f64(&mut out, &table.prior);
+                        push_f64(&mut out, &table.regret);
+                        push_f64(&mut out, &table.avg_strategy);
+                        push_f64(&mut out, &table.visits);
+                        push_f64(&mut out, &table.q);
+                    }
+                }
                 out.push(crate::rng::Rng::consumed(&rng) as i64);
+            }
+            // The eviction decision, driven directly.
+            //
+            // M6 added this for the reason the `runtime` surface exists: two of
+            // the retention rule's four behaviours cannot be reached by running
+            // a search at all. The score is `last_used + 0.25 * ln1p(touches)`,
+            // so the touch term can only decide a tie in `last_used` — and
+            // `last_used` is the node's visit counter at the table's last
+            // backup, which advances on every backup, so no two tables in a
+            // real tree ever hold the same one. Stating the table set is the
+            // only way to ask the question.
+            "evict" => {
+                let count = ints.n()?;
+                let node_n = ints.next()?;
+                let max_tables = ints.n()?;
+                let mut tree = crate::tree::SearchTree::new(1024, max_tables, 0);
+                let at = tree
+                    .make_node([0u8; 32], 0, [0u8; 32], Vec::new(), [0u8; 32], 0.0, 1)
+                    .map_err(|_| "the first node always fits".to_string())?;
+                let mut pins: Vec<[u8; 32]> = Vec::new();
+                for _ in 0..count {
+                    let seed = ints.next()? as u8;
+                    let last_used = ints.next()?;
+                    let touch_count = ints.next()?;
+                    let pinned = ints.next()? != 0;
+                    let hash = [seed; 32];
+                    tree.get_or_create_enemy_table(at, hash, &[1], &[1.0]);
+                    let table = tree
+                        .node_mut(at)
+                        .table_mut(&hash)
+                        .expect("just installed");
+                    table.last_used = last_used;
+                    table.touch_count = touch_count;
+                    if pinned {
+                        pins.push(hash);
+                    }
+                }
+                for hash in pins {
+                    tree.pin_enemy(at, hash);
+                }
+                tree.node_mut(at).n = node_n;
+                let arriving = [ints.next()? as u8; 32];
+                tree.get_or_create_enemy_table(at, arriving, &[1], &[1.0]);
+                let node = tree.node(at);
+                out.push(node.enemy_tables.len() as i64);
+                for table in &node.enemy_tables {
+                    out.extend([
+                        table.info_hash[0] as i64,
+                        table.last_used,
+                        table.touch_count,
+                    ]);
+                }
             }
             // scalar controller arithmetic with no state behind it
             //

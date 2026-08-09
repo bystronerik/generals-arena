@@ -39,18 +39,26 @@ use morpheus_core::wire::{
 struct Seat {
     controller: RuntimeController,
     evaluator: Box<dyn SearchEvaluator>,
+    /// `(load, warmup, init)` in ms — plan §11's fourth success criterion, and
+    /// the only place it can be measured: the grace window is spent here.
+    startup_ms: (f64, f64, f64),
 }
 
 impl Seat {
     fn new(player_id: usize, h: usize, w: usize) -> Result<Self, String> {
+        let begin = Instant::now();
         let deployment: DeploymentConfig = try_load_deployment();
+        let mut load_ms = 0.0;
+        let mut warmup_ms = 0.0;
         let evaluator: Box<dyn SearchEvaluator> = match deployment.evaluator {
             EvaluatorKind::Uniform => Box::new(ShapedUniformEvaluator {
                 knobs: deployment.shaping_knobs(),
                 ..Default::default()
             }),
             EvaluatorKind::Network => {
+                let load = Instant::now();
                 let mut session = Session::load_default()?;
+                load_ms = load.elapsed().as_secs_f64() * 1e3;
                 // Exercise the configured shapes, not the export's fixed set.
                 // The engine has no batch axis, so "shape n" is n forwards.
                 let shapes = if deployment.warmup_batch_shapes.is_empty() {
@@ -58,6 +66,7 @@ impl Seat {
                 } else {
                     deployment.warmup_batch_shapes.clone()
                 };
+                let warm = Instant::now();
                 let x = vec![0f32; morpheus_core::network::IN_CHANNELS * 441];
                 for batch in shapes {
                     for _ in 0..batch {
@@ -65,6 +74,7 @@ impl Seat {
                         session.forward(&x, Heads::PolicyWdl);
                     }
                 }
+                warmup_ms = warm.elapsed().as_secs_f64() * 1e3;
                 Box::new(NetworkEvaluator::new(session, deployment.shaping_knobs()))
             }
         };
@@ -79,14 +89,37 @@ impl Seat {
             rng,
         );
         controller.use_policy_proposal = deployment.use_policy_proposal;
+        let total_ms = begin.elapsed().as_secs_f64() * 1e3;
+        check_single_threaded()?;
         Ok(Self {
             controller,
             evaluator,
+            startup_ms: (load_ms, warmup_ms, (total_ms - load_ms - warmup_ms).max(0.0)),
         })
     }
 
     fn act(&mut self, obs: &Observation) -> Action {
         wire(self.controller.decide(self.evaluator.as_mut(), obs))
+    }
+}
+
+/// Plan §10's thread-pinning invariant, checked after warmup.
+///
+/// The bot is single-threaded by construction and every latency number in this
+/// project assumes it; a dependency that quietly started a pool would make all
+/// of them measurements of a different machine. `Err` here degrades the seat to
+/// passing rather than exiting, which is the same trade the loader makes: the
+/// judge forfeits a game on an early exit, so a refusal that costs the match is
+/// a worse answer than one that costs the game and says why.
+fn check_single_threaded() -> Result<(), String> {
+    match morpheus_core::telemetry::thread_count() {
+        Some(n) if n > 1 => Err(format!(
+            "{n} threads after warmup; this bot is single-threaded by \
+             construction and its deadline knobs are calibrated for one core"
+        )),
+        // `None` is "this platform did not say" — macOS has no /proc — and is
+        // deliberately not a pass. The judge runs Linux, which does say.
+        _ => Ok(()),
     }
 }
 
@@ -259,6 +292,12 @@ fn main() {
         }
     };
 
+    // Armed by MORPHEUS_RS_TRACE only, and buffered until the game ends: this
+    // bot's own probe, since `arena.instrument.runner` can only trace an Agent
+    // it constructs in-process. See `telemetry.rs`.
+    let mut trace = morpheus_core::telemetry::Trace::from_env();
+    let mut turn: i64 = 0;
+
     loop {
         match read_observation(&mut reader, &mut obs, &mut line) {
             Ok(true) => {}
@@ -284,7 +323,17 @@ fn main() {
         if write_action(&mut writer, action).is_err() {
             break; // engine hung up while we were replying
         }
+
+        // After the reply is flushed, outside every clock the seat reports.
+        turn += 1;
+        if let (Some(trace), Some(seat)) = (trace.as_mut(), seat.as_ref()) {
+            let startup = if turn == 1 { Some(seat.startup_ms) } else { None };
+            trace.record(turn, &seat.controller.metrics, startup);
+        }
     }
 
     let _ = writer.flush();
+    if let Some(trace) = trace.as_ref() {
+        trace.flush();
+    }
 }

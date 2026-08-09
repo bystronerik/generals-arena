@@ -38,6 +38,8 @@ KINDS = (
     # M5: the search math, the tactical layer, and the decision it produces.
     "matrix", "runtime", "playmask", "candidates", "planners", "shaping",
     "constrain", "search", "decide",
+    # M6: the eviction decision, which no tree the search can build reaches.
+    "evict",
 )
 
 

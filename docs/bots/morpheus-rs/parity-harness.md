@@ -5,9 +5,10 @@ turned out to matter more — how we know the proof is worth anything.
 
 Established at milestone M1 of the [rewrite plan](rewrite-plan.md), extended at
 M2 to tier 2, at M3 to the first surface that cannot be bit-exact, at M4 to the
-first surfaces that consume **randomness**, and at M5 to the first surface where
-the *oracle* is not reproducible and to tier 3 — the decision itself. The corpus
-it runs on is described in [parity-corpus.md](parity-corpus.md).
+first surfaces that consume **randomness**, at M5 to the first surface where
+the *oracle* is not reproducible and to tier 3 — the decision itself — and at M6
+to the coverage M5 said it did not have. The corpus it runs on is described in
+[parity-corpus.md](parity-corpus.md).
 
 ## Shape
 
@@ -17,7 +18,7 @@ bots/morpheus-rs/tools/run_parity.sh    # full corpus + mutation check, minutes
 ```
 
 `tests/parity_cases.py` builds cases, runs the Python oracle on them, invokes
-`morpheus-rs parity <kind>` on the same cases, and compares. Thirty
+`morpheus-rs parity <kind>` on the same cases, and compares. Thirty-one
 surfaces are checked. Tier 1 is bit-exact by specification; tier 2 allows 1e-6 — and is
 *also* enforced bit-exact, for the reason in the next section.
 
@@ -46,6 +47,7 @@ surfaces are checked. Tier 1 is bit-exact by specification; tier 2 allows 1e-6 �
 | `initbelief` | 1 | the initial prior's support, and the belief sampled from it |
 | `matrix` | 2 | the regret-matching cycle end to end |
 | `runtime` | 1 | the two controller functions `decide` cannot reach |
+| `evict` | 1 | which enemy table the retention rule drops, from a stated set |
 | `playmask` | 1 | the play mask, and how many bits each sub-rule removed |
 | `candidates` | 1 | mandatory actions, then the stable policy ordering |
 | `planners` | 1 | every planner's answer, each with a present/absent flag |
@@ -226,7 +228,7 @@ there, each entry with the mutation that motivated it.
 
 ## Current results
 
-Full corpus (1,328 heavy frames from 20 games) — **533,552 cases**. Everything
+Full corpus (1,328 heavy frames from 20 games) — **533,726 cases**. Everything
 except the network and the BLAS-fed matrix math is bit-exact; the surfaces that
 cannot be are inside the budgets in the right-hand column, with the worst value
 a run actually reached.
@@ -256,12 +258,13 @@ a run actually reached.
 | `initbelief` | 222 | bit-exact, prior support included |
 | `matrix` | 15 | max 8.88e-16 (cap 5e-12) |
 | `runtime` | 7 | bit-exact |
-| `playmask` | 1,376 | bit-exact |
-| `candidates` | 5,504 | bit-exact |
-| `planners` | 1,376 | bit-exact |
-| `shaping` | 1,376 | bit-exact (budget 1e-9) |
-| `constrain` | 5,504 | bit-exact |
-| `search` | 1,362 | bit-exact vs the pairwise-dot oracle |
+| `evict` | 7 | bit-exact |
+| `playmask` | 1,391 | bit-exact |
+| `candidates` | 5,564 | bit-exact |
+| `planners` | 1,391 | bit-exact |
+| `shaping` | 1,391 | bit-exact (budget 1e-9) |
+| `constrain` | 5,564 | bit-exact |
+| `search` | 1,364 | bit-exact vs the pairwise-dot oracle, **every node** |
 | `decide` | 1,322 | identical action on **1,322 / 1,322** |
 
 `initbelief` exists because mutation testing found `initialize_belief`
@@ -278,10 +281,11 @@ disagreement, so no frame came near a tie flip. `shaping` matching to the last
 bit is why: with the scores identical, the only float that could move the
 decision is the network prior, and 6.6e-7 does not move it.
 
-`search` runs 1,362 trees to completion and matches the pairwise-dot oracle
-exactly. Against the *shipped* oracle, BLAS moved 2,083 statistic vectors and
-flipped the regret-matching branch on 568 enemy tables, deciding on magnitudes
-up to 8.88e-16. That is the oracle's number, not the port's.
+`search` runs 1,364 trees to completion and matches the pairwise-dot oracle
+exactly — every node of every tree, not only the root. Against the *shipped*
+oracle, BLAS moved 2,094 statistic vectors and flipped the regret-matching
+branch on 567 enemy tables, deciding on magnitudes up to 8.88e-16. That is the
+oracle's number, not the port's.
 
 `toplegal` was expected to need a tolerance and does not. Two implementations
 of `exp` over 3,970 f64 logits land on the same double for every logit here,
@@ -470,6 +474,121 @@ That is the third host-conditional behaviour the harness has had to name, after
 `npsum` and `argsort`, and the pattern is now clear enough to state as a rule:
 **when a surface will not go bit-exact, check whether the oracle is stable
 before assuming the port is wrong.**
+
+## M6: the tactical positions M5's eleven could not reach
+
+M5 grouped its tactical survivors three ways, and each group needed a different
+kind of board. Fifteen positions were added, one rule each, and the arithmetic
+that puts a gate on its boundary is written into the source rather than tuned
+by trial — a position that only *happens* to sit on a boundary stops sitting on
+it the next time a constant moves, and then quietly stops testing anything.
+
+- **Two gates in range at once.** The castle anchor standing down for a general
+  threat needs a build site 18 cells from the general (any nearer and the build
+  surcharge disqualifies it), 16 from the enemy (the safe-distance rule wants
+  4), *and* a 30-army stack two steps from a garrison of 3. The kill/defence
+  tie needs a march that reaches the enemy general in two steps and a threat
+  that reaches ours in two. The tithe yielding to a take needs a tithe turn, an
+  underfunded site, and an action that captures.
+- **An exact numeric coincidence.** A split leaves `ceil(a/2)` and the mutation
+  leaves `floor(a/2)`: the two differ only on an odd garrison and only change
+  the ban when the floor falls exactly between them, so the garrison must be
+  `2 * floor - 1` — 19 against a floor of 10, and no other value works. The
+  same position is the only one where the release *factor* is decidable, for
+  the mirror-image reason.
+- **An exemption shadowed by the next one.** M5's position for "a reverse onto
+  enemy land is not oscillation" reached the *vision* exemption first and
+  returned there, so the enemy-land branch was never the reason for the answer.
+  Owning both cells flanking the enemy makes its 3×3 box already visible, and
+  then only the enemy-land rule can allow the reverse. The vision exemption's
+  own position had the opposite problem: it reversed onto own land, and an
+  owned cell reveals nothing by definition.
+- **A window pointed at the wrong move.** The oscillation history keeps the
+  last eight moves. M5's corridor had ten and reversed the eighth — which both
+  the last-eight and the first-eight window contain. Nine moves reversing the
+  ninth is decidable; ten reversing the eighth is not.
+
+One rule needed something no board can supply. The shaping blend clips a
+heuristic to a 10× nudge either way, and every own-land non-progressing move
+scores ~0.01 against a top of ~309, so the heuristic term alone spans 100×. A
+position cannot make the redirect prefer a retreat; only a *prior* can, and it
+has to insist by more than 100×. `_frame_like` therefore takes an optional
+unshaped prior, and that case states one — which is exactly the situation the
+rule exists to overrule: the network insisting on a retreat.
+
+## M6: what the `search` surface was not looking at
+
+M5 ended with forty-six behaviours in the tactical and search layers that no
+case could tell from their negation, and said closing that was the first thing
+M6 should do. Half of them fell to positions built the way M5's eleven were.
+The other half did not, and the reason was never the positions: **the surface
+was comparing the wrong thing, on a tree that could not diverge, fed by an
+evaluator that made a whole class of arithmetic invisible.** Three causes, each
+found by asking why a purpose-built case still could not see a break.
+
+### The four particles were one board
+
+`_search_setups` built four particles that "disagree about the enemy's armies"
+by calling `state._replace()` and writing into the copy. `_replace` copies the
+*tuple*; every array inside it is shared. All four particles were one board, the
+last write won on all of them, they hashed to one enemy view, and the node
+therefore never held more than one enemy table — so eviction, the LRU, pinning
+and protection had nothing to decide, on any case, ever. That is the whole
+explanation for four M5 survivors, and the comment above them asserted the
+opposite. `_copy_state` fixes it; the contended setup below then reaches
+seventeen over-capacity evictions, ten where the protected table carried the
+lowest retention score and four where a pinned one did.
+
+### A root-only comparison cannot see a child
+
+Even with the trees fixed, a mutation inside a child node survived. The
+surface compared the root's statistics, its enemy tables, and a handful of
+counters. Nothing else can reach those:
+
+- a leaf value comes from the evaluator and is applied **unchanged** to every
+  edge on the path, so a child's own statistics never travel upward;
+- `Replay` returns the oracle's sampled index whatever distribution this side
+  built, so a divergence inside a child does not even change the tree's shape.
+
+The surface now emits **every node** in creation order — N, turn, memory
+digest, reservoir size, candidates, prior/regret/average, and every enemy
+table's columns, LRU counters and joint statistics. The memory digest is what
+catches a child folding its observation into the wrong memory; the rest is
+what catches everything a child computes.
+
+### A constant leaf value hides every weighting
+
+The last cause is the subtlest and the most general. `ScriptedEvaluator` returns
+one number for every leaf — chosen at M5 so a search comparison could not fail
+on the last bit of a softmax. But with every leaf worth the same, every `q`
+entry ends up equal, and **an average of equal numbers does not depend on its
+weights**. The enemy-hash cache key, the reservoir's particle weights and the
+marginal aggregation were all unobservable for that one reason.
+
+The fix keeps what the scripted evaluator is for and drops what it cost: the
+value is now a deterministic function of the leaf's own observation payload
+(an integer sum folded into `[-1, 1]`), so it varies per leaf without a network
+or a softmax anywhere, and lands on the same double on both sides. It is armed
+per setup — the recorded frames keep the constant evaluator, so M5's tally of
+what the oracle's BLAS moves is still measured on real frames.
+
+### Some rules cannot be reached by playing at all
+
+`evict` exists for the reason `runtime` does. The retention score is
+`last_used + 0.25 * ln1p(touch_count)` and `last_used` is an integer, so the
+touch term can only ever decide an exact tie — and in a real tree there are no
+ties, because `last_used` is the node's visit counter at the table's last
+backup and a backup advances it. Measured over the search setups: 680 backups,
+never two candidates sharing a `last_used`. The surface states the table set
+instead of playing for it, and the seven cases are written from the rule
+backwards: the touch term deciding, an exact tie, a pinned minimum, a protected
+minimum, a double eviction, an all-pinned refusal, and nothing to do.
+
+One case in it is worth naming because the first version was wrong in the way
+this whole harness is about. The touch-term case lists the *well-used* table
+first on purpose: with the term deleted the two scores tie and the first
+minimum wins, which in the other order is the same answer the rule gives. The
+order of the list is the test.
 
 ## The `search` surface, and the two oracles it needs
 
