@@ -293,6 +293,21 @@ and `npsum` reproduces the reduction exactly, so bit-exactness is what the
 harness enforces and the 1e-15 figure is only the floor to fall back to.
 Which leaves `net` as the only surface where a budget does real work.
 
+### M6: the pass that finishes it
+
+**140 of 167 caught, 27 survivors, every one explained**
+([report](../../research/measurements/morpheus-rs-mutation-check.json)). No new
+mutations were written; M5's twenty-nine open survivors became twenty-two
+caught and seven recorded as equivalent, each with a measurement rather than an
+argument — 0 lagging table widths in 680 backups, 198 of 647 admits whose
+weight the reservoir overwrites, 24 terminal firings with an empty edge list,
+742 selections where the two root priors never differ.
+
+The tool gained two conveniences the work needed: `--only` takes a
+comma-separated list so several mutations share one baseline build, and
+`--file` restricts a run to one source file. A filtered run refuses to write
+the report, as `--only` already did.
+
 ### M5: the pass that says the coverage is not finished
 
 **118 of 167 caught, 49 survivors** — and unlike M4's fourteen, most of these
@@ -345,17 +360,22 @@ adjacent to a reachable source and therefore reachable, so `path_progress`
 cannot leave the goal component; and scores are clamped non-negative, so
 commitment hysteresis's `> 0` guard excludes only zero, and `0 × 1.5` is zero.
 
-The honest summary: **M5's parity result is proved to the standard the earlier
-milestones set, and its mutation coverage is not.** The 533,390 recorded and
-synthetic cases agree bit-for-bit and the decision surface reads 100%, but
-forty-six behaviours in the tactical and search layers have no case that can
-tell them from their negation. Each is named above with what it would take.
+The honest summary at the time: **M5's parity result was proved to the standard
+the earlier milestones set, and its mutation coverage was not.** The recorded
+and synthetic cases agreed bit-for-bit and the decision surface read 100%, but
+twenty-nine behaviours in the tactical and search layers had no case that could
+tell them from their negation. Each was named with what it would take, and M6
+took it — see the two M6 sections above, and note that its list of what each
+survivor needed was right about the tactical half and wrong about the search
+half: those were not missing positions.
 
-Mutation check: **71 of 86 caught**
-([report](../../research/measurements/morpheus-rs-mutation-check.json)). All
-fifteen survivors are equivalent mutants, not gaps; the tool fails on an
-*unexplained* survivor, and — since M3 — on a mutation that never reached
-production code at all.
+**The survivor catalogue.** A survivor is only accepted with an explanation,
+and the tool fails the run on an *unexplained* one — and, since M3, on a
+mutation that never reached production code at all. What follows is every
+accepted survivor from M1 through M4, with the argument each rests on. The M5
+and M6 additions are catalogued in their own sections above. (The counts these
+lists were first written against — 71 of 86 at M4, 118 of 167 at M5 — are
+history; the current figure is at the top of this section.)
 
 - **`ownership_neutral` cleared on a loss** — `ownership_neutral` and
   `ownership[seat]` are disjoint on every well-formed state, so the mask that

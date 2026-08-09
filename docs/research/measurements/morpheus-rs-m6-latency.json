@@ -1,0 +1,341 @@
+{
+  "rust": {
+    "games": 20,
+    "frames": 10994,
+    "normal_frames": 10974,
+    "move_ms": {
+      "n": 10994,
+      "p50": 105.0,
+      "p99": 135.0,
+      "p999": 140.0,
+      "max": 167.0,
+      "mean": 105.854
+    },
+    "normal_move_ms": {
+      "n": 10974,
+      "p50": 105.0,
+      "p99": 135.0,
+      "p999": 140.0,
+      "max": 158.0,
+      "mean": 105.853
+    },
+    "moves_over_judge_limit": 2,
+    "moves_over_judge_limit_frac": 0.00018,
+    "completed_simulations_normal": {
+      "n": 10974,
+      "p50": 16.0,
+      "p99": 16.0,
+      "p999": 16.0,
+      "max": 16.0,
+      "mean": 15.829
+    },
+    "forward_equivalents_normal": {
+      "n": 10974,
+      "p50": 23.0,
+      "p99": 29.0,
+      "p999": 31.0,
+      "max": 32.0,
+      "mean": 23.156
+    },
+    "offline_p99_ms": {
+      "particle_transitions": 26.8708,
+      "leaf_batch": 73.3523,
+      "enemy_prior_batch": 52.4654,
+      "root_inference": 4.8327,
+      "belief_proposal": 0.6015,
+      "belief_tensor": 0.127,
+      "selection": 3.327,
+      "backup": 1.7766,
+      "hashing": 0.0001,
+      "reply": 0.0001
+    },
+    "per_call_p99_ms": {
+      "enemy_prior_batch": 12.7707,
+      "leaf_batch": 18.8831,
+      "selection": 0.1282
+    },
+    "fallback_level": {
+      "average": 6967,
+      "policy": 4027
+    },
+    "recovery_frames": 0,
+    "belief_plus_root_ok_frac": 1.0,
+    "first_move": {
+      "load_ms": {
+        "n": 20,
+        "p50": 3.712,
+        "p99": 8.201,
+        "p999": 8.201,
+        "max": 8.201,
+        "mean": 4.265
+      },
+      "warmup_ms": {
+        "n": 20,
+        "p50": 109.064,
+        "p99": 119.832,
+        "p999": 119.832,
+        "max": 119.832,
+        "mean": 112.089
+      },
+      "init_ms": {
+        "n": 20,
+        "p50": 0.073,
+        "p99": 0.389,
+        "p999": 0.389,
+        "max": 0.389,
+        "mean": 0.09
+      },
+      "total_ms": {
+        "n": 20,
+        "p50": 114.81,
+        "p99": 124.659,
+        "p999": 124.659,
+        "max": 124.659,
+        "mean": 116.445
+      }
+    }
+  },
+  "manifest": {
+    "round": "morpheus-rs-m6",
+    "measured_at": "2026-08-09T12:49:34+00:00",
+    "bot": {
+      "bot_id": "morpheus-rs",
+      "content_hash": "5456f5532cc2"
+    },
+    "host": {
+      "platform": "macOS-26.5.2-arm64-arm-64bit",
+      "machine": "arm64",
+      "python": "3.12.11",
+      "cpu": "Apple M3 Pro"
+    },
+    "panel": [
+      "cm_expander",
+      "macaria",
+      "sosipolis",
+      "castle_builder",
+      "metro"
+    ],
+    "games": [
+      {
+        "game": 0,
+        "opponent": "cm_expander",
+        "seed": 1000,
+        "bot_seat": "a",
+        "game_id": "20260809T122914Z_morpheus-rs_vs_cm_expander_s1000_c1b8d740",
+        "winner": "a",
+        "turns": 425,
+        "truncated": false,
+        "trace": "game000.jsonl"
+      },
+      {
+        "game": 1,
+        "opponent": "macaria",
+        "seed": 1001,
+        "bot_seat": "b",
+        "game_id": "20260809T123001Z_macaria_vs_morpheus-rs_s1001_e0223166",
+        "winner": "b",
+        "turns": 604,
+        "truncated": false,
+        "trace": "game001.jsonl"
+      },
+      {
+        "game": 2,
+        "opponent": "sosipolis",
+        "seed": 1002,
+        "bot_seat": "a",
+        "game_id": "20260809T123109Z_morpheus-rs_vs_sosipolis_s1002_bde9455e",
+        "winner": "a",
+        "turns": 737,
+        "truncated": false,
+        "trace": "game002.jsonl"
+      },
+      {
+        "game": 3,
+        "opponent": "castle_builder",
+        "seed": 1003,
+        "bot_seat": "b",
+        "game_id": "20260809T123237Z_castle_builder_vs_morpheus-rs_s1003_a05a94e9",
+        "winner": "b",
+        "turns": 450,
+        "truncated": false,
+        "trace": "game003.jsonl"
+      },
+      {
+        "game": 4,
+        "opponent": "metro",
+        "seed": 1004,
+        "bot_seat": "a",
+        "game_id": "20260809T123327Z_morpheus-rs_vs_metro_s1004_2e7ee11a",
+        "winner": "a",
+        "turns": 801,
+        "truncated": false,
+        "trace": "game004.jsonl"
+      },
+      {
+        "game": 5,
+        "opponent": "cm_expander",
+        "seed": 1005,
+        "bot_seat": "b",
+        "game_id": "20260809T123454Z_cm_expander_vs_morpheus-rs_s1005_07285e96",
+        "winner": "b",
+        "turns": 745,
+        "truncated": false,
+        "trace": "game005.jsonl"
+      },
+      {
+        "game": 6,
+        "opponent": "macaria",
+        "seed": 1006,
+        "bot_seat": "a",
+        "game_id": "20260809T123616Z_morpheus-rs_vs_macaria_s1006_e594d869",
+        "winner": "b",
+        "turns": 333,
+        "truncated": false,
+        "trace": "game006.jsonl"
+      },
+      {
+        "game": 7,
+        "opponent": "sosipolis",
+        "seed": 1007,
+        "bot_seat": "b",
+        "game_id": "20260809T123652Z_sosipolis_vs_morpheus-rs_s1007_5fb7dd4c",
+        "winner": "a",
+        "turns": 627,
+        "truncated": false,
+        "trace": "game007.jsonl"
+      },
+      {
+        "game": 8,
+        "opponent": "castle_builder",
+        "seed": 1008,
+        "bot_seat": "a",
+        "game_id": "20260809T123802Z_morpheus-rs_vs_castle_builder_s1008_3ec3ecfe",
+        "winner": "a",
+        "turns": 407,
+        "truncated": false,
+        "trace": "game008.jsonl"
+      },
+      {
+        "game": 9,
+        "opponent": "metro",
+        "seed": 1009,
+        "bot_seat": "b",
+        "game_id": "20260809T123848Z_metro_vs_morpheus-rs_s1009_44a395e6",
+        "winner": "b",
+        "turns": 388,
+        "truncated": false,
+        "trace": "game009.jsonl"
+      },
+      {
+        "game": 10,
+        "opponent": "cm_expander",
+        "seed": 1010,
+        "bot_seat": "a",
+        "game_id": "20260809T123930Z_morpheus-rs_vs_cm_expander_s1010_32a05791",
+        "winner": "a",
+        "turns": 833,
+        "truncated": false,
+        "trace": "game010.jsonl"
+      },
+      {
+        "game": 11,
+        "opponent": "macaria",
+        "seed": 1011,
+        "bot_seat": "b",
+        "game_id": "20260809T124100Z_macaria_vs_morpheus-rs_s1011_dd88a78c",
+        "winner": "b",
+        "turns": 398,
+        "truncated": false,
+        "trace": "game011.jsonl"
+      },
+      {
+        "game": 12,
+        "opponent": "sosipolis",
+        "seed": 1012,
+        "bot_seat": "a",
+        "game_id": "20260809T124146Z_morpheus-rs_vs_sosipolis_s1012_7be782d4",
+        "winner": "a",
+        "turns": 531,
+        "truncated": false,
+        "trace": "game012.jsonl"
+      },
+      {
+        "game": 13,
+        "opponent": "castle_builder",
+        "seed": 1013,
+        "bot_seat": "b",
+        "game_id": "20260809T124248Z_castle_builder_vs_morpheus-rs_s1013_21bc53a0",
+        "winner": "b",
+        "turns": 400,
+        "truncated": false,
+        "trace": "game013.jsonl"
+      },
+      {
+        "game": 14,
+        "opponent": "metro",
+        "seed": 1014,
+        "bot_seat": "a",
+        "game_id": "20260809T124330Z_morpheus-rs_vs_metro_s1014_1bcdd723",
+        "winner": "a",
+        "turns": 801,
+        "truncated": false,
+        "trace": "game014.jsonl"
+      },
+      {
+        "game": 15,
+        "opponent": "cm_expander",
+        "seed": 1015,
+        "bot_seat": "b",
+        "game_id": "20260809T124459Z_cm_expander_vs_morpheus-rs_s1015_5cbebcf2",
+        "winner": "b",
+        "turns": 459,
+        "truncated": false,
+        "trace": "game015.jsonl"
+      },
+      {
+        "game": 16,
+        "opponent": "macaria",
+        "seed": 1016,
+        "bot_seat": "a",
+        "game_id": "20260809T124550Z_morpheus-rs_vs_macaria_s1016_5b840f85",
+        "winner": "b",
+        "turns": 372,
+        "truncated": false,
+        "trace": "game016.jsonl"
+      },
+      {
+        "game": 17,
+        "opponent": "sosipolis",
+        "seed": 1017,
+        "bot_seat": "b",
+        "game_id": "20260809T124629Z_sosipolis_vs_morpheus-rs_s1017_735f9ad4",
+        "winner": "a",
+        "turns": 330,
+        "truncated": false,
+        "trace": "game017.jsonl"
+      },
+      {
+        "game": 18,
+        "opponent": "castle_builder",
+        "seed": 1018,
+        "bot_seat": "a",
+        "game_id": "20260809T124705Z_morpheus-rs_vs_castle_builder_s1018_8295e2c2",
+        "winner": "a",
+        "turns": 455,
+        "truncated": false,
+        "trace": "game018.jsonl"
+      },
+      {
+        "game": 19,
+        "opponent": "metro",
+        "seed": 1019,
+        "bot_seat": "b",
+        "game_id": "20260809T124756Z_metro_vs_morpheus-rs_s1019_74c29ca4",
+        "winner": "b",
+        "turns": 898,
+        "truncated": false,
+        "trace": "game019.jsonl"
+      }
+    ]
+  }
+}

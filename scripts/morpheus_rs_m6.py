@@ -181,6 +181,17 @@ def _aggregate(files: Iterable[Path]) -> dict[str, Any]:
     move_ms: list[float] = []
     normal_move_ms: list[float] = []
     component: dict[str, list[float]] = {name: [] for name in COMPONENTS}
+    # Per *call*, for the three search components whose call count the trace
+    # carries. The totals above are per turn, and this bot runs more search per
+    # turn than the Python does, so a total-versus-total ratio charges the Rust
+    # side for the extra work it managed to fit. Dividing by the calls is the
+    # only comparison that answers "is the kernel faster".
+    per_call: dict[str, list[float]] = {}
+    CALL_KEYS = {
+        "selection": "search_selection_calls",
+        "leaf_batch": "search_leaf_batch_calls",
+        "enemy_prior_batch": "search_enemy_prior_calls",
+    }
     sims: list[float] = []
     forwards: list[float] = []
     fallback: Counter[str] = Counter()
@@ -215,7 +226,22 @@ def _aggregate(files: Iterable[Path]) -> dict[str, Any]:
                 if ms > JUDGE_LIMIT_MS:
                     over_judge += 1
             for name, value in (row.get("components") or {}).items():
-                component.setdefault(name, []).append(float(value))
+                # Turns where the component ran, not every turn. M0's
+                # aggregation walks the Python's `component_ms` *dict*, which
+                # only holds a key when that component was timed — so its p99
+                # for anything that does not run every turn is over the turns
+                # it did. The Rust side carries all ten slots always, and
+                # counting the zeros would compare two different questions:
+                # `belief_tensor` runs once per game (both bots time only
+                # `first_move_setup` with it), so against 10,974 zeros its p99
+                # is 0 and against 20 real values it is 2.4 ms.
+                if float(value) > 0.0:
+                    component.setdefault(name, []).append(float(value))
+            for name, key in CALL_KEYS.items():
+                calls = int(row.get(key, 0))
+                total = float((row.get("components") or {}).get(name, 0.0))
+                if calls > 0:
+                    per_call.setdefault(name, []).append(total / calls)
             fallback[str(row["fallback_level"])] += 1
             recovery += int(row["recovery"])
             belief_root_ok += int(row["belief_plus_root_ok"])
@@ -235,6 +261,10 @@ def _aggregate(files: Iterable[Path]) -> dict[str, Any]:
             name: round(_nearest_rank(component.get(name, []), 0.99), 4)
             for name in COMPONENTS
             if component.get(name)
+        },
+        "per_call_p99_ms": {
+            name: round(_nearest_rank(values, 0.99), 4)
+            for name, values in sorted(per_call.items())
         },
         "fallback_level": dict(fallback.most_common()),
         "recovery_frames": recovery,
@@ -306,7 +336,18 @@ def _markdown(report: dict[str, Any], manifest: dict[str, Any]) -> str:
         )
 
     out.append("## Per-component p99\n")
-    out.append("| component | morpheus-rs p99 ms | morpheus (M0) p99 ms | speedup |")
+    out.append(
+        "Both columns are **per turn, over the turns the component ran** — "
+        "which is what `deployment.json`'s `offline_p99_ms` means and what the "
+        "admission controller forecasts from. Two things it is not. It is not "
+        "a per-call speedup: the search components run once per simulation and "
+        "this bot completes more simulations per turn, so a total-versus-total "
+        "ratio charges it for the extra work it managed to fit; the three whose "
+        "call count the trace carries are normalized below. And `belief_tensor` "
+        "is a first-move cost in both bots — both time only `first_move_setup` "
+        "with it — so its row is twenty values per arm, not ten thousand.\n"
+    )
+    out.append("| component | morpheus-rs p99 ms | morpheus (M0) p99 ms | ratio |")
     out.append("| --- | ---: | ---: | ---: |")
     base_components = (base or {}).get("offline_p99_ms", {})
     for name in COMPONENTS:
@@ -315,8 +356,32 @@ def _markdown(report: dict[str, Any], manifest: dict[str, Any]) -> str:
         if mine is None:
             continue
         ratio = f"{theirs / mine:.1f}x" if (theirs and mine) else "—"
-        out.append(f"| {name} | {mine:.3f} | {theirs if theirs else '—'} | {ratio} |")
+        out.append(f"| {name} | {mine:.4f} | {theirs if theirs else '—'} | {ratio} |")
     out.append("")
+
+    per_call = rust.get("per_call_p99_ms") or {}
+    base_calls = (base or {}).get("component_calls_mean", {})
+    if per_call:
+        out.append("### Per call, where the trace counts calls\n")
+        out.append(
+            "The Python side divides its per-turn p99 by its *mean* calls per "
+            "turn, which is the only figure M0 recorded — so its column is an "
+            "estimate and the Rust column is not.\n"
+        )
+        out.append(
+            "| component | morpheus-rs p99 ms/call | morpheus (M0) est. ms/call | ratio |"
+        )
+        out.append("| --- | ---: | ---: | ---: |")
+        for name, mine in sorted(per_call.items()):
+            total = base_components.get(name)
+            calls = base_calls.get(name)
+            theirs = (total / calls) if (total and calls) else None
+            ratio = f"{theirs / mine:.1f}x" if (theirs and mine) else "—"
+            out.append(
+                f"| {name} | {mine:.4f} | "
+                f"{f'{theirs:.4f}' if theirs else '—'} | {ratio} |"
+            )
+        out.append("")
 
     out.append("## Search throughput\n")
     sims = rust["completed_simulations_normal"]
