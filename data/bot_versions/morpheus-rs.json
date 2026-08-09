@@ -1,0 +1,233 @@
+{
+  "bot_id": "morpheus-rs",
+  "steps": [
+    {
+      "at": "2026-08-09T12:29:14Z",
+      "content_hash": "5456f5532cc2",
+      "seq": 1
+    }
+  ],
+  "version": 1,
+  "versions": [
+    {
+      "closure_ref": "refs/bot-versions/5456f5532cc2",
+      "closure_tree": "21ebe850dfdd37b0025da8b7f75a68dff4b440aa",
+      "content_hash": "5456f5532cc2",
+      "files": [
+        {
+          "blob": "2139a9192b1fff17e3e4f4e259a432cf4dd5d94d",
+          "path": "bots/morpheus-rs/.cargo/config.toml",
+          "sha256": "b5d9a201a3946a0a61f8ba0fa427cf4bcacc61cd1d5da2c5ad9d4324749c9e91"
+        },
+        {
+          "blob": "6efb926845f2493b4bd148df7250a970c0fbd56e",
+          "path": "bots/morpheus-rs/Cargo.lock",
+          "sha256": "8af964fde7129ac1b594b8653fbbdf699325894945ae1c20e3367a858e060ec5"
+        },
+        {
+          "blob": "5471f4db3f7803334be4538a603680ca27c2cc40",
+          "path": "bots/morpheus-rs/Cargo.toml",
+          "sha256": "4295081adb5c15771754175b5d657d616f8f5ea4c43c0be0f441fd8c2f3b4942"
+        },
+        {
+          "blob": "04201c9eb4be81210125e04fa01f9185a179fcc4",
+          "path": "bots/morpheus-rs/artifact/manifest.json",
+          "sha256": "1a6b0c71be0ad03cdf37e847c6babf0b576738d3e9a64445a3ca42930d049c25"
+        },
+        {
+          "blob": "f415c5fe7dacc82e5cc5a730bc096fbb1644fc47",
+          "path": "bots/morpheus-rs/artifact/model.safetensors",
+          "sha256": "15509ff5cc1aa8bca16062363a9cd65cc4187a666eb71fc8dc200d8180abb0c9"
+        },
+        {
+          "blob": "7a729feefb8bf45ccb91259f89a7b7bc84c8b854",
+          "path": "bots/morpheus-rs/crates/bot/Cargo.toml",
+          "sha256": "ae4a1700ba82b2ea64dc39172af5ca7bf9c05a5f418bc13161d577bf262cdf1f"
+        },
+        {
+          "blob": "ce3b4eaf5ceb5447aff1032a8c609c3ca107a6da",
+          "path": "bots/morpheus-rs/crates/bot/src/main.rs",
+          "sha256": "bdc066a9f66a0a2339ada1aaaa0fcb8ad4f67626288d3cae2cb4679487def6f6"
+        },
+        {
+          "blob": "3169550c489d05f88bf42775e907be2432a31801",
+          "path": "bots/morpheus-rs/crates/core/Cargo.toml",
+          "sha256": "34021a6c9930bff66dd8cc95fe2209b3142a033b325ff81b30295dc9318265f0"
+        },
+        {
+          "blob": "3673a18ea83df952b14801e607f02c67d2fee027",
+          "path": "bots/morpheus-rs/crates/core/src/action.rs",
+          "sha256": "efc15d042b6f3628e24d8e44e434b9ea00baf1c8a26f95b68c95bc93edf4c909"
+        },
+        {
+          "blob": "9b724b4de42b57c1496167a30378d339170e319f",
+          "path": "bots/morpheus-rs/crates/core/src/belief.rs",
+          "sha256": "cc1996def786377dbf33bbaa9bed93f38781bdca6004da4556880cad77f9dcf2"
+        },
+        {
+          "blob": "c87d552b55bdc3837db2bb99d3a859a9003c0832",
+          "path": "bots/morpheus-rs/crates/core/src/deployment.rs",
+          "sha256": "6e2b49a0c16fa34ff6bb2ec2b28fb3674d27a1b3a2eb7705c49d1ad02d8dddea"
+        },
+        {
+          "blob": "ef5b095002775652381a3bc71ee8f82c553a37c6",
+          "path": "bots/morpheus-rs/crates/core/src/evaluator.rs",
+          "sha256": "3be32a6ff1ffd594b33b1e5d06c98591722530733cc141118209a4f3a9288d42"
+        },
+        {
+          "blob": "b96657df53941cf6a0d7faae5a3d197810506b08",
+          "path": "bots/morpheus-rs/crates/core/src/gemm.rs",
+          "sha256": "4345e28bcd5299878df50fb68737b26339784592d34fb92571a8efab0cf1a08f"
+        },
+        {
+          "blob": "e6a49280b3ad7f744ecb513a9345d72498ce5304",
+          "path": "bots/morpheus-rs/crates/core/src/hashing.rs",
+          "sha256": "31afad521d93e1b55e49508c029f1cda81cb17fb5b38551f0419875528a4b8fd"
+        },
+        {
+          "blob": "6a96b23c03ca0e53cf32a19134acdadeeabc53be",
+          "path": "bots/morpheus-rs/crates/core/src/inference.rs",
+          "sha256": "fb980108b69b1b868d1b364164594d761a6ed7d5e6933526fad0b809c23ecb51"
+        },
+        {
+          "blob": "66e49e766ee895dc88925a0e652c89641e81ed6b",
+          "path": "bots/morpheus-rs/crates/core/src/json.rs",
+          "sha256": "de0a0e166b6ddd0153a6cbf453b76219fd3245ddf3535c3484a36d6c3be7b244"
+        },
+        {
+          "blob": "2e33ee60217d9e32b5d031f97361381331ba43a8",
+          "path": "bots/morpheus-rs/crates/core/src/lib.rs",
+          "sha256": "5d3599b8aa76f35c84342c3359fdae8b58d87f1dbc1e28f30bce8eda1e183080"
+        },
+        {
+          "blob": "67eac3314d184a2f812ad62c708ea9a4e31b1f04",
+          "path": "bots/morpheus-rs/crates/core/src/matrix.rs",
+          "sha256": "a7fd702886645cb196dc6b9d155684005194bae4319889e19278a072f1fc9a97"
+        },
+        {
+          "blob": "26b9896bb8cbfa98d8d567737d7ab6922c93f695",
+          "path": "bots/morpheus-rs/crates/core/src/memory.rs",
+          "sha256": "bfc83fc811c228f80aabd2fd2fdaf6039c82b88bc3236af7cfd8fe83f6925395"
+        },
+        {
+          "blob": "5cfd6e82933c43ce0f9b823b902ed8f3641cffda",
+          "path": "bots/morpheus-rs/crates/core/src/network.rs",
+          "sha256": "ab63c71eea985101b8774e64bd6129290713d70f539b9b57bd54f9acd9e5c258"
+        },
+        {
+          "blob": "ae821e5e90aa6c276159caada47bbc938475a165",
+          "path": "bots/morpheus-rs/crates/core/src/observe.rs",
+          "sha256": "1dbe62b0a0b8f6d28011f553934a25dc9f375972c30ae4c19bbc3acfdfc09114"
+        },
+        {
+          "blob": "ddd2ae50be1777398fc6467b6a6ff202c95c111e",
+          "path": "bots/morpheus-rs/crates/core/src/parity.rs",
+          "sha256": "636b89cc6b83a1b5d7a8de111096b0df34237ed7070c0e6b55067c0d22f9ac3e"
+        },
+        {
+          "blob": "d453c38687e7e111da16aece495e4a71418c8a98",
+          "path": "bots/morpheus-rs/crates/core/src/particle_summary.rs",
+          "sha256": "40816825558b660d402002d6a09a676d89eea94cde8fd7848933e983a854988b"
+        },
+        {
+          "blob": "68ac739075fe2c177e5e988cfd5a50b2d85577d8",
+          "path": "bots/morpheus-rs/crates/core/src/proposal.rs",
+          "sha256": "3a4ab40e76e97927e1b443fd1d8ec34f5b25431695ce6d7cc219db9820606b41"
+        },
+        {
+          "blob": "7a419d51f267196e2b6949957413885eb05ba453",
+          "path": "bots/morpheus-rs/crates/core/src/recovery.rs",
+          "sha256": "2a6f74179af500a2f9492743ee42e86ccc3fc4ca3b9b1d1bb197028c8ee2ebb4"
+        },
+        {
+          "blob": "5c5808b4642f8672a62bc44d2209ef94fe6ed7d8",
+          "path": "bots/morpheus-rs/crates/core/src/reservoir.rs",
+          "sha256": "ab520dc15c6b6d2aa833993788873d240ec8a1c88cdd06ac8f85e8d5dbbf5ba5"
+        },
+        {
+          "blob": "0072f27b9f2462cf30351b40abaef7f3564b22b9",
+          "path": "bots/morpheus-rs/crates/core/src/rng.rs",
+          "sha256": "a42b3d90b44e5d0b452d56aa4c95732e95287005063068961883a4fce9e2cd18"
+        },
+        {
+          "blob": "72d08c4277f3fbd007b538e38ea10788e18f43b6",
+          "path": "bots/morpheus-rs/crates/core/src/runtime.rs",
+          "sha256": "b9992d789cb9917d81296371a593e09c31ef9e0f7af064facef221814f31505d"
+        },
+        {
+          "blob": "c50e80723de49b26e910a6ce6439acbe27aef0cf",
+          "path": "bots/morpheus-rs/crates/core/src/safetensors.rs",
+          "sha256": "34d860f8714c0e3285cca78f473b10cf2290ddab756a5e5e7c49c88d826a5e42"
+        },
+        {
+          "blob": "d9441543e05c7c2adb16dc20c3fb66ddee80158d",
+          "path": "bots/morpheus-rs/crates/core/src/search.rs",
+          "sha256": "e3030bef5aab75d55aaa78461cc36c7bc4f91d515f76f0509bd551b48c5b16bf"
+        },
+        {
+          "blob": "ae3555a8d8c27cf8e326ad97b61c7d05282e0327",
+          "path": "bots/morpheus-rs/crates/core/src/sha256.rs",
+          "sha256": "d0b8e201a98df4866052b97f7eb2d4686edc063efc7e6bd14feaee6acecaa7f0"
+        },
+        {
+          "blob": "a5f5b56993bac34249b895c7d6998f5c9757363a",
+          "path": "bots/morpheus-rs/crates/core/src/state.rs",
+          "sha256": "a37fb703feba96211031952ee1bda185bdf5ae712ef06fd6a142d25182a9e90c"
+        },
+        {
+          "blob": "61f976d1aa07988ec173b275ca94c3678e427758",
+          "path": "bots/morpheus-rs/crates/core/src/symmetry.rs",
+          "sha256": "3f06d9213c5e6e7f6d123e79c761e352f99f367424a393ba179eb4c5c94e8b7a"
+        },
+        {
+          "blob": "9716ae927ebe3640c20c59ee34f70c732706c8cd",
+          "path": "bots/morpheus-rs/crates/core/src/tactics.rs",
+          "sha256": "9f99994edebe83c5613d251ef6400ed832d911b49c4b25b3074fd03916fd0d63"
+        },
+        {
+          "blob": "cf21c437c26e61171defb30bd96e7f79b4156760",
+          "path": "bots/morpheus-rs/crates/core/src/telemetry.rs",
+          "sha256": "a211437d1895522eb964dd32094cf042c4a980d3a506562829e9469d334d20a4"
+        },
+        {
+          "blob": "6ca7e8a3649b03eb7ac096e8a29367272e9e3d45",
+          "path": "bots/morpheus-rs/crates/core/src/tensor.rs",
+          "sha256": "90f3626e942b7d061d7d917355cd742e95e1c96acabda6e7c80eb15ad84106e9"
+        },
+        {
+          "blob": "78ed0d7a0564e45bae515a805d26fe67448b8104",
+          "path": "bots/morpheus-rs/crates/core/src/transition.rs",
+          "sha256": "d878c57fae5692cf3a5c5e26a52e54cdd25148d51ed98a34d7bb0a17325a2640"
+        },
+        {
+          "blob": "498c0a25f32b76e09dd422b6c2d5eacfab2aa549",
+          "path": "bots/morpheus-rs/crates/core/src/tree.rs",
+          "sha256": "ee9ff89c2b2a0c80582b38412b031418be84d833f1df29dc823d2b510110f616"
+        },
+        {
+          "blob": "f29978677d283a89c8fd19d20eb46c1638636e80",
+          "path": "bots/morpheus-rs/crates/core/src/wire.rs",
+          "sha256": "4b0b51a8c786d42d93b44271bd43d26fe2e8bce162bfcf3fa50e3869311e475b"
+        },
+        {
+          "blob": "2b982727126472fa52ca05f779ecba55778409bd",
+          "path": "bots/morpheus-rs/deployment.json",
+          "sha256": "84e00f57feb96c789ed7e6e0549e9dcb4c83b611c1bb2773ba687ebfc589f3c1"
+        },
+        {
+          "blob": "fb1afde5b374ed54a220180f1dc02074cf3d89fd",
+          "path": "bots/morpheus-rs/run.sh",
+          "sha256": "066d4e73fab52e6712c7c1f2e535756743f41cfcf4f638b35078ffa97eec1016"
+        },
+        {
+          "blob": "eb28a1e6e4fae6e39a46446dccc1d08bfbb04c7d",
+          "path": "bots/morpheus-rs/rust-toolchain.toml",
+          "sha256": "d0c9c1f47835e9b8e7c0ff6742df6d4b54093717f8be653415da5383934993cf"
+        }
+      ],
+      "first_seen_at": "2026-08-09T12:29:14Z",
+      "git_commit": "fc011179a1d480573fdbf8e7d3510cb27eb90ec8",
+      "git_dirty": false
+    }
+  ]
+}

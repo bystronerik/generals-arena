@@ -59,6 +59,8 @@ Small topic files for the Generals Arena research repo.
 - [morpheus-rs belief filter](bots/morpheus-rs/belief.md) — particles, recovery, the injected RNG, and the two NumPy behaviours the port reproduces
 - [morpheus-rs search and tactics](bots/morpheus-rs/search-and-tactics.md) — the arena tree, the shared generator, the BLAS reduction the oracle cannot pin, and the decision surface
 - [morpheus-rs telemetry](bots/morpheus-rs/telemetry.md) — the bot's own per-turn trace, why a subprocess needs one, and the thread-count invariant
+- [morpheus-rs M6 latency](research/measurements/morpheus-rs-m6-latency.md) — the Rust bot on M0's schedule, and the two ways a component table misleads
+- [morpheus-rs M6 strength](research/measurements/morpheus-rs-m6-strength.md) — the arena gate at parity knobs, and what a deadline-shaped configuration does to "identical"
 
 ## Arena
 

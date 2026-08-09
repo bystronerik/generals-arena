@@ -1,8 +1,11 @@
 # Morpheus-rs rewrite plan
 
 Status: **confirmed 2026-08-08 — implementation under way. M0, M0.5, M1, M2,
-M3, M4, and M5 are done (§14–§20); M0.5 awaits a submission only the account
-holder can make. The Rust bot plays its own decisions as of M5.**
+M3, M4, M5, and M6 are done (§14–§21); M0.5 awaits a submission only the
+account holder can make. The Rust bot plays its own decisions as of M5, and as
+of M6 it is registered, measured, and rated: +425 ± 23 Elo over the Python
+sibling at identical knobs (§21). M7 — the first qualified deployment — is
+next.**
 Revised against the declared-final morpheus state at commit `9d6f186`
 (oracle `morpheus@73967d2125cc`, registry step 18 — see §14; the
 `17c8ac2684ec` this plan first named was the *previous* registry head, the
@@ -1140,3 +1143,93 @@ Two smaller notes:
   values are the *Python's* measured costs and are wrong for this binary by
   roughly the ratios M4 measured; they are there to make admission behave
   identically, not because they describe this bot. M7 re-derives every field.
+
+## 21. M6 — the coverage debt, and a gate that passed for the wrong reason
+
+Delivered 2026-08-09. The bot is integrated behind `run.sh`, registered as
+`morpheus-rs@5456f5532cc2` (lineage step 1), measures itself, and has played
+its arena round. Harness detail: [`parity-harness.md`](parity-harness.md).
+Telemetry: [`telemetry.md`](telemetry.md). Figures:
+[latency](../../research/measurements/morpheus-rs-m6-latency.md) and
+[strength](../../research/measurements/morpheus-rs-m6-strength.md).
+
+**Exit gate met.** The AGENTS.md gate finishes under `--mode competition` (win
+at turn 736, two castles). The pairwise contrast over one round — seven bots,
+21 pairs, 192 games each, round seed 7, seats alternated, `--strict-versions` —
+reads `morpheus@73967d2125cc` → `morpheus-rs@5456f5532cc2` at
+**Δ = +425.06 ± 22.77 Elo, CI₉₅ [+380.44, +469.68], P(B > A) = 1.0000**, on
+1,152 games per arm and 973 / 1,121 decisive. The gate asks for `no change` or
+better; this is `improvement`.
+
+**§4's reasoning for that gate was wrong, and the error is worth more than the
+verdict.** It said: "at identical configuration the Rust bot should play the
+same bot, so anything worse means a real divergence." The knobs *are*
+identical — verified field by field, only a note, a runtime name and a
+qualification host differ — but **identical configuration is not identical
+behaviour when the configuration is a deadline.** Every knob in
+`deployment.json` is a time budget or a bound on work attempted inside one. The
+Python completes its belief update *and* root inference on 18.4% of turns; this
+binary does it on 100%, at 16 simulations per move against 12, with 0.02% of
+moves over the judge's limit against 8.76%. The contrast measures that gap
+closing, which is §7's thesis, not a divergence.
+
+The consequence for how M6's gate should have been read: a `regression` at
+parity knobs would still have meant "investigate" (M5's note stands), but `no
+change` was never the right prior. Faithfulness is what the parity harness
+proves — 533,726 cases, `decide` 1,322 / 1,322 — and the strength round cannot
+speak to it either way.
+
+**M5's instruction was to close the mutation gap before reading anything into a
+strength contrast, and doing so found three harness bugs rather than three
+missing positions.** The pass reads **140 of 167 caught**, up from 118, with all
+27 survivors explained; no new mutations were written, so the whole movement is
+M5's twenty-nine open survivors becoming twenty-two caught and seven
+equivalent-with-a-measurement. Half wanted positions built the way M5's eleven
+were, and fifteen more are in `tactical_positions()`. The other half wanted
+something else:
+
+- **M5's four "disagreeing" particles were one board.** `_replace()` on a
+  NamedTuple copies the tuple and shares every array in it, so all four held the
+  same `armies`, hashed to one enemy view, and no node ever had two enemy
+  tables. Four eviction and LRU mutations survived for that reason alone, under
+  a comment asserting the opposite.
+- **A root-only comparison cannot see a child.** A leaf value is applied
+  unchanged to every edge on the path, and `Replay` returns the oracle's sampled
+  index whatever this side computed — so a divergence inside a child changes
+  neither the root's statistics nor the tree's shape. `search` now emits every
+  node.
+- **A constant leaf value hides every weighting.** `ScriptedEvaluator` returns
+  one number for every leaf, so every `q` entry is equal and an average of equal
+  numbers does not depend on its weights. The enemy-hash cache key, the
+  reservoir's weights and the marginal aggregation were unobservable for that
+  and nothing else.
+
+Two rules cannot be reached by playing at all: the retention score's touch term
+only ever decides a tie in `last_used`, which is a per-node backup counter that
+advances on every backup — 680 backups, never a tie. `evict` states the table
+set instead, as `runtime` states its samples. Thirty-one surfaces now.
+
+**The bot measures itself.** `arena.instrument.runner` constructs an `Agent`
+in-process and samples `probe.py`; a subprocess binary offers neither, so §7's
+promise of "its own arena-owned probe later" comes due here — M6's latency and
+first-move claims are unmeasurable without one. `telemetry.rs` writes one JSONL
+line per turn on `probe.py`'s key set, armed by `MORPHEUS_RS_TRACE`, buffered to
+the end for the reason the runner buffers. §10's thread-count invariant is
+checked after warmup through `/proc/self/status`, on the platform that has one.
+
+**First-move budget (§11.4), measured:** 3.7 ms load + 109.1 ms warmup + 0.1 ms
+init = **114.8 ms at p50**, against `first_move_limit_ms` of 8,500 and the
+Python's ~8.5 s. The follow-up §8 noted — that the grace window could fund a
+deeper first-move search — is now a 8.4-second question rather than a
+hypothetical one.
+
+Two notes for M7:
+
+- **The simulation ceiling is now the binding constraint, not the deadline.**
+  `target_simulations = 16` was fitted to a bot that could not reach it; this
+  one hits it on the median move with 30 ms of budget unspent. The re-tune grid
+  in §8 should treat 16 as its floor, not a midpoint.
+- **A component table needs its call counts.** The trace carries calls for three
+  components, and only those three could be normalized per call — which
+  mattered: `enemy_prior_batch` reads 0.9× per turn and 1.6× per call. M7 fits
+  knobs from these numbers and should emit all ten.
