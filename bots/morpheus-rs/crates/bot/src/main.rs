@@ -42,6 +42,10 @@ struct Seat {
     /// `(load, warmup, init)` in ms — plan §11's fourth success criterion, and
     /// the only place it can be measured: the grace window is spent here.
     startup_ms: (f64, f64, f64),
+    /// The knobs this seat is playing, for the trace's first line. M7 sweeps
+    /// configurations, and a trace that does not say which one produced it is
+    /// a measurement waiting to be misfiled.
+    config_json: String,
 }
 
 impl Seat {
@@ -91,10 +95,28 @@ impl Seat {
         controller.use_policy_proposal = deployment.use_policy_proposal;
         let total_ms = begin.elapsed().as_secs_f64() * 1e3;
         check_single_threaded()?;
+        let config_json = format!(
+            "{{\"n_particles\":{},\"target_simulations\":{},\"min_simulations\":{},\
+             \"pending_leaf_batch\":{},\"search_depth\":{},\"max_proposal_batch\":{},\
+             \"widen_freeze_below\":{},\"max_forward_equivalents\":{},\
+             \"normal_deadline_ms\":{},\"reserve_ms\":{},\"admission_guard_ms\":{}}}",
+            deployment.n_particles,
+            deployment.target_simulations,
+            deployment.min_simulations,
+            deployment.pending_leaf_batch,
+            deployment.search_depth,
+            deployment.max_proposal_batch,
+            deployment.widen_freeze_below,
+            deployment.max_forward_equivalents,
+            deployment.normal_deadline_ms,
+            deployment.reserve_ms,
+            deployment.admission_guard_ms,
+        );
         Ok(Self {
             controller,
             evaluator,
             startup_ms: (load_ms, warmup_ms, (total_ms - load_ms - warmup_ms).max(0.0)),
+            config_json,
         })
     }
 
@@ -296,6 +318,9 @@ fn main() {
     // bot's own probe, since `arena.instrument.runner` can only trace an Agent
     // it constructs in-process. See `telemetry.rs`.
     let mut trace = morpheus_core::telemetry::Trace::from_env();
+    if let (Some(trace), Some(seat)) = (trace.as_mut(), seat.as_ref()) {
+        trace.set_header(seat.config_json.clone());
+    }
     let mut turn: i64 = 0;
 
     loop {

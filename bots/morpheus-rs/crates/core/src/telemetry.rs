@@ -32,6 +32,10 @@ pub const TRACE_ENV: &str = "MORPHEUS_RS_TRACE";
 pub struct Trace {
     path: PathBuf,
     lines: Vec<String>,
+    /// A JSON fragment describing the configuration, emitted on the first line.
+    /// A sweep writes one trace per candidate config, and a trace that does not
+    /// say which knobs produced it is a measurement waiting to be misfiled.
+    header: Option<String>,
 }
 
 impl Trace {
@@ -49,7 +53,13 @@ impl Trace {
         Some(Self {
             path: PathBuf::from(path),
             lines: Vec::with_capacity(1024),
+            header: None,
         })
+    }
+
+    /// Record the configuration this process is playing, for the first line.
+    pub fn set_header(&mut self, fragment: String) {
+        self.header = Some(fragment);
     }
 
     /// One line per turn. `startup` is `(load_ms, warmup_ms, init_ms)` and is
@@ -100,6 +110,20 @@ impl Trace {
             let _ = write!(line, ",\"{key}\":{value}");
         }
         let _ = write!(line, ",\"fallback_level\":\"{}\"", m.fallback_level);
+        // Calls for all ten, not the three `probe.py` happens to declare. M6
+        // could normalize only those three per call and it mattered — the
+        // per-turn total charges a faster bot for the extra simulations it fit,
+        // so `enemy_prior_batch` read 0.9x per turn and 1.6x per call. M7 fits
+        // knobs from these numbers and a per-turn total is the wrong unit for
+        // anything that runs once per simulation.
+        line.push_str(",\"calls\":{");
+        for (i, name) in COST_COMPONENTS.iter().enumerate() {
+            if i > 0 {
+                line.push(',');
+            }
+            let _ = write!(line, "\"{name}\":{}", m.component_calls[i]);
+        }
+        line.push('}');
         line.push_str(",\"components\":{");
         for (i, name) in COST_COMPONENTS.iter().enumerate() {
             if i > 0 {
@@ -115,6 +139,9 @@ impl Trace {
                 line,
                 ",\"load_ms\":{load_ms:.3},\"warmup_ms\":{warmup_ms:.3},\"init_ms\":{init_ms:.3}"
             );
+            if let Some(header) = &self.header {
+                let _ = write!(line, ",\"config\":{header}");
+            }
         }
         line.push('}');
         self.lines.push(line);

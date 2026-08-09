@@ -1,0 +1,144 @@
+{
+  "online_cpus": 17,
+  "cpuinfo_model": "unknown",
+  "rust_build_seconds": 18.2,
+  "rust_build_ok": true,
+  "rustc_version": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+  "sweep_wall_s": 2758.8,
+  "sweep_returncode": 0,
+  "sweep_stdout_tail": "[m7] n8-s32-b4-d8 game 1/20 vs cm_expander\n[m7] n8-s32-b4-d8 game 2/20 vs macaria\n[m7] n8-s32-b4-d8 game 3/20 vs cm_expander\n[m7] n8-s32-b4-d8 game 4/20 vs macaria\n[m7] n8-s32-b4-d8 game 5/20 vs cm_expander\n[m7] n8-s32-b4-d8 game 6/20 vs macaria\n[m7] n8-s32-b4-d8 game 7/20 vs cm_expander\n[m7] n8-s32-b4-d8 game 8/20 vs macaria\n[m7] n8-s32-b4-d8 game 9/20 vs cm_expander\n[m7] n8-s32-b4-d8 game 10/20 vs macaria\n[m7] n8-s32-b4-d8 game 11/20 vs cm_expander\n[m7] n8-s32-b4-d8 game 12/20 vs macaria\n[m7] n8-s32-b4-d8 game 13/20 vs cm_expander\n[m7] n8-s32-b4-d8 game 14/20 vs macaria\n[m7] n8-s32-b4-d8 game 15/20 vs cm_expander\n[m7] n8-s32-b4-d8 game 16/20 vs macaria\n[m7] n8-s32-b4-d8 game 17/20 vs cm_expander\n[m7] n8-s32-b4-d8 game 18/20 vs macaria\n[m7] n8-s32-b4-d8 game 19/20 vs cm_expander\n[m7] n8-s32-b4-d8 game 20/20 vs macaria\n[m7] n8-s16-b4-d2 game 1/20 vs cm_expander\n[m7] n8-s16-b4-d2 game 2/20 vs macaria\n[m7] n8-s16-b4-d2 game 3/20 vs cm_expander\n[m7] n8-s16-b4-d2 game 4/20 vs macaria\n[m7] n8-s16-b4-d2 game 5/20 vs cm_expander\n[m7] n8-s16-b4-d2 game 6/20 vs macaria\n[m7] n8-s16-b4-d2 game 7/20 vs cm_expander\n[m7] n8-s16-b4-d2 game 8/20 vs macaria\n[m7] n8-s16-b4-d2 game 9/20 vs cm_expander\n[m7] n8-s16-b4-d2 game 10/20 vs macaria\n[m7] n8-s16-b4-d2 game 11/20 vs cm_expander\n[m7] n8-s16-b4-d2 game 12/20 vs macaria\n[m7] n8-s16-b4-d2 game 13/20 vs cm_expander\n[m7] n8-s16-b4-d2 game 14/20 vs macaria\n[m7] n8-s16-b4-d2 game 15/20 vs cm_expander\n[m7] n8-s16-b4-d2 game 16/20 vs macaria\n[m7] n8-s16-b4-d2 game 17/20 vs cm_expander\n[m7] n8-s16-b4-d2 game 18/20 vs macaria\n[m7] n8-s16-b4-d2 game 19/20 vs cm_expander\n[m7] n8-s16-b4-d2 game 20/20 vs macaria\n[m7] deployment.json restored\n",
+  "sweep_stderr_tail": "",
+  "report_stdout": "config                turns  move p50     p99   p99.9     max  >150  sims p50  belief ok\nn8-s16-b4-d2          10382      94.0   131.0   138.0   140.0     0      16.0     100.0%\nn8-s32-b4-d8          10595     130.0   140.0   140.0   141.0     0      20.0     100.0%\n\nwrote /root/m7/summary.json\n",
+  "summary": {
+    "n8-s16-b4-d2": {
+      "config": {
+        "n_particles": 8,
+        "target_simulations": 16,
+        "pending_leaf_batch": 4,
+        "search_depth": 2
+      },
+      "games": 20,
+      "turns": 10382,
+      "move_ms": {
+        "n": 10382,
+        "p50": 94.0,
+        "p99": 131.0,
+        "p999": 138.0,
+        "max": 140.0,
+        "mean": 95.7955
+      },
+      "over_judge_limit": 0,
+      "completed_simulations": {
+        "n": 10382,
+        "p50": 16.0,
+        "p99": 16.0,
+        "p999": 16.0,
+        "max": 16.0,
+        "mean": 15.9861
+      },
+      "belief_plus_root_ok_frac": 1.0,
+      "per_turn_p99_ms": {
+        "backup": 2.014,
+        "belief_proposal": 0.7354,
+        "enemy_prior_batch": 44.6427,
+        "hashing": 0.0002,
+        "leaf_batch": 64.8862,
+        "particle_transitions": 29.4327,
+        "reply": 0.0001,
+        "root_inference": 5.117,
+        "selection": 3.8731
+      },
+      "per_call_p99_ms": {
+        "backup": 0.1259,
+        "belief_proposal": 0.7354,
+        "enemy_prior_batch": 11.2377,
+        "hashing": 0.0002,
+        "leaf_batch": 16.2313,
+        "particle_transitions": 29.4327,
+        "reply": 0.0001,
+        "root_inference": 5.117,
+        "selection": 0.1524
+      },
+      "calls_mean": {
+        "backup": 15.986,
+        "belief_proposal": 1.0,
+        "enemy_prior_batch": 3.787,
+        "hashing": 1.0,
+        "leaf_batch": 3.997,
+        "particle_transitions": 1.0,
+        "reply": 1.0,
+        "root_inference": 1.0,
+        "selection": 24.838
+      },
+      "fallback_level": {
+        "average": 6071,
+        "policy": 4311
+      }
+    },
+    "n8-s32-b4-d8": {
+      "config": {
+        "n_particles": 8,
+        "target_simulations": 32,
+        "pending_leaf_batch": 4,
+        "search_depth": 8
+      },
+      "games": 20,
+      "turns": 10595,
+      "move_ms": {
+        "n": 10595,
+        "p50": 130.0,
+        "p99": 140.0,
+        "p999": 140.0,
+        "max": 141.0,
+        "mean": 130.4483
+      },
+      "over_judge_limit": 0,
+      "completed_simulations": {
+        "n": 10595,
+        "p50": 20.0,
+        "p99": 28.0,
+        "p999": 32.0,
+        "max": 32.0,
+        "mean": 21.6099
+      },
+      "belief_plus_root_ok_frac": 1.0,
+      "per_turn_p99_ms": {
+        "backup": 3.6209,
+        "belief_proposal": 0.7162,
+        "enemy_prior_batch": 59.3669,
+        "hashing": 0.0002,
+        "leaf_batch": 106.625,
+        "particle_transitions": 26.9104,
+        "reply": 0.0002,
+        "root_inference": 5.217,
+        "selection": 6.2709
+      },
+      "per_call_p99_ms": {
+        "backup": 0.2267,
+        "belief_proposal": 0.7162,
+        "enemy_prior_batch": 10.3671,
+        "hashing": 0.0002,
+        "leaf_batch": 16.292,
+        "particle_transitions": 26.9104,
+        "reply": 0.0002,
+        "root_inference": 5.217,
+        "selection": 0.1879
+      },
+      "calls_mean": {
+        "backup": 21.61,
+        "belief_proposal": 1.0,
+        "enemy_prior_batch": 5.775,
+        "hashing": 1.0,
+        "leaf_batch": 5.418,
+        "particle_transitions": 1.0,
+        "reply": 1.0,
+        "root_inference": 1.0,
+        "selection": 34.914
+      },
+      "fallback_level": {
+        "average": 5627,
+        "policy": 4968
+      }
+    }
+  }
+}
