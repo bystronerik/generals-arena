@@ -1153,13 +1153,26 @@ Telemetry: [`telemetry.md`](telemetry.md). Figures:
 [latency](../../research/measurements/morpheus-rs-m6-latency.md) and
 [strength](../../research/measurements/morpheus-rs-m6-strength.md).
 
-**Exit gate met.** The AGENTS.md gate finishes under `--mode competition` (win
-at turn 736, two castles). The pairwise contrast over one round — seven bots,
-21 pairs, 192 games each, round seed 7, seats alternated, `--strict-versions` —
-reads `morpheus@73967d2125cc` → `morpheus-rs@5456f5532cc2` at
-**Δ = +425.06 ± 22.77 Elo, CI₉₅ [+380.44, +469.68], P(B > A) = 1.0000**, on
-1,152 games per arm and 973 / 1,121 decisive. The gate asks for `no change` or
-better; this is `improvement`.
+**Exit gate: the matchup half stands, the strength half is RETRACTED.** The
+AGENTS.md gate finishes under `--mode competition` (win at turn 736, two
+castles). The pairwise contrast — seven bots, 21 pairs, 192 games each, round
+seed 7, seats alternated, `--strict-versions` — read
+`morpheus@73967d2125cc` → `morpheus-rs@5456f5532cc2` at **+425.06 ± 22.77 Elo,
+P(B > A) = 1.0000** over 1,152 games per arm.
+
+**That number does not replicate** (found at M7, 2026-08-10). Four later
+measurements of the same two programs, one of them replaying this round's own
+seeds under its own job count, agree at **0.504 ± 0.042** against the round's
+0.867 — a 7.4-sigma disagreement, cause unidentified, with map seeds,
+tournament parallelism, external CPU load and the programs themselves each
+ruled out by experiment. The current best estimate of the contrast is **+138
+Elo**. Full account:
+[morpheus-rs-m6-replication.md](../../research/measurements/morpheus-rs-m6-replication.md).
+
+The rewrite's deployment case is untouched, because it was never this number:
+on one x86 core the Python bot is late on **13.8%** of moves and reaches
+`RULES.md`'s 50-fault forfeit around move 360 of a typical game, while this
+binary is late on **0 of 21,000** (§22).
 
 **§4's reasoning for that gate was wrong, and the error is worth more than the
 verdict.** It said: "at identical configuration the Rust bot should play the
@@ -1170,8 +1183,14 @@ behaviour when the configuration is a deadline.** Every knob in
 `deployment.json` is a time budget or a bound on work attempted inside one. The
 Python completes its belief update *and* root inference on 18.4% of turns; this
 binary does it on 100%, at 16 simulations per move against 12, with 0.02% of
-moves over the judge's limit against 8.76%. The contrast measures that gap
-closing, which is §7's thesis, not a divergence.
+moves over the judge's limit against 8.76%.
+
+That reasoning is still right, and it is *also* the reason a strength round can
+go wrong: a bot whose strength is a function of spare host compute will be
+measured differently by two hosts in two states, and nothing in the round
+manifest records which state it was. M6 published the difference between two
+bots; the replication says a large part of what it published was the difference
+between two afternoons.
 
 The consequence for how M6's gate should have been read: a `regression` at
 parity knobs would still have meant "investigate" (M5's note stands), but `no
@@ -1233,3 +1252,63 @@ Two notes for M7:
   components, and only those three could be normalized per call — which
   mattered: `enemy_prior_batch` reads 0.9× per turn and 1.6× per call. M7 fits
   knobs from these numbers and should emit all ten.
+
+## 22. M7 — the knobs are qualified, the pick is not, and M6 is retracted
+
+Delivered 2026-08-10, **incomplete by design**: §8's steps 1–3 are done and
+measured, step 4 came back `unproven`, and step 5 has therefore not been taken.
+No knob shipped. Figures: [knobs](../../research/measurements/morpheus-rs-m7-knobs.md),
+[x86 qualification](../../research/measurements/morpheus-rs-m7-x86-guard0.md),
+[the M6 retraction](../../research/measurements/morpheus-rs-m6-replication.md).
+
+**The cost model is one number.** A network forward costs ~4.9 ms on the M3 Pro
+and ~5.1 ms on x86, and a turn affords about twenty-six of them. That explains
+the whole grid: `target_simulations` 16 → 32 buys four real simulations and 64
+buys none (the deadline binds at ~20); `search_depth` 2 → 8 is nearly free
+because a simulation's cost is its leaf forward, not its tree walk; particles
+trade against search at about four simulations per doubling; and
+`pending_leaf_batch = 8` has the best median and the worst tail, which is what
+a zero admission guard predicts.
+
+**§8 asks for a reserve that does not exist.** `reserve_ms` is parsed, stored
+and never read — in the Python oracle as much as in the port, so the port is a
+faithful transcription of a dead knob. The turn deadline is
+`turn_start + normal_deadline_ms` and nothing subtracts a reserve. What
+protects the tail is `admission_guard_ms`, which ships at 0.0; M6's two moves
+over the limit were forecast misses (`leaf_batch` at 72 and 110 ms against a
+forecast near 20), admitted because the guard is zero. Priced: **15 ms of guard
+costs four simulations and buys twenty milliseconds of tail.**
+
+**The latency half of the exit gate is met, on the host that has authority.**
+Twenty games per configuration on one x86 core, ~10,000 normal moves each:
+`n8-s32-b4-d8` reads p99.9 **140 ms**, max **141 ms**, **zero moves over 150**,
+at twenty simulations against the parity config's sixteen. x86 is *faster* at
+inference and ~1.7× *slower* at the belief kernel than the laptop, which is
+why the shipped table has to come from there and not from here.
+
+**The strength half is `unproven` and nothing was shipped.** `parity → s32`
+fits at **+18.15 ± 23.42, CI₉₅ [−27.8, +64.1], P = 0.781**. Reading a pick out
+of that would be inventing one.
+
+**And the round that produced it found something worse.** The same round put
+`morpheus` and `morpheus-rs` far closer than M6 had, which turned into the
+[M6 retraction](../../research/measurements/morpheus-rs-m6-replication.md):
+M6's +425 does not replicate, the cause is unidentified, and seeds,
+parallelism, external load and the programs are each ruled out by experiment.
+The lesson is recorded in
+[`decision-rule.md`](../../arena/decision-rule.md#a-round-is-not-evidence-until-it-replicates)
+rather than here, because it is not a morpheus fact: **a round is not evidence
+until it replicates, and host state is an experimental variable this repo does
+not record.**
+
+What M7 still owes:
+
+- A replicated strength contrast for the knobs, on a quiet host, run twice.
+  Until then `bots/morpheus-rs/deployment.json` keeps the parity knobs and its
+  *no* qualification verdict, which is now only half true: the latency is
+  qualified on x86, the configuration it qualifies is not the one measured for
+  strength, and saying so is more useful than a verdict field that cannot
+  express it.
+- `bots/morpheus-rs-s32/` is the decision arm and is gitignored derived data
+  (the `bots/morpheus-*/` rule); it stays until the contrast is settled, then
+  goes, with its registry entry left as provenance.

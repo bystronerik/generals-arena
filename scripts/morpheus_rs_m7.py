@@ -217,9 +217,10 @@ def cmd_sweep(args: argparse.Namespace) -> int:
             directory = out / name
             directory.mkdir(parents=True, exist_ok=True)
             apply_config(config, extra=args.extra)
+            panel = tuple(args.panel) if args.panel else SWEEP_PANEL
             played = []
             for i in range(args.games):
-                opponent = SWEEP_PANEL[i % len(SWEEP_PANEL)]
+                opponent = panel[i % len(panel)]
                 trace = directory / f"game{i:03d}.jsonl"
                 print(f"[m7] {name} game {i + 1}/{args.games} vs {opponent}", flush=True)
                 played.append(play(trace, opponent, args.seed + i, i % 2 == 0))
@@ -227,6 +228,7 @@ def cmd_sweep(args: argparse.Namespace) -> int:
                 json.dumps(
                     {
                         "config": config,
+                        "panel": list(panel),
                         "extra": args.extra or {},
                         "games": played,
                         "host": host_facts(),
@@ -382,6 +384,8 @@ def main(argv: list[str] | None = None) -> int:
     sweep.add_argument("--out", type=Path, default=DEFAULT_OUT)
     sweep.add_argument("--extra", type=json.loads, default=None,
                        help="extra deployment.json overrides as JSON")
+    sweep.add_argument("--panel", nargs="*", default=None,
+                       help="opponents to cycle through (default: cm_expander, macaria)")
     sweep.set_defaults(func=cmd_sweep)
 
     arm = sub.add_parser("arm", help="materialize a config as a sibling bot dir")

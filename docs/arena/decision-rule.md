@@ -44,6 +44,34 @@ copy of the pre-change bot under `bots/`, kept only for the duration of the
 comparison (`bots/macaria_base/` was that copy for the run above; it has since
 been removed).
 
+## A round is not evidence until it replicates
+
+**Every gate below passed on a round whose result was wrong by 300 Elo.** The
+M6 morpheus-rs contrast (2026-08-09) fitted `+425.06 ± 22.77, P = 1.0000` over
+1,152 games per arm, 973 decisive, registered hashes, one engine version,
+shared panel, alternated seats. Re-measured four ways — including a replay of
+that round's own seeds under its own job count — the same two programs sit at
+**0.504 ± 0.042** against the round's 0.867, a 7.4-sigma disagreement. Cause
+unidentified; seeds, parallelism, external load and the programs are each
+ruled out by experiment. Detail:
+[morpheus-rs-m6-replication.md](../research/measurements/morpheus-rs-m6-replication.md).
+
+Two rules follow, and they bind hardest on **deadline-driven bots** — anything
+that thinks until a wall-clock budget expires, where strength is a function of
+how much compute the host happened to spare:
+
+- **Replicate before publishing.** A contrast that will be written down needs a
+  second round, separately scheduled. The gates below cannot substitute for it;
+  they all passed.
+- **Host state is an experimental variable and is currently unrecorded.** The
+  round manifest captures the roster, seeds, seat policy, engine and job count,
+  and nothing about what else the machine was doing. Until it does, note it by
+  hand, and treat a round whose host state is unknown as unpublishable.
+
+Related: the same phenomenon at 1/9th the size is the "cross-round baselines
+are not comparators" section above, which was measured at +46 Elo between
+byte-identical programs.
+
 ## Gate
 
 Any failure means `unproven`, with the reason named.

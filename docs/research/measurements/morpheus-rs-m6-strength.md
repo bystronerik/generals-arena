@@ -1,5 +1,26 @@
 # Morpheus-rs M6 — the arena gate, at parity knobs
 
+> # ⚠ RETRACTED, 2026-08-10
+>
+> **The headline number below does not replicate and must not be quoted.**
+> Four later measurements of the same two programs — one of which replays this
+> round's own map seeds under this round's own job configuration — agree with
+> each other at a score of **0.504 ± 0.042** and disagree with this round's
+> 0.867 by **7.4 sigma**. The current best estimate of the same contrast is
+> **+138 Elo**, from the M7 round. The cause has not been identified; map
+> seeds, tournament parallelism, external CPU load and the programs themselves
+> are each ruled out by direct experiment.
+>
+> Full account: [M6's strength result does not replicate](morpheus-rs-m6-replication.md).
+>
+> What survives is everything measured **serially on the x86 deployment host**,
+> which is untouched by this: the Python bot is late on 13.8% of moves there
+> and would forfeit on faults, while this binary is late on 0 of 21,000. That
+> case never depended on the round below.
+>
+> The rest of this page is kept as written, as the record of what was
+> published and how it was reasoned about.
+
 > Verdict: **improvement.** `morpheus@73967d2125cc` → `morpheus-rs@5456f5532cc2`
 > is **Δ = +425.06 ± 22.77 Elo, CI₉₅ [+380.44, +469.68], P(B > A) = 1.0000**,
 > 1,152 games per arm. The M6 exit gate asks for `no change` or better, so it
