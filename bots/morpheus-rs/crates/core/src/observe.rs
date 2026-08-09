@@ -18,11 +18,21 @@ use crate::wire::Observation;
 
 /// Chebyshev-1 (3×3) visibility around every owned cell.
 pub fn visibility_mask(state: &GameState, seat: usize) -> [bool; MAX_CELLS] {
+    visibility_from_owned(&state.ownership[seat], state.h, state.w)
+}
+
+/// The same dilation over a bare ownership plane.
+///
+/// The Python's `visibility_mask` takes the plane, not the state — the belief
+/// filter and the summary both need vision for a seat whose state they are
+/// only partway through building. Keeping both entry points means neither
+/// caller has to fabricate a `GameState` to ask a question about a mask.
+pub fn visibility_from_owned(owned: &[bool], h: usize, w: usize) -> [bool; MAX_CELLS] {
     let mut visible = [false; MAX_CELLS];
-    let (h, w) = (state.h as i32, state.w as i32);
+    let (h, w) = (h as i32, w as i32);
     for r in 0..h {
         for c in 0..w {
-            if !state.ownership[seat][(r * w + c) as usize] {
+            if !owned[(r * w + c) as usize] {
                 continue;
             }
             for dr in -1..=1 {

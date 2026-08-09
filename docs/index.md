@@ -56,6 +56,7 @@ Small topic files for the Generals Arena research repo.
 - [morpheus-rs packaging](bots/morpheus-rs/packaging.md) — crate layout, content hash, and the two submission variants
 - [morpheus-rs parity harness](bots/morpheus-rs/parity-harness.md) — how a ported surface is proved equal, and how the proof is itself checked
 - [morpheus-rs inference](bots/morpheus-rs/inference.md) — the hand-written network engine, the artifact contract, and the shoot-out that chose it
+- [morpheus-rs belief filter](bots/morpheus-rs/belief.md) — particles, recovery, the injected RNG, and the two NumPy behaviours the port reproduces
 
 ## Arena
 

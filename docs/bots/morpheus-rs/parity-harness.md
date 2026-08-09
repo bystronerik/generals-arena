@@ -4,19 +4,20 @@ How a ported surface is proved equal to the Python oracle, and — the part that
 turned out to matter more — how we know the proof is worth anything.
 
 Established at milestone M1 of the [rewrite plan](rewrite-plan.md), extended at
-M2 to tier 2, and at M3 to the first surface that cannot be bit-exact. The
-corpus it runs on is described in [parity-corpus.md](parity-corpus.md).
+M2 to tier 2, at M3 to the first surface that cannot be bit-exact, and at M4 to
+the first surfaces that consume **randomness**. The corpus it runs on is
+described in [parity-corpus.md](parity-corpus.md).
 
 ## Shape
 
 ```bash
-pytest bots/morpheus-rs/tests/          # smoke slice, ~7 s
+pytest bots/morpheus-rs/tests/          # smoke slice, ~9 s
 bots/morpheus-rs/tools/run_parity.sh    # full corpus + mutation check, minutes
 ```
 
 `tests/parity_cases.py` builds cases, runs the Python oracle on them, invokes
-`morpheus-rs parity <kind>` on the same cases, and compares. Eleven surfaces
-are checked. Tier 1 is bit-exact by specification; tier 2 allows 1e-6 — and is
+`morpheus-rs parity <kind>` on the same cases, and compares. Twenty-one
+surfaces are checked. Tier 1 is bit-exact by specification; tier 2 allows 1e-6 — and is
 *also* enforced bit-exact, for the reason in the next section.
 
 | kind | tier | what it compares |
@@ -32,13 +33,70 @@ are checked. Tier 1 is bit-exact by specification; tier 2 allows 1e-6 — and is
 | `symmetry` | 1 | the D4 coordinate/direction maps and the policy permutation |
 | `net` | 2 | all eleven network heads, through all three entry points |
 | `prior` | 2 | the legal-normalized prior and the search backup value |
+| `npsum` | 1 | NumPy's pairwise `f64` reduction |
+| `argsort` | 1 | `np.argsort(-scores)`, ties included |
+| `summary` | 1 | the six belief planes, plus ESS in full precision |
+| `propose` | 1 | each particle's proposal distribution *and* its sampled action |
+| `filter` | 1 | the filtered belief: weights, states, enemy memories, history |
+| `rejuvenate` | 1 | the belief a bounded beam replay reconstructs |
+| `maxent` | 1 | the maximum-entropy reconstruction, or its refusal |
+| `reservoir` | 1 | Algorithm R admission, sampling, and replace-from-belief |
+| `toplegal` | 2 | the masked softmax and the ranked candidate list |
+| `initbelief` | 1 | the initial prior's support, and the belief sampled from it |
 
 The smoke slice grew from ~1.5 s to ~7 s at M3, almost all of it importing
-torch and loading three TorchScript modules. That is the price of having the
-network oracle in CI at all, and it buys the surface the milestone exists for.
-AGENTS.md's 12 s ceiling governs the repo's `tests/`, which this is not part of;
-if this suite is ever folded in, the torch import is the thing to move behind a
-marker rather than the coverage to drop.
+torch and loading three TorchScript modules, and to ~8 s at M4. That is the
+price of having the network oracle in CI at all, and it buys the surface the
+milestone exists for. AGENTS.md's 12 s ceiling governs the repo's `tests/`,
+which this is not part of; if this suite is ever folded in, the torch import is
+the thing to move behind a marker rather than the coverage to drop.
+
+## Randomness: recorded, replayed, and argued with
+
+M4's surfaces are the first that draw. The plan's §5 settled the approach —
+record NumPy's draws, replay them in Rust, never reimplement the bit generator
+— and the harness closes it: the Python oracle runs behind the *same*
+`RecordingGenerator` the M0 capture wraps the live bot in, seeded per case, and
+its draw log is encoded into the case stream.
+
+`rng::Replay` then **verifies every argument** before handing back a recorded
+result. NumPy's `size=None` and `size=1` are different calls and stay
+distinguishable; so are populations of different sizes, `replace`, and whether
+a `p` vector was passed. A port that samples one extra time, or from a
+differently sized population, fails on that call with the draw index and both
+signatures in the message rather than diverging quietly three decisions later.
+
+**Replay creates a new way to be wrong, and one surface exists to close it.**
+Because `Replay` returns the oracle's index whatever this side computed,
+checking only the *sampled actions* would pass a port whose every probability
+was wrong. So `propose` emits each particle's distribution — sparsely, since a
+uniform mask has a few hundred non-zeros out of 3,970 — alongside the action,
+and compares both.
+
+One draw site is not on the shared stream at all: `replace_from_belief` builds
+`np.random.default_rng(0)` *inside* the method. The harness patches the factory
+for the duration so those draws land in the same ordered log, which means the
+Rust side has to make them at the same point in the sequence. What the port
+does not reproduce is *which* particles that seed picks; see
+[belief.md](belief.md) for why, and for what is preserved instead.
+
+## Two NumPy behaviours have their own surfaces
+
+`npsum` and `argsort` check functions that exist only to reproduce NumPy, and
+they exist as surfaces because both are **host-conditional**:
+
+- NumPy's `f64` reduction is pairwise, and a host whose NumPy vectorizes it
+  differently would change the ESS, which decides whether a resample runs,
+  which consumes a draw — a desynchronized replay stream three calls after the
+  cause.
+- NumPy ≥ 2.0 dispatches `argsort` on 64-bit dtypes to `x86-simd-sort` under
+  AVX-512-SKX, a different unstable algorithm with a different tie order. Under
+  the deployed uniform proposal *every* legal action ties, so on such a host the
+  Python bot itself would rank recovery candidates differently.
+
+Neither is a bug the port can fix. Making each a surface turns "this host's
+NumPy is not the one this was written against" into one named failure instead
+of a recovery mismatch nobody can trace.
 
 The corpus supplies **states, not answers**. Both implementations run fresh, so
 a case can exercise action pairs the recorded game never played — a build, a
@@ -158,9 +216,9 @@ there, each entry with the mutation that motivated it.
 
 ## Current results
 
-Full corpus (1,328 heavy frames from 20 games) — **502,870 cases**. The first
-nine surfaces are bit-exact; the two M3 surfaces are inside the budgets in the
-right-hand column, with the worst value a run actually reached.
+Full corpus (1,328 heavy frames from 20 games) — **515,710 cases**. Everything
+except the network is bit-exact; the two surfaces that cannot be are inside the
+budgets in the right-hand column, with the worst value a run actually reached.
 
 | kind | cases | agreement |
 | --- | ---: | --- |
@@ -175,10 +233,33 @@ right-hand column, with the worst value a run actually reached.
 | `symmetry` | 8 | bit-exact |
 | `net` | 1,399 | MAE ≤ 4.05e-6 (budget 1e-5), max 1.05e-5 (cap 5e-5) |
 | `prior` | 1,399 | max 6.56e-7 (cap 5e-6) |
+| `npsum` | 34 | bit-exact |
+| `argsort` | 13 | bit-exact |
+| `summary` | 1,352 | bit-exact, ESS included |
+| `propose` | 1,352 | bit-exact, distributions, actions and telemetry |
+| `filter` | 4,028 | bit-exact |
+| `rejuvenate` | 310 | bit-exact |
+| `maxent` | 1,328 | bit-exact |
+| `reservoir` | 4 | bit-exact |
+| `toplegal` | 4,197 | bit-exact (floor 1e-15) |
+| `initbelief` | 222 | bit-exact, prior support included |
 
-Mutation check: **44 of 51 caught**
+`initbelief` exists because mutation testing found `initialize_belief`
+completely uncovered: the corpus records the beliefs that exist, never the
+frame that created one, so deleting the minimum-separation rule from the prior
+changed nothing anywhere. The surface emits the candidate **support** as well
+as the sampled belief, because a belief drawn from a wrong support can agree by
+luck.
+
+`toplegal` was expected to need a tolerance and does not. Two implementations
+of `exp` over 3,970 f64 logits land on the same double for every logit here,
+and `npsum` reproduces the reduction exactly, so bit-exactness is what the
+harness enforces and the 1e-15 figure is only the floor to fall back to.
+Which leaves `net` as the only surface where a budget does real work.
+
+Mutation check: **71 of 86 caught**
 ([report](../../research/measurements/morpheus-rs-mutation-check.json)). All
-seven survivors are equivalent mutants, not gaps; the tool fails on an
+fifteen survivors are equivalent mutants, not gaps; the tool fails on an
 *unexplained* survivor, and — since M3 — on a mutation that never reached
 production code at all.
 
@@ -222,6 +303,44 @@ the network and the search. Two of them are equivalent mutants worth naming:
   explicit zero stays because it makes "illegal means zero" a property of the
   code rather than of float underflow.
 
+### M4: the milestone where the mutation pass found the most
+
+Thirty-five new mutations, and the first run caught only twenty-one of them.
+Fourteen unexplained survivors is by far the worst result any milestone has had
+— and every one of them was a real hole, not a bug in the port. The parity run
+had been green the whole time.
+
+Four kinds of hole showed up, and they generalize:
+
+- **A whole entry point was uncovered.** `initialize_belief` had no surface at
+  all: deleting the minimum-separation rule from the initial prior changed
+  nothing anywhere, because the corpus records beliefs that already exist and
+  never the frame that created one. Fixed by the `initbelief` surface.
+- **The answer encoding hid the difference.** `filter` emitted each particle's
+  history as a *length*. `_append_history` drops from the old end when the
+  window overflows, so swapping that for a truncation keeps the length and the
+  wrong eight frames. Now every frame's action pair and timestep rides out.
+- **A comparison was written and then not made.** The proposal information key
+  reaches exactly one observable on the deployed path —
+  `n_unique_info_keys` — and the comparison checked only the particle count.
+  A key that ignored the previous action passed. Now all five counters are
+  compared.
+- **The corpus is regular in ways that hide arithmetic.** Every captured belief
+  holds eight particles whose weights already sum to one, all of them `1/8`.
+  Normalizing a normalized set is the identity, `1/8` is exact in `f32`, and
+  eight equal values sum the same in any order — so `ess`'s division,
+  `summarize_belief`'s rescale, the belief planes' `f64` accumulator and
+  NumPy's pairwise sum were *all* unreachable at once. Four mutations, one
+  cause. Fixed by synthetic beliefs with unnormalized, irregular, negative and
+  all-zero weights, and by a filter variant that gives every particle the same
+  enemy action so more than one of them survives to be normalized.
+
+The last one is the lesson worth keeping. **A corpus is not a sample of inputs;
+it is a sample of the inputs the deployed configuration produces**, and a
+configuration that happens to use a power-of-two particle count with equal
+weights makes a whole class of arithmetic bugs invisible. The synthetic cases
+are not there to be realistic. They are there to be irregular.
+
 ### A mutation can also miss the code entirely
 
 The pad-column mutation for GroupNorm survived its first run, and the
@@ -229,6 +348,12 @@ write-up was one edit away from claiming a coverage hole. It had matched a
 line inside `#[cfg(test)]` — it broke a unit test, never the bot, and the
 parity harness had nothing to notice. `replace(..., 1)` takes the first
 occurrence, and the first occurrence was in the test module.
+
+M4 hit the other half of that rule. The depthwise-kernel mutation went `stale`:
+M3's halo rewrite replaced the `ky`/`kx` loop with a flat tap index, so the
+pattern stopped matching and the mutation had silently stopped testing anything
+some time before anyone looked. Failing on `stale` is what surfaced it; the
+mutation is re-aimed at the current source.
 
 So the tool now refuses any mutation whose match falls below `#[cfg(test)]`,
 reports it as `in-test`, and fails the run alongside `stale`. A misaimed
@@ -242,7 +367,24 @@ while a misaimed one reads as evidence.
 2. Mirror the encode/decode in `tests/parity_cases.py` and add the comparison
    branch, reporting *where* it differs — a cell index, an action index — so a
    failure is actionable without a debugger.
-3. Add the kind to `KINDS` in `tests/test_parity_tier1.py`.
+3. Add the kind to `KINDS` in `tests/test_parity_tier1.py` and to the `--kinds`
+   default in `parity_cases.py`.
 4. **Add mutations for it** in `tools/mutation_check.py` and run them. A
    surface with no mutation coverage is a surface nobody has shown the harness
    can check.
+5. If the surface is the *only* one that can see a given source file, add it to
+   `FILE_SURFACES` in the same file — see below.
+
+### Scoping, and why a survivor ignores it
+
+Running all twenty surfaces per mutation was the honest default until M4 made
+it the dominant cost: eighty-odd mutations against a torch import and two
+million integers through a pipe. `FILE_SURFACES` maps each source file to the
+kinds that could possibly see a break in it, and the board layer
+(`transition.rs`, `observe.rs`, `action.rs`, `memory.rs`, `state.rs`) still
+maps to *everything*, because every belief and every tensor is downstream of it.
+
+An over-narrow entry would report a caught mutation as a survivor, which reads
+as a coverage hole and is the most expensive kind of wrong. So a survivor is
+never allowed to rest on the scoping: before one is recorded, the full surface
+set is re-run. A narrow map therefore costs a slow run, not a false finding.

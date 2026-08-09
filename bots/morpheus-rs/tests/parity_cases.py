@@ -21,6 +21,7 @@ edited together.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -29,11 +30,16 @@ import numpy as np
 
 BOT_DIR = Path(__file__).resolve().parents[1]
 REPO = BOT_DIR.parents[1]
-for entry in (REPO, REPO / "bots", REPO / "bots" / "morpheus"):
+for entry in (REPO, REPO / "bots", REPO / "bots" / "morpheus", BOT_DIR / "tools"):
     if str(entry) not in sys.path:
         sys.path.insert(0, str(entry))
 
-BINARY = BOT_DIR / "target" / "release" / "morpheus-rs"
+# `MORPHEUS_RS_BINARY` lets `tools/mutation_check.py` point the harness at its
+# own faster-building profile. The default is, and must stay, the release
+# binary: the parity harness proper tests the thing that plays.
+BINARY = Path(
+    os.environ.get("MORPHEUS_RS_BINARY", BOT_DIR / "target" / "release" / "morpheus-rs")
+)
 SMOKE_FIXTURE = BOT_DIR / "tests" / "fixtures" / "parity-smoke.jsonl.gz"
 DEFAULT_CORPUS = REPO / "data" / "morpheus" / "morpheus-rs" / "morpheus-rs-m0"
 
@@ -70,6 +76,19 @@ NET_MAX_ABS_TOLERANCE = 5e-5
 # so the headroom stays visible rather than becoming folklore. Measured worst
 # over the full corpus: 6.56e-7 on a prior mass, 1.19e-7 on the backup value.
 PRIOR_TOLERANCE = 5e-6
+
+# The masked softmax was expected to need a tolerance — two implementations of
+# `exp` over 3,970 f64 logits — and does not: it agrees to the **last bit**, so
+# that is what is enforced, following the tensor's precedent. NumPy's
+# vectorized `exp` and the platform libm land on the same double for every
+# logit here, and `npsum` reproduces the reduction exactly, which leaves
+# nothing to differ.
+#
+# The figure below is the floor to fall back to, deliberately, if a platform
+# ever produces real drift; the failure message reports the max |Δ| and how
+# many elements exceed it so that decision comes with a number attached. It is
+# not a budget anything is currently measured against.
+TOPLEGAL_TOLERANCE = 1e-15
 
 # The three entry points share a trunk. Their common heads must agree exactly —
 # not approximately — on each side, because they are the same arithmetic run
@@ -652,6 +671,497 @@ def _crafted_memory_pairs():
     return pairs
 
 
+# --- M4: beliefs, and the recorded RNG stream -------------------------------
+
+# Method codes shared with `read_draws` in crates/core/src/parity.rs.
+_DRAW_CODES = {"integers": 0, "choice": 1, "random": 2}
+
+
+def recording_rng(seed: int):
+    """A NumPy generator that logs what it hands out.
+
+    The same `RecordingGenerator` the M0 capture uses on the live bot, pointed
+    at a fresh seeded generator here. That reuse is the point: if the recorder
+    ever stops covering a draw site the corpus and this harness go blind
+    together, which is a single failure to notice rather than two.
+    """
+    from capture_morpheus import RecordingGenerator
+
+    return RecordingGenerator(np.random.default_rng(seed))
+
+
+def encode_draws(draws: list[dict]) -> list[int]:
+    """`n` then, per draw: `code a b size replace weighted count values…`.
+
+    `size=None` rides as -1. NumPy's scalar form is a different call from
+    `size=1` and the Rust `Replay` refuses to accept one for the other, which
+    is how draw-site order becomes a checked contract instead of a hope
+    (rewrite-plan §5).
+    """
+    out = [len(draws)]
+    for draw in draws:
+        method, args, result = draw["m"], draw["a"], draw["r"]
+        values = result if isinstance(result, list) else [result]
+        if method == "integers":
+            a, b = int(args["low"]), int(args["high"])
+            replace, weighted = 1, 0
+        elif method == "choice":
+            a, b = int(args["n"]), 0
+            replace = int(bool(args["replace"]))
+            weighted = int(bool(args["weighted"]))
+        else:  # random
+            a = b = 0
+            replace, weighted = 1, 0
+        size = args.get("size")
+        out += [
+            _DRAW_CODES[method],
+            a,
+            b,
+            -1 if size is None else int(size),
+            replace,
+            weighted,
+            len(values),
+        ]
+        if method == "random":
+            out += [int(v) for v in np.asarray(values, np.float64).view(np.int64)]
+        else:
+            out += [int(v) for v in values]
+    return out
+
+
+def _f64_bits(values) -> list[int]:
+    return np.asarray(values, dtype=np.float64).ravel().view(np.int64).astype(np.int64).tolist()
+
+
+def _memory_from_planes(raw: dict, h: int, w: int):
+    """The capture stores the eleven planes without H/W; the frame has those."""
+    return _memory_from_capture({"H": h, "W": w, **raw})
+
+
+def encode_particle_state(particle) -> list[int]:
+    """`weight has_prev action5 n_history state memory [oldest pairs…]`.
+
+    Histories go out as the oldest state plus the action pairs, exactly as the
+    corpus stores them, and both sides rebuild the intermediate boards through
+    the transition kernel. Shipping the boards instead would be two thirds of a
+    megabyte per turn and would also skip the one property M4's rejuvenation
+    gate exists to check.
+    """
+    prev = particle.enemy_prev_action
+    out = _f64_bits([float(particle.weight)])
+    out += [1 if prev is not None else 0] + list(prev or PASS)
+    out += [len(particle.history)]
+    out += encode_state(particle.state)
+    out += encode_memory(particle.enemy_memory)
+    if particle.history:
+        out += encode_state(particle.history[0].state)
+        for frame in particle.history:
+            out += list(frame.my_action) + list(frame.enemy_action)
+    return out
+
+
+def encode_belief_state(belief) -> list[int]:
+    out = [
+        int(belief.seat),
+        int(bool(belief.collapsed)),
+        int(belief.config.n_particles),
+        int(belief.n),
+    ]
+    for particle in belief.particles:
+        out += encode_particle_state(particle)
+    return out
+
+
+def _read_state_at(values: list[int], at: int):
+    """`decode_state` without the trailing `GameInfo`, at an offset."""
+    from state import GameState
+
+    h, w = values[at], values[at + 1]
+    time, winner = values[at + 2], values[at + 3]
+    gp = np.asarray(values[at + 4 : at + 8], dtype=np.int32).reshape(2, 2)
+    n = h * w
+    at += 8
+    armies = np.asarray(values[at : at + n], dtype=np.int32).reshape(h, w)
+    at += n
+    planes = []
+    for _ in range(7):
+        planes.append(np.asarray(values[at : at + n], dtype=bool).reshape(h, w))
+        at += n
+    return (
+        GameState(
+            armies=armies,
+            ownership=np.stack([planes[0], planes[1]]),
+            ownership_neutral=planes[2],
+            generals=planes[3],
+            castles=planes[4],
+            mountains=planes[5],
+            passable=planes[6],
+            general_positions=gp,
+            time=time,
+            winner=winner,
+            pool_idx=0,
+        ),
+        at,
+    )
+
+
+def _read_memory_at(values: list[int], at: int):
+    h, w = values[at], values[at + 1]
+    n = h * w
+    at += 2
+    raw = {}
+    for name in (
+        "known_mountain", "known_passable_base", "known_castle", "own_general",
+        "known_enemy_general", "ever_visible", "last_seen_turn", "remembered_owner",
+        "remembered_army", "remembered_was_castle", "remembered_castle_owner",
+    ):
+        raw[name] = np.asarray(values[at : at + n], dtype=np.int64).reshape(h, w)
+        at += n
+    return _memory_from_capture({"H": h, "W": w, **raw}), at
+
+
+def _read_belief_at(values: list[int], at: int):
+    """Inverse of `write_belief` on the Rust side."""
+    seat, collapsed, count = values[at], values[at + 1], values[at + 2]
+    at += 3
+    particles = []
+    for _ in range(count):
+        weight = float(np.asarray([values[at]], np.int64).view(np.float64)[0])
+        has_prev = bool(values[at + 1])
+        prev = tuple(values[at + 2 : at + 7])
+        history_len = values[at + 7]
+        at += 8
+        frames = []
+        for _ in range(history_len):
+            frames.append(
+                (tuple(values[at : at + 5]), tuple(values[at + 5 : at + 10]), values[at + 10])
+            )
+            at += 11
+        state, at = _read_state_at(values, at)
+        memory, at = _read_memory_at(values, at)
+        particles.append(
+            {
+                "weight": weight,
+                "enemy_prev_action": prev if has_prev else None,
+                "history_len": history_len,
+                "history": frames,
+                "state": state,
+                "enemy_memory": memory,
+            }
+        )
+    return {"seat": seat, "collapsed": bool(collapsed), "particles": particles}, at
+
+
+def belief_from_frame(frame: dict):
+    """A live `BeliefState` from a captured heavy frame.
+
+    History frames are reconstructed from the oldest recorded state through
+    the transition kernel — the same recipe the Rust side follows, so a
+    disagreement about a rebuilt board would surface as a rejuvenation
+    mismatch rather than as an encoding argument.
+    """
+    from belief import BeliefConfig, BeliefState, HistoryFrame, Particle
+    from observe import emit_observation
+    from transition import transition
+
+    snapshot = frame.get("belief")
+    if not snapshot or not snapshot["particles"]:
+        return None
+    h, w = int(frame["obs"]["H"]), int(frame["obs"]["W"])
+    seat = int(snapshot["seat"])
+
+    particles = []
+    for raw in snapshot["particles"]:
+        history = []
+        if raw["history_actions"]:
+            current = _state_from_capture(raw["history_oldest_state"])
+            for step in raw["history_actions"]:
+                actions = np.zeros((2, 5), dtype=np.int32)
+                actions[seat] = np.asarray(step["mine"], dtype=np.int32)
+                actions[1 - seat] = np.asarray(step["enemy"], dtype=np.int32)
+                nxt, _ = transition(current, actions)
+                history.append(
+                    HistoryFrame(
+                        state=current,
+                        my_action=tuple(int(v) for v in step["mine"]),
+                        enemy_action=tuple(int(v) for v in step["enemy"]),
+                        observation_after=emit_observation(nxt, seat, as_arrays=True),
+                    )
+                )
+                current = nxt
+        prev = raw["enemy_prev_action"]
+        particles.append(
+            Particle(
+                state=_state_from_capture(raw["state"]),
+                weight=float(raw["weight"]),
+                enemy_memory=_memory_from_planes(raw["enemy_memory"], h, w),
+                enemy_prev_action=tuple(int(v) for v in prev) if prev else None,
+                history=tuple(history),
+            )
+        )
+    return BeliefState(
+        seat=seat,
+        particles=particles,
+        config=BeliefConfig(n_particles=int(snapshot["n_particles_config"])),
+        collapsed=bool(snapshot["collapsed"]),
+    )
+
+
+def _deep_history_belief(seat: int, depth: int):
+    """A belief whose particles already hold a full `recovery_lag` window.
+
+    Mutation testing found the gap: `filter_step` appends one frame and drops
+    from the *old* end, and swapping that for a truncate is invisible until a
+    history is already at the cap. Corpus histories on the smoke slice are one
+    or two deep, so nothing could tell the two apart.
+
+    The chain is built with real transitions rather than by fabricating frames,
+    so every `observation_after` is one the state actually produced — which is
+    what rejuvenation checks against.
+    """
+    from belief import BeliefConfig, BeliefState, HistoryFrame, Particle
+    from memory import empty_memory
+    from observe import emit_observation
+    from transition import transition
+
+    state = synthetic_states()[0]
+    frames = []
+    current = state
+    for _ in range(depth):
+        actions = np.zeros((2, 5), dtype=np.int32)
+        actions[seat] = np.asarray(PASS, np.int32)
+        actions[1 - seat] = np.asarray(PASS, np.int32)
+        nxt, _ = transition(current, actions)
+        frames.append(
+            HistoryFrame(
+                state=current,
+                my_action=PASS,
+                enemy_action=PASS,
+                observation_after=emit_observation(nxt, seat, as_arrays=True),
+            )
+        )
+        current = nxt
+
+    h, w = current.armies.shape
+    return BeliefState(
+        seat=seat,
+        particles=[
+            Particle(
+                state=current,
+                weight=0.5,
+                enemy_memory=empty_memory(h, w),
+                enemy_prev_action=PASS,
+                history=tuple(frames),
+            )
+            for _ in range(2)
+        ],
+        config=BeliefConfig(n_particles=2),
+        collapsed=False,
+    )
+
+
+def synthetic_beliefs():
+    """Hand-built beliefs for shapes the corpus cannot supply.
+
+    The capture only ever holds eight particles, all alive, all with weights
+    that already sum to one. That last property hides more than it looks:
+    normalizing a normalized set is the identity, so `ess`'s division,
+    `normalize_weights`'s clamp, and `summarize_belief`'s rescale are all
+    unreachable from replay alone. Mutation testing found every one of them.
+
+    So these deliberately include: an empty set; a single particle; **weights
+    that do not sum to one**; a **negative** weight; a particle count below the
+    configured one so the resample-to-`n` pad in `filter_step` fires; a
+    collapsed set; particles identical except for their previous action, which
+    is the only thing the proposal information key would notice; and a
+    `recovery_lag`-deep history.
+    """
+    from belief import BeliefConfig, BeliefState, Particle
+    from memory import empty_memory
+
+    out = []
+    states = synthetic_states()
+    for seat in (0, 1):
+        for n_config, weights in (
+            (4, []),
+            (4, [1.0]),
+            (4, [0.5, 0.25, 0.25]),
+            (2, [0.4, 0.0, 0.6]),
+            (8, [1.0 / 3.0] * 3),
+            # Unnormalized: `total` is not 1, so every rescale is observable.
+            (4, [3.0, 1.0, 4.0, 1.0]),
+            (4, [0.05, 0.05]),
+            # A negative weight, which `normalize_weights` must clamp to zero
+            # rather than carry through the division.
+            (4, [2.0, -1.0, 3.0]),
+            # All-zero: the fallback branches in `resample` and
+            # `summarize_belief` that avoid dividing by zero.
+            (4, [0.0, 0.0]),
+        ):
+            particles = [
+                Particle(
+                    state=states[i % len(states)],
+                    weight=w,
+                    enemy_memory=empty_memory(
+                        *states[i % len(states)].armies.shape
+                    ),
+                    enemy_prev_action=None if i % 2 else (0, 1, 1, 3, 0),
+                    history=(),
+                )
+                for i, w in enumerate(weights)
+            ]
+            out.append(
+                BeliefState(
+                    seat=seat,
+                    particles=particles,
+                    config=BeliefConfig(n_particles=n_config),
+                    collapsed=bool(n_config == 2),
+                )
+            )
+
+        # Same board, different previous action. The information key is the
+        # only thing that separates these, and in the uniform proposal it
+        # reaches exactly one observable: `n_unique_info_keys`.
+        state = states[0]
+        h, w = state.armies.shape
+        out.append(
+            BeliefState(
+                seat=seat,
+                particles=[
+                    Particle(
+                        state=state,
+                        weight=0.25,
+                        enemy_memory=empty_memory(h, w),
+                        enemy_prev_action=prev,
+                        history=(),
+                    )
+                    for prev in (None, PASS, (0, 1, 1, 3, 0), (0, 1, 1, 3, 1))
+                ],
+                config=BeliefConfig(n_particles=4),
+                collapsed=False,
+            )
+        )
+        out.append(_deep_history_belief(seat, 8))
+
+        # Eight identical boards at irregular weights. Two mutations needed
+        # exactly this and nothing else could supply it: NumPy's pairwise sum
+        # only diverges from a sequential one from eight elements up, and the
+        # belief planes only round differently in f32 when the weights are not
+        # negative powers of two. The corpus is eight particles at 1/8, where
+        # both are exact.
+        out.append(
+            BeliefState(
+                seat=seat,
+                particles=[
+                    Particle(
+                        state=state,
+                        weight=1.0 / (i + 3.0),
+                        enemy_memory=empty_memory(h, w),
+                        enemy_prev_action=None,
+                        history=(),
+                    )
+                    for i in range(8)
+                ],
+                config=BeliefConfig(n_particles=8),
+                collapsed=False,
+            )
+        )
+    return out
+
+
+def _enemy_action_for(belief, particle, offset: int):
+    """A legal enemy action for one particle, chosen without an RNG.
+
+    Deterministic on purpose: `filter_step`'s own draw stream should be about
+    resampling, not about how the enemy actions were picked, and the mask this
+    indexes into is a surface parity already proves bit-exact.
+    """
+    from action import decode_action, legal_mask
+    from belief import as_action5
+    from memory import update_memory
+    from observe import emit_observation
+
+    enemy_obs = emit_observation(particle.state, belief.enemy_seat, as_arrays=True)
+    enemy_mem = update_memory(particle.enemy_memory, enemy_obs)
+    legal = np.flatnonzero(legal_mask(enemy_obs, enemy_mem))
+    if not len(legal):
+        return PASS
+    return as_action5(decode_action(int(legal[offset % len(legal)])))
+
+
+def _reservoir_snapshot(reservoir) -> dict:
+    return {
+        "admitted_count": int(reservoir.admitted_count),
+        "version": int(reservoir.version),
+        "particles": [(float(p.weight), p.state) for p in reservoir.particles],
+    }
+
+
+def _replace_from_belief_recording(reservoir_obj, belief, rng) -> None:
+    """Run `replace_from_belief` with its private generator logged.
+
+    The Python builds `np.random.default_rng(0)` *inside* the method, so its
+    draws never reach the bot's shared stream — a deliberate property, since a
+    node's contents must not depend on how much searching came before. That
+    also puts them out of reach of the recorder, so the factory is patched for
+    the duration and the draws are appended to the same log. Sharing the list
+    rather than keeping a second one matters: the Rust side reads one stream in
+    call order, and a separate log would silently permit a port that made these
+    draws at a different point.
+    """
+    import reservoir as reservoir_module  # noqa: F401 - patched via numpy
+    from capture_morpheus import RecordingGenerator
+
+    inner = RecordingGenerator(np.random.default_rng(0))
+    inner.draws = rng.draws
+    real = np.random.default_rng
+    try:
+        np.random.default_rng = lambda seed=None: inner
+        reservoir_obj.replace_from_belief(belief)
+    finally:
+        np.random.default_rng = real
+
+
+def npsum_vectors() -> list[np.ndarray]:
+    """Vectors whose length crosses every branch of NumPy's pairwise sum.
+
+    8 is where it switches to eight interleaved lanes, 128 where it starts
+    recursing, and the odd sizes leave a remainder for the scalar tail. The
+    values are deliberately not representable as short binary fractions, so a
+    reassociated sum lands on a different float.
+    """
+    sizes = [0, 1, 2, 7, 8, 9, 15, 16, 17, 31, 64, 65, 127, 128, 129, 200, 257]
+    out = []
+    for size in sizes:
+        out.append(np.asarray([1.0 / (i + 3.0) for i in range(size)], np.float64))
+        out.append(np.asarray([(i % 11) * 0.1 for i in range(size)], np.float64))
+    return out
+
+
+def argsort_vectors() -> list[np.ndarray]:
+    """Score vectors, most of them full of ties.
+
+    A uniform proposal gives every legal action the same probability, so the
+    ordering `top_legal_actions` walks is decided entirely by how the sort
+    breaks ties. These reproduce that: masks of several densities at the real
+    3,970 action space, plus small sizes around the insertion-sort ceiling and
+    one all-distinct vector as a control.
+    """
+    n = 9 * 441 + 1
+    out = []
+    for density in (0.01, 0.05, 0.2, 0.6):
+        rng = np.random.default_rng(int(density * 1000))
+        mask = rng.random(n) < density
+        mask[-1] = True
+        probs = np.zeros(n, np.float64)
+        probs[mask] = 1.0 / mask.sum()
+        out.append(np.where(mask, probs, -1.0))
+    for size in (0, 1, 2, 15, 16, 17, 128, 129):
+        out.append(np.asarray([float((i * 37) % 11) for i in range(size)], np.float64))
+    out.append(np.asarray([float(i) * 1e-3 for i in range(500)], np.float64))
+    return out
+
+
 # --- the network oracle ------------------------------------------------------
 
 _SESSION = None
@@ -951,6 +1461,269 @@ def build_cases(
                     expected.append(
                         _prior_expectation(logits, mask, wdl, from_root)
                     )
+        elif kind == "toplegal":
+            from action import legal_mask
+            from memory import update_memory
+            from proposal import (
+                _singleton_probs,
+                _softmax_masked,
+                top_legal_actions,
+            )
+
+            for index, (obs, memory, _prev, _action) in enumerate(
+                _memory_pairs(frame, synthetic)
+            ):
+                mask = np.asarray(legal_mask(obs, update_memory(memory, obs)), dtype=bool)
+                # Three shapes of logit vector, because they rank differently.
+                # A wide spread makes the ordering about the values; a narrow
+                # one puts neighbouring actions within a rounding of each
+                # other; a flat one is what the *deployed* uniform proposal
+                # actually produces, where the ranking is pure tie-breaking.
+                for k, spread in ((4, 6.0), (8, 0.05), (2, 0.0)):
+                    logits = spread * np.sin(
+                        np.arange(len(mask), dtype=np.float64) * (index + 1) * 0.017
+                    )
+                    probs = _softmax_masked(logits, mask)
+                    stream += _f64_bits(logits)
+                    stream += [int(v) for v in mask]
+                    stream += [k]
+                    expected.append(
+                        (
+                            probs,
+                            int(np.argmax(_singleton_probs(mask))),
+                            top_legal_actions(probs, mask, k),
+                        )
+                    )
+        elif kind in ("npsum", "argsort"):
+            if frame is not None:
+                continue  # pure functions; one pass over the vectors is enough
+            vectors = npsum_vectors() if kind == "npsum" else argsort_vectors()
+            for values in vectors:
+                stream += [len(values)] + _f64_bits(values)
+                expected.append(
+                    float(values.sum())
+                    if kind == "npsum"
+                    else [int(i) for i in np.argsort(-values)]
+                )
+        elif kind == "initbelief":
+            from belief import (
+                BeliefConfig,
+                initialize_belief,
+                legal_enemy_general_candidates,
+            )
+            from observe import emit_observation
+
+            # A first frame is the one thing the corpus records but never
+            # feeds back: it stores the beliefs that exist, not the frames that
+            # created them. These are real first frames where the capture has
+            # one, and every synthetic board's own emission otherwise.
+            observations = []
+            if frame is None:
+                for state in synthetic_states():
+                    for seat in (0, 1):
+                        observations.append((emit_observation(state, seat, as_arrays=True), seat))
+            elif frame.get("stratum") == "first_move" or int(frame["obs"]["turn"]) <= 2:
+                observations.append((_obs_from_capture(frame["obs"]), int(frame["seat"])))
+
+            for index, (obs, seat) in enumerate(observations):
+                # Distances that straddle the real 17: one that admits most of
+                # the board, one that admits none of a small one and forces the
+                # fallback, and the shipped value.
+                for n_particles, min_distance in ((4, 1), (8, 17), (3, 40)):
+                    rng = recording_rng(6000 + index)
+                    try:
+                        candidates = legal_enemy_general_candidates(
+                            obs, min_distance=min_distance
+                        )
+                    except ValueError:
+                        candidates = None
+                    try:
+                        result = initialize_belief(
+                            obs,
+                            seat,
+                            rng,
+                            config=BeliefConfig(
+                                n_particles=n_particles,
+                                min_general_distance=min_distance,
+                            ),
+                        )
+                    except ValueError:
+                        result = None
+                    stream += encode_observation(obs)
+                    stream += [seat, n_particles, min_distance]
+                    stream += encode_draws(rng.take())
+                    expected.append((candidates, result))
+        elif kind in ("summary", "propose", "filter", "rejuvenate", "maxent"):
+            from belief import ess, ess_fraction, filter_step
+            from memory import update_memory
+            from observe import emit_observation
+            from particle_summary import summarize_belief
+            from proposal import ProposalTelemetry, propose_enemy_actions, uniform_legal_probs
+            from recovery import maximum_entropy_reconstruction, rejuvenate
+            from transition import transition
+
+            beliefs = []
+            if frame is None:
+                beliefs = synthetic_beliefs()
+            else:
+                belief = belief_from_frame(frame)
+                if belief is not None:
+                    beliefs = [belief]
+
+            for b_index, belief in enumerate(beliefs):
+                if kind == "summary":
+                    stream += encode_belief_state(belief)
+                    expected.append(
+                        (
+                            summarize_belief(belief),
+                            ess([p.weight for p in belief.particles]),
+                            ess_fraction(belief),
+                        )
+                    )
+                elif kind == "propose":
+                    rng = recording_rng(1000 + b_index)
+                    probs = []
+                    for particle in belief.particles:
+                        enemy_obs = emit_observation(
+                            particle.state, belief.enemy_seat, as_arrays=True
+                        )
+                        probs.append(
+                            uniform_legal_probs(
+                                enemy_obs,
+                                update_memory(particle.enemy_memory, enemy_obs),
+                            )
+                        )
+                    telemetry = ProposalTelemetry()
+                    actions = propose_enemy_actions(
+                        belief, rng, policy=None, telemetry=telemetry
+                    )
+                    stream += encode_belief_state(belief) + encode_draws(rng.take())
+                    expected.append(
+                        (
+                            probs,
+                            actions,
+                            telemetry.n_singleton_particles,
+                            telemetry.n_unique_info_keys,
+                        )
+                    )
+                elif kind == "filter":
+                    enemy_actions = [
+                        _enemy_action_for(belief, p, i + b_index)
+                        for i, p in enumerate(belief.particles)
+                    ]
+                    my_action = tuple(int(v) for v in frame["action"]) if frame else PASS
+                    # Two frames per belief. The first is one the leading
+                    # particle can actually explain, so survivors exist and the
+                    # normalize/resample tail runs; the second is the turn's own
+                    # observation, which almost never survives and is therefore
+                    # the total-collapse branch.
+                    variants = []
+                    if belief.n:
+                        actions = np.zeros((2, 5), dtype=np.int32)
+                        actions[belief.seat] = np.asarray(my_action, np.int32)
+                        actions[belief.enemy_seat] = np.asarray(enemy_actions[0], np.int32)
+                        nxt, _ = transition(belief.particles[0].state, actions)
+                        advanced = emit_observation(nxt, belief.seat, as_arrays=True)
+                        variants.append((enemy_actions, advanced))
+                        # The same frame with **one** enemy action for every
+                        # particle. On a belief whose particles share a board
+                        # that makes all of them survive, which is the only way
+                        # `normalize_weights` ever sees more than one weight —
+                        # and a mutation swapping its sequential sum for
+                        # NumPy's pairwise one is invisible on a single weight.
+                        variants.append(([enemy_actions[0]] * belief.n, advanced))
+                    if frame is not None:
+                        variants.append((enemy_actions, _obs_from_capture(frame["obs"])))
+                    for t_index, (chosen, real_obs) in enumerate(variants):
+                        rng = recording_rng(2000 + b_index * 8 + t_index)
+                        result = filter_step(belief, my_action, real_obs, chosen, rng)
+                        stream += encode_belief_state(belief)
+                        stream += list(my_action)
+                        stream += encode_observation(real_obs)
+                        for action in chosen:
+                            stream += list(action)
+                        stream += encode_draws(rng.take())
+                        expected.append(result)
+                elif kind == "rejuvenate":
+                    if not any(p.history for p in belief.particles):
+                        continue
+                    rng = recording_rng(3000 + b_index)
+                    result = rejuvenate(belief, rng, policy=None)
+                    stream += encode_belief_state(belief) + encode_draws(rng.take())
+                    expected.append(result)
+                else:  # maxent
+                    if frame is None or "memory" not in frame:
+                        continue
+                    obs = _obs_from_capture(frame["obs"])
+                    memory = _memory_from_capture(frame["memory"])
+                    rng = recording_rng(4000 + b_index)
+                    try:
+                        result = maximum_entropy_reconstruction(
+                            obs, belief.seat, memory, rng, config=belief.config
+                        )
+                    except ValueError:
+                        result = None
+                    stream += encode_observation(obs) + [int(belief.seat)]
+                    stream += encode_memory(memory)
+                    stream += [int(belief.config.n_particles)]
+                    stream += encode_draws(rng.take())
+                    expected.append(result)
+        elif kind == "reservoir":
+            from belief import BeliefConfig, BeliefState, Particle
+            from memory import empty_memory
+            from reservoir import ParticleReservoir
+
+            if frame is not None:
+                continue  # nothing here depends on which board is in a particle
+            states = synthetic_states()
+            # `(8, ...)` is the case where the belief's own particle count
+            # binds instead of the capacity — mutation testing found that
+            # `min()` unreachable while every capacity was the smaller of the
+            # two.
+            for capacity, n_arrivals, seat in ((3, 5, 0), (4, 2, 1), (2, 9, 0), (8, 3, 1)):
+                arrivals = [
+                    Particle(
+                        state=states[i % len(states)],
+                        weight=0.5 + 0.1 * i,
+                        enemy_memory=empty_memory(*states[i % len(states)].armies.shape),
+                        enemy_prev_action=None if i % 2 else (0, 1, 1, 3, 0),
+                        history=(),
+                    )
+                    for i in range(n_arrivals)
+                ]
+                belief = BeliefState(
+                    seat=seat,
+                    particles=[
+                        Particle(
+                            state=states[(i + 3) % len(states)],
+                            weight=1.0 / 3.0,
+                            enemy_memory=empty_memory(
+                                *states[(i + 3) % len(states)].armies.shape
+                            ),
+                            history=(),
+                        )
+                        for i in range(3)
+                    ],
+                    config=BeliefConfig(n_particles=6),
+                    collapsed=False,
+                )
+
+                rng = recording_rng(5000 + capacity)
+                reservoir = ParticleReservoir(capacity=capacity)
+                for _ in range(2):
+                    for particle in arrivals:
+                        reservoir.admit(particle, rng)
+                after_admit = _reservoir_snapshot(reservoir)
+                sampled = reservoir.sample(rng) if reservoir.particles else None
+                _replace_from_belief_recording(reservoir, belief, rng)
+                after_replace = _reservoir_snapshot(reservoir)
+
+                stream += [capacity, seat, len(arrivals)]
+                for particle in arrivals:
+                    stream += encode_particle_state(particle)
+                stream += encode_belief_state(belief)
+                stream += encode_draws(rng.take())
+                expected.append((after_admit, sampled, after_replace))
         elif kind == "symmetry":
             from symmetry import (
                 SYMMETRIES,
@@ -1020,6 +1793,114 @@ def worst_observed() -> dict[str, float]:
 def _note(name: str, value: float) -> None:
     if value > _WORST.get(name, -1.0):
         _WORST[name] = value
+
+
+def _state_difference(label: str, want, got) -> list[str]:
+    """Which planes of two `GameState`s disagree, named."""
+    from state import states_equal
+
+    if states_equal(want, got):
+        return []
+    fields = [
+        name
+        for name in ("armies", "ownership", "ownership_neutral", "generals",
+                     "castles", "mountains", "passable")
+        if not np.array_equal(getattr(want, name), getattr(got, name))
+    ]
+    if want.time != got.time:
+        fields.append(f"time({got.time}!={want.time})")
+    if want.winner != got.winner:
+        fields.append(f"winner({got.winner}!={want.winner})")
+    if not np.array_equal(want.general_positions, got.general_positions):
+        fields.append("general_positions")
+    return [f"{label}: state differs in {', '.join(fields) or 'an unnamed field'}"]
+
+
+def _compare_belief(kind: str, case: int, want, got: list[int], at: int) -> list[str]:
+    """Compare a returned `BeliefState` particle by particle.
+
+    Weights are compared **exactly**. They are products and quotients of the
+    same numbers on both sides, and the one thing that could make them differ
+    — NumPy's pairwise sum — is reproduced deliberately and has its own
+    surface. A tolerance here would hide precisely the bug that matters.
+    """
+    problems: list[str] = []
+    mine, _ = _read_belief_at(got, at)
+    if mine["seat"] != int(want.seat):
+        problems.append(f"{kind}[{case}]: seat {mine['seat']} != {want.seat}")
+    if mine["collapsed"] != bool(want.collapsed):
+        problems.append(
+            f"{kind}[{case}]: collapsed {mine['collapsed']} != {bool(want.collapsed)}"
+        )
+    if len(mine["particles"]) != want.n:
+        return problems + [
+            f"{kind}[{case}]: {len(mine['particles'])} particle(s) survived, "
+            f"the oracle kept {want.n}"
+        ]
+
+    for index, (got_p, want_p) in enumerate(zip(mine["particles"], want.particles)):
+        label = f"{kind}[{case}]: particle {index}"
+        if got_p["weight"] != float(want_p.weight):
+            _note(f"{kind}.weight.max", abs(got_p["weight"] - float(want_p.weight)))
+            problems.append(
+                f"{label} weight {got_p['weight']!r} != {float(want_p.weight)!r}"
+            )
+        want_prev = (
+            tuple(int(v) for v in want_p.enemy_prev_action)
+            if want_p.enemy_prev_action is not None
+            else None
+        )
+        if got_p["enemy_prev_action"] != want_prev:
+            problems.append(
+                f"{label} previous enemy action {got_p['enemy_prev_action']} != {want_prev}"
+            )
+        if got_p["history_len"] != len(want_p.history):
+            problems.append(
+                f"{label} carries {got_p['history_len']} history frame(s), "
+                f"the oracle {len(want_p.history)}"
+            )
+        else:
+            # Depth alone is not enough. `_append_history` drops from the old
+            # end when the window overflows, and a truncation keeps the same
+            # count and the wrong frames.
+            want_frames = [
+                (
+                    tuple(int(v) for v in f.my_action),
+                    tuple(int(v) for v in f.enemy_action),
+                    int(f.state.time),
+                )
+                for f in want_p.history
+            ]
+            if got_p["history"] != want_frames:
+                first = next(
+                    (
+                        j
+                        for j, (a, b) in enumerate(zip(got_p["history"], want_frames))
+                        if a != b
+                    ),
+                    0,
+                )
+                problems.append(
+                    f"{label} history differs at frame {first}: "
+                    f"{got_p['history'][first]} != {want_frames[first]}"
+                )
+        problems += _state_difference(label, want_p.state, got_p["state"])
+        for name in (
+            "known_mountain", "known_passable_base", "known_castle", "own_general",
+            "known_enemy_general", "ever_visible", "last_seen_turn",
+            "remembered_owner", "remembered_army", "remembered_was_castle",
+            "remembered_castle_owner",
+        ):
+            a = np.asarray(getattr(want_p.enemy_memory, name)).astype(np.int64)
+            b = np.asarray(getattr(got_p["enemy_memory"], name)).astype(np.int64)
+            if not np.array_equal(a, b):
+                diff = np.flatnonzero(a.ravel() != b.ravel())
+                problems.append(
+                    f"{label} enemy memory {name} differs at {diff.size} cell(s), "
+                    f"first {int(diff[0])}"
+                )
+                break
+    return problems
 
 
 def compare(kind: str, expected: list, actual: list[list[int]]) -> list[str]:
@@ -1212,6 +2093,280 @@ def compare(kind: str, expected: list, actual: list[list[int]]) -> list[str]:
                     (k for k, (a, b) in enumerate(zip(got, want)) if a != b), None
                 )
                 problems.append(f"symmetry[{i}]: first difference at position {diff}")
+        elif kind == "toplegal":
+            want_probs, want_single, want_top = want
+            count = got[0]
+            pairs = got[1 : 1 + 2 * count]
+            at = 1 + 2 * count
+            indices = np.asarray(pairs[0::2], np.int64)
+            values = _decode_f64(pairs[1::2])
+            mine = np.flatnonzero(np.asarray(want_probs) != 0.0)
+            if not np.array_equal(indices, mine):
+                problems.append(
+                    f"toplegal[{i}]: softmax has mass on {indices.size} action(s), "
+                    f"the oracle on {mine.size}"
+                )
+            else:
+                delta = np.abs(values - np.asarray(want_probs)[mine])
+                worst = float(delta.max()) if delta.size else 0.0
+                _note("toplegal.softmax.max", worst)
+                # Bit-exact, not within a tolerance. This surface was expected
+                # to need one and turned out not to, and M2's lesson is that a
+                # budget nothing approaches is a check that cannot fail. The
+                # message names the fallback figure so a platform that really
+                # does drift is a deliberate decision, not a silent pass.
+                if worst > 0.0:
+                    bad = int(delta.argmax())
+                    over = int((delta > TOPLEGAL_TOLERANCE).sum())
+                    problems.append(
+                        f"toplegal[{i}]: softmax not bit-identical, max |Δ| "
+                        f"{worst:.3g} at action {int(indices[bad])}; {over} "
+                        f"element(s) also exceed the fallback floor "
+                        f"{TOPLEGAL_TOLERANCE:g}"
+                    )
+            if got[at] != want_single:
+                problems.append(
+                    f"toplegal[{i}]: singleton picks action {got[at]}, not {want_single}"
+                )
+            at += 1
+            n_top = got[at]
+            at += 1
+            mine_top = [tuple(got[at + 5 * j : at + 5 * j + 5]) for j in range(n_top)]
+            want_top = [tuple(int(v) for v in a) for a in want_top]
+            if mine_top != want_top:
+                first = next(
+                    (j for j, (a, b) in enumerate(zip(mine_top, want_top)) if a != b),
+                    min(len(mine_top), len(want_top)),
+                )
+                problems.append(
+                    f"toplegal[{i}]: candidate list differs from position {first} "
+                    f"({mine_top[first:first + 2]} != {want_top[first:first + 2]}); "
+                    f"{len(mine_top)} vs {len(want_top)} candidate(s)"
+                )
+        elif kind == "npsum":
+            got_sum = float(_decode_f64(got)[0])
+            _note("npsum.max", abs(got_sum - want))
+            if got_sum != want:
+                # Not a tolerance. This function exists to reproduce NumPy's
+                # pairwise reduction exactly, because the ESS it feeds decides
+                # whether a resample runs, and a resample consumes a draw.
+                problems.append(
+                    f"npsum[{i}]: {got_sum!r} != {want!r} — NumPy's reduction on "
+                    "this host is not the eight-lane pairwise sum the port "
+                    "reproduces (rng::npsum)"
+                )
+        elif kind == "argsort":
+            got = got[1:]  # the length prefix; see the Rust arm
+            if got != list(want):
+                first = next(
+                    (k for k, (a, b) in enumerate(zip(got, want)) if a != b), len(got)
+                )
+                problems.append(
+                    f"argsort[{i}]: permutations differ from position {first} "
+                    f"({got[first : first + 4]} != {list(want)[first : first + 4]}); "
+                    "if this host's NumPy dispatches argsort to x86-simd-sort "
+                    "(AVX-512-SKX) the oracle itself has changed tie order — see "
+                    "rng::argsort_desc_numpy"
+                )
+        elif kind == "summary":
+            want_summary, want_ess, want_ess_fraction = want
+            planes = (
+                "enemy_owner", "enemy_army_mean", "enemy_army_std",
+                "enemy_general", "enemy_castle_owner", "enemy_visibility",
+            )
+            at = 0
+            for name in planes:
+                count = got[at]
+                at += 1
+                a = _decode_f32(got[at : at + count])
+                at += count
+                b = np.asarray(getattr(want_summary, name), np.float32).ravel()
+                if a.shape != b.shape:
+                    problems.append(f"summary[{i}]: {name} length {a.size} != {b.size}")
+                    continue
+                delta = np.abs(a.astype(np.float64) - b.astype(np.float64))
+                worst = float(delta.max()) if delta.size else 0.0
+                _note(f"summary.{name}.max", worst)
+                if worst > 0.0:
+                    cell = int(delta.argmax())
+                    problems.append(
+                        f"summary[{i}]: {name} not bit-identical, max |Δ| "
+                        f"{worst:.3g} at cell {cell} ({a[cell]!r} != {b[cell]!r})"
+                    )
+            got_fraction_f32 = float(_decode_f32(got[at : at + 1])[0])
+            at += 1
+            got_ess, got_ess_fraction = _decode_f64(got[at : at + 2])
+            # The planes narrow to f32 where the Python's `.astype` does, but
+            # ESS is compared in full precision: M2's lesson is that a
+            # narrowing can hide an accumulation bug from every check that
+            # only looks at the narrowed value.
+            for name, a, b in (
+                ("ess", float(got_ess), float(want_ess)),
+                ("ess_fraction", float(got_ess_fraction), float(want_ess_fraction)),
+            ):
+                _note(f"summary.{name}.max", abs(a - b))
+                if a != b:
+                    problems.append(f"summary[{i}]: {name} {a!r} != {b!r}")
+            if got_fraction_f32 != np.float32(want_summary.ess_fraction):
+                problems.append(
+                    f"summary[{i}]: ess_fraction narrowed to "
+                    f"{got_fraction_f32!r}, not {np.float32(want_summary.ess_fraction)!r}"
+                )
+        elif kind == "propose":
+            want_probs, want_actions, want_singletons, want_unique_keys = want
+            at = 0
+            for p_index, probs in enumerate(want_probs):
+                count = got[at]
+                at += 1
+                pairs = got[at : at + 2 * count]
+                at += 2 * count
+                indices = np.asarray(pairs[0::2], np.int64)
+                values = _decode_f64(pairs[1::2])
+                mine = np.flatnonzero(np.asarray(probs) != 0.0)
+                if not np.array_equal(indices, mine):
+                    problems.append(
+                        f"propose[{i}]: particle {p_index} has {indices.size} legal "
+                        f"action(s), the oracle has {mine.size}"
+                    )
+                    continue
+                # Uniform means `1/n` on both sides from the same integer, so
+                # anything but equality is a different legal count or a
+                # different division.
+                delta = np.abs(values - np.asarray(probs)[mine])
+                worst = float(delta.max()) if delta.size else 0.0
+                _note("propose.max", worst)
+                if worst > 0.0:
+                    bad = int(delta.argmax())
+                    problems.append(
+                        f"propose[{i}]: particle {p_index} probability at action "
+                        f"{int(indices[bad])} is {values[bad]!r}, not {np.asarray(probs)[mine][bad]!r}"
+                    )
+            for p_index, action in enumerate(want_actions):
+                mine = tuple(got[at : at + 5])
+                at += 5
+                if mine != tuple(int(v) for v in action):
+                    problems.append(
+                        f"propose[{i}]: particle {p_index} sampled {mine} != {tuple(action)}"
+                    )
+            telemetry = got[at : at + 5]
+            consumed = got[at + 5]
+            # Every counter, not just the particle count. `n_unique_info_keys`
+            # is the *only* observable the proposal information key reaches on
+            # the deployed uniform path, so leaving it uncompared made the key
+            # itself untested — which is what mutation testing found.
+            want_telemetry = (
+                len(want_actions),
+                want_singletons,
+                want_unique_keys,
+                0,
+                0,
+            )
+            if tuple(telemetry) != want_telemetry:
+                problems.append(
+                    f"propose[{i}]: telemetry {tuple(telemetry)} != {want_telemetry} "
+                    "(particles, singletons, unique info keys, unique policy "
+                    "inputs, policy batches)"
+                )
+            if consumed != len(want_actions):
+                problems.append(
+                    f"propose[{i}]: consumed {consumed} draw(s) for "
+                    f"{len(want_actions)} particle(s)"
+                )
+        elif kind == "initbelief":
+            want_candidates, want_belief = want
+            count = got[0]
+            at = 1
+            if want_candidates is None:
+                if count != -1:
+                    problems.append(
+                        f"initbelief[{i}]: rust listed {count} candidate(s) where "
+                        "the oracle refused the frame"
+                    )
+            elif count != len(want_candidates):
+                problems.append(
+                    f"initbelief[{i}]: {count} candidate cell(s), the oracle "
+                    f"found {len(want_candidates)}"
+                )
+                at += 2 * max(count, 0)
+            else:
+                mine = [tuple(got[at + 2 * j : at + 2 * j + 2]) for j in range(count)]
+                at += 2 * count
+                theirs = [tuple(int(v) for v in c) for c in want_candidates]
+                if mine != theirs:
+                    first = next(
+                        (j for j, (a, b) in enumerate(zip(mine, theirs)) if a != b),
+                        0,
+                    )
+                    problems.append(
+                        f"initbelief[{i}]: prior support differs from position "
+                        f"{first} ({mine[first:first + 3]} != {theirs[first:first + 3]})"
+                    )
+            ok = bool(got[at])
+            at += 1
+            if ok != (want_belief is not None):
+                problems.append(
+                    f"initbelief[{i}]: rust {'built' if ok else 'refused'} an "
+                    f"initial belief, the oracle "
+                    f"{'built' if want_belief is not None else 'refused'} one"
+                )
+            elif ok:
+                problems += _compare_belief(kind, i, want_belief, got, at)
+        elif kind in ("filter", "rejuvenate"):
+            problems += _compare_belief(kind, i, want, got, 0)
+        elif kind == "maxent":
+            ok = bool(got[0])
+            if ok != (want is not None):
+                problems.append(
+                    f"maxent[{i}]: rust {'built' if ok else 'refused'} a "
+                    f"reconstruction, the oracle "
+                    f"{'built' if want is not None else 'refused'} one"
+                )
+            elif ok:
+                problems += _compare_belief(kind, i, want, got, 1)
+        elif kind == "reservoir":
+            want_admit, want_sampled, want_replace = want
+            at = 0
+            for label, snapshot in (("after admit", want_admit), ("after replace", want_replace)):
+                admitted, version, count = got[at : at + 3]
+                at += 3
+                if (admitted, version, count) != (
+                    snapshot["admitted_count"],
+                    snapshot["version"],
+                    len(snapshot["particles"]),
+                ):
+                    problems.append(
+                        f"reservoir[{i}]: {label} counters "
+                        f"(admitted {admitted}, version {version}, n {count}) != "
+                        f"(admitted {snapshot['admitted_count']}, version "
+                        f"{snapshot['version']}, n {len(snapshot['particles'])})"
+                    )
+                for p_index in range(count):
+                    weight = float(_decode_f64(got[at : at + 1])[0])
+                    at += 1
+                    state, at = _read_state_at(got, at)
+                    if p_index >= len(snapshot["particles"]):
+                        continue
+                    want_weight, want_state = snapshot["particles"][p_index]
+                    if weight != want_weight:
+                        problems.append(
+                            f"reservoir[{i}]: {label} resident {p_index} weight "
+                            f"{weight!r} != {want_weight!r}"
+                        )
+                    problems += _state_difference(
+                        f"reservoir[{i}]: {label} resident {p_index}", want_state, state
+                    )
+                if label == "after admit":
+                    has_sample = bool(got[at])
+                    at += 1
+                    if has_sample != (want_sampled is not None):
+                        problems.append(f"reservoir[{i}]: sample presence differs")
+                    elif has_sample:
+                        state, at = _read_state_at(got, at)
+                        problems += _state_difference(
+                            f"reservoir[{i}]: sampled particle",
+                            want_sampled.state,
+                            state,
+                        )
         elif kind == "cost":
             want_cost = np.asarray(want, dtype=np.int32).ravel()
             got_cost = np.asarray(got, dtype=np.int32)
@@ -1269,6 +2424,8 @@ def main(argv: list[str] | None = None) -> int:
         default=[
             "transition", "order", "observe", "mask", "cost",
             "memory", "hash", "tensor", "symmetry", "net", "prior",
+            "npsum", "argsort", "summary", "propose", "filter",
+            "rejuvenate", "maxent", "reservoir", "toplegal", "initbelief",
         ],
     )
     args = parser.parse_args(argv)

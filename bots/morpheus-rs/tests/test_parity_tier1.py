@@ -32,6 +32,9 @@ import parity_cases as pc  # noqa: E402
 KINDS = (
     "transition", "order", "observe", "mask", "cost",
     "memory", "hash", "tensor", "symmetry", "net", "prior",
+    # M4: the belief layer, and the two NumPy behaviours it rests on.
+    "npsum", "argsort", "summary", "propose", "filter",
+    "rejuvenate", "maxent", "reservoir", "toplegal", "initbelief",
 )
 
 

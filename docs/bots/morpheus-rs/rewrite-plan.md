@@ -1,8 +1,8 @@
 # Morpheus-rs rewrite plan
 
 Status: **confirmed 2026-08-08 — implementation under way. M0, M0.5, M1, M2,
-and M3 are done (§14–§18); M0.5 awaits a submission only the account holder can
-make.**
+M3, and M4 are done (§14–§19); M0.5 awaits a submission only the account holder
+can make.**
 Revised against the declared-final morpheus state at commit `9d6f186`
 (oracle `morpheus@73967d2125cc`, registry step 18 — see §14; the
 `17c8ac2684ec` this plan first named was the *previous* registry head, the
@@ -941,3 +941,93 @@ Two notes for M4 and M5:
 - The x86 arm is one Modal container, and M0 already found separate runs
   landing on different fleet generations. It is a shape result, not a
   qualification. M7 still owes the reference host a full suite.
+
+## 19. M4 — done, and the mutation pass found more than the parity pass
+
+Delivered 2026-08-09. The belief layer is ported: `belief`, `proposal`,
+`recovery`, `reservoir`, `particle_summary`, plus the injected RNG §5 specified
+and nothing had needed until now. Design and the two NumPy behaviours it rests
+on: [`belief.md`](belief.md). Figures:
+[`morpheus-rs-belief-bench.md`](../../research/measurements/morpheus-rs-belief-bench.md).
+
+**Exit gate met, both halves.** Parity is exact over the full corpus — 1,328
+heavy frames, **515,710 cases across twenty-one surfaces**, zero mismatches,
+including the recovery-triggered strata the gate names. The measured belief
+update at n = 8 beats the Python by **30.6× at p50 / 23.8× at p99** on the
+filter alone and **46.6× / 39.6×** on the path that includes recovery, against
+a bar of ≥10×. The AGENTS.md matchup gate still finishes under
+`--mode competition`.
+
+**The M0 baseline's 142.6 ms was recovery, and nobody could have known that.**
+`runtime.py` charges `filter_step` and the `recover_belief` it may trigger to
+one component, so the baseline reported a single p99 for a cost distribution
+that is bimodal by a factor of a hundred: the filter alone measures 1.1 ms at
+p99, the same block with recovery 127 ms. §7's "large, mostly inherited from
+the transition kernel" was right about the mechanism — rejuvenation replays an
+eight-deep history across a beam of eight, and every step is M1's kernel — but
+the *budget* implication is new. M7 should reserve for the two paths
+separately; a knob fitted to the mixture is fitted to how often recovery
+happened to fire on the capture host.
+
+**§5's record-and-replay design works, and creates one new way to be wrong.**
+`Replay` verifies every argument of every draw before returning the recorded
+result, which makes draw-site order a checked contract exactly as §5 intended.
+But it returns the *oracle's* index whatever the port computed — so a surface
+that compared only sampled actions would pass a port whose every probability
+was wrong. `propose` therefore emits each particle's distribution alongside its
+action. Anyone adding a randomized surface should assume the same trap.
+
+**Two NumPy behaviours had to be reproduced, and both are host-conditional.**
+`np.sum` is pairwise, not sequential, and it feeds an ESS that decides whether
+a resample runs — and a resample consumes a draw, so a last-bit difference
+desynchronizes the replay stream rather than rounding an answer. `np.argsort`
+is an unstable introsort, and under the deployed *uniform* proposal every legal
+action ties, so the order recovery walks its candidates in is decided entirely
+by the sort's internals. Both are transcribed; both have their own parity
+surface. The second one is worse than it looks: NumPy ≥ 2.0 dispatches
+`argsort` to `x86-simd-sort` under AVX-512-SKX, and M0's CPU probe found Modal
+hosts both with and without it — so on some x86 hosts **the Python bot itself**
+would rank those candidates differently. That is a property of the oracle, not
+of the port, and the surface exists so it fails with a name.
+
+**The milestone's real finding is the mutation pass.** Thirty-five new
+mutations; the first run caught twenty-one and left **fourteen unexplained
+survivors** — by far the worst any milestone has had, against a parity run that
+was green throughout. Every one was a hole, and four of them shared a cause
+worth stating plainly: **the corpus is not a sample of inputs, it is a sample
+of the inputs the deployed configuration produces.** Eight particles at
+weight 1/8 means normalizing is the identity, 1/8 is exact in f32, and eight
+equal values sum the same in any order — so `ess`'s division,
+`summarize_belief`'s rescale, an f32 accumulator in the belief planes, and the
+pairwise sum itself were all invisible at once. The other three were an entry
+point with no surface at all (`initialize_belief`), an answer encoding that
+emitted a history's *length* where the bug reorders its contents, and a
+comparison that was written and then not made. Final: **71 of 86 caught**, 15
+survivors, all with recorded explanations. Detail:
+[`parity-harness.md`](parity-harness.md).
+
+Two smaller notes:
+
+- One mutation went **stale** — M3's depthwise halo rewrite had moved the line
+  it matched, so it had quietly stopped testing anything. Failing the run on a
+  misaimed mutation is what surfaced it. That rule has now paid for itself
+  twice.
+- `tools/mutation_check.py` gained a scoping map and a `mutation` cargo
+  profile. Eighty-six mutations against fat LTO and twenty surfaces each is
+  over an hour; scoped and without the LTO link it is about fifteen minutes.
+  A survivor still re-runs the *full* surface set before it is recorded, so an
+  over-narrow map costs a slow run rather than a false coverage hole.
+
+Two notes for M5:
+
+- The bot still plays M1's first-legal-move. Nothing calls the belief in the
+  *playing* path yet: the decision needs `search.py` and `tactics.py`.
+  `particle_summary` closes the join M2 left open, so the tensor path is now
+  complete on the Rust side alone.
+- `ParticleReservoir::replace_from_belief` is the one place in the belief layer
+  where play-time answers legitimately differ. The Python builds
+  `np.random.default_rng(0)` inside the method; reproducing *which* particles
+  that seed picks would mean reimplementing PCG64, which §5 declined. The
+  inputs are equal-weight, so both draw from the same distribution and differ
+  only in the sample; the harness injects the oracle's recorded draws and checks
+  it exactly. M5 owns the caller and should keep the generator dedicated.

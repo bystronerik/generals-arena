@@ -11,6 +11,7 @@
 //! constraint, not a tuning choice, so nothing here may spawn a thread.
 
 pub mod action;
+pub mod belief;
 pub mod gemm;
 pub mod hashing;
 pub mod inference;
@@ -19,6 +20,11 @@ pub mod memory;
 pub mod network;
 pub mod observe;
 pub mod parity;
+pub mod particle_summary;
+pub mod proposal;
+pub mod recovery;
+pub mod reservoir;
+pub mod rng;
 pub mod safetensors;
 pub mod sha256;
 pub mod state;

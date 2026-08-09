@@ -159,6 +159,19 @@ fn main() {
             }
         }
     }
+    if args.first().map(String::as_str) == Some("bench-belief") {
+        let iters = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(20);
+        let stdin = io::stdin();
+        let stdout = io::stdout();
+        let mut writer = BufWriter::new(stdout.lock());
+        match morpheus_core::parity::bench_belief(&mut stdin.lock(), &mut writer, iters) {
+            Ok(()) => std::process::exit(0),
+            Err(err) => {
+                eprintln!("[morpheus-rs] bench-belief: {err}");
+                std::process::exit(2);
+            }
+        }
+    }
     if args.first().map(String::as_str) == Some("bench") {
         let iters = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(200);
         run_bench(iters);

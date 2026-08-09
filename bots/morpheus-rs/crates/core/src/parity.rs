@@ -19,9 +19,13 @@
 //! the point of truncation instead of silently shifting every later case.
 
 use std::io::{BufRead, Write};
+use std::rc::Rc;
 
 use crate::action::{
     decode_action, encode_action, legal_mask, live_build_cost, N_ACTIONS, PAD,
+};
+use crate::belief::{
+    ess, ess_fraction, filter_step, Action5, BeliefConfig, BeliefState, HistoryFrame, Particle,
 };
 use crate::hashing::{
     child_edge_key, enemy_info_hash_prehashed, info_state_key_prehashed, memory_digest,
@@ -30,6 +34,14 @@ use crate::hashing::{
 use crate::memory::{update_memory, VisibleMemory};
 use crate::network;
 use crate::observe::emit_observation;
+use crate::particle_summary::summarize_belief;
+use crate::proposal::{
+    propose_enemy_actions, singleton_probs, softmax_masked, top_legal_actions, uniform_legal_probs,
+    ProposalTelemetry,
+};
+use crate::recovery::{maximum_entropy_reconstruction, recover_belief, rejuvenate};
+use crate::reservoir::ParticleReservoir;
+use crate::rng::{argsort_desc_numpy, npsum, Method, RecordedDraw, Replay};
 use crate::state::GameState;
 use crate::symmetry;
 use crate::tensor::{build_tensor, BeliefSummary, ARMY_SCALE};
@@ -91,6 +103,15 @@ impl Ints {
         let mut out = Vec::with_capacity(count);
         for _ in 0..count {
             out.push(f32::from_bits(self.next()? as u32));
+        }
+        Ok(out)
+    }
+
+    /// f64 the same way `floats` reads f32: raw bit patterns, as integers.
+    fn f64s(&mut self, count: usize) -> Result<Vec<f64>, String> {
+        let mut out = Vec::with_capacity(count);
+        for _ in 0..count {
+            out.push(f64::from_bits(self.next()? as u64));
         }
         Ok(out)
     }
@@ -258,6 +279,237 @@ fn push_f32(out: &mut Vec<i64>, values: &[f32]) {
 /// channel, not a number channel.
 fn push_f64(out: &mut Vec<i64>, values: &[f64]) {
     out.extend(values.iter().map(|v| v.to_bits() as i64));
+}
+
+// ------------------------------------------------------------------ M4 I/O
+
+/// `n_draws` then, per draw: `code a b size replace weighted count values…`
+///
+/// `size` rides as `-1` for NumPy's scalar form, which is a *different* draw
+/// from `size=1` and has to stay distinguishable — `Replay` refuses the swap,
+/// and that refusal is most of what makes draw-site order a checked contract
+/// rather than a hope (rewrite-plan §5).
+fn read_draws(ints: &mut Ints) -> Result<Vec<RecordedDraw>, String> {
+    let count = ints.n()?;
+    let mut draws = Vec::with_capacity(count);
+    for _ in 0..count {
+        let code = ints.next()?;
+        let method = Method::from_code(code).ok_or_else(|| format!("bad draw method {code}"))?;
+        let a = ints.next()?;
+        let b = ints.next()?;
+        let raw_size = ints.next()?;
+        let size = if raw_size < 0 {
+            None
+        } else {
+            Some(raw_size as usize)
+        };
+        let replace = ints.next()? != 0;
+        let weighted = ints.next()? != 0;
+        let values = ints.n()?;
+        let mut draw = RecordedDraw {
+            method,
+            a,
+            b,
+            size,
+            replace,
+            weighted,
+            ints: Vec::new(),
+            floats: Vec::new(),
+        };
+        match method {
+            Method::Random => {
+                for _ in 0..values {
+                    draw.floats.push(f64::from_bits(ints.next()? as u64));
+                }
+            }
+            _ => {
+                for _ in 0..values {
+                    draw.ints.push(ints.next()?);
+                }
+            }
+        }
+        draws.push(draw);
+    }
+    Ok(draws)
+}
+
+/// `weight has_prev action5 n_history state memory [oldest_state pairs…]`
+///
+/// Histories arrive as their **action pairs plus the oldest state**, exactly
+/// as the corpus stores them (parity-corpus.md): eight particles with an
+/// eight-deep history is two thirds of a megabyte of boards otherwise. The
+/// intermediate states — and every frame's `observation_after` — are rebuilt
+/// here through the transition kernel. That is not a shortcut around the
+/// check; it *is* the check, because both sides rebuild from the same recipe
+/// and a transition that disagreed anywhere would show up as a rejuvenation
+/// that accepted a different set of histories.
+fn read_particle(ints: &mut Ints, seat: usize) -> Result<Particle, String> {
+    let weight = f64::from_bits(ints.next()? as u64);
+    let has_prev = ints.next()? != 0;
+    let prev_action = ints.action()?;
+    let n_history = ints.n()?;
+    let state = Rc::new(read_state(ints)?);
+    let memory = Rc::new(read_memory(ints)?);
+
+    let mut history = Vec::with_capacity(n_history);
+    if n_history > 0 {
+        let mut current = Rc::new(read_state(ints)?);
+        let pairs: Vec<(Action5, Action5)> = (0..n_history)
+            .map(|_| Ok((ints.action()?, ints.action()?)))
+            .collect::<Result<_, String>>()?;
+        for (my_action, enemy_action) in pairs {
+            let mut actions: Actions = [[1, 0, 0, 0, 0]; 2];
+            actions[seat] = my_action;
+            actions[1 - seat] = enemy_action;
+            let (next, _) = transition(&current, &actions);
+            let next = Rc::new(next);
+            history.push(Rc::new(HistoryFrame {
+                state: Rc::clone(&current),
+                my_action,
+                enemy_action,
+                observation_after: Rc::new(emit_observation(&next, seat)),
+            }));
+            current = next;
+        }
+    }
+
+    Ok(Particle {
+        state,
+        weight,
+        enemy_memory: memory,
+        enemy_prev_action: if has_prev { Some(prev_action) } else { None },
+        history,
+    })
+}
+
+/// `seat collapsed n_particles_config n` then `n` particles.
+fn read_belief(ints: &mut Ints) -> Result<BeliefState, String> {
+    let seat = ints.n()?;
+    let collapsed = ints.next()? != 0;
+    let n_particles = ints.n()?;
+    let count = ints.n()?;
+    let mut particles = Vec::with_capacity(count);
+    for _ in 0..count {
+        particles.push(read_particle(ints, seat)?);
+    }
+    Ok(BeliefState {
+        seat,
+        particles,
+        config: BeliefConfig {
+            n_particles,
+            ..Default::default()
+        },
+        collapsed,
+    })
+}
+
+/// The answer side: `seat collapsed n` then per particle `weight has_prev
+/// action5 history_len [per frame: my_action5 enemy_action5 time] state
+/// memory`.
+///
+/// Frames go out as their action pair and the timestep of the state they sit
+/// on, not as whole boards — the boards are a function of inputs both sides
+/// already agree on. Emitting only the *length* was the first design and was
+/// wrong: `_append_history` drops from the old end when the window overflows,
+/// and swapping that for a truncation keeps the length identical while keeping
+/// the wrong eight frames. Mutation testing found exactly that.
+fn write_belief(out: &mut Vec<i64>, belief: &BeliefState) {
+    out.push(belief.seat as i64);
+    out.push(belief.collapsed as i64);
+    out.push(belief.n() as i64);
+    for particle in &belief.particles {
+        out.push(particle.weight.to_bits() as i64);
+        let prev = particle.enemy_prev_action.unwrap_or([1, 0, 0, 0, 0]);
+        out.push(particle.enemy_prev_action.is_some() as i64);
+        out.extend(prev.iter().map(|&v| v as i64));
+        out.push(particle.history.len() as i64);
+        for frame in &particle.history {
+            out.extend(frame.my_action.iter().map(|&v| v as i64));
+            out.extend(frame.enemy_action.iter().map(|&v| v as i64));
+            out.push(frame.state.time as i64);
+        }
+        write_state(out, &particle.state);
+        write_memory(out, &particle.enemy_memory);
+    }
+}
+
+/// `morpheus-rs bench-belief`: time the belief update on recorded beliefs.
+///
+/// The same two calls the runtime charges to `belief_proposal` and
+/// `particle_transitions`, on the same inputs the Python is timed on, so M4's
+/// exit-gate ratio is a like-for-like measurement rather than a live-play
+/// number compared against a microbenchmark. The RNG here is `SmallRng`, not
+/// `Replay`: this is the *playing* path, and replaying a recorded stream would
+/// time a vector read instead of a sample.
+///
+/// The timed unit is what `runtime.py` charges, not what is convenient: the
+/// controller's `particle_transitions` block is `filter_step` **and**, when
+/// nothing survived, `recover_belief`. Timing only the filter would report a
+/// happy-path number against a baseline whose p99 is dominated by recovery.
+/// Each case therefore carries several target observations — one the belief
+/// can explain and one it cannot — and both are timed.
+///
+/// Input per case: a belief, `my_action`, a `VisibleMemory` for the recovery
+/// path, then `n_targets` observations. Output: `case propose_ns` followed by
+/// one `update_ns survivors` pair per target, minimum over `iters` repetitions.
+/// The minimum because a per-case p99 over a handful of runs measures the
+/// machine's scheduling noise; the distribution that matters is the one
+/// *across* beliefs.
+pub fn bench_belief<R: BufRead, W: Write>(
+    reader: &mut R,
+    writer: &mut W,
+    iters: usize,
+) -> Result<(), String> {
+    use std::time::Instant;
+
+    let mut ints = Ints::read_all(reader)?;
+    let cases = ints.n()?;
+    let mut rng = crate::rng::SmallRng::seed_from_u64(0x5eed);
+
+    for case in 0..cases {
+        let belief = read_belief(&mut ints)?;
+        let my_action = ints.action()?;
+        let memory = read_memory(&mut ints)?;
+        let targets = ints.n()?;
+        let mut observations = Vec::with_capacity(targets);
+        for _ in 0..targets {
+            observations.push(read_observation(&mut ints)?);
+        }
+
+        // One untimed pass so the first measurement is not paying for cold
+        // pages in the freshly-read belief.
+        let warm = propose_enemy_actions(&belief, &mut rng, None, 8, None);
+        std::hint::black_box(warm.len());
+
+        let mut propose_ns = u128::MAX;
+        for _ in 0..iters.max(1) {
+            let t0 = Instant::now();
+            let actions = propose_enemy_actions(&belief, &mut rng, None, 8, None);
+            propose_ns = propose_ns.min(t0.elapsed().as_nanos());
+            std::hint::black_box(actions.len());
+        }
+        let actions = propose_enemy_actions(&belief, &mut rng, None, 8, None);
+
+        let mut line = format!("{case} {propose_ns}");
+        for real_obs in &observations {
+            let mut update_ns = u128::MAX;
+            let mut survivors = 0usize;
+            for _ in 0..iters.max(1) {
+                let t = Instant::now();
+                let mut next = filter_step(&belief, my_action, real_obs, &actions, &mut rng)?;
+                if !next.particles.iter().any(|p| p.weight > 0.0) {
+                    next = recover_belief(&belief, real_obs, &memory, &mut rng, None);
+                }
+                update_ns = update_ns.min(t.elapsed().as_nanos());
+                survivors = next.particles.iter().filter(|p| p.weight > 0.0).count();
+                std::hint::black_box(next.n());
+            }
+            line.push_str(&format!(" {update_ns} {survivors}"));
+        }
+        writeln!(writer, "{line}").map_err(|e| format!("case {case}: {e}"))?;
+    }
+    writer.flush().map_err(|e| format!("flush: {e}"))?;
+    Ok(())
 }
 
 pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> Result<(), String> {
@@ -460,6 +712,291 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
                     &mut out,
                     &[network::backup_value([wdl[0], wdl[1], wdl[2]], from_root)],
                 );
+            }
+            // logits + mask + k -> the masked softmax, the singleton fallback,
+            // and the ranked candidate list
+            //
+            // The corner of the proposal M4 ports but nothing else reaches.
+            // `softmax_masked` runs only under the policy proposal, which
+            // `deployment.json` ships turned **off**; and `top_legal_actions`
+            // is otherwise exercised through recovery on a *uniform*
+            // distribution, where every legal action ties and the check is
+            // therefore only about NumPy's tie-breaking. Feeding real logits
+            // here checks the ranking itself, and covers the branch that would
+            // have to work before M7 could re-qualify `use_policy_proposal`.
+            "toplegal" => {
+                let logits = ints.f64s(N_ACTIONS)?;
+                let mask_ints = ints.ints(N_ACTIONS)?;
+                let mask: Vec<bool> = mask_ints.iter().map(|v| *v != 0).collect();
+                let k = ints.n()?;
+
+                let probs = softmax_masked(&logits, &mask);
+                let nonzero: Vec<usize> = probs
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, &p)| p != 0.0)
+                    .map(|(i, _)| i)
+                    .collect();
+                out.push(nonzero.len() as i64);
+                for index in &nonzero {
+                    out.push(*index as i64);
+                    out.push(probs[*index].to_bits() as i64);
+                }
+                let singles = singleton_probs(&mask);
+                out.push(singles.iter().position(|&p| p != 0.0).unwrap_or(0) as i64);
+
+                let top = top_legal_actions(&probs, &mask, k);
+                out.push(top.len() as i64);
+                for action in &top {
+                    out.extend(action.iter().map(|&v| v as i64));
+                }
+            }
+            // a vector of f64 -> its NumPy pairwise sum
+            //
+            // A one-line surface guarding a two-line function, because the
+            // function is not portable by construction: `np.sum` reduces in
+            // eight interleaved lanes, and a host whose NumPy vectorizes that
+            // reduction differently would change the ESS, which would change
+            // whether a resample happened, which would desynchronize the
+            // replay stream three calls later. Checking the sum directly turns
+            // that into one named failure instead.
+            "npsum" => {
+                let count = ints.n()?;
+                let values = ints.f64s(count)?;
+                push_f64(&mut out, &[npsum(&values)]);
+            }
+            // a vector of f64 -> `np.argsort(-scores)`
+            //
+            // `top_legal_actions` ranks a distribution that, on the deployed
+            // uniform proposal, is entirely ties — so the recovery candidate
+            // order is decided by NumPy's introsort internals and by nothing
+            // else. See `rng::argsort_desc_numpy` for why this surface is
+            // host-conditional and why that is the oracle's property, not the
+            // port's.
+            "argsort" => {
+                let count = ints.n()?;
+                let values = ints.f64s(count)?;
+                // Length first: an empty permutation is a legitimate answer,
+                // and a bare empty line would be dropped as blank by the
+                // harness's line reader rather than compared.
+                out.push(count as i64);
+                out.extend(argsort_desc_numpy(&values).iter().map(|&i| i as i64));
+            }
+            // first-frame observation + seat + config + draws -> the initial
+            // particle set, or a refusal
+            //
+            // The corpus cannot reach this by replay: it records beliefs that
+            // already exist, never the frame that created one. Mutation
+            // testing found the consequence — deleting the minimum-separation
+            // rule and deleting the "never a cell we can see" rule both
+            // survived every other surface, because nothing called
+            // `legal_enemy_general_candidates` at all.
+            "initbelief" => {
+                let obs = read_observation(&mut ints)?;
+                let seat = ints.n()?;
+                let n_particles = ints.n()?;
+                let min_general_distance = ints.next()? as i32;
+                let mut rng = Replay::new(read_draws(&mut ints)?);
+                let config = BeliefConfig {
+                    n_particles,
+                    min_general_distance,
+                    ..Default::default()
+                };
+                // The candidate set is emitted alongside the belief: it is the
+                // thing the prior rules actually decide, and a belief sampled
+                // from it can agree by luck when the support does not.
+                match crate::belief::legal_enemy_general_candidates(&obs, min_general_distance) {
+                    Ok(candidates) => {
+                        out.push(candidates.len() as i64);
+                        for (r, c) in &candidates {
+                            out.push(*r as i64);
+                            out.push(*c as i64);
+                        }
+                    }
+                    Err(_) => out.push(-1),
+                }
+                match crate::belief::initialize_belief(&obs, seat, &mut rng, config) {
+                    Ok(belief) => {
+                        out.push(1);
+                        write_belief(&mut out, &belief);
+                    }
+                    Err(_) => out.push(0),
+                }
+                out.push(rng.consumed() as i64);
+            }
+            // a belief -> the six belief planes, plus ESS in full precision
+            //
+            // The planes narrow to f32 exactly where the Python's `.astype`
+            // does; `ess` and `ess_fraction` ride out in f64 so a precision
+            // bug in the aggregation cannot hide behind the narrowing.
+            "summary" => {
+                let belief = read_belief(&mut ints)?;
+                let summary = summarize_belief(&belief);
+                for plane in [
+                    &summary.enemy_owner,
+                    &summary.enemy_army_mean,
+                    &summary.enemy_army_std,
+                    &summary.enemy_general,
+                    &summary.enemy_castle_owner,
+                    &summary.enemy_visibility,
+                ] {
+                    out.push(plane.len() as i64);
+                    push_f32(&mut out, plane);
+                }
+                push_f32(&mut out, &[summary.ess_fraction]);
+                push_f64(&mut out, &[ess(&belief.weights()), ess_fraction(&belief)]);
+            }
+            // a belief + a recorded draw stream -> each particle's proposal
+            // distribution and the action sampled from it
+            //
+            // Both halves, deliberately. `Replay` hands back the oracle's
+            // index whatever distribution this side computed, so checking only
+            // the sampled actions would pass even if every probability were
+            // wrong. The distribution rides out **sparsely** — a uniform mask
+            // has a few hundred non-zeros out of 3,970 — which keeps the
+            // channel honest without making it enormous.
+            "propose" => {
+                let belief = read_belief(&mut ints)?;
+                let mut rng = Replay::new(read_draws(&mut ints)?);
+                let mut telemetry = ProposalTelemetry::default();
+
+                for particle in &belief.particles {
+                    let enemy_obs = emit_observation(&particle.state, belief.enemy_seat());
+                    let enemy_mem = update_memory(&particle.enemy_memory, &enemy_obs);
+                    let probs = uniform_legal_probs(&enemy_obs, &enemy_mem);
+                    let nonzero: Vec<usize> = probs
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, &p)| p != 0.0)
+                        .map(|(i, _)| i)
+                        .collect();
+                    out.push(nonzero.len() as i64);
+                    for index in &nonzero {
+                        out.push(*index as i64);
+                        out.push(probs[*index].to_bits() as i64);
+                    }
+                }
+
+                let actions =
+                    propose_enemy_actions(&belief, &mut rng, None, 8, Some(&mut telemetry));
+                for action in &actions {
+                    out.extend(action.iter().map(|&v| v as i64));
+                }
+                out.extend([
+                    telemetry.n_particles as i64,
+                    telemetry.n_singleton_particles as i64,
+                    telemetry.n_unique_info_keys as i64,
+                    telemetry.n_unique_policy_inputs as i64,
+                    telemetry.n_policy_batches as i64,
+                    rng.consumed() as i64,
+                ]);
+            }
+            // belief + my action + the real frame + one enemy action per
+            // particle + draws -> the filtered belief
+            "filter" => {
+                let belief = read_belief(&mut ints)?;
+                let my_action = ints.action()?;
+                let real_obs = read_observation(&mut ints)?;
+                let mut enemy_actions = Vec::with_capacity(belief.n());
+                for _ in 0..belief.n() {
+                    enemy_actions.push(ints.action()?);
+                }
+                let mut rng = Replay::new(read_draws(&mut ints)?);
+                let next = filter_step(&belief, my_action, &real_obs, &enemy_actions, &mut rng)?;
+                write_belief(&mut out, &next);
+                out.push(rng.consumed() as i64);
+            }
+            // a belief carrying histories + draws -> the rejuvenated belief
+            "rejuvenate" => {
+                let belief = read_belief(&mut ints)?;
+                let mut rng = Replay::new(read_draws(&mut ints)?);
+                write_belief(&mut out, &rejuvenate(&belief, &mut rng, None));
+                out.push(rng.consumed() as i64);
+            }
+            // observation + seat + memory + particle count + draws -> the
+            // maximum-entropy reconstruction, or a refusal
+            //
+            // The refusal is part of the contract: the Python raises
+            // `ValueError` on an inconsistent frame and `recover_belief`
+            // catches it to keep the last valid belief. A port that
+            // reconstructed something anyway would look correct here and be
+            // wrong in play, so the `ok` flag is compared before the belief.
+            "maxent" => {
+                let obs = read_observation(&mut ints)?;
+                let seat = ints.n()?;
+                let memory = read_memory(&mut ints)?;
+                let n_particles = ints.n()?;
+                let mut rng = Replay::new(read_draws(&mut ints)?);
+                let config = BeliefConfig {
+                    n_particles,
+                    ..Default::default()
+                };
+                match maximum_entropy_reconstruction(&obs, seat, &memory, &mut rng, config) {
+                    Ok(belief) => {
+                        out.push(1);
+                        write_belief(&mut out, &belief);
+                    }
+                    Err(_) => out.push(0),
+                }
+                out.push(rng.consumed() as i64);
+            }
+            // capacity + arrivals + a belief + draws -> the reservoir after a
+            // fixed script: admit everything twice, sample once, then replace
+            // from the belief
+            //
+            // The script is fixed rather than corpus-driven because nothing
+            // the reservoir does depends on which board is in a particle. What
+            // it depends on is arrival *count* against capacity, which the
+            // double pass crosses, and the fixed-seed resample in
+            // `replace_from_belief` — the one place in the belief layer where
+            // the Python's generator is a local, and where play-time answers
+            // legitimately differ (see `reservoir.rs`).
+            "reservoir" => {
+                let capacity = ints.n()?;
+                let seat = ints.n()?;
+                let arrivals = ints.n()?;
+                let mut incoming = Vec::with_capacity(arrivals);
+                for _ in 0..arrivals {
+                    incoming.push(read_particle(&mut ints, seat)?);
+                }
+                let belief = read_belief(&mut ints)?;
+                let mut rng = Replay::new(read_draws(&mut ints)?);
+
+                let mut reservoir = ParticleReservoir::new(capacity);
+                for _ in 0..2 {
+                    for particle in &incoming {
+                        reservoir.admit(particle, &mut rng);
+                    }
+                }
+                out.extend([
+                    reservoir.admitted_count as i64,
+                    reservoir.version as i64,
+                    reservoir.n() as i64,
+                ]);
+                for particle in &reservoir.particles {
+                    out.push(particle.weight.to_bits() as i64);
+                    write_state(&mut out, &particle.state);
+                }
+
+                match reservoir.sample(&mut rng) {
+                    Ok(particle) => {
+                        out.push(1);
+                        write_state(&mut out, &particle.state);
+                    }
+                    Err(_) => out.push(0),
+                }
+
+                reservoir.replace_from_belief(&belief, &mut rng);
+                out.extend([
+                    reservoir.admitted_count as i64,
+                    reservoir.version as i64,
+                    reservoir.n() as i64,
+                ]);
+                for particle in &reservoir.particles {
+                    out.push(particle.weight.to_bits() as i64);
+                    write_state(&mut out, &particle.state);
+                }
+                out.push(rng.consumed() as i64);
             }
             other => return Err(format!("unknown parity kind {other:?}")),
         }
