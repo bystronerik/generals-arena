@@ -1,8 +1,8 @@
 # Morpheus-rs rewrite plan
 
 Status: **confirmed 2026-08-08 — implementation under way. M0, M0.5, M1, M2,
-M3, and M4 are done (§14–§19); M0.5 awaits a submission only the account holder
-can make.**
+M3, M4, and M5 are done (§14–§20); M0.5 awaits a submission only the account
+holder can make. The Rust bot plays its own decisions as of M5.**
 Revised against the declared-final morpheus state at commit `9d6f186`
 (oracle `morpheus@73967d2125cc`, registry step 18 — see §14; the
 `17c8ac2684ec` this plan first named was the *previous* registry head, the
@@ -351,11 +351,13 @@ control-flow divergences.
    RNG and fixed simulation count; every divergence machine-enumerated with
    the tie margin, and accepted only if traced to a within-tolerance tie
    flip. No-search frames (policy-fallback decisions) must agree exactly.
-   Note the final-state wrinkle: the hard-rule layer (`constrain_nn_action`)
-   consumes the **belief**, so decision parity on any frame requires the
-   captured belief snapshot as an input, not just the observation — the
-   capture format in this section already includes it, but the `decide`
-   parity subcommand must accept it explicitly rather than re-deriving it.
+   ~~Note the final-state wrinkle: the hard-rule layer (`constrain_nn_action`)
+   consumes the **belief**~~ — **wrong, corrected at M5 (§20).**
+   `runtime.py` passes a belief, `constrain_nn_action` accepts it, and the body
+   never reads it. The belief reaches the decision through
+   `heuristic_action_scores` on the *shaping* path, so the `shaping` and
+   `decide` surfaces take one and the `constrain` surface deliberately does
+   not.
 
 **Mechanics.** The Rust binary exposes parity subcommands
 (`morpheus-rs parity transition|tensor|belief|decide --frames <file>`)
@@ -1031,3 +1033,110 @@ Two notes for M5:
   inputs are equal-weight, so both draw from the same distribution and differ
   only in the sample; the harness injects the oracle's recorded draws and checks
   it exactly. M5 owns the caller and should keep the generator dedicated.
+
+## 20. M5 — done, and the bot plays
+
+Delivered 2026-08-09. `matrix`, `tree`, `search`, `tactics`, `runtime`,
+`deployment` and the network evaluator are ported: about 5,200 lines of Python,
+the largest and least glamorous slice of the rewrite. **The Rust bot now makes
+its own decisions** — the belief, the network, the shaping blend, the hard
+rules and the search all run in the playing path, and M1's first-legal-move is
+gone. Design notes:
+[`search-and-tactics.md`](search-and-tactics.md). Harness:
+[`parity-harness.md`](parity-harness.md).
+
+**Exit gate met, and the decision half of it exactly.** Parity runs over the
+full corpus — 1,328 heavy frames, **533,552 cases across thirty surfaces**,
+zero mismatches. The gate asks for root decisions matching the
+oracle on ≥99% of frames; `decide` reads **1,322 of 1,322**, and the closest
+call separated the committed action from the runner-up by 3.42e-05 of shaped
+prior, 52× the network prior's worst disagreement. The gate's other half —
+heuristic shaping scores inside 1e-9 in f64 — is met by a wide margin: they
+match to the **last bit**, so the harness enforces bit-exactness and keeps
+1e-9 as the floor. The AGENTS.md matchup gate finishes under `--mode
+competition`: a win at turn 825 by capturing the enemy general, with two
+castles built.
+
+**§5 was wrong about the belief, and the correction is small but load-bearing.**
+The plan records a "final-state wrinkle" saying `constrain_nn_action` consumes
+the belief, so decision parity needs the captured snapshot as an input.
+`runtime.py` passes one, the function accepts one, and the body never reads it.
+The belief does reach the decision — through `heuristic_action_scores` on the
+shaping path — but not through the hard rules. §5 is amended above. The
+parameter stays on the Rust signature so the discrepancy stays visible.
+
+**The milestone's real finding is that the oracle's search is not
+reproducible, and regret matching is why it matters.** M1–M4 all matched to the
+last bit. `matrix.rs` cannot, because the Python writes `q_eff @ sigma_enemy`
+and NumPy sends `@` on f64 to BLAS, whose reduction order is the vendor's —
+Accelerate here, OpenBLAS on the container. Measured over 3,000 random simplex
+vectors at the widths the search uses, BLAS agrees with neither a sequential
+sum (mean 0.5 ulp) nor NumPy's own pairwise reduction (mean 0.4 ulp). This is
+the third host-conditional behaviour the harness has had to name, after
+`npsum` and `argsort`.
+
+On its own it is a ulp. But `regret_matching_strategy` branches on
+`sum(max(regret, 0)) <= 0`, and on the **first backup of every fresh enemy
+table** the true regret is exactly zero — all joint entries still sit at
+first-play urgency, so `u_enemy` equals `v`. Whether the accumulated float
+lands on `0.0` or on `2.8e-17` decides between falling back to the prior and
+spreading over the positive entries: one ulp, a qualitatively different mixed
+strategy, deterministically, on every new table on every turn.
+
+That is proved rather than argued. Re-running the *oracle* with its `@`
+replaced by NumPy's own pairwise reduction — the single substitution the port
+makes — reproduces the Rust answer bit-for-bit on all 1,362 `search` cases. The
+surface therefore carries two oracles: the port must match the pairwise one
+exactly, and what the shipped one moves is tallied — **2,083 statistic vectors
+over 1,362 cases, 568 regret-branch flips**, decided on magnitudes up to
+8.88e-16.
+
+**Consequence for M6, and it changes the exit gate's reading.** §4's M6 gate
+says "at identical configuration the Rust bot should play the same bot, so
+anything worse means a real divergence". That holds for the no-search decision
+and is now measured at 100%. It does **not** hold once a simulation completes,
+and not because of a porting bug: the Python bot does not play the same bot as
+itself across BLAS vendors. M6 should read a `regression` verdict at parity
+knobs as evidence to investigate, not as proof of R2's "unfound logic bug", and
+the pairwise-dot oracle is the tool that separates the two.
+
+**The mutation pass is where M5 falls short, and it says so.** Eighty-one new
+mutations, three passes, **118 of 167 caught**. The first pass returned 63
+survivors with a single shape: every rule gated on a *game phase* — the
+garrison window, the castle window, a live threat, a reachable kill — and every
+behaviour needing a deep or contended tree. Neither is reachable from seven
+recorded frames and a 5×5 synthetic board built for M1's transition
+boundaries. Eleven purpose-built tactical positions, richer search
+configurations and a `runtime` surface closed fifteen and took the count to
+118; three more are now recorded as equivalent by construction.
+
+Forty-six remain, each diagnosed and none mysterious: rules that need *two*
+gates in range at once, rules that need an exact numeric coincidence, an
+oscillation exemption shadowed by the next exemption, and tree contention a
+24-node cap over four batches still does not produce. Detail and the specific
+positions each would need: [`parity-harness.md`](parity-harness.md).
+
+So the milestone's claim is deliberately split. **The parity result meets the
+standard the earlier milestones set; the mutation coverage does not.** M1's
+lesson — replay proves agreement, mutation proves the proof — is exactly why
+that distinction is written down rather than averaged away. The parity numbers
+say the two implementations agree on half a million cases; the mutation number
+says that for forty-six behaviours in the tactical and search layers, nothing
+in the case set could have told them apart. Closing that is the first thing M6
+should do, before it reads anything into a strength contrast.
+
+Two smaller notes:
+
+- Tier 3 had to be reformulated to be answerable. A full-search decision
+  depends on cross-turn state — the tree, the rolling history digest, the
+  estimator windows — that no single frame carries, and the corpus is a record
+  of what happened rather than a script that reproduces it. The *no-search*
+  decision has no such dependency, and M0 measured belief plus root at 166.7 ms
+  against a 140 ms deadline, so it is what the bot plays on a large fraction of
+  turns. `search` covers the tree separately, from a frame, with a scripted
+  evaluator so the comparison cannot fail on the last bit of a softmax.
+- `deployment.json` for `morpheus-rs` is the Python's file copied field for
+  field, so M6 compares two bots at one configuration. Its `offline_p99_ms`
+  values are the *Python's* measured costs and are wrong for this binary by
+  roughly the ratios M4 measured; they are there to make admission behave
+  identically, not because they describe this bot. M7 re-derives every field.

@@ -35,6 +35,9 @@ KINDS = (
     # M4: the belief layer, and the two NumPy behaviours it rests on.
     "npsum", "argsort", "summary", "propose", "filter",
     "rejuvenate", "maxent", "reservoir", "toplegal", "initbelief",
+    # M5: the search math, the tactical layer, and the decision it produces.
+    "matrix", "runtime", "playmask", "candidates", "planners", "shaping",
+    "constrain", "search", "decide",
 )
 
 

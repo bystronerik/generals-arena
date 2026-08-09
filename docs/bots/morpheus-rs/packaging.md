@@ -16,6 +16,7 @@ bots/morpheus-rs/
   crates/core/src/      the ported bot; wire, board, network, parity
   crates/bot/src/       main: read frames, decide, reply; `parity` and `bench`
   artifact/             safetensors weights + manifest; inside the content hash
+  deployment.json       the coupled knobs; inside the content hash (M5)
   run.sh                repo launcher — builds when stale, then execs
   tools/                dev tooling; outside the content hash
     submission/build.sh the build.sh copied into the vendored zip
@@ -79,6 +80,19 @@ has no dependencies — which is why the probe below exists.
 reduced to a no-op. This is R4's fallback (§9) for a sandbox that cannot build
 the vendored tree. It is built and smoked on every packaging run because a
 fallback nobody exercises is a fallback nobody can rely on.
+
+**Both variants carry `artifact/` and `deployment.json`.** That is a
+correction, not a description: until M5 the static variant shipped only the
+binary and its launchers, which was right for the M0.5 pass bot, quietly wrong
+once M3 gave the bot weights to load, and wrong twice over once M5 gave it a
+configuration to read. A missing `deployment.json` is the nastier of the two —
+the artifact's absence fails loudly at load, while the config's absence falls
+back to the Part 07 placeholders and plays a *different bot* (four times the
+particles, twice the search depth, a 125 ms deadline against 140) with nothing
+in a match log to say so. The packager now refuses to build either variant
+without it, `try_load_deployment` says on stderr when it falls back, and the
+lookup tries the binary's own directory before `target/../..` so the static
+layout resolves.
 
 Both are audited through `arena.bundle.check_limits` — the same code that
 guards the Python bundles, so the two cannot drift — then extracted to a

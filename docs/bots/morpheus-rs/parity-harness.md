@@ -4,9 +4,10 @@ How a ported surface is proved equal to the Python oracle, and — the part that
 turned out to matter more — how we know the proof is worth anything.
 
 Established at milestone M1 of the [rewrite plan](rewrite-plan.md), extended at
-M2 to tier 2, at M3 to the first surface that cannot be bit-exact, and at M4 to
-the first surfaces that consume **randomness**. The corpus it runs on is
-described in [parity-corpus.md](parity-corpus.md).
+M2 to tier 2, at M3 to the first surface that cannot be bit-exact, at M4 to the
+first surfaces that consume **randomness**, and at M5 to the first surface where
+the *oracle* is not reproducible and to tier 3 — the decision itself. The corpus
+it runs on is described in [parity-corpus.md](parity-corpus.md).
 
 ## Shape
 
@@ -16,7 +17,7 @@ bots/morpheus-rs/tools/run_parity.sh    # full corpus + mutation check, minutes
 ```
 
 `tests/parity_cases.py` builds cases, runs the Python oracle on them, invokes
-`morpheus-rs parity <kind>` on the same cases, and compares. Twenty-one
+`morpheus-rs parity <kind>` on the same cases, and compares. Thirty
 surfaces are checked. Tier 1 is bit-exact by specification; tier 2 allows 1e-6 — and is
 *also* enforced bit-exact, for the reason in the next section.
 
@@ -43,9 +44,18 @@ surfaces are checked. Tier 1 is bit-exact by specification; tier 2 allows 1e-6 �
 | `reservoir` | 1 | Algorithm R admission, sampling, and replace-from-belief |
 | `toplegal` | 2 | the masked softmax and the ranked candidate list |
 | `initbelief` | 1 | the initial prior's support, and the belief sampled from it |
+| `matrix` | 2 | the regret-matching cycle end to end |
+| `runtime` | 1 | the two controller functions `decide` cannot reach |
+| `playmask` | 1 | the play mask, and how many bits each sub-rule removed |
+| `candidates` | 1 | mandatory actions, then the stable policy ordering |
+| `planners` | 1 | every planner's answer, each with a present/absent flag |
+| `shaping` | 2 | `heuristic_action_scores` and the blended prior |
+| `constrain` | 1 | the action the hard rules commit |
+| `search` | 1 | the whole tree after three batches (see below) |
+| `decide` | 3 | the whole no-search decision, network included |
 
 The smoke slice grew from ~1.5 s to ~7 s at M3, almost all of it importing
-torch and loading three TorchScript modules, and to ~8 s at M4. That is the
+torch and loading three TorchScript modules, to ~8 s at M4, and to ~10 s at M5. That is the
 price of having the network oracle in CI at all, and it buys the surface the
 milestone exists for. AGENTS.md's 12 s ceiling governs the repo's `tests/`,
 which this is not part of; if this suite is ever folded in, the torch import is
@@ -216,9 +226,10 @@ there, each entry with the mutation that motivated it.
 
 ## Current results
 
-Full corpus (1,328 heavy frames from 20 games) — **515,710 cases**. Everything
-except the network is bit-exact; the two surfaces that cannot be are inside the
-budgets in the right-hand column, with the worst value a run actually reached.
+Full corpus (1,328 heavy frames from 20 games) — **533,552 cases**. Everything
+except the network and the BLAS-fed matrix math is bit-exact; the surfaces that
+cannot be are inside the budgets in the right-hand column, with the worst value
+a run actually reached.
 
 | kind | cases | agreement |
 | --- | ---: | --- |
@@ -243,6 +254,15 @@ budgets in the right-hand column, with the worst value a run actually reached.
 | `reservoir` | 4 | bit-exact |
 | `toplegal` | 4,197 | bit-exact (floor 1e-15) |
 | `initbelief` | 222 | bit-exact, prior support included |
+| `matrix` | 15 | max 8.88e-16 (cap 5e-12) |
+| `runtime` | 7 | bit-exact |
+| `playmask` | 1,376 | bit-exact |
+| `candidates` | 5,504 | bit-exact |
+| `planners` | 1,376 | bit-exact |
+| `shaping` | 1,376 | bit-exact (budget 1e-9) |
+| `constrain` | 5,504 | bit-exact |
+| `search` | 1,362 | bit-exact vs the pairwise-dot oracle |
+| `decide` | 1,322 | identical action on **1,322 / 1,322** |
 
 `initbelief` exists because mutation testing found `initialize_belief`
 completely uncovered: the corpus records the beliefs that exist, never the
@@ -251,11 +271,81 @@ changed nothing anywhere. The surface emits the candidate **support** as well
 as the sampled belief, because a belief drawn from a wrong support can agree by
 luck.
 
+`decide` is the tier-3 gate and it reads 100%, not the 99% §5 asks for. The
+closest call over the whole corpus separated the committed action from the
+runner-up by **3.42e-05** of shaped prior — 52× the `prior` surface's worst
+disagreement, so no frame came near a tie flip. `shaping` matching to the last
+bit is why: with the scores identical, the only float that could move the
+decision is the network prior, and 6.6e-7 does not move it.
+
+`search` runs 1,362 trees to completion and matches the pairwise-dot oracle
+exactly. Against the *shipped* oracle, BLAS moved 2,083 statistic vectors and
+flipped the regret-matching branch on 568 enemy tables, deciding on magnitudes
+up to 8.88e-16. That is the oracle's number, not the port's.
+
 `toplegal` was expected to need a tolerance and does not. Two implementations
 of `exp` over 3,970 f64 logits land on the same double for every logit here,
 and `npsum` reproduces the reduction exactly, so bit-exactness is what the
 harness enforces and the 1e-15 figure is only the floor to fall back to.
 Which leaves `net` as the only surface where a budget does real work.
+
+### M5: the pass that says the coverage is not finished
+
+**118 of 167 caught, 49 survivors** — and unlike M4's fourteen, most of these
+are still open. The number moved twice under its own findings: 103 → 115 → 118,
+across three passes.
+
+The first pass came back with 63 survivors and one shape. *Every* rule gated on
+a **game phase** survived — the garrison window, the castle window, a live
+threat, a reachable kill — and so did every behaviour that needs a **deep or
+contended tree**. Neither is reachable from the smoke slice: seven recorded
+frames from a capture host, plus `synthetic_states()`, which was built for M1's
+transition boundaries on a 5×5 board.
+
+The response was `tactical_positions()`: eleven boards built from the rule
+backwards, one gate at a time, with the observation and memory constructed
+directly rather than emitted from a `GameState` — the tactical layer reads only
+those two, and fog would otherwise have to be arranged rather than stated.
+Plus richer `search` configurations (two enemy tables against four particles to
+force eviction, twenty-four nodes to force the cap's refusal, a `freeze` flag
+the corpus never sets) and a `runtime` surface for the two controller functions
+`decide` cannot reach — `highest_prior_legal`'s mask never binds on a
+legal-normalized prior, and `nearest_rank_p99` only appears in an admission
+decision the harness does not replay.
+
+That closed fifteen. What is left is diagnosed rather than mysterious, and it
+falls into four kinds:
+
+- **Two gates at once.** The castle anchor standing down for a threat, the
+  kill/defence tie, the garrison release refusing mid-emergency, the tithe
+  yielding to an enemy take — each needs one board where *both* rules are in
+  range, and the eleven positions each isolate one.
+- **An exact numeric coincidence.** A threat whose arrival equals
+  `garrison + d/2`; a reinforcement at exactly `d - 1` rather than `d`; a
+  half-split whose remainder straddles the floor, which needs a garrison of
+  precisely `2 * floor - 1`.
+- **An exemption shadowed by the next one.** `blocks_oscillation` returns early
+  on enemy land, then again on new vision. Deleting the first changes nothing
+  unless the reverse destination is enemy-owned *and* its 3×3 box is already
+  fully visible; deleting the second changes nothing unless the destination
+  borders fog. The two positions added for these reach neither condition —
+  a diagnosis, not a mystery.
+- **Tree contention.** Eviction, the retention score, the enemy-hash cache's
+  version key, child reuse, terminal leaves. Four batches of four over a
+  24-node cap still does not visit the same child twice.
+
+Three survivors are now **explained** rather than open, and all three are
+equivalent by construction: owning a cell already makes its 3×3 box visible, so
+the reveal grid's early return only saves work; a legal move's destination is
+adjacent to a reachable source and therefore reachable, so `path_progress`
+cannot leave the goal component; and scores are clamped non-negative, so
+commitment hysteresis's `> 0` guard excludes only zero, and `0 × 1.5` is zero.
+
+The honest summary: **M5's parity result is proved to the standard the earlier
+milestones set, and its mutation coverage is not.** The 533,390 recorded and
+synthetic cases agree bit-for-bit and the decision surface reads 100%, but
+forty-six behaviours in the tactical and search layers have no case that can
+tell them from their negation. Each is named above with what it would take.
 
 Mutation check: **71 of 86 caught**
 ([report](../../research/measurements/morpheus-rs-mutation-check.json)). All
@@ -359,6 +449,88 @@ So the tool now refuses any mutation whose match falls below `#[cfg(test)]`,
 reports it as `in-test`, and fails the run alongside `stale`. A misaimed
 mutation is worse than a missing one: a missing mutation is a known gap,
 while a misaimed one reads as evidence.
+
+## M5: a surface whose oracle is not reproducible
+
+Every surface through M4 could in principle be matched to the last bit. `matrix`
+cannot, and for a reason that is the *oracle's*, not the port's.
+
+The Python writes `q_eff @ sigma_enemy`, and NumPy sends `@` on `f64` to BLAS —
+Accelerate on the laptop, OpenBLAS on the x86 container. The reduction order is
+the vendor's, and measured against 3,000 random simplex vectors at the widths
+the search uses it matches neither a sequential sum (mean 0.5 ulp, max 3) nor
+NumPy's own pairwise reduction (mean 0.4 ulp, max 3). There is no order to
+copy: **the Python bot disagrees with itself across hosts here**, exactly as
+`np.argsort` does under AVX-512.
+
+So `matrix.rs` reduces with `npsum`, the surface carries a tolerance set from
+measurement (5e-12, against a worst observed 4.4e-16), and the decision gate
+expects the resulting flips on near-ties rather than being surprised by them.
+That is the third host-conditional behaviour the harness has had to name, after
+`npsum` and `argsort`, and the pattern is now clear enough to state as a rule:
+**when a surface will not go bit-exact, check whether the oracle is stable
+before assuming the port is wrong.**
+
+## The `search` surface, and the two oracles it needs
+
+`decide` runs at zero simulations by construction and `matrix` checks the
+arithmetic without the storage that feeds it, so neither reaches the search.
+`search` does: it builds a real tree from a corpus frame — selection,
+progressive widening, enemy-table installation and eviction, leaf expansion,
+backup — and compares every statistic it accumulates.
+
+The evaluator is **scripted**, not the network. The two engines' priors agree to
+6.6e-7, which is enough to reorder a near-tie in a candidate list, and a search
+comparison that could fail on the last bit of a softmax would prove nothing
+about the search. With identical priors on both sides, a disagreement in the
+tree is the tree's.
+
+Except that the first run of the surface disagreed anyway, and the cause was
+the BLAS reduction above — amplified. `regret_matching_strategy` branches on
+`sum(max(regret, 0)) <= 0`, and on the first backup of a fresh enemy table the
+true regret is exactly zero, so whether the accumulated float is `0.0` or
+`2.8e-17` decides between "fall back to the prior" and "normalize the positive
+entries". One ulp becomes a different mixed strategy. Re-running the oracle with
+its `@` replaced by NumPy's own pairwise reduction — the one substitution the
+port makes — reproduces the Rust answer bit-for-bit.
+
+So the surface carries **two oracles**. The port must match the pairwise-dot
+one to the last bit; the shipped BLAS one is compared against *that* and every
+statistic it moves is tallied:
+
+```
+search: the oracle's BLAS moved N statistic vector(s) over M case(s),
+        flipping the regret-matching branch on K enemy table(s)
+```
+
+That line is a measurement of the oracle, not a budget the port is spending.
+It is also the reason M6 should not expect identical search decisions at parity
+knobs: the Python bot's search is a function of whichever BLAS NumPy was built
+against, and no port can be faithful to all of them at once.
+
+## Tier 3: the decision, in the form a frame can answer
+
+§5 asks for "identical chosen action on ≥99% of frames with frozen RNG and
+fixed simulation count", and separately that no-search frames agree *exactly*.
+
+A full-search decision cannot be reconstructed from one frame: it depends on the
+tree, the rolling history digest and the estimator windows, none of which a
+frame carries, and the corpus is a record of what happened rather than a script
+that reproduces it. The **no-search** decision has no such dependency — and it
+is not a corner case. M0 measured belief update plus root inference at 166.7 ms
+against a 140 ms internal deadline, so zero completed simulations is what the
+bot does on a large fraction of turns.
+
+`decide` therefore runs the recorded root tensor through both engines, blends
+the prior, takes `highest_prior_legal`, and applies the hard rules: exactly the
+path `runtime.decide` commits at zero simulations. The tensor rides the wire
+rather than being rebuilt, so a divergence lands on the decision layer and not
+on the tensor builder `tensor` already checks.
+
+Each case also emits the **tie margin** — how much shaped prior separates the
+committed action from the runner-up. §5 accepts a divergence only when it traces
+to a within-tolerance tie, and without the margin that judgement is an argument
+rather than a number.
 
 ## Adding a surface
 

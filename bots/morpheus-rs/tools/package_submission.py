@@ -67,6 +67,13 @@ _ZIP_DATE = (2020, 1, 1, 0, 0, 0)
 SOURCE_MEMBERS = ("Cargo.toml", "Cargo.lock")
 SOURCE_TREES = ("crates",)
 
+# Ships in **both** variants, and is required, because it is the only thing
+# that says which bot this is. Without it the binary falls back to the Part 07
+# placeholders — four times the particles, twice the search depth, a different
+# deadline — and plays a configuration nobody measured. Landed at M5, when the
+# runtime started reading it.
+CONFIG_MEMBERS = ("deployment.json",)
+
 # Included when present. As of M3 this is the safetensors weights plus their
 # manifest — about 1 MB, against a 50 MB zip limit. Still optional rather than
 # required: a build that has not run `tools/convert_artifact.py` should produce
@@ -173,6 +180,11 @@ def _iter_source_files() -> list[tuple[Path, str]]:
         if not path.is_file():
             raise PackageError(f"missing {name}; run cargo build once first")
         members.append((path, name))
+    for name in CONFIG_MEMBERS:
+        path = BOT_DIR / name
+        if not path.is_file():
+            raise PackageError(f"missing {name}; the bot would play placeholder knobs")
+        members.append((path, name))
     for tree in SOURCE_TREES + OPTIONAL_TREES:
         root = BOT_DIR / tree
         if not root.is_dir():
@@ -276,6 +288,25 @@ def build_static(out_path: Path) -> tuple[Path, Path]:
         _write_entry(zf, "run.sh", RUN_SH_STATIC.encode(), mode=0o755)
         _write_entry(zf, "build.sh", BUILD_SH_STATIC.encode(), mode=0o755)
         _write_entry(zf, BINARY, binary.read_bytes(), mode=0o755)
+        for name in CONFIG_MEMBERS:
+            path = BOT_DIR / name
+            if not path.is_file():
+                raise PackageError(
+                    f"missing {name}; the bot would play placeholder knobs"
+                )
+            _write_entry(zf, name, path.read_bytes(), mode=0o644)
+        for tree in OPTIONAL_TREES:
+            root = BOT_DIR / tree
+            if not root.is_dir():
+                continue
+            for path in sorted(root.rglob("*")):
+                if path.is_file():
+                    _write_entry(
+                        zf,
+                        str(path.relative_to(BOT_DIR)),
+                        path.read_bytes(),
+                        mode=0o644,
+                    )
     return out_path, binary
 
 

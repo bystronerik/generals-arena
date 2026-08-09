@@ -18,41 +18,86 @@ use std::io::{self, BufWriter, Write};
 use std::panic::{self, AssertUnwindSafe};
 use std::time::Instant;
 
-use morpheus_core::action::{decode_action, legal_mask, PASS_INDEX};
+use morpheus_core::belief::Action5;
+use morpheus_core::deployment::{try_load_deployment, DeploymentConfig, EvaluatorKind};
+use morpheus_core::evaluator::{NetworkEvaluator, ShapedUniformEvaluator};
 use morpheus_core::inference::Session;
 use morpheus_core::network::Heads;
-use morpheus_core::memory::VisibleMemory;
+use morpheus_core::rng::{SharedRng, SmallRng};
+use morpheus_core::runtime::{MonotonicClock, RuntimeController};
+use morpheus_core::search::SearchEvaluator;
 use morpheus_core::wire::{
     read_handshake, read_observation, write_action, Action, Observation, PASS,
 };
 
-/// The decision: the first legal non-pass move, else pass.
+/// The playing seat: a deployment-configured runtime over the exported net.
 ///
-/// M1 asks for "legal prior-free moves" — enough to prove the ported mask
-/// drives a real game end to end. There is no strategy here on purpose: the
-/// prior, the belief, and the search arrive at M3–M5, and a hand-written
-/// heuristic in the meantime would be code nobody intends to keep and a
-/// tempting thing to compare against.
-///
-/// The mask is built against an *empty* memory, which makes builds unreachable
-/// (they require a cell proven plain) and costs nothing else — memory's update
-/// rule lands in M2.
-fn decide(obs: &Observation, memory: &VisibleMemory) -> Action {
-    let mask = legal_mask(obs, memory, None);
-    for index in 0..PASS_INDEX {
-        if mask[index] {
-            if let Some(action) = decode_action(index) {
-                return Action {
-                    pass: action[0] as u8,
-                    row: action[1] as u16,
-                    col: action[2] as u16,
-                    dir: action[3] as u8,
-                    split: action[4] as u8,
+/// The Python's `Agent.__init__` equivalent. Load and warm-up happen here, on
+/// the caller's clock, before the first frame is answered — the first move's
+/// grace window is what pays for it, and M3 measured the two halves at 3.9 ms
+/// and 21.4 ms standalone against 8.5 s of grace.
+struct Seat {
+    controller: RuntimeController,
+    evaluator: Box<dyn SearchEvaluator>,
+}
+
+impl Seat {
+    fn new(player_id: usize, h: usize, w: usize) -> Result<Self, String> {
+        let deployment: DeploymentConfig = try_load_deployment();
+        let evaluator: Box<dyn SearchEvaluator> = match deployment.evaluator {
+            EvaluatorKind::Uniform => Box::new(ShapedUniformEvaluator {
+                knobs: deployment.shaping_knobs(),
+                ..Default::default()
+            }),
+            EvaluatorKind::Network => {
+                let mut session = Session::load_default()?;
+                // Exercise the configured shapes, not the export's fixed set.
+                // The engine has no batch axis, so "shape n" is n forwards.
+                let shapes = if deployment.warmup_batch_shapes.is_empty() {
+                    vec![1, 4, 64]
+                } else {
+                    deployment.warmup_batch_shapes.clone()
                 };
+                let x = vec![0f32; morpheus_core::network::IN_CHANNELS * 441];
+                for batch in shapes {
+                    for _ in 0..batch {
+                        session.forward(&x, Heads::Policy);
+                        session.forward(&x, Heads::PolicyWdl);
+                    }
+                }
+                Box::new(NetworkEvaluator::new(session, deployment.shaping_knobs()))
             }
-        }
+        };
+
+        let rng = SharedRng::new(Box::new(SmallRng::seed_from_u64(0)));
+        let mut controller = RuntimeController::new(
+            player_id,
+            h,
+            w,
+            deployment.to_runtime_config(),
+            Box::new(MonotonicClock::default()),
+            rng,
+        );
+        controller.use_policy_proposal = deployment.use_policy_proposal;
+        Ok(Self {
+            controller,
+            evaluator,
+        })
     }
-    PASS
+
+    fn act(&mut self, obs: &Observation) -> Action {
+        wire(self.controller.decide(self.evaluator.as_mut(), obs))
+    }
+}
+
+fn wire(action: Action5) -> Action {
+    Action {
+        pass: action[0] as u8,
+        row: action[1] as u16,
+        col: action[2] as u16,
+        dir: action[3] as u8,
+        split: action[4] as u8,
+    }
 }
 
 /// `morpheus-rs parity <kind>`: run one ported surface over recorded cases.
@@ -197,8 +242,22 @@ fn main() {
     };
 
     let mut obs = Observation::with_dims(handshake.h, handshake.w);
-    let memory = VisibleMemory::empty(handshake.h, handshake.w);
     let mut line = String::new();
+
+    // A seat that will not construct cannot play, and the judge forfeits a
+    // game on an early exit — so a load failure degrades to passing every turn
+    // with the reason on stderr, which costs the game but not the match.
+    let mut seat = match Seat::new(
+        handshake.player_id as usize,
+        handshake.h,
+        handshake.w,
+    ) {
+        Ok(seat) => Some(seat),
+        Err(err) => {
+            eprintln!("[morpheus-rs] cannot start the seat, passing every turn: {err}");
+            None
+        }
+    };
 
     loop {
         match read_observation(&mut reader, &mut obs, &mut line) {
@@ -213,10 +272,14 @@ fn main() {
             }
         }
 
-        let action = panic::catch_unwind(AssertUnwindSafe(|| decide(&obs, &memory))).unwrap_or_else(|_| {
-            eprintln!("[morpheus-rs] decide panicked on turn {}; passing", obs.turn);
-            PASS
-        });
+        let action = match seat.as_mut() {
+            Some(seat) => panic::catch_unwind(AssertUnwindSafe(|| seat.act(&obs)))
+                .unwrap_or_else(|_| {
+                    eprintln!("[morpheus-rs] decide panicked on turn {}; passing", obs.turn);
+                    PASS
+                }),
+            None => PASS,
+        };
 
         if write_action(&mut writer, action).is_err() {
             break; // engine hung up while we were replying

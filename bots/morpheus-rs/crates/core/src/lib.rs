@@ -12,10 +12,13 @@
 
 pub mod action;
 pub mod belief;
+pub mod deployment;
+pub mod evaluator;
 pub mod gemm;
 pub mod hashing;
 pub mod inference;
 pub mod json;
+pub mod matrix;
 pub mod memory;
 pub mod network;
 pub mod observe;
@@ -25,10 +28,14 @@ pub mod proposal;
 pub mod recovery;
 pub mod reservoir;
 pub mod rng;
+pub mod runtime;
 pub mod safetensors;
+pub mod search;
 pub mod sha256;
 pub mod state;
 pub mod symmetry;
+pub mod tactics;
 pub mod tensor;
 pub mod transition;
+pub mod tree;
 pub mod wire;

@@ -57,6 +57,7 @@ Small topic files for the Generals Arena research repo.
 - [morpheus-rs parity harness](bots/morpheus-rs/parity-harness.md) — how a ported surface is proved equal, and how the proof is itself checked
 - [morpheus-rs inference](bots/morpheus-rs/inference.md) — the hand-written network engine, the artifact contract, and the shoot-out that chose it
 - [morpheus-rs belief filter](bots/morpheus-rs/belief.md) — particles, recovery, the injected RNG, and the two NumPy behaviours the port reproduces
+- [morpheus-rs search and tactics](bots/morpheus-rs/search-and-tactics.md) — the arena tree, the shared generator, the BLAS reduction the oracle cannot pin, and the decision surface
 
 ## Arena
 

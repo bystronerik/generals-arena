@@ -81,6 +81,16 @@ pub trait Rng {
     fn random_one(&mut self) -> f64 {
         self.random(None)[0]
     }
+
+    /// How many recorded draws have been taken. Zero for a real PRNG.
+    ///
+    /// The parity surfaces emit it, because a port that consumed a *different
+    /// number* of draws and still produced the same answers has agreed by
+    /// accident. Behind the trait rather than on `Replay` so a surface holding
+    /// a `SharedRng` can still ask.
+    fn consumed(&self) -> usize {
+        0
+    }
 }
 
 // ------------------------------------------------------------------- replay
@@ -199,6 +209,10 @@ impl Rng for Replay {
             );
         }
         draw.ints
+    }
+
+    fn consumed(&self) -> usize {
+        self.at
     }
 
     fn random(&mut self, size: Option<usize>) -> Vec<f64> {
@@ -339,6 +353,60 @@ impl Rng for SmallRng {
 
     fn random(&mut self, size: Option<usize>) -> Vec<f64> {
         (0..size.unwrap_or(1)).map(|_| self.unit()).collect()
+    }
+}
+
+// --------------------------------------------------------------- sharing it
+
+/// One generator, two owners.
+///
+/// `runtime.py` builds a single `np.random.Generator` and hands the *same
+/// object* to `SearchController`, so the belief's draws and the search's draws
+/// interleave in one stream. That is not incidental: the replay harness checks
+/// draw order across the whole turn, and two independent generators would
+/// produce a different sequence even from the same seed. Rust cannot lend one
+/// `&mut` to two structs, so the sharing is explicit — a refcounted cell whose
+/// borrow lasts exactly one call, which is safe here because the crate is
+/// single-threaded by construction and no draw site re-enters another.
+pub struct SharedRng(std::rc::Rc<std::cell::RefCell<Box<dyn Rng>>>);
+
+impl SharedRng {
+    pub fn new(inner: Box<dyn Rng>) -> Self {
+        Self(std::rc::Rc::new(std::cell::RefCell::new(inner)))
+    }
+
+    pub fn handle(&self) -> Self {
+        Self(std::rc::Rc::clone(&self.0))
+    }
+}
+
+impl Clone for SharedRng {
+    fn clone(&self) -> Self {
+        self.handle()
+    }
+}
+
+impl Rng for SharedRng {
+    fn integers(&mut self, low: i64, high: i64, size: Option<usize>) -> Vec<i64> {
+        self.0.borrow_mut().integers(low, high, size)
+    }
+
+    fn choice(
+        &mut self,
+        n: usize,
+        size: Option<usize>,
+        replace: bool,
+        p: Option<&[f64]>,
+    ) -> Vec<i64> {
+        self.0.borrow_mut().choice(n, size, replace, p)
+    }
+
+    fn random(&mut self, size: Option<usize>) -> Vec<f64> {
+        self.0.borrow_mut().random(size)
+    }
+
+    fn consumed(&self) -> usize {
+        self.0.borrow().consumed()
     }
 }
 

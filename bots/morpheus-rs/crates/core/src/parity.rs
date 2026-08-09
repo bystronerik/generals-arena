@@ -31,6 +31,7 @@ use crate::hashing::{
     child_edge_key, enemy_info_hash_prehashed, info_state_key_prehashed, memory_digest,
     observation_payload, roll_history_digest,
 };
+use crate::matrix;
 use crate::memory::{update_memory, VisibleMemory};
 use crate::network;
 use crate::observe::emit_observation;
@@ -44,6 +45,7 @@ use crate::reservoir::ParticleReservoir;
 use crate::rng::{argsort_desc_numpy, npsum, Method, RecordedDraw, Replay};
 use crate::state::GameState;
 use crate::symmetry;
+use crate::tactics;
 use crate::tensor::{build_tensor, BeliefSummary, ARMY_SCALE};
 use crate::transition::{determine_move_order, transition, Actions};
 use crate::wire::Observation;
@@ -430,6 +432,68 @@ fn write_belief(out: &mut Vec<i64>, belief: &BeliefState) {
         }
         write_state(out, &particle.state);
         write_memory(out, &particle.enemy_memory);
+    }
+}
+
+// ------------------------------------------------------------------ M5 I/O
+
+/// `seat n` then per particle `weight_bits gr gc`.
+///
+/// A *lite* belief: the only thing the tactical layer reads out of one is
+/// `believed_enemy_general`, which needs each particle's enemy general cell and
+/// its weight and nothing else. Sending whole boards here would multiply the
+/// stream by three orders of magnitude to check the same function. The full
+/// belief still rides the `decide` surface, where the tensor needs it.
+fn read_belief_lite(ints: &mut Ints) -> Result<BeliefState, String> {
+    let seat = ints.n()?;
+    let count = ints.n()?;
+    let mut particles = Vec::with_capacity(count);
+    for _ in 0..count {
+        let weight = f64::from_bits(ints.next()? as u64);
+        let gr = ints.next()? as i32;
+        let gc = ints.next()? as i32;
+        let mut state = GameState::empty(1, 1);
+        state.general_positions[1 - seat] = [gr, gc];
+        particles.push(Particle::new(
+            Rc::new(state),
+            weight,
+            Rc::new(VisibleMemory::empty(1, 1)),
+        ));
+    }
+    Ok(BeliefState {
+        seat,
+        particles,
+        config: BeliefConfig::default(),
+        collapsed: false,
+    })
+}
+
+/// `has_prev action5 n_recent action5…`
+fn read_action_history(ints: &mut Ints) -> Result<(Option<Action5>, Vec<Action5>), String> {
+    let has_prev = ints.next()? != 0;
+    let prev = ints.action()?;
+    let count = ints.n()?;
+    let mut recent = Vec::with_capacity(count);
+    for _ in 0..count {
+        recent.push(ints.action()?);
+    }
+    Ok((if has_prev { Some(prev) } else { None }, recent))
+}
+
+fn push_cell(out: &mut Vec<i64>, cell: Option<(usize, usize)>) {
+    match cell {
+        Some((r, c)) => out.extend([1, r as i64, c as i64]),
+        None => out.extend([0, -1, -1]),
+    }
+}
+
+fn push_action(out: &mut Vec<i64>, action: Option<Action5>) {
+    match action {
+        Some(action) => {
+            out.push(1);
+            out.extend(action.iter().map(|&v| v as i64));
+        }
+        None => out.extend([0, -1, -1, -1, -1, -1]),
     }
 }
 
@@ -997,6 +1061,501 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
                     write_state(&mut out, &particle.state);
                 }
                 out.push(rng.consumed() as i64);
+            }
+            // observation + memory -> the play mask, plus the two sub-rules
+            // that shape it
+            //
+            // Emitted alongside the mask because both are *subtractive*: the
+            // garrison floor and the castle anchor each clear bits and then
+            // withdraw entirely if that would leave no non-pass action, so a
+            // port that never applied either would produce a mask identical to
+            // `legal_mask` on most frames and differ only where it matters.
+            // The counts make "how many bits did each rule remove" a number.
+            "playmask" => {
+                let obs = read_observation(&mut ints)?;
+                let memory = read_memory(&mut ints)?;
+                let mask = tactics::play_mask(&obs, &memory, None);
+                let base = legal_mask(&obs, &memory, None);
+                out.extend(mask.iter().map(|&v| v as i64));
+                out.push(
+                    base.iter()
+                        .zip(mask.iter())
+                        .filter(|(&b, &m)| b && !m)
+                        .count() as i64,
+                );
+                out.push(tactics::enemy_is_visible(&obs, &memory) as i64);
+                let own_total: i64 = (0..obs.h * obs.w)
+                    .filter(|&i| obs.owner_grid[i] as i32 == 1)
+                    .map(|i| obs.army_grid[i] as i64)
+                    .sum();
+                out.push(tactics::garrison_floor(own_total));
+                out.push(tactics::max_threat_arrival(&obs, &memory));
+            }
+            // observation + memory + lite belief + previous action + a network
+            // prior -> the heuristic scores and the blended prior
+            //
+            // rewrite-plan §5 budgets 1e-9 for these in f64. Both sides are in
+            // f64 throughout and they agree to the **last bit**, so that is
+            // what the harness enforces, following M2's precedent: a tolerance
+            // nothing approaches is a check that cannot fail.
+            "shaping" => {
+                let obs = read_observation(&mut ints)?;
+                let memory = read_memory(&mut ints)?;
+                let belief = read_belief_lite(&mut ints)?;
+                let (prev, _recent) = read_action_history(&mut ints)?;
+                let prior = ints.f64s(N_ACTIONS)?;
+                let lam = ints.f64s(1)?[0];
+                let log_clip = ints.f64s(1)?[0];
+                let floor_frac = ints.f64s(1)?[0];
+                // The mask is recomputed on both sides rather than sent: it is
+                // 3,970 integers a case, and `playmask` already proves it.
+                let mask = tactics::play_mask(&obs, &memory, None);
+                let scores = tactics::heuristic_action_scores(
+                    &obs,
+                    &memory,
+                    &mask,
+                    Some(&belief),
+                    prev,
+                );
+                push_f64(&mut out, &scores);
+                push_f64(
+                    &mut out,
+                    &tactics::blend_prior(&prior, &scores, &mask, lam, log_clip, floor_frac, 0.0),
+                );
+            }
+            // observation + memory + prior + widening limit -> the mandatory
+            // list and the ordered candidate list
+            "candidates" => {
+                let obs = read_observation(&mut ints)?;
+                let memory = read_memory(&mut ints)?;
+                let prior = ints.f64s(N_ACTIONS)?;
+                let limit = ints.n()?;
+                let use_play_mask = ints.next()? != 0;
+                let mask = if use_play_mask {
+                    tactics::play_mask(&obs, &memory, None)
+                } else {
+                    legal_mask(&obs, &memory, None)
+                };
+                let mandatory = tactics::mandatory_action_indices(&obs, &memory, &mask);
+                out.push(mandatory.len() as i64);
+                out.extend(mandatory.iter().map(|&i| i as i64));
+                let candidates =
+                    tactics::policy_ordered_candidates(&prior, &mask, &mandatory, limit);
+                out.push(candidates.len() as i64);
+                out.extend(candidates.iter().map(|&i| i as i64));
+            }
+            // observation + memory + lite belief -> every planner's answer
+            //
+            // One surface for the whole battery because they share their
+            // expensive input (a BFS field) and because a planner that returns
+            // `None` everywhere is the failure mode worth catching: each answer
+            // rides with an explicit present/absent flag rather than a sentinel
+            // that could be confused with a real cell.
+            "planners" => {
+                let obs = read_observation(&mut ints)?;
+                let memory = read_memory(&mut ints)?;
+                let belief = read_belief_lite(&mut ints)?;
+
+                push_cell(&mut out, tactics::own_general_cell(&obs, &memory));
+                push_cell(&mut out, tactics::known_enemy_general_cell(&obs, &memory));
+                push_cell(&mut out, tactics::king_cell(&obs, None));
+                push_cell(&mut out, tactics::believed_enemy_general(Some(&belief)));
+                push_cell(&mut out, tactics::enemy_seek_target(&obs, &memory, Some(&belief)));
+                let goals = tactics::seek_goals(&obs, &memory, Some(&belief));
+                out.push(goals.len() as i64);
+                for (r, c) in &goals {
+                    out.extend([*r as i64, *c as i64]);
+                }
+                let exclude = tactics::own_general_cell(&obs, &memory);
+                push_cell(
+                    &mut out,
+                    tactics::wave_assembly_cell(&obs, &memory, Some(&belief), exclude),
+                );
+                let (share, max_own, total) = tactics::army_concentration(&obs, exclude);
+                push_f64(&mut out, &[share]);
+                out.extend([max_own, total]);
+                out.push(tactics::structure_idle_army(&obs, &memory));
+                out.push(tactics::max_threat_arrival(&obs, &memory));
+
+                let site = tactics::castle_build_site(&obs, &memory);
+                push_cell(&mut out, site);
+                match site {
+                    Some(site) => {
+                        push_action(&mut out, tactics::castle_tithe_move(&obs, &memory, site))
+                    }
+                    None => push_action(&mut out, None),
+                }
+
+                let threat = tactics::general_threat(&obs, &memory);
+                match threat {
+                    Some((cell, d)) => {
+                        out.extend([1, cell.0 as i64, cell.1 as i64, d as i64]);
+                        push_action(
+                            &mut out,
+                            tactics::defend_general_move(&obs, &memory, (cell, d)),
+                        );
+                    }
+                    None => {
+                        out.extend([0, -1, -1, -1]);
+                        push_action(&mut out, None);
+                    }
+                }
+
+                match tactics::kill_plan(&obs, &memory) {
+                    Some((steps, margin, first)) => {
+                        out.extend([1, steps as i64, margin]);
+                        push_action(&mut out, Some(first));
+                    }
+                    None => {
+                        out.extend([0, -1, -1]);
+                        push_action(&mut out, None);
+                    }
+                }
+
+                // The two whole-board fields the scoring path rides on.
+                let reveal = tactics::reveal_count_grid(&obs);
+                out.extend(reveal.iter().copied());
+                let goal_cells: Vec<(usize, usize)> = goals.clone();
+                let field = tactics::path_distance_field(&obs, &goal_cells);
+                out.extend(field.dist.iter().map(|&v| v as i64));
+            }
+            // observation + memory + a chosen action + history + an optional
+            // prior -> the action the hard rules commit
+            //
+            // The belief is deliberately absent: `constrain_nn_action` takes one
+            // and never reads it (see `tactics.rs`), which contradicts
+            // rewrite-plan §5's "final-state wrinkle". Passing one here would
+            // paper over that.
+            "constrain" => {
+                let obs = read_observation(&mut ints)?;
+                let memory = read_memory(&mut ints)?;
+                let chosen = ints.action()?;
+                let (prev, recent) = read_action_history(&mut ints)?;
+                let has_prior = ints.next()? != 0;
+                let prior = ints.f64s(N_ACTIONS)?;
+                let action = tactics::constrain_nn_action(
+                    &obs,
+                    &memory,
+                    chosen,
+                    prev,
+                    &recent,
+                    if has_prior { Some(&prior) } else { None },
+                    None,
+                );
+                out.extend(action.iter().map(|&v| v as i64));
+                // The oscillation predicate on the chosen move, both ways: with
+                // the precomputed reveal grid the redirect loop uses, and with
+                // the whole-board dilation the Python calls. They must agree.
+                let reveal = tactics::reveal_count_grid(&obs);
+                out.push(
+                    tactics::blocks_oscillation(chosen, prev, &obs, &recent, false, None) as i64,
+                );
+                out.push(tactics::blocks_oscillation(
+                    chosen,
+                    prev,
+                    &obs,
+                    &recent,
+                    false,
+                    Some(&reveal),
+                ) as i64);
+            }
+            // strategy vectors and one joint matrix -> the whole regret cycle
+            //
+            // The one surface in the port with a **tolerance on an integer-free
+            // path**, and the reason is the oracle: NumPy sends `@` on f64 to
+            // BLAS, whose reduction order is the vendor's. See `matrix.rs`.
+            "matrix" => {
+                let n_a = ints.n()?;
+                let n_b = ints.n()?;
+                let n_hashes = ints.n()?;
+                let n = ints.next()?;
+                let regrets = ints.f64s(n_a)?;
+                let prior = ints.f64s(n_a)?;
+                let avg_strategy = ints.f64s(n_a)?;
+                let marginal_visits = ints.f64s(n_a)?;
+                let first_play = ints.f64s(1)?[0];
+                let enemy_weights = ints.f64s(n_hashes)?;
+                let mut enemy_regrets = Vec::with_capacity(n_hashes);
+                let mut enemy_priors = Vec::with_capacity(n_hashes);
+                let mut visits = Vec::with_capacity(n_hashes);
+                let mut q = Vec::with_capacity(n_hashes);
+                for _ in 0..n_hashes {
+                    enemy_regrets.push(ints.f64s(n_b)?);
+                    enemy_priors.push(ints.f64s(n_b)?);
+                    visits.push(ints.f64s(n_a * n_b)?);
+                    q.push(ints.f64s(n_a * n_b)?);
+                }
+                let a_idx = ints.n()?;
+                let b_idx = ints.n()?;
+                let leaf_value = ints.f64s(1)?[0];
+
+                out.extend([
+                    matrix::self_widening_limit(n) as i64,
+                    matrix::enemy_widening_limit(n) as i64,
+                ]);
+                push_f64(&mut out, &[matrix::exploration_epsilon(n)]);
+
+                let sigma_self = matrix::mixed_strategy(&regrets, &prior, n);
+                push_f64(&mut out, &sigma_self);
+                let mut enemy_sigmas = Vec::with_capacity(n_hashes);
+                let mut q_eff_list = Vec::with_capacity(n_hashes);
+                for h in 0..n_hashes {
+                    let sigma_b = matrix::mixed_strategy(&enemy_regrets[h], &enemy_priors[h], n);
+                    push_f64(&mut out, &sigma_b);
+                    let q_eff = matrix::effective_q(&visits[h], &q[h], first_play);
+                    push_f64(&mut out, &q_eff);
+                    enemy_sigmas.push(sigma_b);
+                    q_eff_list.push(q_eff);
+                }
+                let (u_self, v) = matrix::aggregate_self_utilities(
+                    &sigma_self,
+                    &enemy_weights,
+                    &enemy_sigmas,
+                    &q_eff_list,
+                );
+                push_f64(&mut out, &u_self);
+                push_f64(&mut out, &[v]);
+                let (u_h, u_enemy, v_h) =
+                    matrix::matrix_utilities(&sigma_self, &enemy_sigmas[0], &q_eff_list[0]);
+                push_f64(&mut out, &u_h);
+                push_f64(&mut out, &u_enemy);
+                push_f64(&mut out, &[v_h]);
+                push_f64(
+                    &mut out,
+                    &matrix::regret_plus_update(&regrets, &u_self, v, true),
+                );
+                push_f64(
+                    &mut out,
+                    &matrix::regret_plus_update(&enemy_regrets[0], &u_enemy, v, false),
+                );
+
+                let mut visits_0 = visits[0].clone();
+                let mut value_sum = vec![0.0f64; n_a * n_b];
+                let mut q_0 = q[0].clone();
+                matrix::apply_joint_backup(
+                    &mut visits_0,
+                    &mut value_sum,
+                    &mut q_0,
+                    n_b,
+                    a_idx,
+                    b_idx,
+                    leaf_value,
+                );
+                push_f64(&mut out, &visits_0);
+                push_f64(&mut out, &value_sum);
+                push_f64(&mut out, &q_0);
+
+                push_f64(&mut out, &matrix::normalize_average_strategy(&avg_strategy));
+                out.push(matrix::select_root_action(
+                    &avg_strategy,
+                    &marginal_visits,
+                    &prior,
+                    None,
+                ) as i64);
+            }
+            // the recorded root tensor + observation + memory + history ->
+            // the action the bot commits with zero completed simulations
+            //
+            // rewrite-plan §5's tier 3, in the form a single frame can answer.
+            // The full-search decision depends on cross-turn state (tree,
+            // history digest, estimator windows) that no one frame carries, but
+            // the *no-search* decision is a whole deployed path — M0 measured
+            // the belief update alone overrunning the deadline at p99, so this
+            // is what the bot plays whenever search does not complete — and §5
+            // requires it to agree **exactly**.
+            //
+            // The tensor comes off the wire rather than being rebuilt, so a
+            // divergence lands on the decision layer instead of on the tensor
+            // builder that `tensor` already checks.
+            "decide" => {
+                let session = net_session.get_or_insert_with(|| {
+                    crate::inference::Session::load_default()
+                        .unwrap_or_else(|e| panic!("loading the artifact: {e}"))
+                });
+                let obs = read_observation(&mut ints)?;
+                let memory = read_memory(&mut ints)?;
+                let belief = read_belief_lite(&mut ints)?;
+                let tensor = ints.floats(network::IN_CHANNELS * network::CELLS)?;
+                let (prev, recent) = read_action_history(&mut ints)?;
+                let lam_pre = ints.f64s(1)?[0];
+                let lam_post = ints.f64s(1)?[0];
+                let log_clip = ints.f64s(1)?[0];
+                let floor_frac = ints.f64s(1)?[0];
+
+                let logits = session
+                    .forward(&tensor, network::Heads::PolicyWdl)
+                    .flat_logits();
+                let mask = tactics::play_mask(&obs, &memory, None);
+                let unshaped = network::legal_normalized_policy(&logits, &mask);
+                let lam = if tactics::enemy_is_visible(&obs, &memory) {
+                    lam_post
+                } else {
+                    lam_pre
+                };
+                let shaped = tactics::apply_pre_contact_prior(
+                    &unshaped,
+                    &obs,
+                    &memory,
+                    &mask,
+                    Some(&belief),
+                    lam,
+                    log_clip,
+                    floor_frac,
+                    0.0,
+                    prev,
+                );
+                let fallback = crate::runtime::highest_prior_legal(&shaped, &mask);
+                let action = tactics::constrain_nn_action(
+                    &obs,
+                    &memory,
+                    fallback,
+                    prev,
+                    &recent,
+                    Some(&shaped),
+                    None,
+                );
+                out.extend(fallback.iter().map(|&v| v as i64));
+                out.extend(action.iter().map(|&v| v as i64));
+                // The tie margin: how much shaped prior separates the committed
+                // action from the runner-up. A divergence is only acceptable if
+                // this is inside the prior's measured agreement, and the number
+                // is what makes that judgeable instead of arguable.
+                let mut ranked: Vec<f64> = (0..mask.len())
+                    .filter(|&i| mask[i])
+                    .map(|i| shaped[i])
+                    .collect();
+                ranked.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+                let margin = if ranked.len() >= 2 {
+                    ranked[0] - ranked[1]
+                } else {
+                    1.0
+                };
+                push_f64(&mut out, &[margin]);
+            }
+            // a root frame + a scripted evaluator + a recorded draw stream ->
+            // the whole tree after N batches
+            //
+            // The surface that proves the *search*, which no other one reaches:
+            // `decide` runs at zero simulations by design, and `matrix` checks
+            // the arithmetic without the storage that feeds it. Here the tree
+            // is built for real — selection, progressive widening, enemy-table
+            // installation and eviction, leaf expansion, backup — and every
+            // statistic it accumulates is compared.
+            //
+            // The evaluator is *scripted*, not the network. The two engines'
+            // priors agree to 6.6e-7, which is enough to reorder a near-tie in
+            // the candidate list, and a search comparison that could fail on
+            // the last bit of a softmax would prove nothing about the search.
+            // With identical priors on both sides, any disagreement here is the
+            // tree's.
+            "search" => {
+                let obs = read_observation(&mut ints)?;
+                let memory = read_memory(&mut ints)?;
+                let belief = read_belief(&mut ints)?;
+                let prior = ints.f64s(N_ACTIONS)?;
+                let value = ints.f64s(1)?[0];
+                let config = crate::search::SearchConfig {
+                    depth: ints.n()?,
+                    pending_batch: ints.n()?,
+                    n_particles: ints.n()?,
+                    max_nodes: ints.n()?,
+                    max_enemy_tables: ints.n()?,
+                    ..Default::default()
+                };
+                let batches = ints.n()?;
+                let freeze = ints.next()? != 0;
+                let rng = crate::rng::SharedRng::new(Box::new(Replay::new(read_draws(&mut ints)?)));
+                let mut evaluator = crate::search::ScriptedEvaluator { prior, value };
+                let mut controller =
+                    crate::search::SearchController::new(belief.seat, config, rng.handle());
+                controller.ensure_root(&mut evaluator, &obs, &memory, &belief);
+                for _ in 0..batches {
+                    controller.run_batch(&mut evaluator, &belief, None, freeze);
+                }
+
+                let tree = &controller.tree;
+                out.extend([
+                    tree.completed_simulations as i64,
+                    tree.nodes.len() as i64,
+                    tree.table_hits as i64,
+                    tree.table_misses as i64,
+                ]);
+                push_f64(&mut out, &[tree.eviction_loss, tree.total_joint_visits]);
+                let root = tree.node(tree.root.expect("ensure_root always sets one"));
+                out.push(root.n);
+                out.push(root.actions.len() as i64);
+                out.extend(root.actions.iter().map(|&a| a as i64));
+                push_f64(&mut out, &root.prior);
+                push_f64(&mut out, &root.regret);
+                push_f64(&mut out, &root.avg_strategy);
+                out.push(root.enemy_tables.len() as i64);
+                for table in &root.enemy_tables {
+                    out.push(table.actions.len() as i64);
+                    out.extend(table.actions.iter().map(|&a| a as i64));
+                    push_f64(&mut out, &table.prior);
+                    push_f64(&mut out, &table.regret);
+                    push_f64(&mut out, &table.avg_strategy);
+                    out.extend([table.n_self as i64, table.last_used, table.touch_count]);
+                    push_f64(&mut out, &table.visits);
+                    push_f64(&mut out, &table.q);
+                }
+                push_f64(&mut out, &tree.root_marginal_visits());
+                match tree.root_action_index() {
+                    Ok(index) => out.push(index as i64),
+                    Err(_) => out.push(-1),
+                }
+                match controller.best_action() {
+                    Some(action) => {
+                        out.push(1);
+                        out.extend(action.iter().map(|&v| v as i64));
+                    }
+                    None => out.extend([0, -1, -1, -1, -1, -1]),
+                }
+                // The degradation path, on the tree that was just built. It
+                // lives here rather than in its own surface because its
+                // interesting branch — "the search says pass, the policy
+                // fallback does not" — needs a real root to say pass.
+                for (completed, has_root, fallback) in [
+                    (0u64, false, [1, 0, 0, 0, 0]),
+                    (0, true, [0, 1, 1, 0, 0]),
+                    (tree.completed_simulations, true, [0, 1, 1, 0, 0]),
+                    (tree.completed_simulations, true, [1, 0, 0, 0, 0]),
+                ] {
+                    let (action, level) = crate::runtime::select_degraded_action(
+                        completed,
+                        has_root,
+                        Some(fallback),
+                        &controller,
+                    );
+                    out.extend(action.iter().map(|&v| v as i64));
+                    out.push(level as i64);
+                }
+                out.push(crate::rng::Rng::consumed(&rng) as i64);
+            }
+            // scalar controller arithmetic with no state behind it
+            //
+            // `nearest_rank_p99` and `highest_prior_legal` are two of the three
+            // places the runtime decides something on its own, and neither is
+            // reachable through `decide`: the prior it is handed is already
+            // legal-normalized, so the mask it applies never binds, and the
+            // percentile only shows up in an admission decision the parity
+            // harness does not replay. Feeding both directly is the only way
+            // the harness can see them at all.
+            "runtime" => {
+                let count = ints.n()?;
+                let samples = ints.f64s(count)?;
+                match crate::runtime::nearest_rank_p99(&samples) {
+                    Ok(value) => {
+                        out.push(1);
+                        push_f64(&mut out, &[value]);
+                    }
+                    Err(_) => out.extend([0, 0]),
+                }
+                let prior = ints.f64s(N_ACTIONS)?;
+                let mask_ints = ints.ints(N_ACTIONS)?;
+                let mask: Vec<bool> = mask_ints.iter().map(|v| *v != 0).collect();
+                let action = crate::runtime::highest_prior_legal(&prior, &mask);
+                out.extend(action.iter().map(|&v| v as i64));
             }
             other => return Err(format!("unknown parity kind {other:?}")),
         }

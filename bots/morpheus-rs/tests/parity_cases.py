@@ -382,6 +382,225 @@ def synthetic_states() -> list:
     return states
 
 
+# --- positions the corpus cannot reach --------------------------------------
+#
+# The mutation pass over M5 came back with 63 survivors, and they had one
+# shape: every rule gated on a *game phase* — the garrison window, the castle
+# window, a live threat, a reachable kill — survived, because the recorded
+# frames on the smoke slice never sit in one and `synthetic_states()` was built
+# for M1's transition boundaries on a 5x5 board.
+#
+# These positions are built the other way round: from the rule backwards. Each
+# one exists to put exactly one gate in its firing range, and the observation
+# and memory are constructed directly rather than emitted from a `GameState`,
+# because the tactical layer only ever reads those two and fog would otherwise
+# have to be arranged rather than stated.
+
+
+def _tactical_obs(h, w, turn, *, own=(), enemy=(), neutral_army=(), types=None,
+                  my_land=0, my_army=0, opp_land=0, opp_army=0):
+    """An observation built cell by cell. `own`/`enemy` are `((r, c), army)`."""
+    from observe import ArrayObservation
+
+    type_grid = np.ones((h, w), np.int32)
+    owner_grid = np.zeros((h, w), np.int32)
+    army_grid = np.zeros((h, w), np.int32)
+    for (r, c), kind in (types or {}).items():
+        type_grid[r, c] = kind
+    for (r, c), army in own:
+        owner_grid[r, c] = 1
+        army_grid[r, c] = army
+    for (r, c), army in enemy:
+        owner_grid[r, c] = 2
+        army_grid[r, c] = army
+    for (r, c), army in neutral_army:
+        army_grid[r, c] = army
+    return ArrayObservation(
+        H=h, W=w, turn=turn,
+        my_land=my_land or int((owner_grid == 1).sum()),
+        my_army=my_army or int(army_grid[owner_grid == 1].sum()),
+        opp_land=opp_land or int((owner_grid == 2).sum()),
+        opp_army=opp_army or int(army_grid[owner_grid == 2].sum()),
+        type_grid=type_grid, owner_grid=owner_grid, army_grid=army_grid,
+    )
+
+
+def _tactical_memory(obs, *, own_general=None, enemy_general=None, castles=()):
+    from memory import VisibleMemory
+
+    h, w = int(obs.H), int(obs.W)
+    types = np.asarray(obs.type_grid, np.int32)
+    mountain = types == 2
+    known_castle = np.zeros((h, w), bool)
+    for cell in castles:
+        known_castle[cell] = True
+    own_gen = np.zeros((h, w), bool)
+    if own_general is not None:
+        own_gen[own_general] = True
+    enemy_gen = np.zeros((h, w), bool)
+    if enemy_general is not None:
+        enemy_gen[enemy_general] = True
+    return VisibleMemory(
+        H=h, W=w,
+        known_mountain=mountain,
+        known_passable_base=~(mountain | known_castle | own_gen | enemy_gen),
+        known_castle=known_castle,
+        own_general=own_gen,
+        known_enemy_general=enemy_gen,
+        ever_visible=np.ones((h, w), bool),
+        last_seen_turn=np.full((h, w), int(obs.turn), np.int32),
+        remembered_owner=np.asarray(obs.owner_grid, np.int32).astype(np.int8),
+        remembered_army=np.asarray(obs.army_grid, np.int32).copy(),
+        remembered_was_castle=known_castle.copy(),
+        remembered_castle_owner=np.where(
+            known_castle & (np.asarray(obs.owner_grid) == 1), 1, 0
+        ).astype(np.int8),
+    )
+
+
+def _frame_like(seat=0, prev=PASS, recent=(), action=PASS, believed=()):
+    """A synthetic stand-in for a captured frame, carrying only what M5 reads.
+
+    `believed` is `((r, c), weight)` per particle: the tactical layer's only
+    use of a belief is `believed_enemy_general`, and two cells with unequal
+    weights is what makes the weighted mode distinguishable from a count.
+    """
+    particles = [
+        {"state": {"general_positions": [[0, 0], list(cell)]}, "weight": weight}
+        for cell, weight in believed
+    ]
+    return {
+        "seat": seat,
+        "prev_action": list(prev),
+        "recent_actions": [list(a) for a in recent],
+        "action": list(action),
+        "belief": {"seat": seat, "particles": particles} if particles else None,
+    }
+
+
+def tactical_positions() -> list[tuple]:
+    """`(obs, memory, frame)` for each tactical gate, one gate at a time."""
+    out: list[tuple] = []
+
+    # (a) The garrison window with a live, imminent threat. Reaches the
+    # threat-aware floor, `general_threat`'s tie rule, both branches of
+    # `defend_general_move`, the castle anchor standing down, and the garrison
+    # release refusing to ship mid-emergency.
+    for garrison, threat_army, threat_at in ((20, 40, (6, 9)), (44, 40, (6, 8))):
+        obs = _tactical_obs(
+            13, 13, 300,
+            own=[((6, 6), garrison), ((6, 4), 30), ((6, 5), 4), ((5, 6), 3),
+                 ((6, 8), 50) if threat_at != (6, 8) else ((7, 8), 50)],
+            enemy=[(threat_at, threat_army), ((6, 10), 3)],
+        )
+        out.append((obs, _tactical_memory(obs, own_general=(6, 6)),
+                    _frame_like(prev=(0, 6, 5, 3, 0), recent=[(0, 6, 5, 3, 0)])))
+
+    # (b) The castle savings window. One surcharge-free candidate far from every
+    # structure, one nearer a visible enemy, and one already holding a pile —
+    # the sticky rule, the safe-distance rule and the base-price rule each need
+    # a different pair to be decidable. Turn 200 is on the tithe period.
+    for site_army in (12, 40):
+        obs = _tactical_obs(
+            15, 15, 200,
+            own=[((1, 1), 15), ((1, 2), 6), ((8, 8), site_army), ((8, 9), 9),
+                 ((7, 8), 20), ((1, 12), 30), ((2, 12), 4)],
+            enemy=[((1, 14), 5)],
+        )
+        out.append((obs, _tactical_memory(obs, own_general=(1, 1)),
+                    _frame_like(prev=(0, 7, 8, 1, 0))))
+
+    # (c) A reachable kill. The enemy general is visible and thin, an own stack
+    # sits three steps out, there is an own army to collect on the way and a
+    # neutral to pay for — and a fogged cell on the alternative descent, which
+    # is the only thing that makes "refuse to price a fogged cell" decidable.
+    obs = _tactical_obs(
+        13, 13, 400,
+        own=[((6, 6), 14), ((6, 7), 6), ((5, 5), 3), ((6, 2), 40)],
+        enemy=[((6, 10), 2), ((6, 9), 1)],
+        neutral_army=[((6, 8), 2)],
+        types={(6, 10): 4, (5, 8): 0, (5, 9): 5},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(6, 2), enemy_general=(6, 10)),
+                _frame_like(prev=(0, 6, 6, 3, 0),
+                            # Two particles at one cell, one at another with more
+                            # weight: the weighted mode and the count mode disagree,
+                            # which is the only way to tell them apart.
+                            believed=[((2, 2), 0.2), ((2, 2), 0.2), ((6, 10), 0.6)])))
+
+    # (d) The deathtouch regime: any touch wins, so the surplus gate must not
+    # suppress it and the capture is forced however thin the attacker.
+    obs = _tactical_obs(
+        9, 9, 850,
+        own=[((4, 3), 3), ((4, 2), 30)],
+        enemy=[((4, 4), 99)],
+        types={(4, 4): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(4, 2), enemy_general=(4, 4)),
+                _frame_like(prev=(0, 4, 2, 3, 0))))
+
+    # (e) An oscillation corridor with a real history. Every history-dependent
+    # rule — the eight-move window, the enemy-land and new-vision exemptions,
+    # commitment hysteresis, the retreat redirect — needs a previous move that
+    # is a move, which no synthetic frame had before.
+    # Ten, not eight: with exactly eight the last-eight window and the
+    # first-eight window are the same slice and the rule is undecidable.
+    history = [(0, 4, c, 3, 0) for c in range(1, 11)]
+    obs = _tactical_obs(
+        11, 11, 250,
+        own=[((4, c), 2) for c in range(1, 9)] + [((4, 0), 25), ((4, 9), 12)],
+        enemy=[((4, 10), 4)],
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(4, 0)),
+                _frame_like(prev=(0, 4, 8, 3, 0), recent=history,
+                            action=(0, 4, 9, 2, 0))))
+
+    # (e2) The two exemptions from the oscillation ban, one per position: a
+    # reverse onto enemy land, and a reverse onto a cell that unlocks fog.
+    # Without these the ban looks unconditional and deleting either check
+    # changes nothing.
+    obs = _tactical_obs(
+        9, 9, 250,
+        own=[((4, 3), 9), ((4, 4), 6)],
+        enemy=[((4, 5), 3)],
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(4, 3)),
+                _frame_like(prev=(0, 4, 5, 2, 0), recent=[(0, 4, 5, 2, 0)],
+                            action=(0, 4, 4, 3, 0))))
+    obs = _tactical_obs(
+        9, 9, 250,
+        own=[((4, 1), 9), ((4, 2), 6)],
+        types={(r, c): 0 for r in range(9) for c in range(5, 9)},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(4, 1)),
+                _frame_like(prev=(0, 4, 2, 2, 0), recent=[(0, 4, 2, 2, 0)],
+                            action=(0, 4, 1, 3, 0))))
+
+    # (f) Pre-contact with a fat pile on the general: the evacuation redirect,
+    # the structure-idle score branch, and the pre-contact ban on stacking onto
+    # a structure all need this and nothing else.
+    obs = _tactical_obs(
+        11, 11, 60,
+        own=[((5, 5), 40), ((5, 6), 3), ((4, 5), 2)],
+        types={(5, 5): 4, (2, 2): 2},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(5, 5)),
+                _frame_like(prev=(0, 5, 6, 3, 0))))
+
+    # (g) The garrison release: past the release factor, no threat in sight.
+    # Turn 351, not 350: on a tithe turn the savings gather returns first and
+    # the release below is never reached.
+    obs = _tactical_obs(
+        11, 11, 351,
+        own=[((5, 5), 60), ((5, 6), 4), ((6, 5), 3), ((0, 0), 8)],
+        types={(5, 5): 4},
+    )
+    out.append((obs, _tactical_memory(obs, own_general=(5, 5)),
+                _frame_like(prev=(0, 5, 6, 3, 0), action=(0, 5, 6, 3, 0))))
+
+    return out
+
+
 def memory_for(state, seat: int = 0, *, explored: bool = True):
     """
     A memory for a synthetic state — fully informed, or never explored.
@@ -1162,6 +1381,332 @@ def argsort_vectors() -> list[np.ndarray]:
     return out
 
 
+
+# --- M5: tactics, search math, and the decision -----------------------------
+
+# rewrite-plan §5 budgets 1e-9 for the heuristic/shaping scores in f64. Both
+# sides compute them in f64 throughout and agree to the last bit, so the
+# harness enforces bit-exactness and keeps the specified figure as the floor to
+# fall back to — M2's precedent, for M2's reason: the budget is a thousand
+# times looser than anything a run reaches, so on its own it could not fail.
+SHAPING_TOLERANCE = 1e-9
+
+# `matrix` is the one surface where bit-exactness is unreachable *because of
+# the oracle*. The Python writes `q_eff @ sigma_enemy`, and NumPy sends `@` on
+# f64 to BLAS — Accelerate here, OpenBLAS on the x86 container — whose
+# reduction order is the vendor's and matches neither a sequential sum nor
+# NumPy's own pairwise one (measured: mean 0.4 ulp, max 3, over 3,000 random
+# simplex vectors at the widths the search uses). So the port reduces with
+# `npsum` and the tolerance is set from measurement. See `matrix.rs`.
+MATRIX_TOLERANCE = 5e-12
+
+
+def _lite_belief_ints(frame) -> list[int]:
+    """`seat n` then per particle `weight_bits gr gc` — see `read_belief_lite`."""
+    belief = (frame or {}).get("belief")
+    if not belief:
+        return [int((frame or {}).get("seat", 0)), 0]
+    seat = int(belief["seat"])
+    enemy = 1 - seat
+    out = [seat, len(belief["particles"])]
+    for particle in belief["particles"]:
+        gp = np.asarray(particle["state"]["general_positions"], dtype=np.int64)
+        out += _f64_bits([float(particle["weight"])])
+        out += [int(gp[enemy][0]), int(gp[enemy][1])]
+    return out
+
+
+def _lite_belief_object(frame):
+    """The Python-side stand-in the Rust `read_belief_lite` builds."""
+    from belief import BeliefConfig, BeliefState, Particle
+
+    belief = (frame or {}).get("belief")
+    seat = int(belief["seat"]) if belief else int((frame or {}).get("seat", 0))
+    if not belief:
+        return BeliefState(seat=seat, particles=[], config=BeliefConfig(), collapsed=False)
+    enemy = 1 - seat
+    particles = []
+    for particle in belief["particles"]:
+        gp = np.asarray(particle["state"]["general_positions"], dtype=np.int32)
+        state = _blank(1, 1)
+        state.general_positions[enemy] = gp[enemy]
+        from memory import empty_memory
+
+        particles.append(
+            Particle(
+                state=state,
+                weight=float(particle["weight"]),
+                enemy_memory=empty_memory(1, 1),
+                enemy_prev_action=None,
+                history=(),
+            )
+        )
+    return BeliefState(seat=seat, particles=particles, config=BeliefConfig(), collapsed=False)
+
+
+def _history_ints(frame) -> list[int]:
+    """`has_prev action5 n_recent action5…` from the frame's recorded history."""
+    prev, recent = _history_of(frame)
+    out = [int(prev is not None)] + [int(v) for v in (prev or PASS)]
+    out.append(len(recent))
+    for action in recent:
+        out += [int(v) for v in action]
+    return out
+
+
+def _history_of(frame):
+    """The pre-move history the hard-rule layer saw, as the capture recorded it."""
+    prev = tuple(int(v) for v in (frame or {}).get("prev_action", PASS))
+    recent = [tuple(int(v) for v in a) for a in (frame or {}).get("recent_actions", [])]
+    return prev, recent
+
+
+def _shaping_knobs(frame):
+    """The deployed blend knobs. Fixed, because both bots ship the same file."""
+    import math
+
+    del frame
+    return 1.0, 1.0, math.log(10.0), 1e-3
+
+
+def _network_prior_for(frame, obs, memory):
+    """The shaped-prior input: the frame's own unshaped root prior when it has
+    one, else a deterministic ramp over the play mask.
+
+    A recorded prior is the realistic input; the ramp exists so a frame whose
+    root inference was skipped still exercises the blend, and so the blend sees
+    a distribution that is not the network's own (a prior proportional to the
+    heuristic would hide a blend that ignored one of its two inputs).
+    """
+    from action import N_ACTIONS
+
+    recorded = (frame or {}).get("root", {}).get("unshaped_prior")
+    if recorded is not None:
+        return np.asarray(recorded, dtype=np.float64).reshape(-1)
+    from tactics import play_mask
+
+    mask = np.asarray(play_mask(obs, memory), dtype=bool)
+    prior = np.zeros(N_ACTIONS, dtype=np.float64)
+    live = np.flatnonzero(mask)
+    if live.size:
+        ramp = 1.0 + (np.arange(live.size, dtype=np.float64) % 7)
+        prior[live] = ramp / ramp.sum()
+    return prior
+
+
+def matrix_cases() -> list[dict]:
+    """Hand-built strategy shapes for the regret cycle.
+
+    Deliberately irregular, for M4's reason: the deployed configuration makes a
+    whole class of arithmetic invisible. Equal priors normalize to themselves,
+    an all-zero regret vector never exercises the positive branch, and a single
+    enemy hash never exercises the particle weighting. Every one of those is a
+    case here.
+    """
+    rng = np.random.default_rng(20260809)
+    cases: list[dict] = []
+    shapes = [(1, 1, 1), (2, 3, 1), (8, 12, 3), (16, 12, 8), (5, 4, 2)]
+    for n_a, n_b, n_h in shapes:
+        for variant in range(3):
+            if variant == 0:            # everything zero: the fallback branches
+                regrets = np.zeros(n_a)
+                prior = np.zeros(n_a)
+                weights = np.zeros(n_h)
+            elif variant == 1:          # uniform: the deployed shape
+                regrets = np.zeros(n_a)
+                prior = np.full(n_a, 1.0 / n_a)
+                weights = np.full(n_h, 1.0 / n_h)
+            else:                       # irregular, with negatives to be clipped
+                regrets = rng.standard_normal(n_a) * 3.0
+                prior = np.abs(rng.standard_normal(n_a))
+                weights = rng.standard_normal(n_h)
+            if variant == 2 and n_a > 1:
+                # One live entry, the rest below the selector's 1e-6 * max
+                # cutoff, and the *average strategy* piled on a dead one. This
+                # is the only shape in which "drop actions the live prior
+                # zeroed" changes the answer; a prior of plain magnitudes never
+                # goes near the cutoff.
+                prior = np.full(n_a, 1e-12)
+                prior[-1] = 1.0
+            cases.append(
+                {
+                    "n_a": n_a,
+                    "n_b": n_b,
+                    "n_h": n_h,
+                    "n": [0, 1, 7, 64, 4096][(n_a + variant) % 5],
+                    "regrets": regrets,
+                    "prior": prior,
+                    "avg_strategy": (
+                        np.linspace(9.0, 1.0, n_a)
+                        if variant == 2
+                        else np.abs(rng.standard_normal(n_a)) * (variant != 0)
+                    ),
+                    "marginal_visits": np.floor(rng.random(n_a) * 5.0),
+                    "first_play": float(rng.standard_normal()),
+                    "enemy_weights": weights,
+                    "enemy_regrets": [rng.standard_normal(n_b) * 2.0 for _ in range(n_h)],
+                    "enemy_priors": [np.abs(rng.standard_normal(n_b)) for _ in range(n_h)],
+                    "visits": [np.floor(rng.random((n_a, n_b)) * 3.0) for _ in range(n_h)],
+                    "q": [rng.standard_normal((n_a, n_b)) for _ in range(n_h)],
+                    "a_idx": (n_a - 1) // 2,
+                    "b_idx": (n_b - 1) // 2,
+                    "leaf_value": float(rng.standard_normal()),
+                }
+            )
+    return cases
+
+
+def _matrix_expectation(case: dict) -> list:
+    from matrix import (
+        aggregate_self_utilities,
+        apply_joint_backup,
+        effective_q,
+        enemy_widening_limit,
+        exploration_epsilon,
+        matrix_utilities,
+        mixed_strategy,
+        normalize_average_strategy,
+        regret_plus_update,
+        select_root_action,
+        self_widening_limit,
+    )
+
+    n = case["n"]
+    out: list = [self_widening_limit(n), enemy_widening_limit(n), exploration_epsilon(n)]
+    sigma_self = mixed_strategy(case["regrets"], case["prior"], n)
+    out.append(sigma_self)
+    enemy_sigmas, q_effs = [], []
+    for h in range(case["n_h"]):
+        sigma_b = mixed_strategy(case["enemy_regrets"][h], case["enemy_priors"][h], n)
+        q_eff = effective_q(case["visits"][h], case["q"][h], case["first_play"])
+        out += [sigma_b, q_eff.ravel()]
+        enemy_sigmas.append(sigma_b)
+        q_effs.append(q_eff)
+    u_self, v = aggregate_self_utilities(
+        sigma_self, case["enemy_weights"], enemy_sigmas, q_effs
+    )
+    out += [u_self, v]
+    u_h, u_enemy, v_h = matrix_utilities(sigma_self, enemy_sigmas[0], q_effs[0])
+    out += [u_h, u_enemy, v_h]
+    out.append(regret_plus_update(case["regrets"], u_self, v, maximizing=True))
+    out.append(regret_plus_update(case["enemy_regrets"][0], u_enemy, v, maximizing=False))
+    visits, value_sum, q = apply_joint_backup(
+        visits=case["visits"][0],
+        value_sum=np.zeros_like(case["visits"][0]),
+        q=case["q"][0],
+        a_idx=case["a_idx"],
+        b_idx=case["b_idx"],
+        leaf_value=case["leaf_value"],
+    )
+    out += [visits.ravel(), value_sum.ravel(), q.ravel()]
+    out.append(normalize_average_strategy(case["avg_strategy"]))
+    out.append(
+        select_root_action(case["avg_strategy"], case["marginal_visits"], case["prior"])
+    )
+    return out
+
+
+def _matrix_stream(case: dict) -> list[int]:
+    out = [case["n_a"], case["n_b"], case["n_h"], case["n"]]
+    out += _f64_bits(case["regrets"])
+    out += _f64_bits(case["prior"])
+    out += _f64_bits(case["avg_strategy"])
+    out += _f64_bits(case["marginal_visits"])
+    out += _f64_bits([case["first_play"]])
+    out += _f64_bits(case["enemy_weights"])
+    for h in range(case["n_h"]):
+        out += _f64_bits(case["enemy_regrets"][h])
+        out += _f64_bits(case["enemy_priors"][h])
+        out += _f64_bits(np.asarray(case["visits"][h]).ravel())
+        out += _f64_bits(np.asarray(case["q"][h]).ravel())
+    out += [case["a_idx"], case["b_idx"]]
+    out += _f64_bits([case["leaf_value"]])
+    return out
+
+
+def _tactical_pairs(frame, synthetic: bool):
+    """`(obs, memory, frame)` for the tactical surfaces.
+
+    Real frames carry their own belief and history. The synthetic block passes
+    `None` for the frame, which reduces to an empty belief and a pass history —
+    those positions exist to reach turn numbers and board shapes the corpus does
+    not (the garrison-floor window, the deathtouch regime, an affordable build).
+    """
+    pairs = []
+    if frame is None:
+        if not synthetic:
+            return pairs
+        from observe import emit_observation
+
+        for state in synthetic_states():
+            for seat in (0, 1):
+                obs = emit_observation(state, seat, as_arrays=True)
+                pairs.append((obs, memory_for(state, seat), None))
+        for obs, memory in _crafted_memory_pairs():
+            pairs.append((obs, memory, None))
+        pairs.extend(tactical_positions())
+    elif "memory" in frame:
+        pairs.append((_obs_from_capture(frame["obs"]), _memory_from_capture(frame["memory"]), frame))
+    return pairs
+
+
+DIRECTIONS_PY = ((-1, 0), (1, 0), (0, -1), (0, 1))
+
+
+def _decide_expectation(obs, memory, belief, tensor, prev, recent):
+    """The oracle's no-search decision on one recorded frame.
+
+    TorchScript prior -> the play mask -> the shaping blend ->
+    `highest_prior_legal` -> the hard rules. That is exactly what
+    `runtime.decide` commits when zero simulations complete, which M0 measured
+    as a common outcome rather than an edge case.
+    """
+    import torch
+
+    from network import backup_value, legal_normalized_policy
+    from runtime import highest_prior_legal
+    from tactics import apply_pre_contact_prior, constrain_nn_action, enemy_is_visible, play_mask
+
+    del backup_value  # the value is not part of a zero-simulation decision
+    session = torchscript_session()
+    x = torch.from_numpy(np.array(tensor, dtype=np.float32).reshape(1, 49, 21, 21))
+    policy, pass_logit, _wdl = session["policy_wdl"](x)
+    mask = np.asarray(play_mask(obs, memory), dtype=bool)
+    prior_t = legal_normalized_policy(policy, pass_logit, torch.from_numpy(mask).unsqueeze(0))
+    unshaped = prior_t.squeeze(0).detach().cpu().numpy().astype(np.float64)
+    lam_pre, lam_post, clip, floor = _shaping_knobs(None)
+    lam = lam_post if enemy_is_visible(obs, memory) else lam_pre
+    shaped = np.asarray(
+        apply_pre_contact_prior(
+            unshaped,
+            obs,
+            memory,
+            mask=mask,
+            belief=belief,
+            lam=lam,
+            log_clip=clip,
+            floor_frac=floor,
+            prev_action=prev,
+        ),
+        dtype=np.float64,
+    )
+    fallback = tuple(int(v) for v in highest_prior_legal(shaped, mask))
+    action = tuple(
+        int(v)
+        for v in constrain_nn_action(
+            obs,
+            memory,
+            fallback,
+            prev_action=prev,
+            recent_actions=tuple(recent),
+            prior=shaped,
+        )
+    )
+    live = np.sort(shaped[mask])[::-1]
+    margin = float(live[0] - live[1]) if live.size >= 2 else 1.0
+    return fallback, action, margin
+
+
 # --- the network oracle ------------------------------------------------------
 
 _SESSION = None
@@ -1724,6 +2269,260 @@ def build_cases(
                 stream += encode_belief_state(belief)
                 stream += encode_draws(rng.take())
                 expected.append((after_admit, sampled, after_replace))
+        elif kind in (
+            "playmask", "shaping", "candidates", "planners", "constrain", "decide"
+        ):
+            from action import N_ACTIONS
+            from tactics import (
+                apply_pre_contact_prior,
+                army_concentration,
+                believed_enemy_general,
+                blend_prior,
+                blocks_oscillation,
+                castle_build_site,
+                castle_tithe_move,
+                constrain_nn_action,
+                defend_general_move,
+                enemy_is_visible,
+                enemy_seek_target,
+                garrison_floor,
+                general_threat,
+                heuristic_action_scores,
+                kill_plan,
+                king_cell,
+                known_enemy_general_cell,
+                mandatory_action_indices,
+                max_threat_arrival,
+                own_general_cell,
+                path_distance_field,
+                play_mask,
+                policy_ordered_candidates,
+                reveal_count_grid,
+                seek_goals,
+                structure_idle_army,
+                wave_assembly_cell,
+            )
+
+            for obs, memory, source in _tactical_pairs(frame, synthetic):
+                mask = np.asarray(play_mask(obs, memory), dtype=bool)
+                if kind == "playmask":
+                    from action import legal_mask as _legal
+
+                    base = np.asarray(_legal(obs, memory), dtype=bool)
+                    owners = np.asarray(obs.owner_grid, dtype=np.int32)
+                    armies = np.asarray(obs.army_grid, dtype=np.int32)
+                    own_total = int(armies[owners == 1].sum())
+                    stream += encode_observation(obs) + encode_memory(memory)
+                    expected.append(
+                        (
+                            mask,
+                            int(np.sum(base & ~mask)),
+                            int(enemy_is_visible(obs, memory)),
+                            int(garrison_floor(own_total)),
+                            int(max_threat_arrival(obs, memory)),
+                        )
+                    )
+                elif kind == "shaping":
+                    belief = _lite_belief_object(source)
+                    prev, _recent = _history_of(source)
+                    prior = _network_prior_for(source, obs, memory)
+                    lam, _lam_post, clip, floor = _shaping_knobs(source)
+                    stream += encode_observation(obs) + encode_memory(memory)
+                    stream += _lite_belief_ints(source) + _history_ints(source)
+                    stream += _f64_bits(prior)
+                    stream += _f64_bits([lam, clip, floor])
+                    scores = heuristic_action_scores(
+                        obs, memory, mask, belief, prev_action=prev
+                    )
+                    expected.append(
+                        (
+                            np.asarray(scores, dtype=np.float64),
+                            np.asarray(
+                                blend_prior(
+                                    prior,
+                                    scores,
+                                    mask,
+                                    lam=lam,
+                                    log_clip=clip,
+                                    floor_frac=floor,
+                                ),
+                                dtype=np.float64,
+                            ),
+                        )
+                    )
+                elif kind == "candidates":
+                    from action import legal_mask as _legal
+
+                    prior = _network_prior_for(source, obs, memory)
+                    for limit, use_play in ((1, 1), (8, 1), (16, 1), (12, 0)):
+                        active = mask if use_play else np.asarray(_legal(obs, memory), dtype=bool)
+                        stream += encode_observation(obs) + encode_memory(memory)
+                        stream += _f64_bits(prior) + [limit, use_play]
+                        mandatory = mandatory_action_indices(obs, memory, mask=active)
+                        expected.append(
+                            (
+                                [int(i) for i in mandatory],
+                                [
+                                    int(i)
+                                    for i in policy_ordered_candidates(
+                                        prior, active, mandatory=mandatory, limit=limit
+                                    )
+                                ],
+                            )
+                        )
+                elif kind == "planners":
+                    belief = _lite_belief_object(source)
+                    stream += encode_observation(obs) + encode_memory(memory)
+                    stream += _lite_belief_ints(source)
+                    goals = seek_goals(obs, memory, belief)
+                    exclude = own_general_cell(obs, memory)
+                    share, max_own, total = army_concentration(obs, exclude=exclude)
+                    site = castle_build_site(obs, memory)
+                    threat = general_threat(obs, memory)
+                    expected.append(
+                        {
+                            "own_general": own_general_cell(obs, memory),
+                            "enemy_general": known_enemy_general_cell(obs, memory),
+                            "king": king_cell(obs, exclude=None),
+                            "believed": believed_enemy_general(belief),
+                            "seek_target": enemy_seek_target(obs, memory, belief),
+                            "goals": goals,
+                            "assembly": wave_assembly_cell(
+                                obs, memory, belief, exclude=exclude
+                            ),
+                            "share": float(share),
+                            "max_own": int(max_own),
+                            "total": int(total),
+                            "idle": int(structure_idle_army(obs, memory)),
+                            "threat_arrival": int(max_threat_arrival(obs, memory)),
+                            "site": site,
+                            "tithe": castle_tithe_move(obs, memory, site) if site else None,
+                            "threat": threat,
+                            "defend": defend_general_move(obs, memory, threat)
+                            if threat
+                            else None,
+                            "kill": kill_plan(obs, memory),
+                            "reveal": np.asarray(reveal_count_grid(obs), dtype=np.int64),
+                            "field": np.asarray(
+                                path_distance_field(obs, goals), dtype=np.int64
+                            ),
+                        }
+                    )
+                elif kind == "constrain":
+                    prev, recent = _history_of(source)
+                    prior = _network_prior_for(source, obs, memory)
+                    shaped = np.asarray(
+                        apply_pre_contact_prior(
+                            prior,
+                            obs,
+                            memory,
+                            mask=mask,
+                            belief=_lite_belief_object(source),
+                            lam=_shaping_knobs(source)[0],
+                            log_clip=_shaping_knobs(source)[2],
+                            floor_frac=_shaping_knobs(source)[3],
+                            prev_action=prev,
+                        ),
+                        dtype=np.float64,
+                    )
+                    played = tuple(int(v) for v in (source or {}).get("action", PASS))
+                    reveal = np.asarray(reveal_count_grid(obs), dtype=np.int64)
+                    # Three chosen actions per position: what the bot played,
+                    # a pass (the no-pass hard rule), and the reverse of the
+                    # previous move (the oscillation rule). Without the last
+                    # two, most corpus frames never reach either branch.
+                    reversed_prev = (
+                        (0, prev[1] + int(DIRECTIONS_PY[prev[3]][0]),
+                         prev[2] + int(DIRECTIONS_PY[prev[3]][1]),
+                         (prev[3] ^ 1), 0)
+                        if prev[0] == 0
+                        else PASS
+                    )
+                    for chosen, with_prior in (
+                        (played, True), (PASS, True), (reversed_prev, True), (played, False),
+                    ):
+                        stream += encode_observation(obs) + encode_memory(memory)
+                        stream += [int(v) for v in chosen]
+                        stream += _history_ints(source)
+                        stream += [int(with_prior)] + _f64_bits(shaped)
+                        expected.append(
+                            (
+                                tuple(
+                                    int(v)
+                                    for v in constrain_nn_action(
+                                        obs,
+                                        memory,
+                                        chosen,
+                                        prev_action=prev,
+                                        recent_actions=tuple(recent),
+                                        prior=shaped if with_prior else None,
+                                    )
+                                ),
+                                int(
+                                    blocks_oscillation(
+                                        chosen, prev, obs, recent_actions=tuple(recent)
+                                    )
+                                ),
+                            )
+                        )
+                elif kind == "decide":
+                    tensor = (source or {}).get("root", {}).get("tensor")
+                    if tensor is None:
+                        continue
+                    prev, recent = _history_of(source)
+                    lam_pre, lam_post, clip, floor = _shaping_knobs(source)
+                    flat = np.asarray(tensor, dtype=np.float32).reshape(-1)
+                    stream += encode_observation(obs) + encode_memory(memory)
+                    stream += _lite_belief_ints(source)
+                    stream += _f32_bits(flat)
+                    stream += _history_ints(source)
+                    stream += _f64_bits([lam_pre, lam_post, clip, floor])
+                    expected.append(
+                        _decide_expectation(
+                            obs, memory, _lite_belief_object(source), flat, prev, recent
+                        )
+                    )
+        elif kind == "search":
+            for obs, memory, belief, cfg, batches, freeze in _search_setups(
+                frame, synthetic
+            ):
+                prior = _search_prior_for(frame, obs, memory)
+                case = _search_expectation(
+                    obs, memory, belief, prior, 0.25, cfg, batches, freeze,
+                    90210 + len(expected),
+                )
+                expected.append(case)
+                stream += encode_observation(obs) + encode_memory(memory)
+                stream += encode_belief_state(belief)
+                stream += _f64_bits(prior) + _f64_bits([0.25])
+                stream += [
+                    cfg["depth"], cfg["pending_batch"], cfg["n_particles"],
+                    cfg["max_nodes"], cfg["max_enemy_tables"], batches,
+                    int(freeze),
+                ]
+                stream += encode_draws(case["draws"])
+        elif kind == "runtime":
+            if frame is not None:
+                continue  # the inputs are synthetic; one pass is enough
+            from runtime import highest_prior_legal, nearest_rank_p99
+
+            for samples, prior, mask in runtime_cases():
+                stream += [len(samples)] + _f64_bits(samples)
+                stream += _f64_bits(prior)
+                stream += [int(bool(v)) for v in mask]
+                try:
+                    p99 = (1, float(nearest_rank_p99(samples)))
+                except ValueError:
+                    p99 = (0, 0.0)
+                expected.append(
+                    (p99, tuple(int(v) for v in highest_prior_legal(prior, mask)))
+                )
+        elif kind == "matrix":
+            if frame is not None:
+                continue  # the shapes are synthetic; one pass is enough
+            for case in matrix_cases():
+                stream += _matrix_stream(case)
+                expected.append(_matrix_expectation(case))
         elif kind == "symmetry":
             from symmetry import (
                 SYMMETRIES,
@@ -1784,6 +2583,8 @@ _WORST: dict[str, float] = {}
 
 def reset_stats() -> None:
     _WORST.clear()
+    for key in _BLAS_FLIPS:
+        _BLAS_FLIPS[key] = 0
 
 
 def worst_observed() -> dict[str, float]:
@@ -1901,6 +2702,626 @@ def _compare_belief(kind: str, case: int, want, got: list[int], at: int) -> list
                 )
                 break
     return problems
+
+
+def _first_diff(got: list, want: list):
+    for k, (a, b) in enumerate(zip(got, want)):
+        if a != b:
+            return f"index {k} ({a} != {b})"
+    return f"index {min(len(got), len(want))} (length)"
+
+
+def _compare_planners(i: int, want: dict, got: list[int]) -> list[str]:
+    """Every planner answer, named, so a failure says which one moved."""
+    problems: list[str] = []
+    at = 0
+
+    def cell():
+        nonlocal at
+        present, r, c = got[at], got[at + 1], got[at + 2]
+        at += 3
+        return (int(r), int(c)) if present else None
+
+    def action():
+        nonlocal at
+        present = got[at]
+        value = tuple(int(v) for v in got[at + 1 : at + 6])
+        at += 6
+        return value if present else None
+
+    for name in ("own_general", "enemy_general", "king", "believed", "seek_target"):
+        rust = cell()
+        if rust != want[name]:
+            problems.append(f"planners[{i}]: {name} {rust} != {want[name]}")
+    n_goals = got[at]; at += 1
+    rust_goals = [(int(got[at + 2 * k]), int(got[at + 2 * k + 1])) for k in range(n_goals)]
+    at += 2 * n_goals
+    if rust_goals != list(want["goals"]):
+        problems.append(
+            f"planners[{i}]: seek_goals {len(rust_goals)} vs {len(want['goals'])}; "
+            f"first difference at {_first_diff(rust_goals, list(want['goals']))}"
+        )
+    rust = cell()
+    if rust != want["assembly"]:
+        problems.append(f"planners[{i}]: wave_assembly_cell {rust} != {want['assembly']}")
+    share = float(_decode_f64(got[at : at + 1])[0]); at += 1
+    if share != want["share"]:
+        problems.append(f"planners[{i}]: army share {share!r} != {want['share']!r}")
+    for name in ("max_own", "total", "idle", "threat_arrival"):
+        if int(got[at]) != int(want[name]):
+            problems.append(f"planners[{i}]: {name} {got[at]} != {want[name]}")
+        at += 1
+
+    rust = cell()
+    if rust != want["site"]:
+        problems.append(f"planners[{i}]: castle_build_site {rust} != {want['site']}")
+    rust = action()
+    if rust != (tuple(want["tithe"]) if want["tithe"] else None):
+        problems.append(f"planners[{i}]: castle_tithe_move {rust} != {want['tithe']}")
+
+    present, tr, tc, td = got[at], got[at + 1], got[at + 2], got[at + 3]
+    at += 4
+    rust_threat = ((int(tr), int(tc)), int(td)) if present else None
+    want_threat = (
+        (tuple(want["threat"][0]), int(want["threat"][1])) if want["threat"] else None
+    )
+    if rust_threat != want_threat:
+        problems.append(f"planners[{i}]: general_threat {rust_threat} != {want_threat}")
+    rust = action()
+    if rust != (tuple(want["defend"]) if want["defend"] else None):
+        problems.append(f"planners[{i}]: defend_general_move {rust} != {want['defend']}")
+
+    present, steps, margin = got[at], got[at + 1], got[at + 2]
+    at += 3
+    rust_kill = (int(steps), int(margin)) if present else None
+    first = action()
+    want_kill = (int(want["kill"][0]), int(want["kill"][1])) if want["kill"] else None
+    want_first = tuple(want["kill"][2]) if want["kill"] else None
+    if rust_kill != want_kill or first != want_first:
+        problems.append(
+            f"planners[{i}]: kill_plan {rust_kill}/{first} != {want_kill}/{want_first}"
+        )
+
+    reveal = want["reveal"].ravel()
+    got_reveal = np.asarray(got[at : at + reveal.size], dtype=np.int64)
+    at += reveal.size
+    if not np.array_equal(got_reveal, reveal):
+        bad = int(np.argmax(got_reveal != reveal))
+        problems.append(
+            f"planners[{i}]: reveal_count_grid differs first at cell {bad} "
+            f"({got_reveal[bad]} != {reveal[bad]})"
+        )
+    field = want["field"].ravel()
+    got_field = np.asarray(got[at : at + field.size], dtype=np.int64)
+    if not np.array_equal(got_field, field):
+        bad = int(np.argmax(got_field != field))
+        problems.append(
+            f"planners[{i}]: path_distance_field differs first at cell {bad} "
+            f"({got_field[bad]} != {field[bad]})"
+        )
+    return problems
+
+
+def _compare_matrix(i: int, want: list, got: list[int]) -> list[str]:
+    """The regret cycle, under the one tolerance the oracle's BLAS forces."""
+    problems: list[str] = []
+    at = 0
+    names = [
+        "self_widening_limit", "enemy_widening_limit", "exploration_epsilon",
+        "sigma_self",
+    ]
+    for k, value in enumerate(want):
+        if isinstance(value, (int, np.integer)) and k < 2:
+            if int(got[at]) != int(value):
+                problems.append(f"matrix[{i}]: {names[k]} {got[at]} != {value}")
+            at += 1
+        elif isinstance(value, (int, np.integer)):
+            # the trailing `select_root_action` index
+            if int(got[at]) != int(value):
+                problems.append(
+                    f"matrix[{i}]: select_root_action {got[at]} != {value}"
+                )
+            at += 1
+        elif np.isscalar(value) or isinstance(value, float):
+            rust = float(_decode_f64(got[at : at + 1])[0])
+            at += 1
+            delta = abs(rust - float(value))
+            _note("matrix.scalar.max", delta)
+            if delta > MATRIX_TOLERANCE:
+                problems.append(
+                    f"matrix[{i}]: scalar at {k} {rust!r} != {value!r} (|d| {delta:.3g})"
+                )
+        else:
+            arr = np.asarray(value, dtype=np.float64).ravel()
+            rust = _decode_f64(got[at : at + arr.size])
+            at += arr.size
+            delta = np.abs(rust - arr)
+            _note("matrix.vector.max", float(delta.max()) if delta.size else 0.0)
+            if delta.size and delta.max() > MATRIX_TOLERANCE:
+                bad = int(np.argmax(delta))
+                problems.append(
+                    f"matrix[{i}]: vector at {k} differs at {bad} "
+                    f"({rust[bad]!r} != {arr[bad]!r}, |d| {delta.max():.3g})"
+                )
+    return problems
+
+
+# How much regret has to be present before a regret-matching branch counts as
+# a real disagreement rather than the zero test resolving differently. Set from
+# measurement: the flips this harness sees decide on 2.8e-17, half an ulp of the
+# first-play value they are derived from.
+REGRET_TIE_EPS = 1e-12
+
+
+class _PairwiseDots:
+    """Run the oracle's search with `@` replaced by NumPy's pairwise reduction.
+
+    Not a convenience. `matrix.py` writes `q_eff @ sigma_enemy`, NumPy sends
+    that to BLAS, and BLAS's reduction order is the vendor's — so the *oracle*
+    is host-dependent there (see `matrix.rs`). On its own that is a 1-ulp
+    difference the `matrix` surface measures and tolerates.
+
+    Regret matching plus then amplifies it into a different strategy. Its first
+    branch is `sum(max(regret, 0)) <= 0`, and on the first backup of a fresh
+    enemy table the true regret is exactly zero, so whether the accumulated
+    float lands on 0.0 or on 2.8e-17 decides between "fall back to the prior"
+    and "spread uniformly over the positive entries". One ulp becomes a
+    qualitatively different mixed strategy, deterministically.
+
+    Running the oracle a second time with the one substitution the port makes
+    turns that from an unexplained mismatch into a measured one: the port must
+    match *this* oracle to the last bit, and the gap between the two oracles is
+    reported as what it is — the search's sensitivity to its own BLAS.
+    """
+
+    def __enter__(self):
+        import matrix
+        import tree
+
+        self.modules = (matrix, tree)
+        self.saved = [
+            (m, name, getattr(m, name))
+            for m in self.modules
+            for name in ("matrix_utilities", "aggregate_self_utilities")
+            if hasattr(m, name)
+        ]
+        for m in self.modules:
+            if hasattr(m, "matrix_utilities"):
+                m.matrix_utilities = _pairwise_matrix_utilities
+            if hasattr(m, "aggregate_self_utilities"):
+                m.aggregate_self_utilities = _pairwise_aggregate
+        return self
+
+    def __exit__(self, *exc):
+        for module, name, value in self.saved:
+            setattr(module, name, value)
+        return False
+
+
+def _np_pairwise(values) -> float:
+    """`np.sum`'s reduction, which is what `rng::npsum` reproduces in Rust."""
+    return float(np.add.reduce(np.asarray(values, dtype=np.float64).ravel()))
+
+
+def _pairwise_matrix_utilities(sigma_self, sigma_enemy, q_eff):
+    s = np.asarray(sigma_self, np.float64).ravel()
+    b = np.asarray(sigma_enemy, np.float64).ravel()
+    q = np.asarray(q_eff, np.float64)
+    u_self = np.array([_np_pairwise(q[i] * b) for i in range(len(s))])
+    u_enemy = np.array([_np_pairwise(s * q[:, j]) for j in range(len(b))])
+    return u_self, u_enemy, _np_pairwise(s * u_self)
+
+
+def _pairwise_aggregate(sigma_self, enemy_weights, enemy_sigmas, q_eff_list):
+    s = np.asarray(sigma_self, np.float64).ravel()
+    w = np.maximum(np.asarray(enemy_weights, np.float64).ravel(), 0.0)
+    total = _np_pairwise(w)
+    if total <= 0.0 and len(w):
+        w = np.full(len(w), 1.0 / len(w))
+    elif total > 0.0:
+        w = w / total
+    u_self = np.zeros(len(s), dtype=np.float64)
+    for weight, sigma_b, q_eff in zip(w, enemy_sigmas, q_eff_list):
+        if weight <= 0.0:
+            continue
+        u_h, _, _ = _pairwise_matrix_utilities(s, sigma_b, q_eff)
+        u_self = u_self + weight * u_h
+    return u_self, _np_pairwise(s * u_self)
+
+
+def _run_search(obs, memory, belief, prior, value, cfg, batches, freeze, rng):
+    """Build a tree from one frame and run it, with every draw recorded.
+
+    `replace_from_belief` builds `np.random.default_rng(0)` inside itself, so
+    the factory is patched for the whole run and those draws land in the same
+    ordered log — the Rust side reads one stream in call order, and a separate
+    log would silently permit a port that made them at a different point.
+    """
+    from search import ScriptedEvaluator, SearchConfig, SearchController
+
+    controller = SearchController(
+        seat=int(belief.seat),
+        evaluator=ScriptedEvaluator(prior=np.asarray(prior, dtype=np.float64), value=value),
+        config=SearchConfig(
+            depth=cfg["depth"],
+            pending_batch=cfg["pending_batch"],
+            max_nodes=cfg["max_nodes"],
+            max_enemy_tables=cfg["max_enemy_tables"],
+            n_particles=cfg["n_particles"],
+        ),
+        rng=rng,
+    )
+    from capture_morpheus import RecordingGenerator
+
+    inner = RecordingGenerator(np.random.default_rng(0))
+    inner.draws = rng.draws
+    real = np.random.default_rng
+    try:
+        np.random.default_rng = lambda seed=None: inner
+        controller.ensure_root(obs, memory, belief)
+        for _ in range(batches):
+            controller.run_batch(belief, freeze_widening=freeze)
+    finally:
+        np.random.default_rng = real
+
+    tree = controller.tree
+    root = tree.root
+    tables = []
+    for table in root.enemy_tables.values():
+        tables.append(
+            {
+                "actions": [int(a) for a in table.actions],
+                "prior": np.asarray(table.prior, dtype=np.float64),
+                "regret": np.asarray(table.regret, dtype=np.float64),
+                "avg": np.asarray(table.avg_strategy, dtype=np.float64),
+                "n_self": int(table.visits.shape[0]),
+                "last_used": int(table.last_used),
+                "touch_count": int(table.touch_count),
+                "visits": np.asarray(table.visits, dtype=np.float64).ravel(),
+                "q": np.asarray(table.q, dtype=np.float64).ravel(),
+            }
+        )
+    try:
+        index = int(tree.root_action_index())
+    except ValueError:
+        index = -1
+    best = tuple(int(v) for v in controller.best_action()) if root.actions else None
+    return {
+        "completed": int(tree.completed_simulations),
+        "nodes": int(len(tree.nodes)),
+        "hits": int(tree.table_hits),
+        "misses": int(tree.table_misses),
+        "eviction_loss": float(tree.eviction_loss),
+        "joint_visits": float(tree.total_joint_visits),
+        "root_n": int(root.N),
+        "actions": [int(a) for a in root.actions],
+        "prior": np.asarray(root.prior, dtype=np.float64),
+        "regret": np.asarray(root.regret, dtype=np.float64),
+        "avg": np.asarray(root.avg_strategy, dtype=np.float64),
+        "tables": tables,
+        "marginal": np.asarray(controller.root_marginal_visits(), dtype=np.float64),
+        "index": index,
+        "best": best,
+        "degraded": _degradation_tail(controller, int(tree.completed_simulations)),
+        "draws": len(rng.draws),
+    }
+
+
+def _search_expectation(obs, memory, belief, prior, value, cfg, batches, freeze, seed):
+    """Both oracles: the shipped one, and the one whose dots the port shares."""
+    blas = _run_search(
+        obs, memory, belief, prior, value, cfg, batches, freeze, recording_rng(seed)
+    )
+    rng = recording_rng(seed)
+    with _PairwiseDots():
+        pairwise = _run_search(
+            obs, memory, belief, prior, value, cfg, batches, freeze, rng
+        )
+    return {"blas": blas, "pairwise": pairwise, "draws": rng.take()}
+
+
+# The four `select_degraded_action` inputs the surface asks about. The third
+# and fourth are the interesting ones: with a real root that says pass, the
+# path has to prefer a non-pass policy fallback over emitting pass after a
+# search — a branch no corpus frame reaches, because a root with candidates
+# almost never picks pass.
+_DEGRADATION_PROBES = (
+    (0, False, PASS),
+    (0, True, (0, 1, 1, 0, 0)),
+    (None, True, (0, 1, 1, 0, 0)),
+    (None, True, PASS),
+)
+
+_LEVEL_ORDER = ("pass", "policy", "visit", "average")
+
+
+def _degradation_tail(controller, completed: int) -> list[tuple]:
+    from runtime import select_degraded_action
+
+    out = []
+    for sims, has_root, fallback in _DEGRADATION_PROBES:
+        action, level = select_degraded_action(
+            completed_simulations=completed if sims is None else sims,
+            has_root_result=has_root,
+            policy_fallback=fallback,
+            search=controller,
+        )
+        out.append(
+            (tuple(int(v) for v in action), _LEVEL_ORDER.index(level.value))
+        )
+    return out
+
+
+def runtime_cases() -> list[tuple]:
+    """Sample vectors for the two controller functions with no state."""
+    from action import N_ACTIONS
+
+    rng = np.random.default_rng(4242)
+    cases = []
+    for n in (0, 1, 2, 99, 100, 101, 200):
+        samples = np.round(rng.random(n) * 50.0, 6) if n else np.zeros(0)
+        prior = np.zeros(N_ACTIONS, dtype=np.float64)
+        mask = np.zeros(N_ACTIONS, dtype=bool)
+        if n:
+            # The illegal action carries the largest mass, so a fallback that
+            # ignored the mask would pick it. A legal-normalized prior can
+            # never look like this, which is why nothing else reaches the mask.
+            live = [(n * 13) % (N_ACTIONS - 1), (n * 29) % (N_ACTIONS - 1)]
+            mask[live] = True
+            prior[live] = [0.1, 0.2]
+            prior[(n * 7) % (N_ACTIONS - 1)] = 0.9
+        cases.append((samples, prior, mask))
+    return cases
+
+
+def _search_setups(frame, synthetic: bool):
+    """`(obs, memory, belief, config, batches, freeze)` per search case.
+
+    Recorded frames run one small, *odd* configuration — depth 3, batches of 2,
+    three of them — which crosses the terminal, unexpanded-node and depth-limit
+    exits and makes the enemy-prior materialisation run more than once with
+    tables already installed.
+
+    The synthetic block runs the configurations a recorded frame cannot
+    produce, and it exists because the mutation pass said so: on the smoke
+    slice, breaking eviction, the node cap, child reuse, the terminal value or
+    the widening freeze changed nothing anywhere. Two enemy tables against four
+    particles forces eviction; twenty-four nodes forces the cap's refusal;
+    `freeze` is a flag the corpus never sets because the capture host was never
+    that far behind its deadline.
+    """
+    from belief import BeliefConfig, BeliefState, Particle
+    from memory import empty_memory
+    from observe import emit_observation
+
+    if frame is not None:
+        if "belief" not in frame or "memory" not in frame:
+            return
+        belief = belief_from_frame(frame)
+        if belief is None or belief.n == 0:
+            return
+        yield (
+            _obs_from_capture(frame["obs"]),
+            _memory_from_capture(frame["memory"]),
+            belief,
+            {"depth": 3, "pending_batch": 2, "max_nodes": 64,
+             "max_enemy_tables": 3,
+             "n_particles": int(belief.config.n_particles)},
+            3,
+            False,
+        )
+        return
+    if not synthetic:
+        return
+
+    for base in synthetic_states():
+        h, w = base.armies.shape
+        seat = 0
+        # Four particles that disagree about the enemy's armies, so their enemy
+        # information hashes differ and more than one table is installed —
+        # which is the only way eviction and the LRU ever get a decision.
+        particles = []
+        for k, weight in enumerate((0.4, 0.3, 0.2, 0.1)):
+            state = base._replace()
+            state.armies[:] = base.armies
+            enemy_cells = np.argwhere(np.asarray(state.ownership[1]))
+            for j, (r, c) in enumerate(enemy_cells):
+                state.armies[r, c] = int(base.armies[r, c]) + k * (j + 1)
+            particles.append(
+                Particle(state=state, weight=weight,
+                         enemy_memory=empty_memory(h, w),
+                         enemy_prev_action=None, history=())
+            )
+        belief = BeliefState(
+            seat=seat, particles=particles,
+            config=BeliefConfig(n_particles=4), collapsed=False,
+        )
+        obs = emit_observation(base, seat, as_arrays=True)
+        memory = memory_for(base, seat)
+        for batches, freeze, cap in ((4, False, 24), (2, True, 4096)):
+            yield (
+                obs, memory, belief,
+                {"depth": 6, "pending_batch": 4, "max_nodes": cap,
+                 "max_enemy_tables": 2, "n_particles": 4},
+                batches,
+                freeze,
+            )
+
+
+def _search_prior_for(frame, obs, memory):
+    """A scripted prior that is neither uniform nor the network's.
+
+    Uniform would make every candidate ordering a tie and hide the ranking; the
+    network's own prior would make the search comparison depend on the 6.6e-7 the
+    `prior` surface already measures. A deterministic irregular ramp does
+    neither.
+    """
+    from action import N_ACTIONS, legal_mask
+
+    del frame
+    mask = np.asarray(legal_mask(obs, memory), dtype=bool)
+    prior = np.zeros(N_ACTIONS, dtype=np.float64)
+    live = np.flatnonzero(mask)
+    if live.size:
+        ramp = 1.0 + ((live * 7919) % 23).astype(np.float64)
+        prior[live] = ramp / ramp.sum()
+    return prior
+
+
+# How often, and by how much, the shipped oracle's BLAS dot products change a
+# search statistic. Not a port defect: reported so the number exists.
+_BLAS_FLIPS: dict[str, int] = {"vectors": 0, "regret_branch": 0, "cases": 0}
+
+
+def blas_amplification() -> dict[str, int]:
+    return dict(_BLAS_FLIPS)
+
+
+def _tally_blas_amplification(blas: dict, pairwise: dict) -> None:
+    _BLAS_FLIPS["cases"] += 1
+    pairs = [(blas[k], pairwise[k]) for k in ("prior", "regret", "avg", "marginal")]
+    for tb, tp in zip(blas["tables"], pairwise["tables"]):
+        pairs += [(tb[k], tp[k]) for k in ("prior", "regret", "avg", "visits", "q")]
+    for a, b in pairs:
+        a = np.asarray(a, dtype=np.float64).ravel()
+        b = np.asarray(b, dtype=np.float64).ravel()
+        if a.size != b.size or not np.array_equal(a, b):
+            _BLAS_FLIPS["vectors"] += 1
+            _note("search.blas_vs_pairwise.max",
+                  float(np.abs(a[: b.size] - b[: a.size]).max()) if a.size == b.size else 1.0)
+    for tb, tp in zip(blas["tables"], pairwise["tables"]):
+        pos_b = float(np.maximum(np.asarray(tb["regret"]), 0.0).sum())
+        pos_p = float(np.maximum(np.asarray(tp["regret"]), 0.0).sum())
+        if (pos_b <= 0.0) != (pos_p <= 0.0):
+            _BLAS_FLIPS["regret_branch"] += 1
+            _note("search.regret_branch_decided_on",
+                  max(abs(pos_b), abs(pos_p)))
+
+
+def _compare_search(i: int, case: dict, got: list[int]) -> list[str]:
+    """The tree after N batches, statistic by statistic.
+
+    Strict against the pairwise-dot oracle — the port must match it to the last
+    bit. The shipped BLAS oracle is compared against that one separately, and
+    every place the two differ is tallied as what it is: the search's own
+    sensitivity to whichever BLAS NumPy was built against. See `_PairwiseDots`.
+    """
+    _tally_blas_amplification(case["blas"], case["pairwise"])
+    want = case["pairwise"]
+    problems: list[str] = []
+    at = 0
+
+    def ints(count):
+        nonlocal at
+        chunk = got[at : at + count]
+        at += count
+        return chunk
+
+    def floats(count):
+        nonlocal at
+        chunk = _decode_f64(got[at : at + count])
+        at += count
+        return chunk
+
+    for name in ("completed", "nodes", "hits", "misses"):
+        value = ints(1)[0]
+        if int(value) != int(want[name]):
+            problems.append(f"search[{i}]: {name} {value} != {want[name]}")
+    loss, joint = floats(2)
+    if loss != want["eviction_loss"] or joint != want["joint_visits"]:
+        problems.append(
+            f"search[{i}]: eviction {loss!r}/{joint!r} != "
+            f"{want['eviction_loss']!r}/{want['joint_visits']!r}"
+        )
+    root_n = ints(1)[0]
+    if int(root_n) != want["root_n"]:
+        problems.append(f"search[{i}]: root N {root_n} != {want['root_n']}")
+    n_actions = ints(1)[0]
+    actions = [int(v) for v in ints(n_actions)]
+    if actions != want["actions"]:
+        problems.append(
+            f"search[{i}]: root candidates {len(actions)} vs {len(want['actions'])}; "
+            f"first difference at {_first_diff(actions, want['actions'])}"
+        )
+    for name in ("prior", "regret", "avg"):
+        arr = want[name]
+        rust = floats(arr.size)
+        problems += _float_difference(f"search[{i}]: root {name}", arr, rust)
+    n_tables = ints(1)[0]
+    if int(n_tables) != len(want["tables"]):
+        return problems + [
+            f"search[{i}]: {n_tables} enemy table(s) != {len(want['tables'])}"
+        ]
+    for k in range(int(n_tables)):
+        table = want["tables"][k]
+        n_enemy = ints(1)[0]
+        table_actions = [int(v) for v in ints(n_enemy)]
+        if table_actions != table["actions"]:
+            problems.append(
+                f"search[{i}]: table {k} columns {len(table_actions)} vs "
+                f"{len(table['actions'])}; first difference at "
+                f"{_first_diff(table_actions, table['actions'])}"
+            )
+        for name in ("prior", "regret", "avg"):
+            problems += _float_difference(
+                f"search[{i}]: table {k} {name}", table[name], floats(table[name].size)
+            )
+        n_self, last_used, touch = ints(3)
+        if (int(n_self), int(last_used), int(touch)) != (
+            table["n_self"], table["last_used"], table["touch_count"],
+        ):
+            problems.append(
+                f"search[{i}]: table {k} shape/LRU ({n_self}, {last_used}, {touch}) "
+                f"!= ({table['n_self']}, {table['last_used']}, {table['touch_count']})"
+            )
+        for name in ("visits", "q"):
+            problems += _float_difference(
+                f"search[{i}]: table {k} {name}", table[name], floats(table[name].size)
+            )
+    problems += _float_difference(
+        f"search[{i}]: marginal visits", want["marginal"], floats(want["marginal"].size)
+    )
+    index = ints(1)[0]
+    if int(index) != want["index"]:
+        problems.append(f"search[{i}]: root action index {index} != {want['index']}")
+    present = ints(1)[0]
+    best = tuple(int(v) for v in ints(5))
+    rust_best = best if present else None
+    if rust_best != want["best"]:
+        problems.append(f"search[{i}]: best action {rust_best} != {want['best']}")
+    for k, (want_action, want_level) in enumerate(want["degraded"]):
+        action = tuple(int(v) for v in ints(5))
+        level = int(ints(1)[0])
+        if (action, level) != (want_action, want_level):
+            problems.append(
+                f"search[{i}]: degradation probe {k} "
+                f"{action}/{_LEVEL_ORDER[level]} != "
+                f"{want_action}/{_LEVEL_ORDER[want_level]}"
+            )
+    consumed = ints(1)[0]
+    if int(consumed) != want["draws"]:
+        problems.append(
+            f"search[{i}]: consumed {consumed} draw(s), the oracle recorded "
+            f"{want['draws']}"
+        )
+    return problems
+
+
+def _float_difference(label: str, want, got) -> list[str]:
+    """Bit-exact, with the tolerance reported rather than applied."""
+    want = np.asarray(want, dtype=np.float64).ravel()
+    got = np.asarray(got, dtype=np.float64).ravel()
+    if got.size != want.size:
+        return [f"{label}: length {got.size} != {want.size}"]
+    delta = np.abs(got - want)
+    _note("search.max", float(delta.max()) if delta.size else 0.0)
+    if np.array_equal(got, want):
+        return []
+    bad = int(np.argmax(delta))
+    return [
+        f"{label}: not bit-identical; max |d| {delta.max():.3g} at {bad} "
+        f"({got[bad]!r} != {want[bad]!r})"
+    ]
 
 
 def compare(kind: str, expected: list, actual: list[list[int]]) -> list[str]:
@@ -2367,6 +3788,110 @@ def compare(kind: str, expected: list, actual: list[list[int]]) -> list[str]:
                             want_sampled.state,
                             state,
                         )
+        elif kind == "playmask":
+            want_mask, want_removed, want_seen, want_floor, want_threat = want
+            got_mask = np.asarray(got[:len(want_mask)], dtype=bool)
+            if not np.array_equal(got_mask, want_mask):
+                diff = np.flatnonzero(got_mask != want_mask)
+                problems.append(
+                    f"playmask[{i}]: {diff.size} action(s) differ, first "
+                    f"{int(diff[0])} (rust {bool(got_mask[diff[0]])})"
+                )
+            tail = got[len(want_mask):]
+            for name, want_v, got_v in zip(
+                ("removed", "enemy_visible", "garrison_floor", "threat_arrival"),
+                (want_removed, want_seen, want_floor, want_threat),
+                tail,
+            ):
+                if int(got_v) != int(want_v):
+                    problems.append(f"playmask[{i}]: {name} {got_v} != {want_v}")
+        elif kind == "shaping":
+            want_scores, want_blend = want
+            n = want_scores.size
+            got_scores = _decode_f64(got[:n])
+            got_blend = _decode_f64(got[n : 2 * n])
+            for name, wanted, gotten, tol in (
+                ("scores", want_scores, got_scores, SHAPING_TOLERANCE),
+                ("blend", want_blend, got_blend, SHAPING_TOLERANCE),
+            ):
+                delta = np.abs(gotten - wanted)
+                _note(f"shaping.{name}.max", float(delta.max()) if delta.size else 0.0)
+                if not np.array_equal(gotten, wanted):
+                    bad = int(np.argmax(delta))
+                    over = int(np.sum(delta > tol))
+                    problems.append(
+                        f"shaping[{i}]: {name} not bit-identical; max |d| "
+                        f"{delta.max():.3g} at action {bad} "
+                        f"({gotten[bad]!r} != {wanted[bad]!r}), {over} over {tol:g}"
+                    )
+        elif kind == "candidates":
+            want_mandatory, want_candidates = want
+            at = 0
+            n_m = got[at]; at += 1
+            got_mandatory = got[at : at + n_m]; at += n_m
+            n_c = got[at]; at += 1
+            got_candidates = got[at : at + n_c]
+            if got_mandatory != want_mandatory:
+                problems.append(
+                    f"candidates[{i}]: mandatory {len(got_mandatory)} vs "
+                    f"{len(want_mandatory)}; first difference at "
+                    f"{_first_diff(got_mandatory, want_mandatory)}"
+                )
+            if got_candidates != want_candidates:
+                problems.append(
+                    f"candidates[{i}]: ordered {len(got_candidates)} vs "
+                    f"{len(want_candidates)}; first difference at "
+                    f"{_first_diff(got_candidates, want_candidates)}"
+                )
+        elif kind == "planners":
+            problems += _compare_planners(i, want, got)
+        elif kind == "constrain":
+            want_action, want_blocks = want
+            got_action = tuple(int(v) for v in got[:5])
+            if got_action != want_action:
+                problems.append(
+                    f"constrain[{i}]: action {got_action} != {want_action}"
+                )
+            if int(got[5]) != int(want_blocks) or int(got[6]) != int(want_blocks):
+                problems.append(
+                    f"constrain[{i}]: blocks_oscillation {got[5]}/{got[6]} "
+                    f"!= {want_blocks} (plain / reveal-grid)"
+                )
+        elif kind == "runtime":
+            (want_ok, want_p99), want_action = want
+            got_ok = int(got[0])
+            got_p99 = float(_decode_f64(got[1:2])[0]) if got_ok else 0.0
+            if got_ok != want_ok or (want_ok and got_p99 != want_p99):
+                problems.append(
+                    f"runtime[{i}]: nearest_rank_p99 {got_ok}/{got_p99!r} != "
+                    f"{want_ok}/{want_p99!r}"
+                )
+            got_action = tuple(int(v) for v in got[2:7])
+            if got_action != want_action:
+                problems.append(
+                    f"runtime[{i}]: highest_prior_legal {got_action} != {want_action}"
+                )
+        elif kind == "matrix":
+            problems += _compare_matrix(i, want, got)
+        elif kind == "search":
+            problems += _compare_search(i, want, got)
+        elif kind == "decide":
+            want_fallback, want_action, want_margin = want
+            got_fallback = tuple(int(v) for v in got[:5])
+            got_action = tuple(int(v) for v in got[5:10])
+            got_margin = float(_decode_f64(got[10:11])[0])
+            if got_fallback != want_fallback:
+                problems.append(
+                    f"decide[{i}]: policy fallback {got_fallback} != "
+                    f"{want_fallback} (shaped-prior tie margin "
+                    f"{want_margin:.3g} / {got_margin:.3g})"
+                )
+            if got_action != want_action:
+                problems.append(
+                    f"decide[{i}]: committed {got_action} != {want_action} "
+                    f"(shaped-prior tie margin {want_margin:.3g})"
+                )
+            _note("decide.margin.min", -min(want_margin, got_margin))
         elif kind == "cost":
             want_cost = np.asarray(want, dtype=np.int32).ravel()
             got_cost = np.asarray(got, dtype=np.int32)
@@ -2426,6 +3951,8 @@ def main(argv: list[str] | None = None) -> int:
             "memory", "hash", "tensor", "symmetry", "net", "prior",
             "npsum", "argsort", "summary", "propose", "filter",
             "rejuvenate", "maxent", "reservoir", "toplegal", "initbelief",
+            "matrix", "runtime", "playmask", "candidates", "planners",
+            "shaping", "constrain", "search", "decide",
         ],
     )
     args = parser.parse_args(argv)
@@ -2451,6 +3978,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f"      {problem}")
         failed = failed or bool(problems)
 
+    flips = blas_amplification()
+    if flips["cases"]:
+        print(
+            f"search: the oracle's BLAS moved {flips['vectors']} statistic "
+            f"vector(s) over {flips['cases']} case(s), flipping the "
+            f"regret-matching branch on {flips['regret_branch']} enemy table(s)"
+        )
     stats = worst_observed()
     if stats:
         print("worst observed |\u0394| (the headroom under each budget):")
