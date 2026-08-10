@@ -12,9 +12,11 @@ Process rules for agents that work in this repo. Put game and bot knowledge in `
 - Remote play uses `client/generals_client` via `arena/remote/bridge.py` and
   `scripts/remote_play.py`. That path targets **live generals.io** (classic
   rules), not the competition sandbox. Keep that distinction explicit.
-- Scraped `generals.bot` leaderboard replays are **observational data, not arena
-  matches**. They never enter `data/games/` or a rating fit. See
-  [Leaderboard replays](#leaderboard-replays-scraped) below.
+- Scraped `generals.bot` replays — per-player leaderboard games and whole sprint
+  tournaments alike — are **observational data, not arena matches**. They never
+  enter `data/games/` or a rating fit. See
+  [Leaderboard replays](#leaderboard-replays-scraped) and
+  [Sprint replays](#sprint-replays-scraped) below.
 
 ## File placement
 
@@ -31,6 +33,7 @@ Process rules for agents that work in this repo. Put game and bot knowledge in `
 | Per-turn trajectories (derived, gitignored, opt-in `--record`) | `data/trajectories/` |
 | Bot version registry (committed) | `data/bot_versions/` |
 | Scraped leaderboard replays (derived, gitignored) | `competition-replays/<player>/{win,lose,draw}/` |
+| Scraped sprint tournaments (derived, gitignored) | `competition-replays/_sprints/<tourney-id>/` |
 | Morpheus training-only modules | `training/morpheus/` |
 | Morpheus local derived training data (gitignored) | `data/morpheus/` |
 | Submission-harness failure fixtures | `tests/fixtures/submission_bots/` |
@@ -112,6 +115,35 @@ Process rules:
 - Needs `httpx`; `git submodule update --init competition-scraper` first.
 - Format, field meanings, and the sampling caveats that affect analysis:
   [`docs/engine/leaderboard-replays.md`](docs/engine/leaderboard-replays.md).
+
+## Sprint replays (scraped)
+
+Whole `generals.bot` sprint tournaments — bot-vs-bot games over archived
+checkpoints, competition rules, published as one results asset:
+
+```bash
+python scripts/scrape_sprint.py                     # default: sprint-2026-08-08
+python scripts/scrape_sprint.py <url-or-path> --dry-run
+```
+
+Process rules:
+
+- Different source, different scraper. The `competition-scraper` submodule
+  speaks only `/api/leaderboard`; sprint replays are gzipped blobs named by a
+  results asset, so `scripts/scrape_sprint.py` fetches them. Do not extend the
+  submodule for this.
+- Output goes to `competition-replays/_sprints/<tourney-id>/<pair>/` —
+  gitignored, ~0.9 MB per replay. The `_sprints/` prefix keeps tournaments out
+  of the per-player namespace.
+- Same standing as leaderboard replays: **observational data**. Not our runner,
+  no bot version, never into `data/games/`, `data/ratings/`, or
+  `data/remote_games/`.
+- Results carry the organizers' engine pin and resource limits, and their own
+  note says the pin post-dates the 2026-07-27 move-order tiebreak flip. Read
+  `run.ruleset` in the asset before comparing a sprint result to anything.
+- Needs `httpx`, and the submodule for its pacing primitives.
+- Format, sidecar shape, and the sampling caveats that affect analysis:
+  [`docs/engine/sprint-replays.md`](docs/engine/sprint-replays.md).
 
 ## Subagent roles (workflow only)
 

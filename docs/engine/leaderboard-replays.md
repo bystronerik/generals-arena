@@ -120,6 +120,9 @@ Coordinates are `[row, col]` throughout.
 
 ## Related
 
+- [`sprint-replays.md`](sprint-replays.md) — whole generals.bot tournaments,
+  same replay format but a different source: a results asset plus blob URLs, so
+  a different scraper
 - [`replay-analysis.md`](replay-analysis.md) — reading one of these games:
   timeline, events, fog vs action, and the whole-folder flaw aggregate
 - [`local-matchup.md`](local-matchup.md) — our own competition matches, which
