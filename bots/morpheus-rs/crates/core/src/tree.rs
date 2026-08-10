@@ -29,7 +29,7 @@ use crate::matrix::{
 };
 use crate::board::memory::update_memory;
 use crate::board::observe::emit_observation;
-use crate::reservoir::ParticleReservoir;
+use crate::belief::reservoir::ParticleReservoir;
 use crate::support::rng::npsum;
 
 pub type Digest = [u8; 32];

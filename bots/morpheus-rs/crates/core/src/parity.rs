@@ -35,13 +35,13 @@ use crate::matrix;
 use crate::board::memory::{update_memory, VisibleMemory};
 use crate::nn::network;
 use crate::board::observe::emit_observation;
-use crate::particle_summary::summarize_belief;
-use crate::proposal::{
+use crate::belief::summary::summarize_belief;
+use crate::belief::proposal::{
     propose_enemy_actions, singleton_probs, softmax_masked, top_legal_actions, uniform_legal_probs,
     ProposalTelemetry,
 };
-use crate::recovery::{maximum_entropy_reconstruction, recover_belief, rejuvenate};
-use crate::reservoir::ParticleReservoir;
+use crate::belief::recovery::{maximum_entropy_reconstruction, recover_belief, rejuvenate};
+use crate::belief::reservoir::ParticleReservoir;
 use crate::support::rng::{argsort_desc_numpy, npsum, Method, RecordedDraw, Replay};
 use crate::board::state::GameState;
 use crate::board::symmetry;

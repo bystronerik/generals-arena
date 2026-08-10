@@ -21,8 +21,8 @@ use crate::belief::{
     ess, filter_step, initialize_belief, Action5, BeliefConfig, BeliefState, PASS_ACTION,
 };
 use crate::board::memory::{update_memory, VisibleMemory};
-use crate::proposal::{propose_enemy_actions, ProposalPolicy, ProposalTelemetry};
-use crate::recovery::recover_belief;
+use crate::belief::proposal::{propose_enemy_actions, ProposalPolicy, ProposalTelemetry};
+use crate::belief::recovery::recover_belief;
 use crate::support::rng::SharedRng;
 use crate::search::{
     EnemyPriorRequest, PendingPath, SearchConfig, SearchController, SearchEvaluator, Selection,

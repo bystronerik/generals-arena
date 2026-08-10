@@ -34,7 +34,7 @@ use crate::belief::{
 };
 use crate::board::memory::{update_memory, VisibleMemory, TYPE_FOG, TYPE_STRUCTURE_FOG};
 use crate::board::observe::{emit_observation, observations_match, visibility_mask};
-use crate::proposal::{policy_action_probs, top_legal_actions, ProposalPolicy};
+use crate::belief::proposal::{policy_action_probs, top_legal_actions, ProposalPolicy};
 use crate::support::rng::{npsum, Rng};
 use crate::board::state::GameState;
 use crate::board::transition::{transition, Actions};
@@ -631,7 +631,7 @@ pub fn update_belief<R: Rng + ?Sized>(
     let enemy_actions = match enemy_actions {
         Some(actions) => actions,
         None => {
-            drawn = crate::proposal::propose_enemy_actions(
+            drawn = crate::belief::proposal::propose_enemy_actions(
                 belief,
                 rng,
                 policy.as_deref_mut(),

@@ -32,6 +32,19 @@
 //! where the Python wrote `.sum()` on an array; the sites where the Python
 //! wrote the *builtin* `sum` over a generator stay sequential, because that
 //! is a different function with a different answer.
+//!
+//! ## The rest of the directory
+//!
+//! [`proposal`] is where a new particle's guess comes from, [`recovery`] what
+//! happens when every particle is refuted, [`reservoir`] the bounded sample of
+//! observations the recovery draws on, and [`summary`] the aggregate this
+//! filter hands to [`crate::nn::tensor`]. Nothing outside `belief/` calls the
+//! first three.
+
+pub mod proposal;
+pub mod recovery;
+pub mod reservoir;
+pub mod summary;
 
 use std::rc::Rc;
 

@@ -30,14 +30,11 @@ pub mod board;
 pub mod nn;
 
 pub mod belief;
+
 pub mod deployment;
 pub mod evaluator;
 pub mod matrix;
 pub mod parity;
-pub mod particle_summary;
-pub mod proposal;
-pub mod recovery;
-pub mod reservoir;
 pub mod runtime;
 pub mod search;
 pub mod tactics;

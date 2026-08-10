@@ -95,7 +95,7 @@ pub trait SearchEvaluator {
     /// mutable borrows — so the role is a method instead. `None` means the
     /// belief advances on uniform legal enemy actions, which is what
     /// `deployment.json` ships.
-    fn as_proposal_policy(&mut self) -> Option<&mut (dyn crate::proposal::ProposalPolicy + '_)> {
+    fn as_proposal_policy(&mut self) -> Option<&mut (dyn crate::belief::proposal::ProposalPolicy + '_)> {
         None
     }
 
