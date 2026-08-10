@@ -54,7 +54,7 @@ Small topic files for the Generals Arena research repo.
 - [morpheus](bots/morpheus/index.md) — RL policy/value network + belief-aware simultaneous MCTS
 - [morpheus-rs rewrite plan](bots/morpheus-rs/rewrite-plan.md) — Rust sibling of morpheus: milestones, gates, risks
 - [morpheus-rs parity corpus](bots/morpheus-rs/parity-corpus.md) — recorded frames and RNG streams the Rust port is checked against
-- [morpheus-rs packaging](bots/morpheus-rs/packaging.md) — crate layout, content hash, and the two submission variants
+- [morpheus-rs packaging](bots/morpheus-rs/packaging.md) — crate layout, content hash, and the hash-named submission archive
 - [morpheus-rs parity harness](bots/morpheus-rs/parity-harness.md) — how a ported surface is proved equal, and how the proof is itself checked
 - [morpheus-rs inference](bots/morpheus-rs/inference.md) — the hand-written network engine, the artifact contract, and the shoot-out that chose it
 - [morpheus-rs belief filter](bots/morpheus-rs/belief.md) — particles, recovery, the injected RNG, and the two NumPy behaviours the port reproduces

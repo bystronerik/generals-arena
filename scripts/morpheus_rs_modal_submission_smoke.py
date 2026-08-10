@@ -39,14 +39,25 @@ REPO = Path(__file__).resolve().parents[1]
 BUNDLES = REPO / "data" / "bundles"
 MEASUREMENTS = REPO / "docs" / "research" / "measurements"
 
-if str(REPO) not in sys.path:
-    sys.path.insert(0, str(REPO))
-from arena.bundle import default_output_path  # noqa: E402
-
 # `morpheus-rs-<content_hash>.zip`, resolved rather than hardcoded: the name
 # moves with the program, which is the point of putting the hash in it. A stale
 # path here would smoke-test whatever the last build happened to leave behind.
-SUBMISSION_ZIP = default_output_path("morpheus-rs")
+#
+# **Local only, and the guard is load-bearing.** Modal re-imports this module
+# *inside the container* to find the function, so every module-level statement
+# runs twice — once here, once there, where `arena` does not exist because only
+# this file is mounted. Without the guard the container dies at import with
+# `ModuleNotFoundError: No module named 'arena'` before a single line of the
+# smoke runs. The resolved path is only ever needed locally anyway: it is baked
+# into the image at build time, and the container reads the zip from /root.
+if modal.is_local():
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    from arena.bundle import default_output_path
+
+    SUBMISSION_ZIP = default_output_path("morpheus-rs")
+else:
+    SUBMISSION_ZIP = Path("/root/morpheus-rs-submission.zip")
 # Built by tools/vendor_probe.py. Carries a real transitive dependency graph
 # with a build script, which the shipped archive deliberately does not —
 # so this is the only zip here that actually exercises offline registry

@@ -66,6 +66,34 @@ Requirements:
 Also store the game under `data/games/` before you refit ratings. There is no
 incremental rating update: every write refits the whole pool.
 
+## Modal jobs
+
+Anything under `scripts/*_modal_*.py` runs remotely and can fail in ways the
+local process does not report. **Check the job's output a few minutes after
+starting it, before doing anything else, and confirm it got past startup.** A
+Modal job that dies at import looks exactly like a Modal job that is working:
+no output, process still alive, no error locally.
+
+```bash
+modal app list                  # find the ephemeral app id
+modal app logs <app-id>         # the container's own traceback
+```
+
+Two failure shapes to expect:
+
+- **Module-level code runs twice.** Modal re-imports the script inside the
+  container to find the function, so every top-level statement executes there
+  too — with only that file mounted. A `from arena... import ...` at module
+  scope resolves locally and raises `ModuleNotFoundError` in the container,
+  before the job's first line. Guard repo imports with `modal.is_local()`.
+- **Missing local inputs fail late.** `add_local_file` is evaluated at image
+  build, so a stale or deleted path raises after the run has apparently
+  started.
+
+Do not pipe a backgrounded `modal run` through `tail` or `head`: they buffer
+until the process exits, which turns a crash into an apparent hang. Redirect to
+a file, or read the app logs.
+
 ## Remote success criterion (classic rules)
 
 The remote goal is one heuristic bot that wins **at least 95 of 100 logged games
