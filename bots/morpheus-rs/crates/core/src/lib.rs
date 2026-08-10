@@ -35,7 +35,6 @@ pub mod tactics;
 
 pub mod search;
 
-pub mod deployment;
-pub mod parity;
 pub mod runtime;
-pub mod telemetry;
+
+pub mod parity;

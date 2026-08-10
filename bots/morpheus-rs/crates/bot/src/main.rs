@@ -19,7 +19,7 @@ use std::panic::{self, AssertUnwindSafe};
 use std::time::Instant;
 
 use morpheus_core::belief::Action5;
-use morpheus_core::deployment::{
+use morpheus_core::runtime::deployment::{
     default_deployment_path, deployment_candidates, load_deployment, try_load_deployment,
     DeploymentConfig, EvaluatorKind,
 };
@@ -137,7 +137,7 @@ impl Seat {
 /// judge forfeits a game on an early exit, so a refusal that costs the match is
 /// a worse answer than one that costs the game and says why.
 fn check_single_threaded() -> Result<(), String> {
-    match morpheus_core::telemetry::thread_count() {
+    match morpheus_core::runtime::telemetry::thread_count() {
         Some(n) if n > 1 => Err(format!(
             "{n} threads after warmup; this bot is single-threaded by \
              construction and its deadline knobs are calibrated for one core"
@@ -451,7 +451,7 @@ fn main() {
     // Armed by MORPHEUS_RS_TRACE only, and buffered until the game ends: this
     // bot's own probe, since `arena.instrument.runner` can only trace an Agent
     // it constructs in-process. See `telemetry.rs`.
-    let mut trace = morpheus_core::telemetry::Trace::from_env();
+    let mut trace = morpheus_core::runtime::telemetry::Trace::from_env();
     if let (Some(trace), Some(seat)) = (trace.as_mut(), seat.as_ref()) {
         trace.set_header(seat.config_json.clone());
     }
