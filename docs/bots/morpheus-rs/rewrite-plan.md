@@ -6,10 +6,10 @@ M0 through M8 are done (§14–§23) and their exit gates are met: on 2026-08-10
 playing rated games, which closes M0.5's gate as well as M8's. The Rust bot
 plays its own decisions as of M5; M6's +425 Elo claim is **retracted** (§21,
 §22) and the current estimate of the contrast is +138 Elo; M7 qualified the
-latency on x86 and left the knob pick `unproven`. What is owed: a replicated
-strength contrast for the knobs, and the first look at rated results — no
-games, faults or forfeits from the live bot have been observed here, and it is
-playing a configuration nobody has measured (§22).**
+latency on x86 and left the knob pick `unproven`; the shipped configuration's
+own submission evaluation came back with **zero faults over six games** on the
+judge's hardware. What is owed: a replicated strength contrast for the knobs,
+and the first look at rated results, which are unobserved here.**
 Revised against the declared-final morpheus state at commit `9d6f186`
 (oracle `morpheus@73967d2125cc`, registry step 18 — see §14; the
 `17c8ac2684ec` this plan first named was the *previous* registry head, the
@@ -1340,10 +1340,18 @@ the repo launcher. Rules: [`packaging.md`](packaging.md). Figures:
 **Exit gate: met.** `morpheus-rs-ef5a20484a38.zip` was submitted on 2026-08-10,
 the sandbox accepted and built it, and the bot is playing rated games. That
 also closes M0.5's gate (§15), which had been open since the walking skeleton
-because only the account holder can submit. Nothing about the *results* is
-recorded here — no games, faults or forfeits have been observed, and the
-shipped knobs are the unmeasured `n8-s16-b4-d8` below. Everything upstream is
-done:
+because only the account holder can submit.
+
+**Its submission evaluation reported zero faults over six games** — the first
+latency evidence from the deployment host itself rather than a Modal proxy, and
+the answer to the one thing §22's shipped-but-unmeasured `n8-s16-b4-d8` left
+open. Six games is a floor, not a distribution; but M0 measured the Python bot
+late on 13.8% of moves on one x86 core, so zero at this sample size is a
+signal. **Fault counts are reported only for those six games** — rated play
+does not expose them, so a submission is the only channel that ever yields
+fault evidence for a configuration, and no amount of live play will refine it.
+Rated results themselves — wins, losses, forfeits — remain unobserved here.
+Everything upstream is done:
 `data/bundles/morpheus-rs-<content_hash>.zip` is **43 files / 1.04 MB** against
 10,000 files and 50 MB, builds offline on the sandbox's own rustc 1.97.1 in a
 one-core `block_network` container in 17 s, is byte-reproducible, and wins the
@@ -1402,13 +1410,17 @@ Two notes for whoever submits:
 - Upload `data/bundles/morpheus-rs-<content_hash>.zip`. `SUBMISSION.json`
   inside it records that hash, which is the row to match in
   `data/bot_versions/morpheus-rs.json` when a rated result comes back.
-- **The shipped knobs are `n8-s16-b4-d8`, which is not a configuration anyone
-  has measured.** A `Configuration update` commit landed on `deployment.json`
+- **The shipped knobs are `n8-s16-b4-d8`, which nobody had measured before the
+  submission.** A `Configuration update` commit landed on `deployment.json`
   after this milestone's, taking `search_depth` from 2 to 8 while leaving
   `target_simulations` at 16 — so it is neither M7's x86-qualified
   `n8-s32-b4-d8` nor the parity `n8-s16-b4-d2` the harness ran against. It
   ships as it stands by decision, with the note corrected to say so and a
   qualification verdict of *no on any host*. M7's cost model makes depth 2 → 8
-  nearly free, so it is very likely inside the deadline; that is an inference,
-  and M7's replicated contrast is still owed. M8 packages a bot; it does not
-  settle which knobs it should be playing.
+  nearly free, so it was very likely inside the deadline — an inference, and
+  the judge's own six-game evaluation then agreed with it at zero faults.
+  `deployment.json` keeps its verdict anyway: editing it would mint a new
+  content hash and re-identify the bot that is currently playing, and six games
+  of deadline evidence says nothing about strength. M7's replicated contrast is
+  still owed. M8 packages a bot; it does not settle which knobs it should be
+  playing.

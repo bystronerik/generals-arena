@@ -11,13 +11,25 @@ built it, and the bot is playing rated games. That closes the one thing this
 repo could never test — M0.5 rehearsed it, §15 said so, and the rehearsal was
 right.
 
-Two things are *not* recorded here, and should not be read into it: no intake
-log was captured, so the sandbox's own build time and whether `selfcheck`'s
-output is visible to a submitter are unknown; and no rated results, fault
-counts or forfeits have been observed. The fault count is the number worth
-collecting first — it is the one figure that would say whether the deadline
-knobs and the selfcheck did their job on the judge's hardware, and §22 shipped
-`n8-s16-b4-d8`, a configuration nobody has measured.
+**The submission evaluation reported zero faults**, over the six games
+generals.bot plays against a new bot. That is the first latency evidence this
+project has from the *deployment host itself* rather than a proxy: M7's
+qualification is a Modal container standing in for a machine nobody can
+measure, and this is the machine. It is also six games, so it is a floor rather
+than a distribution — RULES.md §08 forfeits at fifty faults in one game, and
+M0's Python baseline was late on 13.8% of moves, so zero is a real signal at
+this sample size and not a tautology.
+
+**Fault counts are only reported for those six games.** Rated play does not
+expose them, so no amount of live play will refine this number: a submission is
+the only channel that ever yields fault evidence for a configuration. That is
+worth knowing before designing any future latency check — the answer arrives
+once, at intake, or not at all.
+
+Two things are *not* recorded here: no intake log was captured, so the
+sandbox's own build time and whether `selfcheck`'s output is visible to a
+submitter are unknown; and no rated results — wins, losses or forfeits — have
+been observed.
 
 ## The archive
 
@@ -207,13 +219,13 @@ vendored-source zip built inside the judge's own image on the first attempt,
 which is the evidence the removal was waiting on and did not have when the
 decision was taken.
 
-Still to check on the other side, because none of it is visible from here:
-whether `build.sh`'s selfcheck output is legible in whatever intake log exists,
-and whether the rated games show fault accumulation. The second is the one that
-matters — it is what would say the deadline knobs hold on the judge's hardware,
-and the shipped configuration is one nobody has measured.
+Still to check on the other side: whether `build.sh`'s selfcheck output is
+legible in whatever intake log exists. The fault question is answered as well
+as it can be — the submission evaluation's six games are the only place
+generals.bot reports faults at all.
 
-**The shipped knobs are `n8-s16-b4-d8`, and nobody has measured them.** A
+**The shipped knobs are `n8-s16-b4-d8`, and until the submission nobody had
+measured them.** A
 `Configuration update` commit (`386d9ae`) landed on `deployment.json` after M8's
 own commit, taking `search_depth` from 2 to 8 and replacing the note with the
 s32 arm's — which claims `n8-s32-b4-d8` while leaving `target_simulations` at
@@ -224,11 +236,15 @@ the archive now says what it is. What it is:
 | --- | --- |
 | `n8-s32-b4-d8` | M7's x86 qualification — p99.9 140 ms, max 141, zero moves over 150, twenty simulations; strength `unproven` at +18.15 ± 23.42 |
 | `n8-s16-b4-d2` | the parity knobs — M6's rated arm and what the parity harness ran against |
-| **`n8-s16-b4-d8`** | **neither, and nothing** |
+| **`n8-s16-b4-d8`** | **neither — and, since the submission, zero faults over the judge's six evaluation games** |
 
 M7's cost model says a simulation's cost is its leaf forward rather than its
 tree walk, so depth 2 → 8 should be nearly free and this is very likely inside
-the deadline. That is an inference from other points of the grid, not a
-measurement of this one, and it is the shape of claim this project keeps
-recording as its mistakes. The zip's qualification verdict reads *no on any
-host* accordingly.
+the deadline. That was an inference from other points of the grid rather than a
+measurement of this one — the shape of claim this project keeps recording as
+its mistakes — and the six-game evaluation is the first thing to test it. It
+agreed. Note what that does and does not settle: it is the deadline behaviour on
+the real host, at a sample size of six games, and it says nothing about
+strength. `deployment.json` still reads *no on any host*, and deliberately so —
+editing it would mint a new content hash and re-identify the bot that is
+currently playing.
