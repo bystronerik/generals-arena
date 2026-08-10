@@ -20,7 +20,7 @@
 use crate::memory::{VisibleMemory, TYPE_MOUNTAIN, TYPE_STRUCTURE_FOG};
 use crate::state::{GameState, MAX_CELLS};
 use crate::transition::{build_cost_grid, DIRECTIONS};
-use crate::wire::Observation;
+use crate::io::wire::Observation;
 
 pub const PAD: usize = 21;
 pub const N_CELLS: usize = PAD * PAD;

@@ -20,12 +20,12 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::json::{parse, Json};
+use crate::io::json::{parse, Json};
 use crate::network::{
     Heads, Network, Output, BOARD, IN_CHANNELS, N_ARMY_BINS, N_BLOCKS,
 };
 use crate::safetensors::SafeTensors;
-use crate::sha256::sha256;
+use crate::support::sha256::sha256;
 
 pub const MANIFEST_NAME: &str = "manifest.json";
 pub const ARTIFACT_DIRNAME: &str = "artifact";

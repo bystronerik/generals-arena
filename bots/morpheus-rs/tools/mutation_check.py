@@ -56,7 +56,7 @@ FILE_SURFACES: dict[str, tuple[str, ...]] = {
     "symmetry.rs": ("symmetry",),
     "network.rs": ("net", "prior"),
     "gemm.rs": ("net", "prior"),
-    "rng.rs": ("npsum", "argsort", "summary", "propose", "filter",
+    "support/rng.rs": ("npsum", "argsort", "summary", "propose", "filter",
                "rejuvenate", "maxent", "reservoir", "toplegal", "initbelief"),
     "belief.rs": ("summary", "filter", "rejuvenate", "maxent", "reservoir",
                   "initbelief"),
@@ -473,19 +473,19 @@ MUTATIONS: tuple[Mutation, ...] = (
     # mutations below deliberately target that seam.
     Mutation(
         "numpy sum reassociated as a plain loop",
-        "rng.rs",
+        "support/rng.rs",
         "let mut r = [0.0f64; 8];",
         "let mut res = 0.0;\n        for &value in values {\n            res += value;\n        }\n        return res;\n        #[allow(unreachable_code)]\n        let mut r = [0.0f64; 8];",
     ),
     Mutation(
         "argsort made stable",
-        "rng.rs",
+        "support/rng.rs",
         "aquicksort(&negated, &mut order);",
         "order.sort_by(|&a, &b| negated[a].partial_cmp(&negated[b]).unwrap());",
     ),
     Mutation(
         "argsort skips the heapsort depth limit",
-        "rng.rs",
+        "support/rng.rs",
         "if cdepth < 0 {",
         "if false && cdepth < 0 {",
         note=(

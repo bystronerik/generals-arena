@@ -25,10 +25,10 @@ use crate::belief::{BeliefState, Particle, PASS_ACTION};
 use crate::hashing::{memory_digest, observation_payload};
 use crate::memory::{update_memory, VisibleMemory};
 use crate::observe::emit_observation;
-use crate::rng::{argsort_desc_numpy, npsum, Rng};
-use crate::sha256::sha256;
+use crate::support::rng::{argsort_desc_numpy, npsum, Rng};
+use crate::support::sha256::sha256;
 use crate::tensor::{build_tensor, BeliefSummary, ARMY_SCALE};
-use crate::wire::Observation;
+use crate::io::wire::Observation;
 
 pub type Action5 = [i32; 5];
 
@@ -367,7 +367,7 @@ pub fn enemy_info_key(belief: &BeliefState, particle: &Particle) -> Vec<u8> {
 mod tests {
     use super::*;
     use crate::belief::BeliefConfig;
-    use crate::rng::SmallRng;
+    use crate::support::rng::SmallRng;
     use crate::state::GameState;
     use std::rc::Rc;
 

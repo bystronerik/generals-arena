@@ -28,7 +28,7 @@
 //! threshold that decides whether a resample happens — and a resample draws
 //! from the RNG. So a last-bit difference in a sum is not a rounding
 //! difference, it is a different sequence of random numbers from there on.
-//! [`crate::rng::npsum`] exists for that reason and is used at every site
+//! [`crate::support::rng::npsum`] exists for that reason and is used at every site
 //! where the Python wrote `.sum()` on an array; the sites where the Python
 //! wrote the *builtin* `sum` over a generator stay sequential, because that
 //! is a different function with a different answer.
@@ -37,10 +37,10 @@ use std::rc::Rc;
 
 use crate::memory::{update_memory, VisibleMemory, TYPE_FOG, TYPE_MOUNTAIN, TYPE_STRUCTURE_FOG};
 use crate::observe::{emit_observation, observations_match, visibility_from_owned};
-use crate::rng::{npsum, Rng};
+use crate::support::rng::{npsum, Rng};
 use crate::state::GameState;
 use crate::transition::{transition, Actions};
-use crate::wire::Observation;
+use crate::io::wire::Observation;
 
 /// Defaults from `belief.py`. `deployment.json` overrides `n_particles`.
 pub const N_PARTICLES: usize = 64;
@@ -584,7 +584,7 @@ pub fn unique_particle_count(belief: &BeliefState) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rng::SmallRng;
+    use crate::support::rng::SmallRng;
 
     fn open_board(h: usize, w: usize) -> GameState {
         let mut state = GameState::empty(h, w);

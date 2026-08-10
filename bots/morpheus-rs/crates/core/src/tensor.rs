@@ -17,7 +17,7 @@
 use crate::memory::{
     VisibleMemory, OWNER_ENEMY, OWNER_ME, OWNER_NEUTRAL, TYPE_FOG, TYPE_STRUCTURE_FOG,
 };
-use crate::wire::Observation;
+use crate::io::wire::Observation;
 
 pub const PAD: usize = 21;
 pub const N_PLANES: usize = 49;

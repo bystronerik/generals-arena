@@ -31,7 +31,7 @@
 //! answer", and it is recorded here rather than discovered later.
 
 use crate::belief::{normalize_weights, resample, BeliefConfig, BeliefState, Particle};
-use crate::rng::{npsum, Rng};
+use crate::support::rng::{npsum, Rng};
 
 pub struct ParticleReservoir {
     pub capacity: usize,
@@ -141,7 +141,7 @@ impl ParticleReservoir {
 mod tests {
     use super::*;
     use crate::memory::VisibleMemory;
-    use crate::rng::SmallRng;
+    use crate::support::rng::SmallRng;
     use crate::state::GameState;
     use std::rc::Rc;
 

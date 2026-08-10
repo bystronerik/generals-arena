@@ -42,13 +42,13 @@ use crate::proposal::{
 };
 use crate::recovery::{maximum_entropy_reconstruction, recover_belief, rejuvenate};
 use crate::reservoir::ParticleReservoir;
-use crate::rng::{argsort_desc_numpy, npsum, Method, RecordedDraw, Replay};
+use crate::support::rng::{argsort_desc_numpy, npsum, Method, RecordedDraw, Replay};
 use crate::state::GameState;
 use crate::symmetry;
 use crate::tactics;
 use crate::tensor::{build_tensor, BeliefSummary, ARMY_SCALE};
 use crate::transition::{determine_move_order, transition, Actions};
-use crate::wire::Observation;
+use crate::io::wire::Observation;
 
 /// Positional reader over the whitespace-separated integer stream.
 pub struct Ints {
@@ -528,7 +528,7 @@ pub fn bench_belief<R: BufRead, W: Write>(
 
     let mut ints = Ints::read_all(reader)?;
     let cases = ints.n()?;
-    let mut rng = crate::rng::SmallRng::seed_from_u64(0x5eed);
+    let mut rng = crate::support::rng::SmallRng::seed_from_u64(0x5eed);
 
     for case in 0..cases {
         let belief = read_belief(&mut ints)?;
@@ -1499,7 +1499,7 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
                 let batches = ints.n()?;
                 let freeze = ints.next()? != 0;
                 let vary = ints.next()? != 0;
-                let rng = crate::rng::SharedRng::new(Box::new(Replay::new(read_draws(&mut ints)?)));
+                let rng = crate::support::rng::SharedRng::new(Box::new(Replay::new(read_draws(&mut ints)?)));
                 let scripted = crate::search::ScriptedEvaluator { prior, value };
                 let mut evaluator: Box<dyn crate::search::SearchEvaluator> = if vary {
                     Box::new(VaryingEvaluator { inner: scripted })
@@ -1604,7 +1604,7 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
                         push_f64(&mut out, &table.q);
                     }
                 }
-                out.push(crate::rng::Rng::consumed(&rng) as i64);
+                out.push(crate::support::rng::Rng::consumed(&rng) as i64);
             }
             // The eviction decision, driven directly.
             //

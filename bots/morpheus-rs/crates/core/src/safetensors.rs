@@ -22,7 +22,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use crate::json::{parse, Json};
+use crate::io::json::{parse, Json};
 
 /// One tensor: its shape and its slice of the flat f32 payload.
 pub struct TensorView<'a> {

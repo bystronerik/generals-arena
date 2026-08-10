@@ -26,10 +26,10 @@ use morpheus_core::deployment::{
 use morpheus_core::evaluator::{NetworkEvaluator, ShapedUniformEvaluator};
 use morpheus_core::inference::Session;
 use morpheus_core::network::Heads;
-use morpheus_core::rng::{SharedRng, SmallRng};
+use morpheus_core::support::rng::{SharedRng, SmallRng};
 use morpheus_core::runtime::{MonotonicClock, RuntimeController};
 use morpheus_core::search::SearchEvaluator;
-use morpheus_core::wire::{
+use morpheus_core::io::wire::{
     read_handshake, read_observation, write_action, Action, Observation, PASS,
 };
 
@@ -357,7 +357,7 @@ fn run_selfcheck() -> ! {
 /// army on the general is below the 35 a castle costs, so a build is an
 /// illegal action and a skip is the only wrong answer available.
 fn selfcheck_frame() -> Observation {
-    use morpheus_core::wire::{OWNER_ME, TYPE_FOG, TYPE_GENERAL, TYPE_PLAIN};
+    use morpheus_core::io::wire::{OWNER_ME, TYPE_FOG, TYPE_GENERAL, TYPE_PLAIN};
 
     let mut obs = Observation::with_dims(21, 21);
     obs.type_grid.fill(TYPE_FOG);

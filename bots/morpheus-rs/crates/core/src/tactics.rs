@@ -32,10 +32,10 @@ use crate::memory::{
     TYPE_STRUCTURE_FOG,
 };
 use crate::observe::visibility_from_owned;
-use crate::rng::npsum;
+use crate::support::rng::npsum;
 use crate::state::MAX_CELLS;
 use crate::transition::{BASE_COST, DEATHTOUCH_TURN, DIRECTIONS};
-use crate::wire::Observation;
+use crate::io::wire::Observation;
 
 pub const N_ACTIONS: usize = PASS_INDEX + 1;
 

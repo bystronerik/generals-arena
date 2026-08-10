@@ -29,7 +29,7 @@ use crate::tactics::{
     DEFAULT_SHAPING_FLOOR_FRAC, DEFAULT_SHAPING_LAMBDA,
 };
 use crate::tensor::build_tensor;
-use crate::wire::Observation;
+use crate::io::wire::Observation;
 use crate::memory::VisibleMemory;
 
 /// The four shaping knobs, exactly as `deployment.json` carries them.

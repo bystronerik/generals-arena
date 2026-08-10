@@ -23,7 +23,7 @@ use crate::hashing::{
 use crate::matrix::{enemy_widening_limit, mixed_strategy, sample_index, self_widening_limit};
 use crate::memory::{update_memory, VisibleMemory};
 use crate::observe::emit_observation;
-use crate::rng::SharedRng;
+use crate::support::rng::SharedRng;
 use crate::state::GameState;
 use crate::tactics::{mandatory_action_indices, play_mask, policy_ordered_candidates};
 use crate::transition::{transition, Actions};
@@ -45,7 +45,7 @@ pub struct EvalItem {
     pub shape: bool,
 }
 
-use crate::wire::Observation;
+use crate::io::wire::Observation;
 
 /// Injectable policy/value interface for the search.
 pub trait SearchEvaluator {
@@ -1034,7 +1034,7 @@ impl SearchEvaluator for ScriptedEvaluator {
         let masked: Vec<f64> = (0..N_ACTIONS)
             .map(|i| if mask[i] { self.prior[i] } else { 0.0 })
             .collect();
-        let total = crate::rng::npsum(&masked);
+        let total = crate::support::rng::npsum(&masked);
         if total <= 0.0 {
             let live = mask.iter().filter(|&&m| m).count().max(1);
             let prior = (0..N_ACTIONS)

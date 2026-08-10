@@ -14,7 +14,7 @@ use crate::memory::{
 };
 use crate::state::{GameState, MAX_CELLS};
 use crate::transition::get_info;
-use crate::wire::Observation;
+use crate::io::wire::Observation;
 
 /// Chebyshev-1 (3×3) visibility around every owned cell.
 pub fn visibility_mask(state: &GameState, seat: usize) -> [bool; MAX_CELLS] {

@@ -35,10 +35,10 @@ use crate::belief::{
 use crate::memory::{update_memory, VisibleMemory, TYPE_FOG, TYPE_STRUCTURE_FOG};
 use crate::observe::{emit_observation, observations_match, visibility_mask};
 use crate::proposal::{policy_action_probs, top_legal_actions, ProposalPolicy};
-use crate::rng::{npsum, Rng};
+use crate::support::rng::{npsum, Rng};
 use crate::state::GameState;
 use crate::transition::{transition, Actions};
-use crate::wire::Observation;
+use crate::io::wire::Observation;
 
 /// True when the enemy's action changes what Morpheus can see, versus a pass.
 ///
@@ -651,7 +651,7 @@ pub fn update_belief<R: Rng + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rng::SmallRng;
+    use crate::support::rng::SmallRng;
 
     fn corridor(h: usize, w: usize) -> GameState {
         let mut state = GameState::empty(h, w);

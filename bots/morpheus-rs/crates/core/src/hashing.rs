@@ -21,8 +21,8 @@
 
 use crate::action::encode_action;
 use crate::memory::VisibleMemory;
-use crate::sha256::{sha256, Sha256};
-use crate::wire::Observation;
+use crate::support::sha256::{sha256, Sha256};
+use crate::io::wire::Observation;
 
 pub const ZERO_DIGEST: [u8; 32] = [0u8; 32];
 

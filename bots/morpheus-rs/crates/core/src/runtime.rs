@@ -23,7 +23,7 @@ use crate::belief::{
 use crate::memory::{update_memory, VisibleMemory};
 use crate::proposal::{propose_enemy_actions, ProposalPolicy, ProposalTelemetry};
 use crate::recovery::recover_belief;
-use crate::rng::SharedRng;
+use crate::support::rng::SharedRng;
 use crate::search::{
     EnemyPriorRequest, PendingPath, SearchConfig, SearchController, SearchEvaluator, Selection,
 };
@@ -31,7 +31,7 @@ use crate::tactics::{
     constrain_nn_action, default_shaping_log_clip, enemy_is_visible, play_mask,
     DEFAULT_SHAPING_FLOOR_FRAC, DEFAULT_SHAPING_LAMBDA, OSCILLATION_HISTORY,
 };
-use crate::wire::Observation;
+use crate::io::wire::Observation;
 
 /// Named cost components. Admission keeps a separate rolling p99 for each.
 pub const COST_COMPONENTS: [&str; 10] = [
@@ -1305,7 +1305,7 @@ mod tests {
 
     #[test]
     fn the_degradation_path_prefers_a_non_pass_fallback_to_emitting_pass() {
-        let rng = SharedRng::new(Box::new(crate::rng::SmallRng::seed_from_u64(1)));
+        let rng = SharedRng::new(Box::new(crate::support::rng::SmallRng::seed_from_u64(1)));
         let search = SearchController::new(0, SearchConfig::default(), rng);
         let (action, level) = select_degraded_action(0, false, Some([0, 1, 1, 0, 0]), &search);
         assert_eq!(action, PASS_ACTION);

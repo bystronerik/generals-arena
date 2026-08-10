@@ -13,7 +13,7 @@
 //! bot builds its map of the board wrong in a way no single frame reveals.
 
 use crate::state::MAX_CELLS;
-use crate::wire::Observation;
+use crate::io::wire::Observation;
 
 // Competition type codes, perspective-relative wire.
 pub const TYPE_FOG: i32 = 0;

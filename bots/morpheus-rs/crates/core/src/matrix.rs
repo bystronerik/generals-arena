@@ -12,14 +12,14 @@
 //! 0.5 ulp, max 3) nor NumPy's own pairwise reduction (mean 0.4 ulp, max 3).
 //! There is no order to copy: `np.dot` is a different answer on a different
 //! host, so the Python bot disagrees with *itself* across machines here, the
-//! same way `np.argsort` does under AVX-512 (see [`crate::rng`]).
+//! same way `np.argsort` does under AVX-512 (see [`crate::support::rng`]).
 //!
 //! So the dot products reduce with [`npsum`] — NumPy's pairwise order, the
 //! closest thing to a convention this crate already reproduces — the `matrix`
 //! parity surface carries a measured tolerance instead of bit-exactness, and
 //! the decision gate expects the resulting flips on near-ties.
 
-use crate::rng::{npsum, Rng};
+use crate::support::rng::{npsum, Rng};
 
 /// Progressive-widening caps and the exploration floor. Initial guesses in the
 /// Python, and still unmeasured; M7 owns them.
