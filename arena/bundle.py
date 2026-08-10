@@ -325,6 +325,32 @@ _SMOKE_FRAME = (
 )
 
 
+def _extract_is_complete(zf: zipfile.ZipFile, extract_dir: Path) -> bool:
+    """Every member of `zf` present in `extract_dir` at its recorded size.
+
+    The reuse cache lives in the system temp directory, and on macOS that is a
+    reaped directory: `/var/folders/.../T` is swept by age, and the sweep is
+    per *file*. It took the extract dir apart and left `run.sh` — the one file
+    an earlier version of this check looked at — so the cache read as valid,
+    extraction was skipped, and the bot died on a missing `main.py`. Because
+    the cache key is the bundle digest and the bundle is deterministic, that
+    state never cleared itself: the smoke check failed on every run from then
+    on, for a bundle that was perfectly good.
+
+    So the question a cache guard has to answer is "is all of it still here",
+    which costs one `stat` per member and is the same order of work as the
+    `is_file()` it replaces.
+    """
+    for info in zf.infolist():
+        target = extract_dir / info.filename
+        if info.is_dir():
+            if not target.is_dir():
+                return False
+        elif not target.is_file() or target.stat().st_size != info.file_size:
+            return False
+    return True
+
+
 def smoke_check(
     zip_path: Path, extract_dir: Path, *, reuse_extracted: bool = False
 ) -> tuple[int, int, int, int, int]:
@@ -333,14 +359,16 @@ def smoke_check(
     `run.sh` with a scrubbed environment, and require one well-formed action
     for one observation frame. Returns the action.
 
-    `reuse_extracted` skips extraction when `extract_dir` is already populated.
-    macOS assesses each freshly written script on first exec (~0.2 s per file);
-    a caller that keys `extract_dir` on the bundle's content hash pays that
-    only when the bundle actually changed. Bundles are deterministic, so a
-    hash-matched extract dir holds byte-identical files.
+    `reuse_extracted` skips extraction when `extract_dir` already holds the
+    whole bundle. macOS assesses each freshly written script on first exec
+    (~0.2 s per file); a caller that keys `extract_dir` on the bundle's content
+    hash pays that only when the bundle actually changed. Bundles are
+    deterministic, so a hash-matched extract dir holds byte-identical files —
+    but only the ones that are still there, which is why the reuse decision
+    goes through `_extract_is_complete`.
     """
-    if not (reuse_extracted and (extract_dir / "run.sh").is_file()):
-        with zipfile.ZipFile(zip_path) as zf:
+    with zipfile.ZipFile(zip_path) as zf:
+        if not (reuse_extracted and _extract_is_complete(zf, extract_dir)):
             for info in zf.infolist():
                 target = Path(zf.extract(info, extract_dir))
                 mode = (info.external_attr >> 16) & 0o777

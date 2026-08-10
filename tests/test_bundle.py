@@ -134,6 +134,36 @@ def test_bundle_runs_standalone(tmp_path):
     assert split in (0, 1)
 
 
+def test_a_reaped_extract_cache_is_rebuilt_rather_than_trusted(tmp_path):
+    """A half-deleted reuse dir must re-extract, not run against the remains.
+
+    `reuse_extracted` caches the unpacked bundle in the system temp directory,
+    and on macOS that directory is swept by age, file by file. It really
+    happened: the sweep took every `.py` and left `run.sh`, the guard asked
+    only whether `run.sh` existed, extraction was skipped, and the bot died on
+    a missing `main.py`. The cache key is the bundle digest and the bundle is
+    deterministic, so the state never cleared — `test_bundle_runs_standalone`
+    failed on every run afterwards for a bundle that was fine.
+
+    Both halves of that are worth holding: the reaped file must come back, and
+    a truncated one must too, since a survivor of the right name is not
+    evidence of the right bytes.
+    """
+    info = write_bundle("smoke", tmp_path / "smoke.zip")
+    extract_dir = tmp_path / "extract"
+    assert len(smoke_check(info.zip_path, extract_dir, reuse_extracted=True)) == 5
+
+    reaped = extract_dir / "bots" / "smoke" / "main.py"
+    reaped.unlink()
+    assert (extract_dir / "run.sh").is_file(), "the old guard's whole question"
+    assert len(smoke_check(info.zip_path, extract_dir, reuse_extracted=True)) == 5
+    assert reaped.is_file()
+
+    reaped.write_text("")
+    assert len(smoke_check(info.zip_path, extract_dir, reuse_extracted=True)) == 5
+    assert reaped.stat().st_size > 0
+
+
 def test_the_bundle_carries_no_instrumentation(tmp_path):
     """
     The submitted program is game logic only.
