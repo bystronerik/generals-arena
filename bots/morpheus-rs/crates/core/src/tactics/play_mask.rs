@@ -238,6 +238,8 @@ pub fn play_mask(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::board::action::encode_action;
+    use crate::board::memory::TYPE_GENERAL;
 
     fn board(h: usize, w: usize) -> Observation {
         let mut obs = Observation::with_dims(h, w);

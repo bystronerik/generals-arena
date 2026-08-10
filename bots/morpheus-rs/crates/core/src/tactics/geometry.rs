@@ -5,7 +5,8 @@
 //! observation grids at the live stride, and the rest turns an action into the
 //! segment it moves along. Destinations here are *unclipped*: the tables index
 //! the padded 21x21 layout while the grids index the live `HxW`, so every
-//! caller bounds-checks.
+//! caller bounds-checks — the Python gets away with implicit masking
+//! because only legal indices survive its `flatnonzero`.
 
 use std::sync::OnceLock;
 
