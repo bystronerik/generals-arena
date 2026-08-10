@@ -31,6 +31,16 @@ Both are byte-reproducible: fixed member dates, sorted members, and a
 `SUBMISSION.json` with no clock in it. Repackaging produces the same digest, so
 "are the bytes I submitted the bytes I still have" is a checksum question.
 
+The vendored archive's `.rs` members are minified on the way in, the launchers
+and `.cargo/config.toml` lose their whole-line comments, and the release profile
+strips symbols — all added after the milestone's first pass, since the Python
+bundler has minified since it existed and the Rust side was shipping every
+comment in the crate. Measured: **669,589 → 345,746 bytes** of Rust,
+**1,479,416 → 1,298,656 bytes** of static binary, and 1,132,733 → 1,042,441
+bytes of vendored zip against the same archive built `--no-minify`. Mechanics
+and the reasons in
+[packaging.md](../../bots/morpheus-rs/packaging.md#what-the-submission-does-not-carry).
+
 ## What M8 found
 
 ### A well-formed reply is not evidence of a working bot
@@ -182,6 +192,24 @@ latency caveat above before believing anything about its results.
 What to check on the other side, because none of it is visible from here: that
 the sandbox's own image builds the vendored tree, that `build.sh`'s selfcheck
 output is legible in whatever intake log exists, and that the first rated games
-show no fault accumulation. `deployment.json` still carries M7's honest
-half-verdict — the latency is qualified on x86, the configuration it qualifies
-is not the one measured for strength.
+show no fault accumulation.
+
+**The shipped knobs are `n8-s16-b4-d8`, and nobody has measured them.** A
+`Configuration update` commit (`386d9ae`) landed on `deployment.json` after M8's
+own commit, taking `search_depth` from 2 to 8 and replacing the note with the
+s32 arm's — which claims `n8-s32-b4-d8` while leaving `target_simulations` at
+16. The decision was to ship the file as it stands and correct only the note, so
+the archive now says what it is. What it is:
+
+| config | measured |
+| --- | --- |
+| `n8-s32-b4-d8` | M7's x86 qualification — p99.9 140 ms, max 141, zero moves over 150, twenty simulations; strength `unproven` at +18.15 ± 23.42 |
+| `n8-s16-b4-d2` | the parity knobs — M6's rated arm and what the parity harness ran against |
+| **`n8-s16-b4-d8`** | **neither, and nothing** |
+
+M7's cost model says a simulation's cost is its leaf forward rather than its
+tree walk, so depth 2 → 8 should be nearly free and this is very likely inside
+the deadline. That is an inference from other points of the grid, not a
+measurement of this one, and it is the shape of claim this project keeps
+recording as its mistakes. The zip's qualification verdict reads *no on any
+host* accordingly.

@@ -11,6 +11,12 @@ publish = false
 opt-level = 3
 lto = "fat"
 codegen-units = 1
+# Symbol names are the other half of what a submission gives away. The vendored
+# zip's sources are minified on the way in (tools/minify), but the static
+# variant ships a binary, and an unstripped one carries `morpheus_core::tactics`
+# path by path in its symbol table. Nothing at match time needs them: panics are
+# caught and reported by message, and the judge does not hand back backtraces.
+strip = "symbols"
 # `panic = "abort"` would be the reflexive choice and is the wrong one here.
 # The judge treats a crash or an early exit as an immediate forfeit, while a
 # late or malformed reply is one fault out of a budget of fifty (RULES.md §08).

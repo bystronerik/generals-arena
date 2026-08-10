@@ -1382,7 +1382,13 @@ Two notes for whoever submits:
 - Upload the **vendored** zip. `SUBMISSION.json` inside it records the content
   hash of the program, which is the row to match in
   `data/bot_versions/morpheus-rs.json` when a rated result comes back.
-- `deployment.json` still carries M7's half-verdict: the latency is qualified
-  on x86, the configuration it qualifies is not the one measured for strength,
+- **The shipped knobs are `n8-s16-b4-d8`, which is not a configuration anyone
+  has measured.** A `Configuration update` commit landed on `deployment.json`
+  after this milestone's, taking `search_depth` from 2 to 8 while leaving
+  `target_simulations` at 16 — so it is neither M7's x86-qualified
+  `n8-s32-b4-d8` nor the parity `n8-s16-b4-d2` the harness ran against. It
+  ships as it stands by decision, with the note corrected to say so and a
+  qualification verdict of *no on any host*. M7's cost model makes depth 2 → 8
+  nearly free, so it is very likely inside the deadline; that is an inference,
   and M7's replicated contrast is still owed. M8 packages a bot; it does not
   settle which knobs it should be playing.

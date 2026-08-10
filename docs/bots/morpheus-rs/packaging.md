@@ -21,6 +21,7 @@ bots/morpheus-rs/
   tools/                dev tooling; outside the content hash
     submission/build.sh the build.sh copied into the vendored zip
     package_submission.py
+    minify/             dev-time crate: strips comments on the way into the zip
     vendor_probe.py     proves the offline build with real vendored crates
     dependency_budget.py what a crate would cost in the zip
     capture_morpheus.py the M0 capture module
@@ -82,7 +83,8 @@ python bots/morpheus-rs/tools/package_submission.py --force
 **vendored** — sources, `Cargo.lock`, `vendor/`, and a `build.sh` running
 `cargo build --release --offline --locked`. The intended submission: the judge
 compiles it at intake. Note `vendor/` is currently **empty**, because the crate
-has no dependencies — which is why the probe below exists.
+has no dependencies — which is why the probe below exists. The `.rs` members are
+minified on the way in; see below.
 
 **static** — a prebuilt `x86_64-unknown-linux-musl` binary with `build.sh`
 reduced to a no-op plus the selfcheck below. This is R4's fallback (§9) for a
@@ -126,6 +128,61 @@ Both are audited through `arena.bundle.check_limits` — the same code that
 guards the Python bundles, so the two cannot drift — then extracted to a
 scratch directory with no repo around them, built, and driven with a scripted
 frame.
+
+## What the submission does not carry
+
+The vendored variant ships source, and this crate's comments are not
+incidental: the FMA bug and its 277 ms measurement, the BLAS reduction the
+oracle cannot pin, NumPy's unstable `argsort`, the reasoning behind every
+tactical rule. `arena/bundle.py` already decided that question for the Python
+bots — a submission carries logic, not strategy notes — and the Rust side now
+follows the same rule, with the same discipline: **the rewrite happens on the
+way into the zip only, and the repo files are never touched.**
+
+`tools/minify/` is a dev-time crate over
+[`rustminify`](https://docs.rs/rustminify) 0.2.0, pinned exactly, reading one
+`.rs` on stdin and writing the stripped equivalent on stdout. It is a parse and
+a re-print, not a text rewrite: ordinary `//` comments never reach the AST, so
+they vanish for free, and doc comments survive as `#[doc]` attributes that
+`remove_docs` takes. A regex over the same problem eats code the first time
+`//` appears inside a string literal. The output is re-parsed before it is
+returned, and a failure at any step is fatal — falling back to the original
+text would leave the packager reporting a minified bundle it did not build.
+
+Measured: **669,589 → 345,746 bytes** of Rust, and the smoke test compiles and
+plays what came out, so "does the minified source still build offline" is
+answered on every packaging run rather than at intake.
+
+Two things it deliberately does not do. It does not rename anything: Python's
+bundler renames locals because Python ships names at runtime, and a compiled
+binary does not. And it does not touch string literals, so operational messages
+— including the selfcheck's own explanation of the FMA trap — are still in
+there, as they must be to be printed.
+
+**The launchers get the same treatment, by a much simpler rule.** `run.sh`,
+`build.sh` and `.cargo/config.toml` carry as much reasoning as the Rust does —
+why `cd` before `cargo build`, what a missing FMA costs, why intake fails
+loudly — so `strip_line_comments` drops whole-line `#` comments from all three
+on the way into both zips. The shebang stays. A *trailing* `# …` after code is
+deliberately left alone: a line-based rule cannot tell a comment from a `#`
+inside a string or from `${var#prefix}`, and a launcher that stops working is a
+forfeit, not a smaller zip. `tests/test_packaging.py` pins that boundary, and
+the packaging smoke runs the stripped scripts for real.
+
+The other half is the binary. `[profile.release]` sets `strip = "symbols"`,
+because an unstripped executable carries `morpheus_core::tactics::…` path by
+path and the static variant ships one. It also took **1,479,416 → 1,298,656
+bytes** off it. Nothing at match time needs those names: panics are caught and
+reported by message, and the judge does not hand back backtraces.
+
+`--no-minify` ships the sources verbatim, for when a judge traceback has to be
+read against real line numbers. `SUBMISSION.json` records which way the archive
+was built.
+
+Note the version pin is exact (`=0.2.0`) and the helper depends on **syn 1.x**,
+not 2 — `rustminify::remove_docs` takes a 1.0 `syn::File`, and cargo will link
+both majors into one graph without complaint, so the failure reads as a type
+mismatch between two types spelled identically.
 
 ## A well-formed reply is not evidence of a working bot
 

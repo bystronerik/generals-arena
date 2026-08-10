@@ -55,6 +55,11 @@ BUNDLES_DIR = REPO / "data" / "bundles"
 MUSL_TARGET = "x86_64-unknown-linux-musl"
 BINARY = "morpheus-rs"
 
+# The dev-time minifier (tools/minify). Built on the packaging host, where a
+# network exists; never shipped, never linked into the bot.
+MINIFY_DIR = BOT_DIR / "tools" / "minify"
+MINIFY_BIN = MINIFY_DIR / "target" / "release" / "morpheus-rs-minify"
+
 # Fixed timestamp, matching arena.bundle: identical sources produce a
 # byte-identical zip, so "did the submission change" is a checksum question.
 _ZIP_DATE = (2020, 1, 1, 0, 0, 0)
@@ -173,11 +178,12 @@ def _git(*args: str) -> str:
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
-def _provenance(variant: str) -> bytes:
+def _provenance(variant: str, minify_stats: dict | None = None) -> bytes:
     manifest = json.loads((BOT_DIR / "artifact" / "manifest.json").read_text())
     payload = {
         "bot_id": "morpheus-rs",
         "variant": variant,
+        "minified": bool((minify_stats or {}).get("minified")),
         "content_hash": bot_content_hash(BOT_DIR / "run.sh"),
         "git_commit": _git("rev-parse", "HEAD"),
         "git_dirty": bool(_git("status", "--porcelain", "--", "bots/morpheus-rs")),
@@ -186,7 +192,11 @@ def _provenance(variant: str) -> bytes:
         "note": (
             "Rated identity of the program in this zip. The content hash is the "
             "repo bot's, computed over sources + Cargo.lock + run.sh + artifact; "
-            "the zip's own launchers are generated and are not part of it."
+            "the zip's own launchers are generated and are not part of it. "
+            "`minified` means the .rs members were stripped of comments on the "
+            "way in — the program is the same, the line numbers are not, so a "
+            "judge traceback locates a fault in the stripped file. Re-package "
+            "with --no-minify when you need to read one."
         ),
     }
     return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode()
@@ -221,6 +231,69 @@ def _run(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> st
     if result.returncode != 0:
         raise PackageError(
             f"{' '.join(command)} failed in {cwd}:\n{result.stdout}\n{result.stderr}"
+        )
+    return result.stdout
+
+
+def _ensure_minifier() -> Path:
+    """Build `tools/minify` if it is not already built, and return the binary."""
+    if not MINIFY_BIN.is_file():
+        _run(["cargo", "build", "--release"], cwd=MINIFY_DIR)
+    if not MINIFY_BIN.is_file():
+        raise PackageError(f"no minifier at {MINIFY_BIN}")
+    return MINIFY_BIN
+
+
+def strip_line_comments(text: str) -> str:
+    """
+    Drop whole-line `#` comments from a shell script or a TOML file.
+
+    The launchers and `build.sh` carry as much reasoning as the Rust does — why
+    `cd` before `cargo build`, what a missing FMA costs, why intake fails loudly
+    — and none of it is needed to run them. This is the shell half of what
+    `tools/minify` does to `crates/**`, and it runs under the same rule: on the
+    way into the zip only.
+
+    **Whole-line only, and the shebang stays.** A trailing `# …` after code is
+    left alone, because a line-based rule cannot tell a comment from a `#`
+    inside a string or from `${var#prefix}`, and a launcher that stops working
+    is a forfeit. Blank runs left behind by removed blocks are collapsed so the
+    result reads like a script rather than a sieve.
+    """
+    kept: list[str] = []
+    for index, line in enumerate(text.splitlines()):
+        stripped = line.strip()
+        if index == 0 and stripped.startswith("#!"):
+            kept.append(line)
+            continue
+        if stripped.startswith("#"):
+            continue
+        if not stripped and (not kept or not kept[-1].strip()):
+            continue
+        kept.append(line)
+    return "\n".join(kept).rstrip("\n") + "\n"
+
+
+def _shell(text: str, *, minify: bool) -> bytes:
+    return (strip_line_comments(text) if minify else text).encode()
+
+
+def _minify_rust(source: bytes, arcname: str) -> bytes:
+    """
+    One `.rs` file, stripped of everything the judge does not need.
+
+    Same discipline as `arena/bundle.py`: the rewrite happens **on the way into
+    the zip only** and the repo file is never touched. A failure is fatal
+    rather than a fallback to the original text — shipping the un-minified file
+    while reporting a minified bundle is the one outcome worse than not
+    minifying at all.
+    """
+    result = subprocess.run(
+        [str(_ensure_minifier())], input=source, capture_output=True
+    )
+    if result.returncode != 0:
+        raise PackageError(
+            f"minifying {arcname}: {result.stderr.decode(errors='replace').strip()}"
         )
     return result.stdout
 
@@ -261,28 +334,50 @@ def _artifact_members() -> list[tuple[Path, str]]:
     ]
 
 
-def _iter_source_files() -> list[tuple[Path, str]]:
-    """(path, arcname) for everything the vendored variant compiles from."""
-    members: list[tuple[Path, str]] = []
+def _iter_source_files(*, minify: bool) -> tuple[list[tuple[str, bytes]], dict]:
+    """
+    (arcname, bytes) for everything the vendored variant compiles from.
+
+    Returns contents rather than paths because `.rs` members are rewritten on
+    the way in — comments and doc comments stripped — and the repo file is
+    never touched. The second return value is what the rewrite cost, so
+    "was this bundle minified" is a number rather than a flag.
+    """
+    members: list[tuple[str, bytes]] = []
     for name in SOURCE_MEMBERS:
         path = BOT_DIR / name
         if not path.is_file():
             raise PackageError(f"missing {name}; run cargo build once first")
-        members.append((path, name))
+        members.append((name, path.read_bytes()))
     for name in CONFIG_MEMBERS:
         path = BOT_DIR / name
         if not path.is_file():
             raise PackageError(f"missing {name}; the bot would play placeholder knobs")
-        members.append((path, name))
+        members.append((name, path.read_bytes()))
+
+    before = after = 0
     for tree in SOURCE_TREES:
         root = BOT_DIR / tree
         if not root.is_dir():
             raise PackageError(f"missing {tree}/")
         for path in sorted(root.rglob("*")):
-            if path.is_file() and "target" not in path.parts:
-                members.append((path, str(path.relative_to(BOT_DIR))))
-    members.extend(_artifact_members())
-    return members
+            if not path.is_file() or "target" in path.parts:
+                continue
+            arcname = str(path.relative_to(BOT_DIR))
+            data = path.read_bytes()
+            if minify and path.suffix == ".rs":
+                before += len(data)
+                data = _minify_rust(data, arcname)
+                after += len(data)
+            members.append((arcname, data))
+
+    for path, arcname in _artifact_members():
+        members.append((arcname, path.read_bytes()))
+    return members, {
+        "minified": bool(minify and before),
+        "rust_bytes_before": before,
+        "rust_bytes_after": after,
+    }
 
 
 def _write_entry(zf: zipfile.ZipFile, arcname: str, data: bytes, *, mode: int) -> None:
@@ -308,22 +403,30 @@ def _vendor(workdir: Path) -> tuple[Path, int]:
     return vendor_dir, sum(1 for p in vendor_dir.rglob("*") if p.is_file())
 
 
-def build_vendored(out_path: Path, workdir: Path) -> tuple[Path, int]:
+def build_vendored(
+    out_path: Path, workdir: Path, *, minify: bool
+) -> tuple[Path, int, dict]:
     vendor_dir, vendor_files = _vendor(workdir)
-    build_sh = (BOT_DIR / "tools" / "submission" / "build.sh").read_bytes()
+    build_sh = (BOT_DIR / "tools" / "submission" / "build.sh").read_text()
+    members, minify_stats = _iter_source_files(minify=minify)
 
     with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        _write_entry(zf, "run.sh", RUN_SH_VENDORED.encode(), mode=0o755)
-        _write_entry(zf, "build.sh", build_sh, mode=0o755)
-        _write_entry(zf, ".cargo/config.toml", CARGO_CONFIG_VENDORED.encode(), mode=0o644)
-        for path, arcname in _iter_source_files():
-            _write_entry(zf, arcname, path.read_bytes(), mode=0o644)
-        _write_entry(zf, PROVENANCE_NAME, _provenance("vendored"), mode=0o644)
+        _write_entry(zf, "run.sh", _shell(RUN_SH_VENDORED, minify=minify), mode=0o755)
+        _write_entry(zf, "build.sh", _shell(build_sh, minify=minify), mode=0o755)
+        _write_entry(
+            zf,
+            ".cargo/config.toml",
+            _shell(CARGO_CONFIG_VENDORED, minify=minify),
+            mode=0o644,
+        )
+        for arcname, data in members:
+            _write_entry(zf, arcname, data, mode=0o644)
+        _write_entry(zf, PROVENANCE_NAME, _provenance("vendored", minify_stats), mode=0o644)
         for path in sorted(vendor_dir.rglob("*")):
             if path.is_file():
                 arcname = f"vendor/{path.relative_to(vendor_dir)}"
                 _write_entry(zf, arcname, path.read_bytes(), mode=0o644)
-    return out_path, vendor_files
+    return out_path, vendor_files, minify_stats
 
 
 def _musl_rustflags() -> str | None:
@@ -357,7 +460,7 @@ def _musl_rustflags() -> str | None:
     return f"-C linker-flavor=ld.lld -C linker={lld}"
 
 
-def build_static(out_path: Path) -> tuple[Path, Path]:
+def build_static(out_path: Path, *, minify: bool = True) -> tuple[Path, Path]:
     env = _cargo_env()
     flags = _musl_rustflags()
     if flags:
@@ -374,8 +477,8 @@ def build_static(out_path: Path) -> tuple[Path, Path]:
         raise PackageError(f"no static binary at {binary}")
 
     with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        _write_entry(zf, "run.sh", RUN_SH_STATIC.encode(), mode=0o755)
-        _write_entry(zf, "build.sh", BUILD_SH_STATIC.encode(), mode=0o755)
+        _write_entry(zf, "run.sh", _shell(RUN_SH_STATIC, minify=minify), mode=0o755)
+        _write_entry(zf, "build.sh", _shell(BUILD_SH_STATIC, minify=minify), mode=0o755)
         _write_entry(zf, BINARY, binary.read_bytes(), mode=0o755)
         for name in CONFIG_MEMBERS:
             path = BOT_DIR / name
@@ -502,13 +605,16 @@ def smoke(zip_path: Path, variant: str) -> tuple[bool, str, dict[str, str]]:
         )
 
 
-def package(variant: str, *, out_dir: Path, force: bool, run_smoke: bool) -> Package:
+def package(
+    variant: str, *, out_dir: Path, force: bool, run_smoke: bool, minify: bool = True
+) -> Package:
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"morpheus-rs-{variant}.zip"
     if out_path.exists() and not force:
         raise PackageError(f"{out_path} exists (pass --force to overwrite)")
 
     vendor_files = 0
+    minify_stats: dict = {}
     with tempfile.TemporaryDirectory(prefix="morpheus-rs-pkg-") as tmp:
         # Built beside the destination and moved into place only on success.
         # Writing straight to `out_path` leaves a **partial archive** when a
@@ -519,9 +625,11 @@ def package(variant: str, *, out_dir: Path, force: bool, run_smoke: bool) -> Pac
         # `build.sh` now runs `selfcheck`.
         staged = Path(tmp) / out_path.name
         if variant == "vendored":
-            _, vendor_files = build_vendored(staged, Path(tmp))
+            _, vendor_files, minify_stats = build_vendored(
+                staged, Path(tmp), minify=minify
+            )
         elif variant == "static":
-            build_static(staged)
+            build_static(staged, minify=minify)
         else:
             raise PackageError(f"unknown variant {variant!r}")
         out_path.unlink(missing_ok=True)
@@ -533,6 +641,12 @@ def package(variant: str, *, out_dir: Path, force: bool, run_smoke: bool) -> Pac
         smoked, note, facts = smoke(out_path, variant)
     if variant == "vendored":
         note = f"{note}; {vendor_files} vendored file(s)"
+        if minify_stats.get("minified"):
+            note = (
+                f"{note}; sources minified "
+                f"{minify_stats['rust_bytes_before']} -> "
+                f"{minify_stats['rust_bytes_after']} B"
+            )
     import hashlib
 
     return Package(
@@ -645,6 +759,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--no-smoke", action="store_true")
     parser.add_argument(
+        "--no-minify",
+        action="store_true",
+        help="ship the .rs sources verbatim, comments and all. Use when a judge "
+        "traceback has to be read against real line numbers.",
+    )
+    parser.add_argument(
         "--gate",
         action="store_true",
         help="play the AGENTS.md competition gate with the extracted bundle "
@@ -669,6 +789,7 @@ def main(argv: list[str] | None = None) -> int:
                 out_dir=args.out_dir,
                 force=args.force,
                 run_smoke=not args.no_smoke,
+                minify=not args.no_minify,
             )
         except (PackageError, BundleError) as exc:
             failures.append({"variant": variant, "error": str(exc)})
