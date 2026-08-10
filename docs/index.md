@@ -87,4 +87,6 @@ Small topic files for the Generals Arena research repo.
 - [sosipolis strategy](research/strategies/sosipolis.md) — dual-mode MCTS find-and-strike research bot
 - [Kubic behavior (merged)](research/strategies/kubic-behavior-spec.md) — reverse-engineered leaderboard bot; defense present-but-rare
 - [human 95/100 plan](research/strategies/human-95-plan.md) — remote goal: 95 wins in 100 logged games against humans on classic generals.io
+- [top leaderboard loss analysis](research/measurements/leaderboard-top-loss-analysis.md) — how Kubic, bca, and thor lose: the grind, the punch, and the blind stall (per-player profiles linked inside)
+- [morpheus-rs leaderboard gaps](research/measurements/morpheus-rs-leaderboard-gaps.md) — winner behaviors mapped onto morpheus-rs, ranked, with the measurements that would settle them
 - `research/measurements/` — one result set per tournament round
