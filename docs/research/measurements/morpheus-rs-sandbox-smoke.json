@@ -11,34 +11,100 @@
   "results": [
     {
       "variant": "vendored",
-      "files": 20,
-      "unpacked_bytes": 139059,
-      "zip_bytes": 46813,
+      "files": 43,
+      "unpacked_bytes": 1689449,
+      "zip_bytes": 1132136,
       "build_returncode": 0,
-      "build_seconds": 4.62,
-      "build_stderr_tail": "   Compiling morpheus-core v0.1.0 (/tmp/vendored/crates/core)\n   Compiling morpheus-rs v0.1.0 (/tmp/vendored/crates/bot)\n    Finished `release` profile [optimized] target(s) in 4.52s\n",
+      "build_seconds": 17.21,
+      "build_stderr_tail": "   Compiling morpheus-core v0.1.0 (/tmp/vendored/crates/core)\n   Compiling morpheus-rs v0.1.0 (/tmp/vendored/crates/bot)\n    Finished `release` profile [optimized] target(s) in 16.95s\n",
+      "selfcheck": {
+        "hardware_fma": "true",
+        "weights_sha256": "15509ff5cc1aa8bca16062363a9cd65cc4187a666eb71fc8dc200d8180abb0c9",
+        "checkpoint_id": "ckpt-00010000-300811cf4add",
+        "load_ms": "9.517",
+        "warmup_ms": "107.779",
+        "init_ms": "0.140",
+        "decision": "0 10 10 0 0",
+        "decide_ms": "4.732",
+        "selfcheck": "ok"
+      },
       "reply_lines": [
         "1 0 0 0 0",
         "1 0 0 0 0"
       ],
       "run_returncode": 0,
       "run_stderr_tail": "",
+      "selfcheck_repeats": [
+        {
+          "load_ms": 7.918,
+          "warmup_ms": 107.697,
+          "decide_ms": 4.541
+        },
+        {
+          "load_ms": 8.081,
+          "warmup_ms": 108.122,
+          "decide_ms": 4.682
+        },
+        {
+          "load_ms": 8.38,
+          "warmup_ms": 107.863,
+          "decide_ms": 4.763
+        },
+        {
+          "load_ms": 8.202,
+          "warmup_ms": 107.654,
+          "decide_ms": 4.655
+        }
+      ],
       "ok": true
     },
     {
       "variant": "static",
-      "files": 3,
-      "unpacked_bytes": 590646,
-      "zip_bytes": 268243,
+      "files": 7,
+      "unpacked_bytes": 2494592,
+      "zip_bytes": 1587500,
       "build_returncode": 0,
-      "build_seconds": 0.03,
+      "build_seconds": 0.2,
       "build_stderr_tail": "",
+      "selfcheck": {
+        "hardware_fma": "true",
+        "weights_sha256": "15509ff5cc1aa8bca16062363a9cd65cc4187a666eb71fc8dc200d8180abb0c9",
+        "checkpoint_id": "ckpt-00010000-300811cf4add",
+        "load_ms": "17.207",
+        "warmup_ms": "109.315",
+        "init_ms": "0.550",
+        "decision": "0 10 10 0 0",
+        "decide_ms": "9.927",
+        "selfcheck": "ok"
+      },
       "reply_lines": [
         "1 0 0 0 0",
         "1 0 0 0 0"
       ],
       "run_returncode": 0,
       "run_stderr_tail": "",
+      "selfcheck_repeats": [
+        {
+          "load_ms": 18.088,
+          "warmup_ms": 109.901,
+          "decide_ms": 11.664
+        },
+        {
+          "load_ms": 17.109,
+          "warmup_ms": 111.421,
+          "decide_ms": 10.009
+        },
+        {
+          "load_ms": 19.015,
+          "warmup_ms": 108.971,
+          "decide_ms": 10.864
+        },
+        {
+          "load_ms": 18.805,
+          "warmup_ms": 108.818,
+          "decide_ms": 10.305
+        }
+      ],
       "ok": true
     },
     {
@@ -47,8 +113,9 @@
       "unpacked_bytes": 6258671,
       "zip_bytes": 1360046,
       "build_returncode": 0,
-      "build_seconds": 2.52,
-      "build_stderr_tail": "   Compiling version_check v0.9.5\n   Compiling typenum v1.20.1\n   Compiling cfg-if v1.0.4\n   Compiling cpufeatures v0.2.17\n   Compiling generic-array v0.14.7\n   Compiling crypto-common v0.1.7\n   Compiling block-buffer v0.10.4\n   Compiling digest v0.10.7\n   Compiling sha2 v0.10.9\n   Compiling vendor-probe v0.0.0 (/tmp/vendor-probe)\n    Finished `release` profile [optimized] target(s) in 2.46s\n",
+      "build_seconds": 2.44,
+      "build_stderr_tail": "   Compiling version_check v0.9.5\n   Compiling typenum v1.20.1\n   Compiling cfg-if v1.0.4\n   Compiling cpufeatures v0.2.17\n   Compiling generic-array v0.14.7\n   Compiling block-buffer v0.10.4\n   Compiling crypto-common v0.1.7\n   Compiling digest v0.10.7\n   Compiling sha2 v0.10.9\n   Compiling vendor-probe v0.0.0 (/tmp/vendor-probe)\n    Finished `release` profile [optimized] target(s) in 2.38s\n",
+      "selfcheck": {},
       "reply_lines": [
         "1 0 0 0 0",
         "1 0 0 0 0"

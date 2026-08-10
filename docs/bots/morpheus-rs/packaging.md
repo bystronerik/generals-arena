@@ -27,9 +27,17 @@ bots/morpheus-rs/
     convert_artifact.py TorchScript -> safetensors, reproducibly
     bench_inference.py  the M3 shoot-out, local half
     spikes/             candle and tract crates kept as evidence, never linked
-  tests/                pytest parity slice; outside the content hash
+  tests/                pytest parity slice + the selfcheck guard; unhashed
   target/  vendor/      build output and vendored crates; gitignored, unhashed
 ```
+
+Each zip additionally carries a generated `run.sh`, a generated `build.sh`, and
+`SUBMISSION.json` — the bot id, content hash, git commit and weights digest of
+the program inside it. The judge never reads that file; a human comparing a
+rated result on generals.bot against a row in `data/bot_versions/morpheus-rs.json`
+does, and without it "which program is playing up there" is answerable only by
+rebuilding and hoping. It deliberately carries no timestamp, because the zips
+are byte-reproducible from the sources and a clock would end that.
 
 ## Toolchain
 
@@ -77,27 +85,87 @@ compiles it at intake. Note `vendor/` is currently **empty**, because the crate
 has no dependencies — which is why the probe below exists.
 
 **static** — a prebuilt `x86_64-unknown-linux-musl` binary with `build.sh`
-reduced to a no-op. This is R4's fallback (§9) for a sandbox that cannot build
-the vendored tree. It is built and smoked on every packaging run because a
-fallback nobody exercises is a fallback nobody can rely on.
+reduced to a no-op plus the selfcheck below. This is R4's fallback (§9) for a
+sandbox that cannot build the vendored tree. It is built and smoked on every
+packaging run because a fallback nobody exercises is a fallback nobody can rely
+on.
+
+**The fallback plays a different speed.** Measured on one x86 core at M8: the
+26 warmup forwards land within 2% of the vendored variant — same target, same
+FMA, same kernels — while one decision costs **1.75× to 2.2×** more and the
+artifact load ~1.9×, which is musl's allocator against glibc's. So the static
+variant does *not* inherit M7's latency qualification (p99.9 = 140 ms, zero
+moves over 150). If R4 is ever triggered, the fallback needs its own measured
+knobs before it plays rated games, or an allocator — which would be this
+crate's first dependency and should be argued from a measurement. Figures:
+[morpheus-rs-m8-submission.md](../../research/measurements/morpheus-rs-m8-submission.md).
+
+Both are built to a scratch path and moved into place only on success. Writing
+straight to `data/bundles/` leaves a **partial archive** when a member check
+fails mid-zip, and nothing downstream can tell one from a finished bundle: an
+aborted static build left a four-file zip with no weights, which the Modal
+smoke then shipped to an x86 container. The `selfcheck` below is what caught
+it.
 
 **Both variants carry `artifact/` and `deployment.json`.** That is a
 correction, not a description: until M5 the static variant shipped only the
 binary and its launchers, which was right for the M0.5 pass bot, quietly wrong
 once M3 gave the bot weights to load, and wrong twice over once M5 gave it a
-configuration to read. A missing `deployment.json` is the nastier of the two —
-the artifact's absence fails loudly at load, while the config's absence falls
-back to the Part 07 placeholders and plays a *different bot* (four times the
-particles, twice the search depth, a 125 ms deadline against 140) with nothing
-in a match log to say so. The packager now refuses to build either variant
-without it, `try_load_deployment` says on stderr when it falls back, and the
-lookup tries the binary's own directory before `target/../..` so the static
-layout resolves.
+configuration to read. ~~A missing `deployment.json` is the nastier of the two
+— the artifact's absence fails loudly at load~~ — **wrong, and M8 measured it.**
+Neither fails loudly. The missing config falls back to the Part 07 placeholders
+and plays a *different bot* (four times the particles, twice the search depth, a
+125 ms deadline against 140); the missing artifact degrades the seat to a legal
+skip on every turn. Both answer the protocol perfectly, and the difference is
+invisible in a match log — see the next section. The packager now refuses to
+build either variant without both, `try_load_deployment` says on stderr when it
+falls back, and the lookup tries the binary's own directory before
+`target/../..` so the static layout resolves.
 
 Both are audited through `arena.bundle.check_limits` — the same code that
 guards the Python bundles, so the two cannot drift — then extracted to a
 scratch directory with no repo around them, built, and driven with a scripted
 frame.
+
+## A well-formed reply is not evidence of a working bot
+
+The single most important fact about this bot's failure modes, found at M8:
+
+**Delete `artifact/` and the smoke test still passes.** Byte-identically. Two
+well-formed actions, exit zero, green.
+
+That is not a bug in the test, it is the shape of the bot. `Seat::new`
+returning `Err` degrades the seat to passing every turn rather than exiting,
+because the judge forfeits a game on an early exit but charges one fault out of
+fifty for a bad reply (RULES.md §08) — so the *right* behaviour during a game is
+to keep answering. Every way the submission can be broken produces a bot that
+speaks the protocol perfectly and loses every game:
+
+| broken | what it looks like at play time |
+| --- | --- |
+| no `artifact/` | legal skip every turn, one line on stderr |
+| no `deployment.json` | plays the Part 07 placeholder knobs — four times the particles, twice the search depth, a 125 ms deadline against 140 — well, and as a different bot |
+| built without a hardware FMA | correct moves, 277 ms per forward, late on every one |
+
+None of the three is visible in a match log, a reply stream, or a file count.
+
+`morpheus-rs selfcheck` is the one place that refuses. It resolves
+`deployment.json` explicitly instead of falling back, loads the weights against
+their manifest digest, constructs the real playing seat with its warmup and
+thread-count invariant, reports `gemm::HAS_HARDWARE_FMA`, and decides one
+hand-built frame — a general on thirteen army with four empty neighbours, where
+a skip is the only wrong answer available. Any failure exits non-zero.
+
+**Both `build.sh` variants run it**, so a broken submission is rejected at
+intake rather than rated. That is the whole trade: a rejected submission costs a
+resubmission, a degraded one costs every rated game it plays. The packager
+parses its output, `bots/morpheus-rs/tests/test_selfcheck.py` proves it still
+notices a bot with its weights removed, and the Modal smoke requires it — a
+checker nobody checks is exactly the thing it was written to prevent.
+
+`warmup_ms` doubles as a per-forward probe: it is 26 forwards, so ~4.7 ms each
+on the M3 Pro against M7's ~5.1 ms on one x86 core, and a build that lost its
+FMA would read fifty times that.
 
 ## The offline build is proven by a probe, not by the shipping zips
 
@@ -182,13 +250,27 @@ is the wrong trade here.
 
 ```bash
 cargo test --release --manifest-path bots/morpheus-rs/Cargo.toml
-python bots/morpheus-rs/tools/package_submission.py --force
+python bots/morpheus-rs/tools/package_submission.py --force --gate
 modal run scripts/morpheus_rs_modal_submission_smoke.py
 ```
 
-The last one extracts both zips inside a one-core Linux x86 container with
-`block_network=True` and the sandbox's own toolchain, builds them, and speaks
-the protocol to each. Results:
+`--gate` extracts the archive, runs its own `build.sh`, and plays the AGENTS.md
+verification gate with the *submitted* bytes rather than the repo launcher —
+a different launcher, a different directory shape and a build step, none of
+which a two-frame script reaches. It costs minutes, so it is opt-in, and it is
+required before a submission.
+
+It runs `build.sh` and then **deletes it** before invoking `matchup.py`. That
+models the end of intake — the judge builds once and afterwards only spawns
+`run.sh` — and it is also the only way the gate can run: `build_agent`'s
+unguarded `build.relative_to(REPO_ROOT)` raises for every path outside
+`competition-module/`, so a submission-shaped directory crashes the gate
+wherever it is extracted. What goes untested is `build_agent`, which the judge
+does not have.
+
+The last command extracts both zips inside a one-core Linux x86 container with
+`block_network=True` and the sandbox's own toolchain, builds them, runs their
+selfchecks five times each, and speaks the protocol to each. Results:
 [morpheus-rs-sandbox-smoke.md](../../research/measurements/morpheus-rs-sandbox-smoke.md).
 It is a proxy, not the judge — necessary, not sufficient, which is the whole
 reason the fallback variant exists.

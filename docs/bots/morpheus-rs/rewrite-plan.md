@@ -1,11 +1,13 @@
 # Morpheus-rs rewrite plan
 
-Status: **confirmed 2026-08-08 — implementation under way. M0, M0.5, M1, M2,
-M3, M4, M5, and M6 are done (§14–§21); M0.5 awaits a submission only the
-account holder can make. The Rust bot plays its own decisions as of M5, and as
-of M6 it is registered, measured, and rated: +425 ± 23 Elo over the Python
-sibling at identical knobs (§21). M7 — the first qualified deployment — is
-next.**
+Status: **confirmed 2026-08-08 — implementation complete, submission pending.
+M0 through M8 are done (§14–§23), except that M0.5's and M8's exit gates both
+await a generals.bot submission only the account holder can make. The Rust bot
+plays its own decisions as of M5; M6's +425 Elo claim is **retracted** (§21,
+§22) and the current estimate of the contrast is +138 Elo; M7 qualified the
+latency on x86 and left the knob pick `unproven`; M8 built and audited the
+submission archives. What is owed: a replicated strength contrast for the
+knobs, and the upload.**
 Revised against the declared-final morpheus state at commit `9d6f186`
 (oracle `morpheus@73967d2125cc`, registry step 18 — see §14; the
 `17c8ac2684ec` this plan first named was the *previous* registry head, the
@@ -1312,3 +1314,75 @@ What M7 still owes:
 - `bots/morpheus-rs-s32/` is the decision arm and is gitignored derived data
   (the `bots/morpheus-*/` rule); it stays until the contrast is settled, then
   goes, with its registry entry left as provenance.
+
+## 23. M8 — the submission is built, and a green smoke test meant nothing
+
+Delivered 2026-08-10. Two archives, audited, reproducible, and — for the first
+time — put in front of a competition match as the *submitted* bytes rather than
+the repo launcher. Rules: [`packaging.md`](packaging.md). Figures:
+[M8](../../research/measurements/morpheus-rs-m8-submission.md) and
+[the offline x86 smoke](../../research/measurements/morpheus-rs-sandbox-smoke.md).
+
+**The exit gate is not met and cannot be met here** — the same wall M0.5 hit.
+It reads "the sandbox accepts and the bot plays rated games on generals.bot",
+and only the account holder can submit. Everything upstream is done: the
+vendored zip is **43 files / 1.13 MB** and the static fallback **7 files /
+1.59 MB**, against 10,000 files and 50 MB; both build offline on the sandbox's
+own rustc 1.97.1 in a one-core `block_network` container (17.2 s and 0.2 s);
+both are byte-reproducible; and the vendored bundle wins the AGENTS.md gate
+against `cm_expander` at turn 592 with a castle built. The submission checklist
+is at the end of the M8 report.
+
+**M8's finding is that none of the packaging evidence collected before it was
+worth what it read.** Delete `artifact/` from a bundle and the smoke test still
+passes, byte-identically: two well-formed actions, exit zero, green. That is
+not a defective test, it is the shape of the bot. `Seat::new` returning `Err`
+degrades the seat to passing every turn rather than exiting, because the judge
+forfeits a game on an early exit but charges one fault out of fifty for a bad
+reply — so the *correct* behaviour during a game makes a missing artifact, a
+`deployment.json` that fell back to the Part 07 placeholders, and a build with
+no hardware FMA all look like a bot that answers the protocol perfectly.
+
+§4's one-line description of this milestone — "zip builder, vendored crates,
+`build.sh`, size/file-count audit" — is a list of things that can all be true
+of an archive containing a brick. `morpheus-rs selfcheck` is what M8 adds: it
+resolves the config explicitly, loads the weights against their manifest
+digest, builds the real seat with its warmup and thread-count invariant,
+reports `HAS_HARDWARE_FMA`, and decides one hand-built frame where a skip is
+the only wrong answer. Both `build.sh` variants run it and abort intake on
+failure — a rejected submission costs a resubmission, a degraded one costs
+every rated game it plays. It caught a real broken archive within the hour: an
+aborted packaging run had left a partial four-file static zip that the Modal
+smoke then shipped to x86, and only the selfcheck failed it.
+
+**The repo's own gate cannot be run on the submission layout, and that is a
+constraint on verification rather than an inconvenience.**
+`matchup.py::build_agent` executes any `build.sh` beside a `run.sh` and formats
+its log line with `build.relative_to(REPO_ROOT)`, unguarded, against the
+*submodule's* root — so every submission-shaped directory crashes it before the
+first move. M0.5 recorded this as a reason to keep `build.sh` in `tools/`; M8
+is where it stopped being about file placement. The gate is run by building at
+intake and then deleting `build.sh`, which is exactly the judge's sequence and
+leaves `build_agent` — which the judge does not have — as the only untested
+part.
+
+**R4's fallback plays a different speed, which nothing had measured.** §9 asks
+for the static variant to be built and smoked every packaging run "so the
+fallback stays tested rather than theoretical", and it has been. Tested is not
+qualified: on one x86 core the two variants' 26 warmup forwards agree within 2%
+— same target, same FMA, same kernels — while one decision costs **1.75× to
+2.2×** more under musl and the artifact load ~1.9×, the allocator difference
+and nothing else. So the fallback does not inherit M7's `p99.9 = 140 ms, zero
+over 150`. Triggering R4 means re-deriving knobs for it, or adding an
+allocator, which would be this crate's first dependency and needs the
+measurement §17 taught the project to demand.
+
+Two notes for whoever submits:
+
+- Upload the **vendored** zip. `SUBMISSION.json` inside it records the content
+  hash of the program, which is the row to match in
+  `data/bot_versions/morpheus-rs.json` when a rated result comes back.
+- `deployment.json` still carries M7's half-verdict: the latency is qualified
+  on x86, the configuration it qualifies is not the one measured for strength,
+  and M7's replicated contrast is still owed. M8 packages a bot; it does not
+  settle which knobs it should be playing.

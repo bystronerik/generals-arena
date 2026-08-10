@@ -35,3 +35,14 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 cargo build --release --offline --locked --manifest-path "$DIR/Cargo.toml"
 echo "[build] $(ls -l "$DIR/target/release/morpheus-rs")"
+
+# Intake is the last moment where failing is cheaper than playing.
+#
+# Everything `selfcheck` looks at — the weights, the knobs, the FMA the line
+# above depends on — degrades *silently* at match time on purpose: the judge
+# forfeits on an early exit but charges one fault out of fifty for a bad
+# reply, so a seat that cannot start passes every turn instead of dying. That
+# is the right trade during a game and the wrong one here. A rejected
+# submission costs a resubmission; a degraded one costs every rated game it
+# plays, with nothing in a match log to say why.
+"$DIR/target/release/morpheus-rs" selfcheck

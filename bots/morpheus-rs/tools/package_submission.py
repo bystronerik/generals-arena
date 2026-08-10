@@ -49,6 +49,7 @@ from arena.bundle import (  # noqa: E402
     BundleError,
     check_limits,
 )
+from arena.records.fingerprint import bot_content_hash  # noqa: E402
 
 BUNDLES_DIR = REPO / "data" / "bundles"
 MUSL_TARGET = "x86_64-unknown-linux-musl"
@@ -74,11 +75,17 @@ SOURCE_TREES = ("crates",)
 # runtime started reading it.
 CONFIG_MEMBERS = ("deployment.json",)
 
-# Included when present. As of M3 this is the safetensors weights plus their
-# manifest — about 1 MB, against a 50 MB zip limit. Still optional rather than
-# required: a build that has not run `tools/convert_artifact.py` should produce
-# a zip that fails loudly at load, not a packager that refuses to run.
-OPTIONAL_TREES = ("artifact",)
+# The safetensors weights and their manifest — about 1 MB against a 50 MB
+# limit — in **both** variants, and required as of M8.
+#
+# It used to be optional, on the reasoning that a zip without weights "fails
+# loudly at load". It does not. `Seat::new` returning `Err` degrades the seat
+# to passing every turn, because the judge forfeits a game on an early exit and
+# charges one fault out of fifty for a bad reply — so a bot with no weights
+# answers every frame with a well-formed skip. That is the right trade during a
+# game and it is why nothing downstream can see the difference; the packager is
+# where the difference still exists.
+ARTIFACT_TREES = ("artifact",)
 
 RUN_SH_VENDORED = """#!/usr/bin/env bash
 # Submission launcher. No build here: build.sh already ran at intake.
@@ -112,9 +119,19 @@ BUILD_SH_STATIC = """#!/usr/bin/env bash
 # (x86_64-unknown-linux-musl). generals.bot's docs allow that shape, and it is
 # the fallback for a sandbox where the vendored build does not work
 # (rewrite-plan §9, R4).
+#
+# There is still something to *check*. The binary was linked on the packaging
+# host, so this is the first moment it runs on the judge's — which is where a
+# missing artifact, an unreadable deployment.json or a wrong CPU baseline
+# would first be visible, and all three degrade silently at match time by
+# design. `selfcheck` exits non-zero on any of them and takes intake down with
+# it, which is the cheaper failure.
 set -euo pipefail
-chmod +x "$(cd "$(dirname "$0")" && pwd)/morpheus-rs"
+DIR="$(cd "$(dirname "$0")" && pwd)"
+chmod +x "$DIR/morpheus-rs"
 echo "[build] static binary, nothing to compile"
+cd "$DIR"
+"$DIR/morpheus-rs" selfcheck
 """
 
 # The `.cargo/config.toml` that goes in the vendored zip. The source
@@ -137,19 +154,55 @@ SMOKE_INPUT = "0 2 2\n" + ("1 1 1 1 1\n1 1\n1 1\n1 0\n0 0\n1 0\n0 0\n" * 2)
 SMOKE_EXPECTED_LINES = 2
 
 
+# Ships in both zips. The judge never reads it; a human comparing a rated
+# result on generals.bot against a row in data/bot_versions/morpheus-rs.json
+# does, and without it "which program is playing up there" is answerable only
+# by rebuilding and hoping. Deliberately carries no timestamp: the zip is
+# byte-reproducible from the sources, and a clock in it would end that.
+PROVENANCE_NAME = "SUBMISSION.json"
+
+
 class PackageError(RuntimeError):
     """The submission cannot be built, or failed its own smoke test."""
+
+
+def _git(*args: str) -> str:
+    result = subprocess.run(
+        ["git", *args], cwd=str(REPO), capture_output=True, text=True
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def _provenance(variant: str) -> bytes:
+    manifest = json.loads((BOT_DIR / "artifact" / "manifest.json").read_text())
+    payload = {
+        "bot_id": "morpheus-rs",
+        "variant": variant,
+        "content_hash": bot_content_hash(BOT_DIR / "run.sh"),
+        "git_commit": _git("rev-parse", "HEAD"),
+        "git_dirty": bool(_git("status", "--porcelain", "--", "bots/morpheus-rs")),
+        "weights_sha256": manifest["weights_sha256"],
+        "checkpoint": manifest.get("training_run", {}).get("checkpoint_id", ""),
+        "note": (
+            "Rated identity of the program in this zip. The content hash is the "
+            "repo bot's, computed over sources + Cargo.lock + run.sh + artifact; "
+            "the zip's own launchers are generated and are not part of it."
+        ),
+    }
+    return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode()
 
 
 @dataclass
 class Package:
     variant: str
     zip_path: Path
+    zip_sha256: str
     zip_bytes: int
     unpacked_bytes: int
     file_count: int
     smoked: bool
     smoke_note: str
+    selfcheck: dict[str, str]
 
 
 def _cargo_env() -> dict[str, str]:
@@ -172,6 +225,42 @@ def _run(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> st
     return result.stdout
 
 
+def _artifact_members() -> list[tuple[Path, str]]:
+    """
+    (path, arcname) for the weights, checked against their own manifest.
+
+    The manifest's `weights_sha256` is verified here as well as by the loader,
+    for the reason the tree is no longer optional: a loader that rejects the
+    weights produces a bot that passes every turn, and the packager is the last
+    place a wrong artifact is still a visible failure.
+    """
+    root = BOT_DIR / "artifact"
+    manifest_path = root / "manifest.json"
+    if not manifest_path.is_file():
+        raise PackageError(
+            "missing artifact/manifest.json; run tools/convert_artifact.py. "
+            "A zip without weights does not fail loudly — it plays a seat that "
+            "skips every turn."
+        )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    weights = root / manifest["artifact_file"]
+    if not weights.is_file():
+        raise PackageError(f"manifest names {manifest['artifact_file']}, which is missing")
+    import hashlib
+
+    digest = hashlib.sha256(weights.read_bytes()).hexdigest()
+    if digest != manifest["weights_sha256"]:
+        raise PackageError(
+            f"{weights.name} hashes to {digest}, manifest says "
+            f"{manifest['weights_sha256']}"
+        )
+    return [
+        (path, str(path.relative_to(BOT_DIR)))
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    ]
+
+
 def _iter_source_files() -> list[tuple[Path, str]]:
     """(path, arcname) for everything the vendored variant compiles from."""
     members: list[tuple[Path, str]] = []
@@ -185,15 +274,14 @@ def _iter_source_files() -> list[tuple[Path, str]]:
         if not path.is_file():
             raise PackageError(f"missing {name}; the bot would play placeholder knobs")
         members.append((path, name))
-    for tree in SOURCE_TREES + OPTIONAL_TREES:
+    for tree in SOURCE_TREES:
         root = BOT_DIR / tree
         if not root.is_dir():
-            if tree in SOURCE_TREES:
-                raise PackageError(f"missing {tree}/")
-            continue
+            raise PackageError(f"missing {tree}/")
         for path in sorted(root.rglob("*")):
             if path.is_file() and "target" not in path.parts:
                 members.append((path, str(path.relative_to(BOT_DIR))))
+    members.extend(_artifact_members())
     return members
 
 
@@ -230,6 +318,7 @@ def build_vendored(out_path: Path, workdir: Path) -> tuple[Path, int]:
         _write_entry(zf, ".cargo/config.toml", CARGO_CONFIG_VENDORED.encode(), mode=0o644)
         for path, arcname in _iter_source_files():
             _write_entry(zf, arcname, path.read_bytes(), mode=0o644)
+        _write_entry(zf, PROVENANCE_NAME, _provenance("vendored"), mode=0o644)
         for path in sorted(vendor_dir.rglob("*")):
             if path.is_file():
                 arcname = f"vendor/{path.relative_to(vendor_dir)}"
@@ -295,28 +384,47 @@ def build_static(out_path: Path) -> tuple[Path, Path]:
                     f"missing {name}; the bot would play placeholder knobs"
                 )
             _write_entry(zf, name, path.read_bytes(), mode=0o644)
-        for tree in OPTIONAL_TREES:
-            root = BOT_DIR / tree
-            if not root.is_dir():
-                continue
-            for path in sorted(root.rglob("*")):
-                if path.is_file():
-                    _write_entry(
-                        zf,
-                        str(path.relative_to(BOT_DIR)),
-                        path.read_bytes(),
-                        mode=0o644,
-                    )
+        for path, arcname in _artifact_members():
+            _write_entry(zf, arcname, path.read_bytes(), mode=0o644)
+        _write_entry(zf, PROVENANCE_NAME, _provenance("static"), mode=0o644)
     return out_path, binary
 
 
-def smoke(zip_path: Path, variant: str) -> tuple[bool, str]:
+def _selfcheck_facts(stdout: str) -> dict[str, str]:
+    """The `key value` lines `morpheus-rs selfcheck` prints, as a dict."""
+    facts: dict[str, str] = {}
+    for line in stdout.splitlines():
+        head, _, tail = line.partition(" ")
+        if head in {
+            "hardware_fma",
+            "weights_sha256",
+            "checkpoint_id",
+            "load_ms",
+            "warmup_ms",
+            "init_ms",
+            "decision",
+            "decide_ms",
+            "selfcheck",
+        }:
+            facts[head] = tail.strip()
+    return facts
+
+
+def smoke(zip_path: Path, variant: str) -> tuple[bool, str, dict[str, str]]:
     """
     Extract the archive, run its build.sh, and speak the protocol to run.sh.
 
     This is the part that makes packaging a check rather than a hope: it runs
     the submitted bytes, from a directory with no repo around them, exactly as
     the judge will.
+
+    **What it could not see until M8.** A well-formed reply is not evidence of
+    a working bot. A seat that cannot load its weights or its knobs passes
+    every turn rather than exiting — the deliberate trade in `main.rs`, since
+    the judge forfeits on an early exit — so this test scored a bundle with
+    `artifact/` deleted as two well-formed actions, byte-identical to a healthy
+    one. The `selfcheck` that `build.sh` now runs is what closes it, and its
+    output is parsed here rather than merely allowed to pass.
     """
     with tempfile.TemporaryDirectory(prefix="morpheus-rs-smoke-") as tmp:
         root = Path(tmp)
@@ -331,11 +439,16 @@ def smoke(zip_path: Path, variant: str) -> tuple[bool, str]:
             binary = root / BINARY
             header = binary.read_bytes()[:20]
             if header[:4] != b"\x7fELF" or header[18:20] != b"\x3e\x00":
-                return False, "shipped binary is not an x86-64 ELF"
-            return False, (
-                f"built and verified as a static x86-64 ELF "
-                f"({binary.stat().st_size} bytes); not runnable on "
-                f"{platform.system()}/{platform.machine()}"
+                return False, "shipped binary is not an x86-64 ELF", {}
+            return (
+                False,
+                (
+                    f"built and verified as a static x86-64 ELF "
+                    f"({binary.stat().st_size} bytes); not runnable on "
+                    f"{platform.system()}/{platform.machine()} — its selfcheck "
+                    f"runs in the Modal sandbox smoke"
+                ),
+                {},
             )
 
         build = subprocess.run(
@@ -345,8 +458,15 @@ def smoke(zip_path: Path, variant: str) -> tuple[bool, str]:
             capture_output=True,
             text=True,
         )
+        facts = _selfcheck_facts(build.stdout)
         if build.returncode != 0:
-            return False, f"build.sh failed: {build.stderr[-500:]}"
+            return (
+                False,
+                f"build.sh failed: {(build.stderr or build.stdout)[-600:]}",
+                facts,
+            )
+        if facts.get("selfcheck") != "ok":
+            return False, "build.sh did not run selfcheck", facts
 
         play = subprocess.run(
             ["bash", str(root / "run.sh")],
@@ -358,15 +478,28 @@ def smoke(zip_path: Path, variant: str) -> tuple[bool, str]:
         )
         lines = [line for line in play.stdout.strip().splitlines() if line.strip()]
         if len(lines) != SMOKE_EXPECTED_LINES:
-            return False, (
-                f"run.sh replied {len(lines)} line(s), expected "
-                f"{SMOKE_EXPECTED_LINES}: {play.stdout!r} {play.stderr[-300:]}"
+            return (
+                False,
+                (
+                    f"run.sh replied {len(lines)} line(s), expected "
+                    f"{SMOKE_EXPECTED_LINES}: {play.stdout!r} {play.stderr[-300:]}"
+                ),
+                facts,
             )
         for line in lines:
             parts = line.split()
             if len(parts) != 5 or not all(p.lstrip("-").isdigit() for p in parts):
-                return False, f"malformed reply {line!r}"
-        return True, f"built offline and replied {len(lines)} well-formed actions"
+                return False, f"malformed reply {line!r}", facts
+        return (
+            True,
+            (
+                f"selfcheck ok (fma={facts.get('hardware_fma')}, "
+                f"decided `{facts.get('decision')}` in "
+                f"{facts.get('decide_ms')} ms), replied {len(lines)} "
+                f"well-formed actions"
+            ),
+            facts,
+        )
 
 
 def package(variant: str, *, out_dir: Path, force: bool, run_smoke: bool) -> Package:
@@ -377,28 +510,127 @@ def package(variant: str, *, out_dir: Path, force: bool, run_smoke: bool) -> Pac
 
     vendor_files = 0
     with tempfile.TemporaryDirectory(prefix="morpheus-rs-pkg-") as tmp:
+        # Built beside the destination and moved into place only on success.
+        # Writing straight to `out_path` leaves a **partial archive** when a
+        # member check fails mid-zip, and nothing downstream can tell one from
+        # a finished bundle: an aborted static build left a four-file zip with
+        # no weights in `data/bundles/`, which the Modal smoke then dutifully
+        # shipped to an x86 container. It was caught there only because
+        # `build.sh` now runs `selfcheck`.
+        staged = Path(tmp) / out_path.name
         if variant == "vendored":
-            _, vendor_files = build_vendored(out_path, Path(tmp))
+            _, vendor_files = build_vendored(staged, Path(tmp))
         elif variant == "static":
-            build_static(out_path)
+            build_static(staged)
         else:
             raise PackageError(f"unknown variant {variant!r}")
+        out_path.unlink(missing_ok=True)
+        shutil.move(str(staged), str(out_path))
 
     zip_bytes, unpacked_bytes, file_count = check_limits(out_path)
-    smoked, note = (False, "skipped")
+    smoked, note, facts = (False, "skipped", {})
     if run_smoke:
-        smoked, note = smoke(out_path, variant)
+        smoked, note, facts = smoke(out_path, variant)
     if variant == "vendored":
         note = f"{note}; {vendor_files} vendored file(s)"
+    import hashlib
+
     return Package(
         variant=variant,
         zip_path=out_path,
+        # The zip is byte-reproducible from the sources (fixed member dates,
+        # sorted members, no clock in SUBMISSION.json), so this digest answers
+        # "are the bytes I submitted the bytes I still have" without a rebuild.
+        zip_sha256=hashlib.sha256(out_path.read_bytes()).hexdigest(),
         zip_bytes=zip_bytes,
         unpacked_bytes=unpacked_bytes,
         file_count=file_count,
         smoked=smoked,
         smoke_note=note,
+        selfcheck=facts,
     )
+
+
+def gate(zip_path: Path, *, opponent: str, seed: int, keep: bool) -> dict:
+    """
+    Play the AGENTS.md verification gate with the *submitted* bytes.
+
+    Every gate this project has run so far drove `bots/morpheus-rs/run.sh` —
+    the repo launcher, which builds from the working tree and finds the
+    artifact by walking up from `target/`. The zip has a different launcher, a
+    different directory shape and a build step, and none of that was ever put
+    in front of a competition match. A frame script cannot substitute: it never
+    reaches a belief update, an admission decision, a castle build or a
+    deathtouch turn.
+
+    **`build.sh` is run and then deleted**, which is a deviation worth stating
+    rather than hiding. The judge's sequence is exactly that — build once at
+    intake, then spawn `run.sh` for every game and never look at `build.sh`
+    again (RULES.md §08) — so removing it models the end of intake. It is also
+    the only way this gate can run: `matchup.py::build_agent` executes any
+    `build.sh` beside a `run.sh` and formats its log line with
+    `build.relative_to(REPO_ROOT)`, unguarded, where `REPO_ROOT` is the
+    *submodule's* root. Every path outside `competition-module/` raises, so a
+    submission-shaped directory crashes the gate before the first move no
+    matter where it is extracted. What goes untested is `build_agent`, which
+    the judge does not have.
+    """
+    root = REPO / "data" / "bundles" / f"extracted-{zip_path.stem}"
+    if root.exists():
+        shutil.rmtree(root)
+    root.mkdir(parents=True)
+    with zipfile.ZipFile(zip_path) as zf:
+        zf.extractall(root)
+    for name in ("run.sh", "build.sh"):
+        (root / name).chmod(0o755)
+
+    build = subprocess.run(
+        ["bash", str(root / "build.sh")],
+        cwd=str(root),
+        env=_cargo_env(),
+        capture_output=True,
+        text=True,
+        timeout=60 * 30,
+    )
+    if build.returncode != 0:
+        if not keep:
+            shutil.rmtree(root, ignore_errors=True)
+        return {
+            "opponent": opponent,
+            "seed": seed,
+            "returncode": build.returncode,
+            "tail": (build.stdout + build.stderr).strip().splitlines()[-12:],
+        }
+    (root / "build.sh").unlink()
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "competition-module" / "competition" / "matchup.py"),
+            str(root / "run.sh"),
+            str(REPO / "bots" / opponent / "run.sh"),
+            "--mode",
+            "competition",
+            "--seed",
+            str(seed),
+        ],
+        cwd=str(REPO),
+        # The Python side of the pairing needs an interpreter with the repo's
+        # dependencies; `matchup.py` spawns `run.sh`, which honours PYTHON.
+        env={**_cargo_env(), "PYTHON": str(REPO / ".venv" / "bin" / "python")},
+        capture_output=True,
+        text=True,
+        timeout=60 * 30,
+    )
+    tail = (result.stdout + result.stderr).strip().splitlines()[-12:]
+    if not keep:
+        shutil.rmtree(root, ignore_errors=True)
+    return {
+        "opponent": opponent,
+        "seed": seed,
+        "returncode": result.returncode,
+        "tail": tail,
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -412,6 +644,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out-dir", type=Path, default=BUNDLES_DIR)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--no-smoke", action="store_true")
+    parser.add_argument(
+        "--gate",
+        action="store_true",
+        help="play the AGENTS.md competition gate with the extracted bundle "
+        "(minutes, not seconds; vendored variant only on a non-Linux host)",
+    )
+    parser.add_argument("--gate-opponent", default="cm_expander")
+    parser.add_argument("--gate-seed", type=int, default=0)
+    parser.add_argument(
+        "--keep-extracted",
+        action="store_true",
+        help="leave data/bundles/extracted-* in place after the gate",
+    )
     args = parser.parse_args(argv)
 
     variants = ("vendored", "static") if args.variant == "both" else (args.variant,)
@@ -428,22 +673,46 @@ def main(argv: list[str] | None = None) -> int:
         except (PackageError, BundleError) as exc:
             failures.append({"variant": variant, "error": str(exc)})
             continue
-        results.append(
-            {
-                "variant": built.variant,
-                "zip": str(built.zip_path),
-                "zip_bytes": built.zip_bytes,
-                "zip_limit": MAX_ZIP_BYTES,
-                "unpacked_bytes": built.unpacked_bytes,
-                "unpacked_limit": MAX_UNPACKED_BYTES,
-                "files": built.file_count,
-                "files_limit": MAX_FILES,
-                "smoked": built.smoked,
-                "smoke": built.smoke_note,
-            }
-        )
+        row = {
+            "variant": built.variant,
+            "zip": str(built.zip_path),
+            "zip_sha256": built.zip_sha256,
+            "zip_bytes": built.zip_bytes,
+            "zip_limit": MAX_ZIP_BYTES,
+            "unpacked_bytes": built.unpacked_bytes,
+            "unpacked_limit": MAX_UNPACKED_BYTES,
+            "files": built.file_count,
+            "files_limit": MAX_FILES,
+            "smoked": built.smoked,
+            "smoke": built.smoke_note,
+            "selfcheck": built.selfcheck,
+        }
+        if args.gate and built.smoked:
+            try:
+                row["gate"] = gate(
+                    built.zip_path,
+                    opponent=args.gate_opponent,
+                    seed=args.gate_seed,
+                    keep=args.keep_extracted,
+                )
+            except (subprocess.SubprocessError, OSError) as exc:
+                row["gate"] = {"error": str(exc)}
+            if row["gate"].get("returncode") not in (0, None):
+                failures.append({"variant": variant, "error": "competition gate failed"})
+        elif args.gate:
+            row["gate"] = {"skipped": "variant did not smoke on this host"}
+        results.append(row)
 
-    print(json.dumps({"packages": results, "failures": failures}, indent=2))
+    print(
+        json.dumps(
+            {
+                "content_hash": bot_content_hash(BOT_DIR / "run.sh"),
+                "packages": results,
+                "failures": failures,
+            },
+            indent=2,
+        )
+    )
     return 1 if failures else 0
 
 

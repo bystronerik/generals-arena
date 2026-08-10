@@ -19,7 +19,10 @@ use std::panic::{self, AssertUnwindSafe};
 use std::time::Instant;
 
 use morpheus_core::belief::Action5;
-use morpheus_core::deployment::{try_load_deployment, DeploymentConfig, EvaluatorKind};
+use morpheus_core::deployment::{
+    default_deployment_path, deployment_candidates, load_deployment, try_load_deployment,
+    DeploymentConfig, EvaluatorKind,
+};
 use morpheus_core::evaluator::{NetworkEvaluator, ShapedUniformEvaluator};
 use morpheus_core::inference::Session;
 use morpheus_core::network::Heads;
@@ -248,8 +251,139 @@ fn run_bench(iters: usize) -> ! {
     std::process::exit(0);
 }
 
+/// `morpheus-rs selfcheck`: refuse to be a bot that only looks like one.
+///
+/// Every failure this checks for is silent at play time by design. A missing
+/// artifact, a `deployment.json` that did not resolve, a build without a
+/// hardware FMA — none of them stop the process, because the judge forfeits a
+/// game on an early exit and RULES.md §08 charges only one fault out of fifty
+/// for a bad reply. So the seat degrades to passing, the protocol stays
+/// well-formed, and nothing downstream can tell the difference: the M0.5-era
+/// smoke test scored a bot with its weights deleted as "2 well-formed
+/// actions", byte-identical to a healthy one.
+///
+/// Intake is the one moment where failing loudly is the better trade — a
+/// rejected submission costs a resubmission, a degraded one costs every rated
+/// game it plays. `build.sh` runs this and aborts on a non-zero exit.
+fn run_selfcheck() -> ! {
+    let mut failures: Vec<String> = Vec::new();
+    let say = |key: &str, value: String| println!("{key} {value}");
+
+    // Reported before anything else: it is the one fact that changes a
+    // correct binary into a 49x-too-slow one, and M3 shipped it wrong once.
+    say("hardware_fma", morpheus_core::gemm::HAS_HARDWARE_FMA.to_string());
+    if !morpheus_core::gemm::HAS_HARDWARE_FMA {
+        failures.push(
+            "no hardware FMA in this build: every `f32::mul_add` in the inference \
+             kernels becomes a libm `fmaf()` call, measured at 277 ms per forward \
+             against 5.6 ms. Build from the crate root so cargo reads \
+             .cargo/config.toml (target-cpu=x86-64-v3)."
+                .into(),
+        );
+    }
+
+    // The config is resolved here rather than trusted to `Seat::new`, which
+    // falls back to the Part 07 placeholders and plays a *different bot* —
+    // four times the particles, twice the search depth, a 125 ms deadline
+    // against 140 — with one line on stderr to say so.
+    match default_deployment_path() {
+        Some(path) => {
+            say("deployment_path", path.display().to_string());
+            if let Err(err) = load_deployment(&path) {
+                failures.push(format!("{path:?} does not parse: {err}"));
+            }
+        }
+        None => failures.push(format!(
+            "no deployment.json among {:?}; the bot would play placeholder knobs",
+            deployment_candidates()
+        )),
+    }
+
+    match Session::load_default() {
+        Ok(session) => {
+            say("weights_sha256", session.weights_sha256.clone());
+            say("checkpoint_id", session.checkpoint_id.clone());
+        }
+        Err(err) => failures.push(format!("artifact: {err}")),
+    }
+
+    // The playing path itself, not a reconstruction of it: same constructor,
+    // same warmup, same thread-count invariant.
+    match Seat::new(0, 21, 21) {
+        Ok(mut seat) => {
+            let (load_ms, warmup_ms, init_ms) = seat.startup_ms;
+            say("load_ms", format!("{load_ms:.3}"));
+            say("warmup_ms", format!("{warmup_ms:.3}"));
+            say("init_ms", format!("{init_ms:.3}"));
+            say("config", seat.config_json.clone());
+
+            let obs = selfcheck_frame();
+            let began = Instant::now();
+            let action = seat.act(&obs);
+            let decide_ms = began.elapsed().as_secs_f64() * 1e3;
+            say(
+                "decision",
+                format!(
+                    "{} {} {} {} {}",
+                    action.pass, action.row, action.col, action.dir, action.split
+                ),
+            );
+            say("decide_ms", format!("{decide_ms:.3}"));
+            // A degraded seat answers every frame with `1 0 0 0 0`. On this
+            // position — a general on thirteen army with four empty
+            // neighbours — a skip is not a decision this bot makes.
+            if action.pass == 1 {
+                failures.push(
+                    "the seat skipped a turn with an obvious move available, which is \
+                     what a bot that failed to start looks like"
+                        .into(),
+                );
+            }
+        }
+        Err(err) => failures.push(format!("seat: {err}")),
+    }
+
+    for failure in &failures {
+        eprintln!("[morpheus-rs] selfcheck: {failure}");
+    }
+    println!("selfcheck {}", if failures.is_empty() { "ok" } else { "FAILED" });
+    std::process::exit(if failures.is_empty() { 0 } else { 1 });
+}
+
+/// A mid-opening frame with one unambiguous move in it.
+///
+/// Hand-built rather than replayed: the parity corpus lives in the repo and
+/// the whole point of this check is to run where the repo does not. Thirteen
+/// army on the general is below the 35 a castle costs, so a build is an
+/// illegal action and a skip is the only wrong answer available.
+fn selfcheck_frame() -> Observation {
+    use morpheus_core::wire::{OWNER_ME, TYPE_FOG, TYPE_GENERAL, TYPE_PLAIN};
+
+    let mut obs = Observation::with_dims(21, 21);
+    obs.type_grid.fill(TYPE_FOG);
+    obs.turn = 24;
+    obs.my_land = 1;
+    obs.my_army = 13;
+    obs.opp_land = 1;
+    obs.opp_army = 13;
+    for row in 9..=11 {
+        for col in 9..=11 {
+            let cell = obs.idx(row, col);
+            obs.type_grid[cell] = TYPE_PLAIN;
+        }
+    }
+    let general = obs.idx(10, 10);
+    obs.type_grid[general] = TYPE_GENERAL;
+    obs.owner_grid[general] = OWNER_ME;
+    obs.army_grid[general] = 13;
+    obs
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().map(String::as_str) == Some("selfcheck") {
+        run_selfcheck();
+    }
     if args.first().map(String::as_str) == Some("parity") {
         match args.get(1) {
             Some(kind) => run_parity(kind),
