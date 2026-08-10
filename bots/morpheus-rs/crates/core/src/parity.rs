@@ -31,7 +31,7 @@ use crate::board::hashing::{
     child_edge_key, enemy_info_hash_prehashed, info_state_key_prehashed, memory_digest,
     observation_payload, roll_history_digest,
 };
-use crate::matrix;
+use crate::search::matrix;
 use crate::board::memory::{update_memory, VisibleMemory};
 use crate::nn::network;
 use crate::board::observe::emit_observation;
@@ -1620,7 +1620,7 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
                 let count = ints.n()?;
                 let node_n = ints.next()?;
                 let max_tables = ints.n()?;
-                let mut tree = crate::tree::SearchTree::new(1024, max_tables, 0);
+                let mut tree = crate::search::tree::SearchTree::new(1024, max_tables, 0);
                 let at = tree
                     .make_node([0u8; 32], 0, [0u8; 32], Vec::new(), [0u8; 32], 0.0, 1)
                     .map_err(|_| "the first node always fits".to_string())?;

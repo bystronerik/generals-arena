@@ -1,36 +1,170 @@
-//! Network-backed search adapters for the frozen export.
+//! The policy/value interface the search plugs into, and every implementation.
 //!
-//! Port of `bots/morpheus/evaluator.py`. Two evaluators, both shaped:
-//! [`NetworkEvaluator`] runs the exported net, and [`ShapedUniformEvaluator`]
-//! is the network-free arm of the Part 17 C1 ablation — same play mask, same
-//! blend, same hard rules, only the learned prior and value gone, so the
-//! contrast measures exactly what the network contributes.
+//! Port of `bots/morpheus/evaluator.py` plus the two stubs the search module
+//! carried. Four implementations in one file because they only make sense
+//! against each other: [`NetworkEvaluator`] runs the exported net,
+//! [`ShapedUniformEvaluator`] is the network-free arm of the Part 17 C1
+//! ablation — same play mask, same blend, same hard rules, only the learned
+//! prior and value gone — and [`UniformEvaluator`] and [`ScriptedEvaluator`]
+//! are the deterministic stubs the `search` parity surface needs, because the
+//! network's answers agree to 6.6e-7 and that is enough to reorder a near-tie
+//! and turn a search comparison into an argument about the last bit of a
+//! softmax.
 //!
 //! Belief proposal and enemy priors use policy-only inference; the root and
 //! leaves use policy plus WDL. The auxiliary heads never run on the online
 //! search path.
 //!
 //! **Batching is a loop here, not a tensor dimension.** M3 measured
-//! TorchScript's batched call going superlinear on one x86 core (4× the work
-//! for 11.8× the time) while a loop of single forwards stayed flat, and the
+//! TorchScript's batched call going superlinear on one x86 core (4x the work
+//! for 11.8x the time) while a loop of single forwards stayed flat, and the
 //! bespoke engine has no batch axis at all. So `evaluate_many` runs the batch
 //! sequentially and the caller's "leaf batch" stays a scheduling unit, which is
 //! what the runtime charges it as.
 
-use crate::board::action::legal_mask;
+use crate::belief::proposal::ProposalPolicy;
+use crate::belief::summary::summarize_belief;
 use crate::belief::{Action5, BeliefState};
+use crate::board::action::legal_mask;
+use crate::board::memory::VisibleMemory;
+use crate::io::wire::Observation;
 use crate::nn::inference::Session;
 use crate::nn::network::{backup_value, legal_normalized_policy, Heads, IN_CHANNELS, N_ACTIONS};
-use crate::belief::summary::summarize_belief;
-use crate::belief::proposal::ProposalPolicy;
-use crate::search::{EvalItem, SearchEvaluator};
+use crate::nn::tensor::build_tensor;
+use crate::search::EvalItem;
 use crate::tactics::{
     apply_pre_contact_prior, default_shaping_log_clip, enemy_is_visible, play_mask,
     DEFAULT_SHAPING_FLOOR_FRAC, DEFAULT_SHAPING_LAMBDA,
 };
-use crate::nn::tensor::build_tensor;
-use crate::io::wire::Observation;
-use crate::board::memory::VisibleMemory;
+
+/// Injectable policy/value interface for the search.
+pub trait SearchEvaluator {
+    fn evaluate(
+        &mut self,
+        obs: &Observation,
+        memory: &VisibleMemory,
+        belief: &BeliefState,
+        from_root: bool,
+        shape: bool,
+    ) -> (Vec<f64>, f64);
+
+    /// Batched evaluation. The default loops, as the Python's fallback does.
+    fn evaluate_many(&mut self, items: &[EvalItem]) -> Vec<(Vec<f64>, f64)> {
+        items
+            .iter()
+            .map(|item| {
+                self.evaluate(
+                    &item.obs,
+                    &item.memory,
+                    &item.belief,
+                    item.from_root,
+                    item.shape,
+                )
+            })
+            .collect()
+    }
+
+    /// Policy-only priors for enemy tables. Enemy tables discard the value, so
+    /// a network evaluator skips the WDL head here.
+    fn policy_priors_many(&mut self, items: &[EvalItem]) -> Vec<Vec<f64>> {
+        items
+            .iter()
+            .map(|item| {
+                self.evaluate(&item.obs, &item.memory, &item.belief, false, false)
+                    .0
+            })
+            .collect()
+    }
+
+    fn set_previous_action(&mut self, _action: Option<Action5>) {}
+
+    /// The evaluator itself, viewed as a belief-proposal policy.
+    ///
+    /// The Python resolves this with `getattr(evaluator, "policy_logits")` and
+    /// hands the *same object* to both roles, which Rust cannot express as two
+    /// mutable borrows — so the role is a method instead. `None` means the
+    /// belief advances on uniform legal enemy actions, which is what
+    /// `deployment.json` ships.
+    fn as_proposal_policy(&mut self) -> Option<&mut (dyn crate::belief::proposal::ProposalPolicy + '_)> {
+        None
+    }
+
+    /// The raw legal-normalized network prior from the last root evaluation,
+    /// before the shaping blend — the "who's deciding" probe reads this.
+    fn last_unshaped_prior(&self) -> Option<&[f64]> {
+        None
+    }
+
+    fn clear_last_unshaped_prior(&mut self) {}
+}
+
+/// Deterministic stub: a uniform legal prior and a constant value.
+pub struct UniformEvaluator {
+    pub value: f64,
+}
+
+impl SearchEvaluator for UniformEvaluator {
+    fn evaluate(
+        &mut self,
+        obs: &Observation,
+        memory: &VisibleMemory,
+        _belief: &BeliefState,
+        _from_root: bool,
+        _shape: bool,
+    ) -> (Vec<f64>, f64) {
+        let mask = legal_mask(obs, memory, None);
+        let live = mask.iter().filter(|&&m| m).count();
+        let mut prior = vec![0.0f64; N_ACTIONS];
+        if live == 0 {
+            prior[crate::board::action::PASS_INDEX] = 1.0;
+        } else {
+            for (i, &m) in mask.iter().enumerate() {
+                if m {
+                    prior[i] = 1.0 / live as f64;
+                }
+            }
+        }
+        (prior, self.value)
+    }
+}
+
+/// Test helper: a fixed prior vector and value, masked and renormalized.
+///
+/// The Python's `ScriptedEvaluator`. It exists here for the same reason: the
+/// `search` parity surface needs an evaluator whose answers are *identical* on
+/// both sides, and the network's are not — they agree to 6.6e-7, which is
+/// enough to reorder a near-tie in the candidate list and turn a search
+/// comparison into an argument about the last bit of a softmax. With a scripted
+/// prior, any disagreement in the tree is the tree's.
+pub struct ScriptedEvaluator {
+    pub prior: Vec<f64>,
+    pub value: f64,
+}
+
+impl SearchEvaluator for ScriptedEvaluator {
+    fn evaluate(
+        &mut self,
+        obs: &Observation,
+        memory: &VisibleMemory,
+        _belief: &BeliefState,
+        _from_root: bool,
+        _shape: bool,
+    ) -> (Vec<f64>, f64) {
+        let mask = legal_mask(obs, memory, None);
+        let masked: Vec<f64> = (0..N_ACTIONS)
+            .map(|i| if mask[i] { self.prior[i] } else { 0.0 })
+            .collect();
+        let total = crate::support::rng::npsum(&masked);
+        if total <= 0.0 {
+            let live = mask.iter().filter(|&&m| m).count().max(1);
+            let prior = (0..N_ACTIONS)
+                .map(|i| if mask[i] { 1.0 / live as f64 } else { 0.0 })
+                .collect();
+            return (prior, self.value);
+        }
+        (masked.iter().map(|&v| v / total).collect(), self.value)
+    }
+}
 
 /// The four shaping knobs, exactly as `deployment.json` carries them.
 #[derive(Clone, Copy)]

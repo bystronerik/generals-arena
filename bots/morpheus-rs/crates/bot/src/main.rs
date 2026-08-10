@@ -23,7 +23,7 @@ use morpheus_core::deployment::{
     default_deployment_path, deployment_candidates, load_deployment, try_load_deployment,
     DeploymentConfig, EvaluatorKind,
 };
-use morpheus_core::evaluator::{NetworkEvaluator, ShapedUniformEvaluator};
+use morpheus_core::search::evaluator::{NetworkEvaluator, ShapedUniformEvaluator};
 use morpheus_core::nn::inference::Session;
 use morpheus_core::nn::network::Heads;
 use morpheus_core::support::rng::{SharedRng, SmallRng};

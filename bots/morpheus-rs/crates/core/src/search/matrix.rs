@@ -1,7 +1,7 @@
 //! Simultaneous-matrix math for the search: regret matching plus.
 //!
 //! Port of `bots/morpheus/matrix.py`. No tree storage lives here — nodes,
-//! enemy tables and eviction are [`crate::tree`]. Every value is in the root
+//! enemy tables and eviction are [`crate::search::tree`]. Every value is in the root
 //! player's perspective, so backup never flips a sign.
 //!
 //! **One reduction here cannot be bit-exact, and the oracle is the reason.**

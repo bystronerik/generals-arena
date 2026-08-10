@@ -13,7 +13,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::evaluator::ShapingKnobs;
+use crate::search::evaluator::ShapingKnobs;
 use crate::io::json::{parse, Json};
 use crate::runtime::{
     default_offline_p99, RuntimeConfig, COST_COMPONENTS, DEFAULT_OFFLINE_P99_MS,

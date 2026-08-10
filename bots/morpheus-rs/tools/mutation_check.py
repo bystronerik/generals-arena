@@ -66,12 +66,13 @@ FILE_SURFACES: dict[str, tuple[str, ...]] = {
     "belief/reservoir.rs": ("reservoir",),
     # M5. `tactics.rs` reaches the decision through five surfaces and is also
     # upstream of the search's candidate sets, so it maps to all of them.
-    "matrix.rs": ("matrix",),
+    "search/matrix.rs": ("matrix",),
     "tactics.rs": ("playmask", "candidates", "planners", "shaping", "constrain",
                    "decide"),
     "runtime.rs": ("decide", "runtime", "search"),
-    "tree.rs": ("search", "evict"),
-    "search.rs": ("search",),
+    "search/tree.rs": ("search", "evict"),
+    "search/select.rs": ("search",),
+    "search/backup.rs": ("search",),
 }
 
 
@@ -758,63 +759,63 @@ MUTATIONS: tuple[Mutation, ...] = (
 # --- M5: the search math, the tactical layer, the decision -------------
     Mutation(
         "self widening floor",
-        "matrix.rs",
+        "search/matrix.rs",
         "widening_limit(n, SELF_WIDENING_COEFF, SELF_WIDENING_CAP).max(SELF_WIDENING_FLOOR)",
         "widening_limit(n, SELF_WIDENING_COEFF, SELF_WIDENING_CAP)",
         "the floor keeps the root from locking its average strategy onto pass",
     ),
     Mutation(
         "widening cap",
-        "matrix.rs",
+        "search/matrix.rs",
         "(raw as usize).min(cap)",
         "raw as usize",
     ),
     Mutation(
         "exploration epsilon floor",
-        "matrix.rs",
+        "search/matrix.rs",
         "(EXPLORATION_NUMERATOR / (1.0 + n).sqrt()).max(EXPLORATION_FLOOR)",
         "EXPLORATION_NUMERATOR / (1.0 + n).sqrt()",
     ),
     Mutation(
         "regret matching clips negatives",
-        "matrix.rs",
+        "search/matrix.rs",
         "let positive = clamp_positive(regrets);\n    let total = npsum(&positive);\n    if total <= 0.0 {\n        return normalized_or_uniform(prior);",
         "let positive = regrets.to_vec();\n    let total = npsum(&positive);\n    if total <= 0.0 {\n        return normalized_or_uniform(prior);",
     ),
     Mutation(
         "regret matching plus clips at zero",
-        "matrix.rs",
+        "search/matrix.rs",
         "updated.max(0.0)",
         "updated",
     ),
     Mutation(
         "the mixed strategy blends the prior back in",
-        "matrix.rs",
+        "search/matrix.rs",
         "(1.0 - eps) * r + eps * q",
         "r",
     ),
     Mutation(
         "unvisited joint entries take first-play urgency",
-        "matrix.rs",
+        "search/matrix.rs",
         "if n > 0.0 { value } else { first_play }",
         "value",
     ),
     Mutation(
         "the dot product reduces pairwise, as numpy does",
-        "matrix.rs",
+        "search/matrix.rs",
         "let products: Vec<f64> = a.iter().zip(b).map(|(&x, &y)| x * y).collect();\n    npsum(&products)",
         "a.iter().zip(b).map(|(&x, &y)| x * y).sum()",
         "measured 1 ulp against Accelerate: the surface's tolerance may absorb it",
     ),
     Mutation(
         "the root selector drops actions the live prior zeroed",
-        "matrix.rs",
+        "search/matrix.rs",
         "if any && !all {",
         "if false && any && !all {",
     ),
     Mutation(
         "the root selector breaks ties by visits then prior",
-        "matrix.rs",
+        "search/matrix.rs",
         "let better = (avg[i], visits[i], prior[i]) > (avg[best], visits[best], prior[best]);",
         "let better = avg[i] > avg[best];",
     ),
@@ -1142,37 +1143,37 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "eviction protects the table just installed",
-        "tree.rs",
+        "search/tree.rs",
         "if self.pending_pins.contains(&table.info_hash) || &table.info_hash == protect {",
         "if self.pending_pins.contains(&table.info_hash) {",
     ),
     Mutation(
         "eviction spares pinned tables",
-        "tree.rs",
+        "search/tree.rs",
         "if self.pending_pins.contains(&table.info_hash) || &table.info_hash == protect {\n                continue;",
         "if &table.info_hash == protect {\n                continue;",
     ),
     Mutation(
         "retention weighs touch count as well as recency",
-        "tree.rs",
+        "search/tree.rs",
         "self.last_used as f64 + LRU_TOUCH_WEIGHT * (self.touch_count as f64).ln_1p()",
         "self.last_used as f64",
     ),
     Mutation(
         "eviction takes the first minimum",
-        "tree.rs",
+        "search/tree.rs",
         "if best.is_none() || score < best_score {",
         "if best.is_none() || score <= best_score {",
     ),
     Mutation(
         "widening an enemy column keeps the existing statistics",
-        "tree.rs",
+        "search/tree.rs",
         "grown[row * new_b..row * new_b + old_b]\n                    .copy_from_slice(&plane[row * old_b..(row + 1) * old_b]);",
         "let _ = row;",
     ),
     Mutation(
         "widening self renormalizes the candidate prior",
-        "tree.rs",
+        "search/tree.rs",
         "if total > 0.0 {\n            self.prior = positive.iter().map(|&v| v / total).collect();\n        }\n        self.regret.push(0.0);\n        self.avg_strategy.push(0.0);\n        let n_self = self.actions.len();",
         "if false {\n            self.prior = positive.iter().map(|&v| v / total).collect();\n        }\n        self.regret.push(0.0);\n        self.avg_strategy.push(0.0);\n        let n_self = self.actions.len();",
         "equivalent: `widen_self` is only ever called from "
@@ -1183,20 +1184,20 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "refresh_self_priors rebuilds mass from the full network prior",
-        "tree.rs",
+        "search/tree.rs",
         "let masses: Vec<f64> = self\n            .actions\n            .iter()\n            .map(|&a| prior.get(a).copied().unwrap_or(0.0).max(0.0))\n            .collect();",
         "let masses: Vec<f64> = self.prior.clone();",
         "without it, newly legal expands get prior 0 and the search locks onto pass",
     ),
     Mutation(
         "the enemy-hash cache is keyed on the reservoir version",
-        "tree.rs",
+        "search/tree.rs",
         "if node.enemy_hash_version != version || node.enemy_hash_cache.len() != node.reservoir.n() {",
         "if node.enemy_hash_cache.is_empty() {",
     ),
     Mutation(
         "marginal visits skip tables of the wrong width",
-        "tree.rs",
+        "search/tree.rs",
         "if table.n_self != n_self {\n                continue;\n            }",
         "if false {\n                continue;\n            }",
         "unreachable, and the reason is the next mutation. A table's "
@@ -1208,7 +1209,7 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "backup pads every table to the current candidate width",
-        "tree.rs",
+        "search/tree.rs",
         "table.ensure_self_rows(n_self);\n            let n_enemy = table.n_enemy();",
         "let n_enemy = table.n_enemy();",
         "unreachable for the reason above: nothing ever arrives at a "
@@ -1218,38 +1219,38 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "selection stops at an unexpanded node",
-        "search.rs",
+        "search/select.rs",
         "if self.tree.node(node).actions.is_empty() {",
         "if false {",
     ),
     Mutation(
         "freeze_widening actually freezes widening",
-        "search.rs",
+        "search/select.rs",
         "if !freeze_widening {",
         "if true {",
     ),
     Mutation(
         "the cross-turn prior cache installs without a network call",
-        "search.rs",
+        "search/select.rs",
         "if let Some(cached) = self.cached_enemy_prior(&h) {",
         "if let Some(cached) = None::<Vec<f64>> {",
         "only a slower path, unless it also changes the draw sequence",
     ),
     Mutation(
         "a child's memory folds forward from the root's, not the parent's",
-        "search.rs",
+        "search/select.rs",
         "update_memory(&memory, &my_obs)",
         "memory.clone()",
     ),
     Mutation(
         "an arriving particle is admitted to the child reservoir",
-        "search.rs",
+        "search/select.rs",
         "self.tree\n                        .node_mut(child)\n                        .reservoir\n                        .admit(&arriving, &mut rng);\n                    nodes.push(child);",
         "nodes.push(child);",
     ),
     Mutation(
         "a new child arrives at weight 1, not the parent's",
-        "search.rs",
+        "search/select.rs",
         "let arriving = Particle {\n                        state: Rc::clone(&next_state),\n                        weight: 1.0,",
         "let arriving = Particle {\n                        state: Rc::clone(&next_state),\n                        weight: particle.weight,",
         "equivalent: `ParticleReservoir::admit` rebuilds the arriving "
@@ -1260,7 +1261,7 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "a terminal leaf takes the seat's own result",
-        "search.rs",
+        "search/select.rs",
         "let seat_win = if state.winner as usize == self.seat {\n                    1.0\n                } else {\n                    -1.0\n                };",
         "let seat_win = 1.0;",
         "unobservable: this branch tests the state at the *top* of the "
@@ -1272,26 +1273,26 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "a drawn finish scores zero, not a loss",
-        "search.rs",
+        "search/select.rs",
         "let term = if next_state.winner < 0 {\n                    0.0\n                } else if next_state.winner as usize == self.seat {",
         "let term = if false {\n                    0.0\n                } else if next_state.winner as usize == self.seat {",
     ),
     Mutation(
         "backup walks the path from leaf to root",
-        "search.rs",
+        "search/backup.rs",
         "for i in (0..path.edges.len()).rev() {",
         "for i in 0..path.edges.len() {",
         "the node statistics are per-edge, so the order may be unobservable",
     ),
     Mutation(
         "a leaf evaluation expands the node it stopped at",
-        "search.rs",
+        "search/backup.rs",
         "if self.tree.node(leaf).actions.is_empty() {",
         "if false {",
     ),
     Mutation(
         "the root prior drives widening at the root",
-        "search.rs",
+        "search/select.rs",
         "let prior_for_self: Vec<f64> = if node == root && self.last_root_prior.is_some() {",
         "let prior_for_self: Vec<f64> = if false {",
         "equivalent: the two branches hold the same vector. "

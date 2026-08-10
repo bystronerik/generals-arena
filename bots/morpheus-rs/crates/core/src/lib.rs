@@ -31,12 +31,11 @@ pub mod nn;
 
 pub mod belief;
 
+pub mod tactics;
+
+pub mod search;
+
 pub mod deployment;
-pub mod evaluator;
-pub mod matrix;
 pub mod parity;
 pub mod runtime;
-pub mod search;
-pub mod tactics;
 pub mod telemetry;
-pub mod tree;

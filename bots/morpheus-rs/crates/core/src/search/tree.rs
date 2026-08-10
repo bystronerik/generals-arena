@@ -1,6 +1,6 @@
 //! Bounded information-set tree storage: nodes, enemy tables, eviction.
 //!
-//! Port of `bots/morpheus/tree.py`. Matrix math lives in [`crate::matrix`].
+//! Port of `bots/morpheus/tree.py`. Matrix math lives in [`crate::search::matrix`].
 //!
 //! **The Python's object graph becomes an arena.** `InfoNode` there holds
 //! direct references to its children and a dict of enemy tables; here nodes
@@ -23,7 +23,7 @@ use std::hash::{BuildHasherDefault, Hasher};
 
 
 use crate::board::hashing::enemy_info_hash;
-use crate::matrix::{
+use crate::search::matrix::{
     accumulate_average_strategy, aggregate_self_utilities, apply_joint_backup, effective_q,
     matrix_utilities, mixed_strategy, regret_plus_update, select_root_action,
 };
