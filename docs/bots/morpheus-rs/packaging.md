@@ -19,7 +19,7 @@ bots/morpheus-rs/
   deployment.json       the coupled knobs; inside the content hash (M5)
   run.sh                repo launcher — builds when stale, then execs
   tools/                dev tooling; outside the content hash
-    submission/build.sh the build.sh copied into the vendored zip
+    submission/build.sh the build.sh copied into the submission zip
     package_submission.py
     minify/             dev-time crate: strips comments on the way into the zip
     vendor_probe.py     proves the offline build with real vendored crates
@@ -32,19 +32,20 @@ bots/morpheus-rs/
   target/  vendor/      build output and vendored crates; gitignored, unhashed
 ```
 
-Each zip additionally carries a generated `run.sh`, a generated `build.sh`, and
+The zip additionally carries a generated `run.sh`, a generated `build.sh`, and
 `SUBMISSION.json` — the bot id, content hash, git commit and weights digest of
 the program inside it. The judge never reads that file; a human comparing a
 rated result on generals.bot against a row in `data/bot_versions/morpheus-rs.json`
 does, and without it "which program is playing up there" is answerable only by
-rebuilding and hoping. It deliberately carries no timestamp, because the zips
-are byte-reproducible from the sources and a clock would end that.
+rebuilding and hoping. It deliberately carries no timestamp, because the zip
+is byte-reproducible from the sources and a clock would end that.
 
 ## Toolchain
 
 `rustc`/`cargo` **1.97.1**, matching the sandbox's 1.97 stable. Installed with
 rustup; `rust-toolchain.toml` pins the channel and carries the
-`x86_64-unknown-linux-musl` target for the fallback variant.
+`x86_64-unknown-linux-musl` target, which the retired static fallback needed
+and nothing builds today.
 
 ## Content hash
 
@@ -74,43 +75,50 @@ for bot-relative paths and cannot tell a comment from a `source` line. An early
 would have silently re-identified the Rust bot. Refer to sibling bots by
 description, not by path, in any `.sh` under `bots/`.
 
-## Two variants, both built every time
+## One archive, named for the program in it
 
 ```bash
 python bots/morpheus-rs/tools/package_submission.py --force
 ```
 
-**vendored** — sources, `Cargo.lock`, `vendor/`, and a `build.sh` running
-`cargo build --release --offline --locked`. The intended submission: the judge
-compiles it at intake. Note `vendor/` is currently **empty**, because the crate
-has no dependencies — which is why the probe below exists. The `.rs` members are
-minified on the way in; see below.
+Out comes `data/bundles/morpheus-rs-<content_hash>.zip`: sources, `Cargo.lock`,
+`vendor/`, and a `build.sh` running `cargo build --release --offline --locked`.
+The judge compiles it at intake. `vendor/` is currently **empty**, because the
+crate has no dependencies — which is why the probe below exists. The `.rs`
+members are minified on the way in; see below.
 
-**static** — a prebuilt `x86_64-unknown-linux-musl` binary with `build.sh`
-reduced to a no-op plus the selfcheck below. This is R4's fallback (§9) for a
-sandbox that cannot build the vendored tree. It is built and smoked on every
-packaging run because a fallback nobody exercises is a fallback nobody can rely
-on.
+The name comes from `arena.bundle.default_output_path`, the same call the
+Python bundles use, so a Rust bundle and a Python one are the same kind of
+object on disk and an archive says on its face which rated program it holds.
+Two builds of different code cannot land on one path.
 
-**The fallback plays a different speed.** Measured on one x86 core at M8: the
-26 warmup forwards land within 2% of the vendored variant — same target, same
-FMA, same kernels — while one decision costs **1.75× to 2.2×** more and the
-artifact load ~1.9×, which is musl's allocator against glibc's. So the static
-variant does *not* inherit M7's latency qualification (p99.9 = 140 ms, zero
-moves over 150). If R4 is ever triggered, the fallback needs its own measured
-knobs before it plays rated games, or an allocator — which would be this
-crate's first dependency and should be argued from a measurement. Figures:
+**The static-binary variant is gone (M8).** It was R4's fallback (§9) for a
+sandbox that cannot build the vendored tree — a prebuilt
+`x86_64-unknown-linux-musl` binary with `build.sh` reduced to a no-op — and the
+plan asked for it to be built every run "so the fallback stays tested rather
+than theoretical". Tested it was; qualified it never was. Measured on one x86
+core at M8, its 26 warmup forwards land within 2% of the vendored build — same
+target, same FMA, same kernels — while one decision costs **1.75× to 2.2×**
+more and the artifact load ~1.9×, which is musl's allocator against glibc's.
+It therefore never inherited M7's `p99.9 = 140 ms, zero moves over 150`, so
+falling back to it meant shipping an unmeasured bot; and keeping it alive cost
+a cross-linker path, a second `build.sh`, and a smoke test the packaging host
+could not run. **If R4 ever fires, the fallback must be rebuilt from git
+history and qualified before it plays** — that is a real cost of this decision,
+recorded rather than smoothed over. It has not fired: the vendored-source
+archive built inside the judge's own image on the first submission
+(2026-08-10), which is the evidence the removal was waiting on. Figures:
 [morpheus-rs-m8-submission.md](../../research/measurements/morpheus-rs-m8-submission.md).
 
-Both are built to a scratch path and moved into place only on success. Writing
-straight to `data/bundles/` leaves a **partial archive** when a member check
-fails mid-zip, and nothing downstream can tell one from a finished bundle: an
-aborted static build left a four-file zip with no weights, which the Modal
-smoke then shipped to an x86 container. The `selfcheck` below is what caught
-it.
+The archive is built to a scratch path and moved into place only on success.
+Writing straight to `data/bundles/` leaves a **partial archive** when a member
+check fails mid-zip, and nothing downstream can tell one from a finished
+bundle: an aborted build once left a four-file zip with no weights, which the
+Modal smoke then shipped to an x86 container. The `selfcheck` below is what
+caught it.
 
-**Both variants carry `artifact/` and `deployment.json`.** That is a
-correction, not a description: until M5 the static variant shipped only the
+**The archive carries `artifact/` and `deployment.json`, both required.** That
+is a correction, not a description: until M5 the packaging shipped only the
 binary and its launchers, which was right for the M0.5 pass bot, quietly wrong
 once M3 gave the bot weights to load, and wrong twice over once M5 gave it a
 configuration to read. ~~A missing `deployment.json` is the nastier of the two
@@ -120,18 +128,17 @@ and plays a *different bot* (four times the particles, twice the search depth, a
 125 ms deadline against 140); the missing artifact degrades the seat to a legal
 skip on every turn. Both answer the protocol perfectly, and the difference is
 invisible in a match log — see the next section. The packager now refuses to
-build either variant without both, `try_load_deployment` says on stderr when it
+build the archive without both, `try_load_deployment` says on stderr when it
 falls back, and the lookup tries the binary's own directory before
-`target/../..` so the static layout resolves.
+`target/../..` so a flat layout would also resolve.
 
-Both are audited through `arena.bundle.check_limits` — the same code that
-guards the Python bundles, so the two cannot drift — then extracted to a
-scratch directory with no repo around them, built, and driven with a scripted
-frame.
+It is audited through `arena.bundle.check_limits` — the same code that guards
+the Python bundles, so the two cannot drift — then extracted to a scratch
+directory with no repo around it, built, and driven with a scripted frame.
 
 ## What the submission does not carry
 
-The vendored variant ships source, and this crate's comments are not
+The archive ships source, and this crate's comments are not
 incidental: the FMA bug and its 277 ms measurement, the BLAS reduction the
 oracle cannot pin, NumPy's unstable `argsort`, the reasoning behind every
 tactical rule. `arena/bundle.py` already decided that question for the Python
@@ -163,7 +170,7 @@ there, as they must be to be printed.
 `build.sh` and `.cargo/config.toml` carry as much reasoning as the Rust does —
 why `cd` before `cargo build`, what a missing FMA costs, why intake fails
 loudly — so `strip_line_comments` drops whole-line `#` comments from all three
-on the way into both zips. The shebang stays. A *trailing* `# …` after code is
+on the way into the zip. The shebang stays. A *trailing* `# …` after code is
 deliberately left alone: a line-based rule cannot tell a comment from a `#`
 inside a string or from `${var#prefix}`, and a launcher that stops working is a
 forfeit, not a smaller zip. `tests/test_packaging.py` pins that boundary, and
@@ -171,7 +178,7 @@ the packaging smoke runs the stripped scripts for real.
 
 The other half is the binary. `[profile.release]` sets `strip = "symbols"`,
 because an unstripped executable carries `morpheus_core::tactics::…` path by
-path and the static variant ships one. It also took **1,479,416 → 1,298,656
+path. It also took **1,479,416 → 1,298,656
 bytes** off it. Nothing at match time needs those names: panics are caught and
 reported by message, and the judge does not hand back backtraces.
 
@@ -213,7 +220,7 @@ thread-count invariant, reports `gemm::HAS_HARDWARE_FMA`, and decides one
 hand-built frame — a general on thirteen army with four empty neighbours, where
 a skip is the only wrong answer available. Any failure exits non-zero.
 
-**Both `build.sh` variants run it**, so a broken submission is rejected at
+**`build.sh` runs it**, so a broken submission is rejected at
 intake rather than rated. That is the whole trade: a rejected submission costs a
 resubmission, a degraded one costs every rated game it plays. The packager
 parses its output, `bots/morpheus-rs/tests/test_selfcheck.py` proves it still
@@ -224,9 +231,9 @@ checker nobody checks is exactly the thing it was written to prevent.
 on the M3 Pro against M7's ~5.1 ms on one x86 core, and a build that lost its
 FMA would read fifty times that.
 
-## The offline build is proven by a probe, not by the shipping zips
+## The offline build is proven by a probe, not by the shipping zip
 
-The two shipping variants have no dependencies. That makes their
+The shipped archive has no dependencies. That makes its
 `cargo build --offline` cheap to pass and nearly meaningless: with nothing to
 resolve, `--offline` cannot fail. It never exercises `.cargo/config.toml`
 source replacement, a transitive graph, or a build script running at intake —
@@ -237,8 +244,8 @@ shipped binary. It builds a scratch crate that depends on `sha2` — chosen for
 its shape: a transitive chain (`digest` → `block-buffer` → `generic-array` →
 `typenum`) and a build script via the `version_check` build-dependency, which
 is the failure mode most likely to be missed. It vendors, packages in exactly
-the submission shape, builds offline locally, and rides the Modal smoke as a
-third variant.
+the submission shape, builds offline locally, and rides the Modal smoke
+alongside the real archive.
 
 ```bash
 python bots/morpheus-rs/tools/vendor_probe.py
@@ -325,9 +332,9 @@ unguarded `build.relative_to(REPO_ROOT)` raises for every path outside
 wherever it is extracted. What goes untested is `build_agent`, which the judge
 does not have.
 
-The last command extracts both zips inside a one-core Linux x86 container with
-`block_network=True` and the sandbox's own toolchain, builds them, runs their
-selfchecks five times each, and speaks the protocol to each. Results:
+The last command extracts the archive inside a one-core Linux x86 container
+with `block_network=True` and the sandbox's own toolchain, builds it, runs its
+selfcheck five times, and speaks the protocol to it. Results:
 [morpheus-rs-sandbox-smoke.md](../../research/measurements/morpheus-rs-sandbox-smoke.md).
-It is a proxy, not the judge — necessary, not sufficient, which is the whole
-reason the fallback variant exists.
+It is a proxy, not the judge — necessary, not sufficient, and since M8 there is
+no built fallback standing behind it.

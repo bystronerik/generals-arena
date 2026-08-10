@@ -5,39 +5,51 @@ zip builder, vendored crates, `build.sh`, size and file-count audit. Measured
 2026-08-10. Layout and rules: [packaging.md](../../bots/morpheus-rs/packaging.md).
 Offline x86 figures: [morpheus-rs-sandbox-smoke.md](morpheus-rs-sandbox-smoke.md).
 
-**The exit gate is not met and cannot be met from here.** It reads "the sandbox
-accepts and the bot plays rated games on generals.bot", and only the account
-holder can submit. Everything upstream of that button is done and measured; the
-submission checklist is at the end.
+**Exit gate: met.** `morpheus-rs-ef5a20484a38.zip` was submitted to
+generals.bot by the account holder on 2026-08-10, the sandbox accepted and
+built it, and the bot is playing rated games. That closes the one thing this
+repo could never test — M0.5 rehearsed it, §15 said so, and the rehearsal was
+right.
 
-## The archives
+Two things are *not* recorded here, and should not be read into it: no intake
+log was captured, so the sandbox's own build time and whether `selfcheck`'s
+output is visible to a submitter are unknown; and no rated results, fault
+counts or forfeits have been observed. The fault count is the number worth
+collecting first — it is the one figure that would say whether the deadline
+knobs and the selfcheck did their job on the judge's hardware, and §22 shipped
+`n8-s16-b4-d8`, a configuration nobody has measured.
 
-Both built by `tools/package_submission.py --force`, both audited through
-`arena.bundle.check_limits` — the same code that guards the Python bundles.
+## The archive
 
-| variant | zip | unpacked | files | sha256 |
-| --- | ---: | ---: | ---: | --- |
-| vendored (submit this) | 1,132,136 B | 1,689,449 B | 43 | `93ed101b9b62…` |
-| static (R4 fallback) | 1,587,500 B | 2,494,592 B | 7 | `78b47b7cdd62…` |
+One archive, `data/bundles/morpheus-rs-<content_hash>.zip`, built by
+`tools/package_submission.py --force` and audited through
+`arena.bundle.check_limits` — the same code that guards the Python bundles. The
+name comes from `arena.bundle.default_output_path` too, so a Rust bundle and a
+Python one are the same kind of object on disk and an archive says on its face
+which rated program it holds.
 
-Against limits of 50 MB, 512 MB and 10,000 files: **2.2% of the zip budget,
-0.3% of the unpacked budget, 0.4% of the file count.** The file count was the
+| | zip | unpacked | files |
+| --- | ---: | ---: | ---: |
+| morpheus-rs-ef5a20484a38.zip | 1,042,430 B | 1,364,159 B | 43 |
+
+Against limits of 50 MB, 512 MB and 10,000 files: **2.0% of the zip budget,
+0.25% of the unpacked budget, 0.4% of the file count.** The file count was the
 binding constraint the plan worried about (§1, R6) and it never came close,
-because the crate has no dependencies — which is also why the vendored zip's
+because the crate has no dependencies — which is also why the zip's
 `vendor/` is empty and why the offline build path is proved by a separate
 probe carrying `sha2`'s transitive graph instead.
 
-Both are byte-reproducible: fixed member dates, sorted members, and a
+It is byte-reproducible: fixed member dates, sorted members, and a
 `SUBMISSION.json` with no clock in it. Repackaging produces the same digest, so
 "are the bytes I submitted the bytes I still have" is a checksum question.
 
-The vendored archive's `.rs` members are minified on the way in, the launchers
+The archive's `.rs` members are minified on the way in, the launchers
 and `.cargo/config.toml` lose their whole-line comments, and the release profile
 strips symbols — all added after the milestone's first pass, since the Python
 bundler has minified since it existed and the Rust side was shipping every
 comment in the crate. Measured: **669,589 → 345,746 bytes** of Rust,
-**1,479,416 → 1,298,656 bytes** of static binary, and 1,132,733 → 1,042,441
-bytes of vendored zip against the same archive built `--no-minify`. Mechanics
+**1,479,416 → 1,298,656 bytes** of binary, and 1,132,733 → 1,042,441 bytes of
+zip against the same archive built `--no-minify`. Mechanics
 and the reasons in
 [packaging.md](../../bots/morpheus-rs/packaging.md#what-the-submission-does-not-carry).
 
@@ -68,14 +80,14 @@ anything that would *notice*. `morpheus-rs selfcheck` is that: it resolves
 their manifest digest, constructs the real playing seat with its warmup and
 thread-count invariant, reports `gemm::HAS_HARDWARE_FMA`, and decides one
 hand-built frame — a general on thirteen army with four empty neighbours, where
-a skip is the only wrong answer available. Both `build.sh` variants run it and
-abort intake on a non-zero exit, which is the cheaper failure by a wide margin:
+a skip is the only wrong answer available. `build.sh` runs it and aborts intake
+on a non-zero exit, which is the cheaper failure by a wide margin:
 a rejected submission costs a resubmission, a degraded one costs every rated
 game it plays.
 
 It earned itself immediately. An aborted packaging run — the negative test for
-"does the packager refuse without weights" — left a **partial four-file static
-zip** in `data/bundles/`, and the next Modal smoke shipped it to an x86
+"does the packager refuse without weights" — left a **partial four-file zip**
+in `data/bundles/`, and the next Modal smoke shipped it to an x86
 container without noticing. `build.sh`'s selfcheck failed it there. The
 packager now stages archives and moves them into place only on success, so the
 partial can no longer exist; but the sequence is the milestone in miniature,
@@ -118,11 +130,11 @@ reason to keep `build.sh` out of the bot directory; M8 is where it stopped
 being a packaging inconvenience and started constraining what can be verified.
 What goes untested is `build_agent`, which the judge does not have.
 
-### R4's fallback plays a different speed, and nobody had measured it
+### R4's fallback played a different speed, so it was retired
 
-The static musl variant exists so the plan's R4 has a tested escape from a
-sandbox that cannot build the vendored tree, and it is built and smoked on
-every packaging run for exactly that reason. On one x86 core, five runs each:
+The static musl variant existed so the plan's R4 had a tested escape from a
+sandbox that cannot build the vendored tree, built and smoked on every
+packaging run for exactly that reason. On one x86 core, five runs each:
 
 | variant | warmup ms (26 forwards) | one decision, ms | artifact load, ms |
 | --- | --- | --- | --- |
@@ -138,21 +150,23 @@ compile target, the FMA and the kernels are the same in both. Everything that
 allocates is not: a decision costs **1.75× to 2.2×** more under musl and the
 artifact load ~1.9×, which is what musl's allocator against glibc's looks like.
 
-Consequence: **the fallback does not inherit M7's latency qualification.** That
+Consequence: **the fallback never inherited M7's latency qualification.** That
 qualification is `n8-s32-b4-d8` at p99.9 = 140 ms with zero moves over 150 on
-one x86 core, measured with the gnu build. A doubling of the decision
-path is not a rounding error against a 150 ms judge limit. If R4 is ever
-triggered, the fallback needs its own measured knobs before it plays rated
-games — or an allocator, which would be the first dependency this crate has
-ever needed and should be argued from a measurement.
+one x86 core, measured with the gnu build. A doubling of the decision path is
+not a rounding error against a 150 ms judge limit, so taking the fallback meant
+shipping a bot nobody had measured — which is not the safety §9 wanted from it.
+
+The packager therefore stops building it. One archive comes out, and if R4 ever
+fires the musl variant must be rebuilt from git history and qualified before it
+plays; an allocator would be the other route, and would be this crate's first
+dependency ever. That is a worse position than §9 imagined and a more honest
+one than a tested fallback nobody could responsibly use.
 
 ## Everything else, measured
 
 - **Intake build, offline, one x86 core: 17–18 s.** Fat LTO and a single
   codegen unit over 17,600 lines. There is no documented intake timeout; this
   leaves room under any plausible one.
-- **The static variant's `build.sh` costs 0.2 s** and is a `chmod` plus the
-  selfcheck.
 - **`block_network=True` is verified, not asserted:** a curl to crates.io in
   the same container exits 6, and the vendor probe (571 files, `sha2` →
   `digest` → `block-buffer` → `generic-array` → `typenum`, plus a build script)
@@ -165,13 +179,14 @@ ever needed and should be argued from a measurement.
 
 ## Submitting
 
-Only the account holder can do this part.
+Only the account holder can do this part. Done once, on 2026-08-10, with
+`ef5a20484a38`; the procedure below is what the next one follows.
 
 ```bash
 python bots/morpheus-rs/tools/package_submission.py --force --gate
 ```
 
-Then upload `data/bundles/morpheus-rs-vendored.zip` to generals.bot. Its
+Then upload `data/bundles/morpheus-rs-<content_hash>.zip` to generals.bot. Its
 `SUBMISSION.json` records the content hash of the program inside it, which is
 the row to look for in `data/bot_versions/morpheus-rs.json` when a rated result
 comes back — so **commit and register before packaging the zip you actually
@@ -185,14 +200,18 @@ python -m arena.records.registry --register morpheus-rs --strict
 `SUBMISSION.json` also carries `git_dirty`; a `true` there means the archive
 was built from a working tree and its hash cannot be looked up.
 
-If the sandbox rejects the vendored build — R4's tripwire — upload
-`data/bundles/morpheus-rs-static.zip` instead, and read the fallback's
-latency caveat above before believing anything about its results.
+If the sandbox rejects the build — R4's tripwire — there is no second archive
+to fall back to since M8 retired it; the musl variant has to be rebuilt from
+git history and qualified before it plays. **The tripwire did not fire:** the
+vendored-source zip built inside the judge's own image on the first attempt,
+which is the evidence the removal was waiting on and did not have when the
+decision was taken.
 
-What to check on the other side, because none of it is visible from here: that
-the sandbox's own image builds the vendored tree, that `build.sh`'s selfcheck
-output is legible in whatever intake log exists, and that the first rated games
-show no fault accumulation.
+Still to check on the other side, because none of it is visible from here:
+whether `build.sh`'s selfcheck output is legible in whatever intake log exists,
+and whether the rated games show fault accumulation. The second is the one that
+matters — it is what would say the deadline knobs hold on the judge's hardware,
+and the shipped configuration is one nobody has measured.
 
 **The shipped knobs are `n8-s16-b4-d8`, and nobody has measured them.** A
 `Configuration update` commit (`386d9ae`) landed on `deployment.json` after M8's

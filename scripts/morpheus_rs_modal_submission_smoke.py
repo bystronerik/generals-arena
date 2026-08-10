@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""M0.5: run both morpheus-rs submission zips on Linux x86, with no network.
+"""Run the morpheus-rs submission zip on Linux x86, with no network.
 
     python bots/morpheus-rs/tools/package_submission.py --force
     modal run scripts/morpheus_rs_modal_submission_smoke.py
@@ -15,22 +15,22 @@ things M0.5 is trying to falsify are all environmental:
 - does `build.sh` work with **no network at all** (`block_network=True`, which
   is stricter than `cargo --offline` asserting it needs none),
 - does an offline build work when there is genuinely something to resolve —
-  the two shipping variants have no dependencies, so `--offline` cannot fail
-  for them; the `vendor-probe` zip carries a transitive graph and a build
-  script precisely to close that gap,
+  the shipped archive has no dependencies, so `--offline` cannot fail for it;
+  the `vendor-probe` zip carries a transitive graph and a build script
+  precisely to close that gap,
 - does the vendored tree build on a *different* toolchain installation than the
   one that packaged it,
-- does the static musl binary run on x86-64 Linux, which the arm64 macOS
-  packaging host can build but cannot execute,
-- do both stay inside the file-count and size limits after extraction.
+- does it stay inside the file-count and size limits after extraction.
 
 What it cannot tell us: whether generals.bot's own image agrees. Modal is a
-proxy — same caveat as the M0 CPU probe, and the reason R4's fallback variant
-exists at all.
+proxy — same caveat as the M0 CPU probe. R4's static-binary fallback used to
+ride along here as a third variant and was dropped at M8; if it is ever needed
+again it has to be rebuilt and qualified, not assumed.
 """
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import modal
@@ -39,10 +39,16 @@ REPO = Path(__file__).resolve().parents[1]
 BUNDLES = REPO / "data" / "bundles"
 MEASUREMENTS = REPO / "docs" / "research" / "measurements"
 
-VENDORED_ZIP = BUNDLES / "morpheus-rs-vendored.zip"
-STATIC_ZIP = BUNDLES / "morpheus-rs-static.zip"
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+from arena.bundle import default_output_path  # noqa: E402
+
+# `morpheus-rs-<content_hash>.zip`, resolved rather than hardcoded: the name
+# moves with the program, which is the point of putting the hash in it. A stale
+# path here would smoke-test whatever the last build happened to leave behind.
+SUBMISSION_ZIP = default_output_path("morpheus-rs")
 # Built by tools/vendor_probe.py. Carries a real transitive dependency graph
-# with a build script, which the two shipping variants deliberately do not —
+# with a build script, which the shipped archive deliberately does not —
 # so this is the only zip here that actually exercises offline registry
 # resolution. See the probe's module docstring for why that gap mattered.
 PROBE_ZIP = BUNDLES / "morpheus-rs-vendor-probe.zip"
@@ -58,8 +64,7 @@ IMAGE = (
         "| sh -s -- -y --profile minimal --default-toolchain 1.97.1"
     )
     .env({"PATH": "/root/.cargo/bin:/usr/local/bin:/usr/bin:/bin"})
-    .add_local_file(str(VENDORED_ZIP), "/root/morpheus-rs-vendored.zip", copy=True)
-    .add_local_file(str(STATIC_ZIP), "/root/morpheus-rs-static.zip", copy=True)
+    .add_local_file(str(SUBMISSION_ZIP), "/root/morpheus-rs-submission.zip", copy=True)
     .add_local_file(str(PROBE_ZIP), "/root/morpheus-rs-vendor-probe.zip", copy=True)
 )
 
@@ -106,8 +111,7 @@ def _smoke_one(zip_path: str, variant: str) -> dict:
     result["build_seconds"] = round(time.perf_counter() - t0, 2)
     result["build_stderr_tail"] = build.stderr[-1500:]
 
-    # `build.sh` runs `morpheus-rs selfcheck` for the two shipping variants
-    # (M8). Its key/value lines are the only x86 evidence that the submitted
+    # `build.sh` runs `morpheus-rs selfcheck` (M8). Its key/value lines are the only x86 evidence that the submitted
     # bytes are a working bot rather than a well-formed one: a seat that cannot
     # load its weights, its knobs, or a hardware FMA still answers every frame
     # with a legal skip, which is what this smoke used to score as a pass.
@@ -143,13 +147,11 @@ def _smoke_one(zip_path: str, variant: str) -> dict:
     result["reply_lines"] = lines
     result["run_returncode"] = play.returncode
     result["run_stderr_tail"] = play.stderr[-1500:]
-    # One selfcheck is a check; five are a measurement. The first x86 run put
-    # the static variant's decision at 11.0 ms against the vendored variant's
-    # 4.7 ms on the same host — musl's allocator against glibc's, plausibly,
-    # or a cold sample. Either it is real and R4's fallback does not inherit
-    # M7's latency qualification, or it is noise; asserting either from one
-    # sample is what this project keeps writing down as the mistake.
-    if variant in {"vendored", "static"}:
+    # One selfcheck is a check; five are a measurement. This is the only place
+    # the submitted bytes are timed on x86 at all, and `warmup_ms` is 26
+    # forwards, so the spread says whether the archive compiled to the binary
+    # M7 qualified or to something else.
+    if variant == "submission":
         repeats = []
         for _ in range(4):
             again = subprocess.run(
@@ -173,8 +175,8 @@ def _smoke_one(zip_path: str, variant: str) -> dict:
         and all(len(line.split()) == 5 for line in lines)
     )
     # `vendor-probe` is a scratch crate, not this bot; it has no selfcheck to
-    # pass. The two shipping variants must have one, and it must have passed.
-    needs_selfcheck = variant in {"vendored", "static"}
+    # pass. The shipped archive must have one, and it must have passed.
+    needs_selfcheck = variant == "submission"
     result["ok"] = spoke_protocol and (
         not needs_selfcheck or facts.get("selfcheck") == "ok"
     )
@@ -183,7 +185,7 @@ def _smoke_one(zip_path: str, variant: str) -> dict:
 
 @app.function(image=IMAGE, cpu=1, memory=2048, timeout=60 * 20, block_network=True)
 def smoke_sandbox() -> dict:
-    """Both variants, one core, no network — as close to intake as we get."""
+    """The submission and the dependency probe, one core, no network."""
     import os
     import platform
     import subprocess
@@ -214,8 +216,7 @@ def smoke_sandbox() -> dict:
     return {
         "host": facts,
         "results": [
-            _smoke_one("/root/morpheus-rs-vendored.zip", "vendored"),
-            _smoke_one("/root/morpheus-rs-static.zip", "static"),
+            _smoke_one("/root/morpheus-rs-submission.zip", "submission"),
             _smoke_one("/root/morpheus-rs-vendor-probe.zip", "vendor-probe"),
         ],
     }
@@ -242,8 +243,15 @@ def _markdown(report: dict) -> str:
            " — **reachable, so this run does not prove the offline path**"),
         "",
         "Modal stands in for the generals.bot sandbox, which cannot be probed.",
-        "A green result here is necessary, not sufficient — which is why R4's",
-        "static-binary fallback is built and smoked on every packaging run.",
+        "A green result here is necessary, not sufficient — but the sufficiency",
+        "arrived on 2026-08-10, when the real sandbox accepted and built",
+        "`morpheus-rs@ef5a20484a38` on the first attempt. This proxy predicted",
+        "that correctly, which is the most that can be asked of a proxy.",
+        "",
+        "R4's static-binary fallback used to ride along as a third variant and was",
+        "dropped at M8: it was never latency-qualified — 1.75x to 2.2x slower per",
+        "decision under musl — so falling back to it meant shipping an unmeasured",
+        "bot. Nothing stands behind this result now.",
         "",
         "| variant | verdict | build s | files | unpacked | zip | replies |",
         "| --- | --- | ---: | ---: | ---: | ---: | --- |",

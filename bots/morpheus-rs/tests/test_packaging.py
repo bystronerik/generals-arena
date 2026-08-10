@@ -58,15 +58,30 @@ def test_blank_runs_left_by_removed_blocks_collapse_to_one():
     assert out == "#!/bin/sh\n\nexec ./bot\n"
 
 
-def test_the_shipped_launchers_still_do_what_they_did():
+def test_the_shipped_launcher_still_does_what_it_did():
     """
-    Not a syntax check — the packaging smoke runs these for real. This is the
+    Not a syntax check — the packaging smoke runs this for real. This is the
     cheap half: every line that makes the launcher a launcher is still there.
     """
-    for text in (_module.RUN_SH_VENDORED, _module.RUN_SH_STATIC):
-        out = strip_line_comments(text)
-        assert out.startswith("#!/usr/bin/env bash\n")
-        assert "set -euo pipefail" in out
-        assert out.count("export ") == 6
-        assert "exec " in out
-        assert "#" not in out.split("\n", 1)[1]
+    out = strip_line_comments(_module.RUN_SH_VENDORED)
+    assert out.startswith("#!/usr/bin/env bash\n")
+    assert "set -euo pipefail" in out
+    # One per math backend, plus rayon. The bot is single-threaded by
+    # construction and every latency number in the project assumes it.
+    assert out.count("export ") == 6
+    assert "exec " in out
+    assert "#" not in out.split("\n", 1)[1]
+
+
+def test_the_archive_is_named_for_the_program_it_holds():
+    """
+    `<bot_id>-<content_hash>.zip`, through `arena.bundle`'s own call — so a
+    Rust bundle and a Python one are the same kind of object on disk, and two
+    builds of different code cannot land on one path.
+    """
+    path = _module.default_output_path(_module.BOT_ID)
+    assert path.parent.name == "bundles"
+    assert path.name.startswith("morpheus-rs-") and path.suffix == ".zip"
+    assert path.stem.rsplit("-", 1)[1] == _module.bot_content_hash(
+        _module.BOT_DIR / "run.sh"
+    )

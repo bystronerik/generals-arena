@@ -1,13 +1,15 @@
 # Morpheus-rs rewrite plan
 
-Status: **confirmed 2026-08-08 — implementation complete, submission pending.
-M0 through M8 are done (§14–§23), except that M0.5's and M8's exit gates both
-await a generals.bot submission only the account holder can make. The Rust bot
+Status: **confirmed 2026-08-08 — implementation complete and submitted.
+M0 through M8 are done (§14–§23) and their exit gates are met: on 2026-08-10
+`morpheus-rs@ef5a20484a38` was accepted by the generals.bot sandbox and is
+playing rated games, which closes M0.5's gate as well as M8's. The Rust bot
 plays its own decisions as of M5; M6's +425 Elo claim is **retracted** (§21,
 §22) and the current estimate of the contrast is +138 Elo; M7 qualified the
-latency on x86 and left the knob pick `unproven`; M8 built and audited the
-submission archives. What is owed: a replicated strength contrast for the
-knobs, and the upload.**
+latency on x86 and left the knob pick `unproven`. What is owed: a replicated
+strength contrast for the knobs, and the first look at rated results — no
+games, faults or forfeits from the live bot have been observed here, and it is
+playing a configuration nobody has measured (§22).**
 Revised against the declared-final morpheus state at commit `9d6f186`
 (oracle `morpheus@73967d2125cc`, registry step 18 — see §14; the
 `17c8ac2684ec` this plan first named was the *previous* registry head, the
@@ -510,6 +512,14 @@ nothing more.
    reduced to a no-op — the generals.bot docs explicitly allow a
    self-contained binary. The M8 packaging script produces both variants
    from day one, so the fallback stays tested rather than theoretical.
+   **Closed 2026-08-10 (§23).** The tripwire never fired: the real
+   vendored-source submission built inside the sandbox's own image on the
+   first attempt. The fallback was retired before that — it was tested every
+   run but never *qualified*, at 1.75× to 2.2× per decision under musl, so
+   taking it would have meant shipping an unmeasured bot. If a future
+   submission is rejected, it must be rebuilt from git history and qualified;
+   "produces both variants from day one" is no longer true and the reason is
+   recorded rather than the sentence quietly left standing.
 5. **Effort overrun on the translation slog (R5).** `tactics.py` +
    `runtime.py` + `search.py` are ~4,200 lines of behavior-dense code with no
    speed story to motivate them, and the final pre-rewrite commits grew
@@ -526,7 +536,9 @@ nothing more.
    count is the real one. *Mitigation:* dependency budget reviewed at every
    `cargo add`; `cargo vendor` file count checked in the M8 packaging script
    and in the M0.5 smoke test. *Fallback:* R4's static-binary variant
-   sidesteps the vendored-file count entirely.
+   sidesteps the vendored-file count entirely — retired at M8, so this
+   fallback is now a rebuild rather than an archive on disk. It was never
+   close to binding: the shipped zip is 43 files, 0.4% of the cap.
 
 ## 10. Build, packaging, and repo integration
 
@@ -676,13 +688,15 @@ inside a one-core Linux x86 container with `block_network=True` and the
 sandbox's own rustc 1.97.1 — vendored in 3.3 s at 10 files / 8.7 KB, static in
 0.03 s at 3 files / 226 KB, against limits of 10,000 files and 50 MB.
 
-**The exit gate is not met, and cannot be met here.** It reads "the sandbox
-builds and runs it", and only the account holder can submit to generals.bot.
-What the rehearsal can falsify has been falsified: offline build, file count,
-toolchain version, and — the one the packaging host genuinely could not answer
-— that the musl binary an arm64 Mac cross-builds actually executes on x86-64
-Linux. What remains is the sandbox's own image agreeing, which is exactly what
-R4's tripwire is for.
+**The exit gate could not be met here, and was met later** (2026-08-10, §23):
+the real submission built inside the sandbox's own image on the first attempt.
+It reads "the sandbox builds and runs it", and only the account holder can
+submit to generals.bot. What the rehearsal could falsify it falsified: offline
+build, file count, toolchain version, and — the one the packaging host
+genuinely could not answer — that the musl binary an arm64 Mac cross-builds
+actually executes on x86-64 Linux. What remained was the sandbox's own image
+agreeing, which is exactly what R4's tripwire was for; it agreed, and the
+tripwire never fired.
 
 *Corrected during M2:* the "offline build" claim above originally rested on
 zips with **no dependencies**, where `--offline` cannot fail because there is
@@ -1323,15 +1337,20 @@ the repo launcher. Rules: [`packaging.md`](packaging.md). Figures:
 [M8](../../research/measurements/morpheus-rs-m8-submission.md) and
 [the offline x86 smoke](../../research/measurements/morpheus-rs-sandbox-smoke.md).
 
-**The exit gate is not met and cannot be met here** — the same wall M0.5 hit.
-It reads "the sandbox accepts and the bot plays rated games on generals.bot",
-and only the account holder can submit. Everything upstream is done: the
-vendored zip is **43 files / 1.13 MB** and the static fallback **7 files /
-1.59 MB**, against 10,000 files and 50 MB; both build offline on the sandbox's
-own rustc 1.97.1 in a one-core `block_network` container (17.2 s and 0.2 s);
-both are byte-reproducible; and the vendored bundle wins the AGENTS.md gate
-against `cm_expander` at turn 592 with a castle built. The submission checklist
-is at the end of the M8 report.
+**Exit gate: met.** `morpheus-rs-ef5a20484a38.zip` was submitted on 2026-08-10,
+the sandbox accepted and built it, and the bot is playing rated games. That
+also closes M0.5's gate (§15), which had been open since the walking skeleton
+because only the account holder can submit. Nothing about the *results* is
+recorded here — no games, faults or forfeits have been observed, and the
+shipped knobs are the unmeasured `n8-s16-b4-d8` below. Everything upstream is
+done:
+`data/bundles/morpheus-rs-<content_hash>.zip` is **43 files / 1.04 MB** against
+10,000 files and 50 MB, builds offline on the sandbox's own rustc 1.97.1 in a
+one-core `block_network` container in 17 s, is byte-reproducible, and wins the
+AGENTS.md gate against `cm_expander`. Its `.rs` members are minified and the
+binary is stripped, on the rule `arena/bundle.py` already applied to the Python
+bots: a submission carries logic, not the reasoning behind it. The submission
+checklist is at the end of the M8 report.
 
 **M8's finding is that none of the packaging evidence collected before it was
 worth what it read.** Delete `artifact/` from a bundle and the smoke test still
@@ -1349,10 +1368,9 @@ of an archive containing a brick. `morpheus-rs selfcheck` is what M8 adds: it
 resolves the config explicitly, loads the weights against their manifest
 digest, builds the real seat with its warmup and thread-count invariant,
 reports `HAS_HARDWARE_FMA`, and decides one hand-built frame where a skip is
-the only wrong answer. Both `build.sh` variants run it and abort intake on
-failure — a rejected submission costs a resubmission, a degraded one costs
+the only wrong answer. `build.sh` runs it and aborts intake on failure — a rejected submission costs a resubmission, a degraded one costs
 every rated game it plays. It caught a real broken archive within the hour: an
-aborted packaging run had left a partial four-file static zip that the Modal
+aborted packaging run had left a partial four-file zip that the Modal
 smoke then shipped to x86, and only the selfcheck failed it.
 
 **The repo's own gate cannot be run on the submission layout, and that is a
@@ -1366,21 +1384,23 @@ intake and then deleting `build.sh`, which is exactly the judge's sequence and
 leaves `build_agent` — which the judge does not have — as the only untested
 part.
 
-**R4's fallback plays a different speed, which nothing had measured.** §9 asks
+**R4's fallback played a different speed, and has now been retired.** §9 asks
 for the static variant to be built and smoked every packaging run "so the
-fallback stays tested rather than theoretical", and it has been. Tested is not
+fallback stays tested rather than theoretical", and it was. Tested is not
 qualified: on one x86 core the two variants' 26 warmup forwards agree within 2%
-— same target, same FMA, same kernels — while one decision costs **1.75× to
+— same target, same FMA, same kernels — while one decision cost **1.75× to
 2.2×** more under musl and the artifact load ~1.9×, the allocator difference
-and nothing else. So the fallback does not inherit M7's `p99.9 = 140 ms, zero
-over 150`. Triggering R4 means re-deriving knobs for it, or adding an
-allocator, which would be this crate's first dependency and needs the
-measurement §17 taught the project to demand.
+and nothing else. A fallback that can only be taken by shipping an unmeasured
+bot is not the safety §9 wanted, so M8 drops it: one archive is built, and if
+R4 ever fires the musl variant has to be rebuilt from git history and qualified
+before it plays. That is a worse position than §9 imagined and a more honest
+one than the alternative, which was a tested fallback nobody could responsibly
+use.
 
 Two notes for whoever submits:
 
-- Upload the **vendored** zip. `SUBMISSION.json` inside it records the content
-  hash of the program, which is the row to match in
+- Upload `data/bundles/morpheus-rs-<content_hash>.zip`. `SUBMISSION.json`
+  inside it records that hash, which is the row to match in
   `data/bot_versions/morpheus-rs.json` when a rated result comes back.
 - **The shipped knobs are `n8-s16-b4-d8`, which is not a configuration anyone
   has measured.** A `Configuration update` commit landed on `deployment.json`

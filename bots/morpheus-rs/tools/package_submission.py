@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
-"""Package morpheus-rs for generals.bot, in both variants, and prove each one.
+"""Package morpheus-rs for generals.bot, and prove the archive before it ships.
 
-    python bots/morpheus-rs/tools/package_submission.py            # both
-    python bots/morpheus-rs/tools/package_submission.py --variant vendored
-    python bots/morpheus-rs/tools/package_submission.py --no-smoke
+    python bots/morpheus-rs/tools/package_submission.py --force
+    python bots/morpheus-rs/tools/package_submission.py --force --gate
+    python bots/morpheus-rs/tools/package_submission.py --no-minify
 
-Milestone M0.5 of docs/bots/morpheus-rs/rewrite-plan.md. Two archives come out,
-and both are built every time on purpose:
+Started at milestone M0.5 of docs/bots/morpheus-rs/rewrite-plan.md. One archive
+comes out — sources, `Cargo.lock`, vendored crates, and a `build.sh` running
+`cargo build --release --offline` — and the judge compiles it at intake on its
+own toolchain.
 
-**vendored** — sources, `Cargo.lock`, vendored crates, and a `build.sh` that
-runs `cargo build --release --offline`. This is the intended submission: the
-judge compiles it at intake on its own toolchain.
+It is named `morpheus-rs-<content_hash>.zip` through
+`arena.bundle.default_output_path`, the same call the Python bundles use, so an
+archive says on its face which rated program it holds and two builds of
+different code cannot land on one path.
 
-**static** — a prebuilt `x86_64-unknown-linux-musl` binary with `build.sh`
-reduced to a no-op. This is R4's fallback for a sandbox that cannot build the
-vendored tree (§9). The plan asks for it "from day one, so the fallback stays
-tested rather than theoretical", which only holds if it is built and smoked on
-every packaging run rather than written down and left alone.
+**The static-binary variant is gone** (M8). It existed as R4's fallback for a
+sandbox that cannot build the vendored tree, and §9 asked for it to be built
+every run "so the fallback stays tested rather than theoretical". Two things
+overtook that: it was never latency-qualified — M8 measured it 1.75x to 2.2x
+slower per decision under musl, so falling back to it meant shipping an
+unmeasured bot — and keeping a second archive alive cost a cross-linker path,
+a second `build.sh`, and a smoke test that could not run on the packaging host
+anyway. If R4 ever fires, the fallback has to be rebuilt from git history
+(`git log -- bots/morpheus-rs/tools/package_submission.py`) and qualified
+before it plays, which is the honest description of where it now stands.
 
-Each archive is audited against the judge's limits through
+The archive is audited against the judge's limits through
 `arena.bundle.check_limits` — the same code path that guards the Python bots,
 so the two cannot drift — and then smoke-tested by extracting it, running its
 `build.sh`, and driving a scripted frame through its `run.sh`.
@@ -28,7 +36,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import platform
 import shutil
 import subprocess
 import sys
@@ -48,11 +55,11 @@ from arena.bundle import (  # noqa: E402
     MAX_ZIP_BYTES,
     BundleError,
     check_limits,
+    default_output_path,
 )
 from arena.records.fingerprint import bot_content_hash  # noqa: E402
 
-BUNDLES_DIR = REPO / "data" / "bundles"
-MUSL_TARGET = "x86_64-unknown-linux-musl"
+BOT_ID = "morpheus-rs"
 BINARY = "morpheus-rs"
 
 # The dev-time minifier (tools/minify). Built on the packaging host, where a
@@ -64,7 +71,7 @@ MINIFY_BIN = MINIFY_DIR / "target" / "release" / "morpheus-rs-minify"
 # byte-identical zip, so "did the submission change" is a checksum question.
 _ZIP_DATE = (2020, 1, 1, 0, 0, 0)
 
-# Source files the vendored variant ships. `rust-toolchain.toml` is
+# Source files the archive ships. `rust-toolchain.toml` is
 # deliberately **not** here: it pins an exact patch release, and a sandbox
 # whose stable toolchain is any other patch would try to download the pinned
 # one — over a network that does not exist at intake. The pin is a
@@ -73,15 +80,15 @@ _ZIP_DATE = (2020, 1, 1, 0, 0, 0)
 SOURCE_MEMBERS = ("Cargo.toml", "Cargo.lock")
 SOURCE_TREES = ("crates",)
 
-# Ships in **both** variants, and is required, because it is the only thing
-# that says which bot this is. Without it the binary falls back to the Part 07
-# placeholders — four times the particles, twice the search depth, a different
-# deadline — and plays a configuration nobody measured. Landed at M5, when the
-# runtime started reading it.
+# Required, because it is the only thing that says which bot this is. Without
+# it the binary falls back to the Part 07 placeholders — four times the
+# particles, twice the search depth, a different deadline — and plays a
+# configuration nobody measured. Landed at M5, when the runtime started
+# reading it.
 CONFIG_MEMBERS = ("deployment.json",)
 
 # The safetensors weights and their manifest — about 1 MB against a 50 MB
-# limit — in **both** variants, and required as of M8.
+# limit — and required as of M8.
 #
 # It used to be optional, on the reasoning that a zip without weights "fails
 # loudly at load". It does not. `Seat::new` returning `Err` degrades the seat
@@ -105,40 +112,6 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 exec "$DIR/target/release/morpheus-rs"
 """
 
-RUN_SH_STATIC = """#!/usr/bin/env bash
-# Submission launcher for the static-binary variant: nothing was built at
-# intake, the binary shipped in the zip.
-set -euo pipefail
-export OMP_NUM_THREADS=1
-export MKL_NUM_THREADS=1
-export OPENBLAS_NUM_THREADS=1
-export VECLIB_MAXIMUM_THREADS=1
-export NUMEXPR_NUM_THREADS=1
-export RAYON_NUM_THREADS=1
-DIR="$(cd "$(dirname "$0")" && pwd)"
-exec "$DIR/morpheus-rs"
-"""
-
-BUILD_SH_STATIC = """#!/usr/bin/env bash
-# Nothing to build: this variant ships a self-contained static binary
-# (x86_64-unknown-linux-musl). generals.bot's docs allow that shape, and it is
-# the fallback for a sandbox where the vendored build does not work
-# (rewrite-plan §9, R4).
-#
-# There is still something to *check*. The binary was linked on the packaging
-# host, so this is the first moment it runs on the judge's — which is where a
-# missing artifact, an unreadable deployment.json or a wrong CPU baseline
-# would first be visible, and all three degrade silently at match time by
-# design. `selfcheck` exits non-zero on any of them and takes intake down with
-# it, which is the cheaper failure.
-set -euo pipefail
-DIR="$(cd "$(dirname "$0")" && pwd)"
-chmod +x "$DIR/morpheus-rs"
-echo "[build] static binary, nothing to compile"
-cd "$DIR"
-"$DIR/morpheus-rs" selfcheck
-"""
-
 # The `.cargo/config.toml` that goes in the vendored zip. The source
 # replacement is what makes `--offline` work: cargo resolves every dependency
 # out of `vendor/` instead of reaching for crates.io.
@@ -159,7 +132,7 @@ SMOKE_INPUT = "0 2 2\n" + ("1 1 1 1 1\n1 1\n1 1\n1 0\n0 0\n1 0\n0 0\n" * 2)
 SMOKE_EXPECTED_LINES = 2
 
 
-# Ships in both zips. The judge never reads it; a human comparing a rated
+# Ships in the zip. The judge never reads it; a human comparing a rated
 # result on generals.bot against a row in data/bot_versions/morpheus-rs.json
 # does, and without it "which program is playing up there" is answerable only
 # by rebuilding and hoping. Deliberately carries no timestamp: the zip is
@@ -178,11 +151,10 @@ def _git(*args: str) -> str:
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
-def _provenance(variant: str, minify_stats: dict | None = None) -> bytes:
+def _provenance(minify_stats: dict | None = None) -> bytes:
     manifest = json.loads((BOT_DIR / "artifact" / "manifest.json").read_text())
     payload = {
-        "bot_id": "morpheus-rs",
-        "variant": variant,
+        "bot_id": BOT_ID,
         "minified": bool((minify_stats or {}).get("minified")),
         "content_hash": bot_content_hash(BOT_DIR / "run.sh"),
         "git_commit": _git("rev-parse", "HEAD"),
@@ -204,7 +176,7 @@ def _provenance(variant: str, minify_stats: dict | None = None) -> bytes:
 
 @dataclass
 class Package:
-    variant: str
+    content_hash: str
     zip_path: Path
     zip_sha256: str
     zip_bytes: int
@@ -336,7 +308,7 @@ def _artifact_members() -> list[tuple[Path, str]]:
 
 def _iter_source_files(*, minify: bool) -> tuple[list[tuple[str, bytes]], dict]:
     """
-    (arcname, bytes) for everything the vendored variant compiles from.
+    (arcname, bytes) for everything the archive compiles from.
 
     Returns contents rather than paths because `.rs` members are rewritten on
     the way in — comments and doc comments stripped — and the repo file is
@@ -421,76 +393,12 @@ def build_vendored(
         )
         for arcname, data in members:
             _write_entry(zf, arcname, data, mode=0o644)
-        _write_entry(zf, PROVENANCE_NAME, _provenance("vendored", minify_stats), mode=0o644)
+        _write_entry(zf, PROVENANCE_NAME, _provenance(minify_stats), mode=0o644)
         for path in sorted(vendor_dir.rglob("*")):
             if path.is_file():
                 arcname = f"vendor/{path.relative_to(vendor_dir)}"
                 _write_entry(zf, arcname, path.read_bytes(), mode=0o644)
     return out_path, vendor_files, minify_stats
-
-
-def _musl_rustflags() -> str | None:
-    """
-    Cross-linker flags, when the host cannot link ELF with its own `cc`.
-
-    On macOS the system linker cannot produce ELF at all, so the build fails
-    with an unreadable list of unknown `ld` options. `rust-lld` ships with the
-    toolchain and links the musl target fine; it is pointed at explicitly
-    rather than put in `.cargo/config.toml`, because on an x86 Linux host the
-    ordinary `cc` is the better linker and needs no override.
-    """
-    if platform.system() == "Linux":
-        return None
-    sysroot = Path(_run(["rustc", "--print", "sysroot"], cwd=BOT_DIR).strip())
-    # Asked of rustc rather than assembled from `platform.machine()`, which
-    # says `arm64` on macOS where Rust's triple says `aarch64` — close enough
-    # to look right and wrong enough to miss the file.
-    host = ""
-    for line in _run(["rustc", "-vV"], cwd=BOT_DIR).splitlines():
-        if line.startswith("host:"):
-            host = line.split(":", 1)[1].strip()
-    if not host:
-        raise PackageError("cannot read the host triple from `rustc -vV`")
-    lld = sysroot / "lib" / "rustlib" / host / "bin" / "rust-lld"
-    if not lld.is_file():
-        raise PackageError(
-            f"no rust-lld at {lld}; the static variant needs a cross linker "
-            f"(or build it on an x86 Linux host)"
-        )
-    return f"-C linker-flavor=ld.lld -C linker={lld}"
-
-
-def build_static(out_path: Path, *, minify: bool = True) -> tuple[Path, Path]:
-    env = _cargo_env()
-    flags = _musl_rustflags()
-    if flags:
-        env[f"CARGO_TARGET_{MUSL_TARGET.upper().replace('-', '_')}_RUSTFLAGS"] = (
-            f"-C target-cpu=x86-64-v3 -C target-feature=+crt-static {flags}"
-        )
-    _run(
-        ["cargo", "build", "--release", "--locked", "--target", MUSL_TARGET],
-        cwd=BOT_DIR,
-        env=env,
-    )
-    binary = BOT_DIR / "target" / MUSL_TARGET / "release" / BINARY
-    if not binary.is_file():
-        raise PackageError(f"no static binary at {binary}")
-
-    with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        _write_entry(zf, "run.sh", _shell(RUN_SH_STATIC, minify=minify), mode=0o755)
-        _write_entry(zf, "build.sh", _shell(BUILD_SH_STATIC, minify=minify), mode=0o755)
-        _write_entry(zf, BINARY, binary.read_bytes(), mode=0o755)
-        for name in CONFIG_MEMBERS:
-            path = BOT_DIR / name
-            if not path.is_file():
-                raise PackageError(
-                    f"missing {name}; the bot would play placeholder knobs"
-                )
-            _write_entry(zf, name, path.read_bytes(), mode=0o644)
-        for path, arcname in _artifact_members():
-            _write_entry(zf, arcname, path.read_bytes(), mode=0o644)
-        _write_entry(zf, PROVENANCE_NAME, _provenance("static"), mode=0o644)
-    return out_path, binary
 
 
 def _selfcheck_facts(stdout: str) -> dict[str, str]:
@@ -513,7 +421,7 @@ def _selfcheck_facts(stdout: str) -> dict[str, str]:
     return facts
 
 
-def smoke(zip_path: Path, variant: str) -> tuple[bool, str, dict[str, str]]:
+def smoke(zip_path: Path) -> tuple[bool, str, dict[str, str]]:
     """
     Extract the archive, run its build.sh, and speak the protocol to run.sh.
 
@@ -535,24 +443,6 @@ def smoke(zip_path: Path, variant: str) -> tuple[bool, str, dict[str, str]]:
             zf.extractall(root)
         for name in ("run.sh", "build.sh"):
             (root / name).chmod(0o755)
-
-        if variant == "static" and platform.system() != "Linux":
-            # An x86-64 ELF cannot run here. Verifying it *is* one is the most
-            # this host can honestly claim; the rest waits for the sandbox.
-            binary = root / BINARY
-            header = binary.read_bytes()[:20]
-            if header[:4] != b"\x7fELF" or header[18:20] != b"\x3e\x00":
-                return False, "shipped binary is not an x86-64 ELF", {}
-            return (
-                False,
-                (
-                    f"built and verified as a static x86-64 ELF "
-                    f"({binary.stat().st_size} bytes); not runnable on "
-                    f"{platform.system()}/{platform.machine()} — its selfcheck "
-                    f"runs in the Modal sandbox smoke"
-                ),
-                {},
-            )
 
         build = subprocess.run(
             ["bash", str(root / "build.sh")],
@@ -606,10 +496,17 @@ def smoke(zip_path: Path, variant: str) -> tuple[bool, str, dict[str, str]]:
 
 
 def package(
-    variant: str, *, out_dir: Path, force: bool, run_smoke: bool, minify: bool = True
+    *, out_dir: Path, force: bool, run_smoke: bool, minify: bool = True
 ) -> Package:
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"morpheus-rs-{variant}.zip"
+    content_hash = bot_content_hash(BOT_DIR / "run.sh")
+    # `arena.bundle`'s own naming, so a Rust bundle and a Python one are the
+    # same kind of object on disk: `<bot_id>-<content_hash>.zip`. The hash is
+    # the rated identity, so an archive names the program it holds and two
+    # builds of different code cannot collide on one path.
+    out_path = default_output_path(BOT_ID, content_hash)
+    if out_dir != out_path.parent:
+        out_path = out_dir / out_path.name
     if out_path.exists() and not force:
         raise PackageError(f"{out_path} exists (pass --force to overwrite)")
 
@@ -624,33 +521,27 @@ def package(
         # shipped to an x86 container. It was caught there only because
         # `build.sh` now runs `selfcheck`.
         staged = Path(tmp) / out_path.name
-        if variant == "vendored":
-            _, vendor_files, minify_stats = build_vendored(
-                staged, Path(tmp), minify=minify
-            )
-        elif variant == "static":
-            build_static(staged, minify=minify)
-        else:
-            raise PackageError(f"unknown variant {variant!r}")
+        _, vendor_files, minify_stats = build_vendored(
+            staged, Path(tmp), minify=minify
+        )
         out_path.unlink(missing_ok=True)
         shutil.move(str(staged), str(out_path))
 
     zip_bytes, unpacked_bytes, file_count = check_limits(out_path)
     smoked, note, facts = (False, "skipped", {})
     if run_smoke:
-        smoked, note, facts = smoke(out_path, variant)
-    if variant == "vendored":
-        note = f"{note}; {vendor_files} vendored file(s)"
-        if minify_stats.get("minified"):
-            note = (
-                f"{note}; sources minified "
-                f"{minify_stats['rust_bytes_before']} -> "
-                f"{minify_stats['rust_bytes_after']} B"
-            )
+        smoked, note, facts = smoke(out_path)
+    note = f"{note}; {vendor_files} vendored file(s)"
+    if minify_stats.get("minified"):
+        note = (
+            f"{note}; sources minified "
+            f"{minify_stats['rust_bytes_before']} -> "
+            f"{minify_stats['rust_bytes_after']} B"
+        )
     import hashlib
 
     return Package(
-        variant=variant,
+        content_hash=content_hash,
         zip_path=out_path,
         # The zip is byte-reproducible from the sources (fixed member dates,
         # sorted members, no clock in SUBMISSION.json), so this digest answers
@@ -749,13 +640,7 @@ def gate(zip_path: Path, *, opponent: str, seed: int, keep: bool) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--variant",
-        choices=("vendored", "static", "both"),
-        default="both",
-        help="default: both, so R4's fallback stays tested",
-    )
-    parser.add_argument("--out-dir", type=Path, default=BUNDLES_DIR)
+    parser.add_argument("--out-dir", type=Path, default=default_output_path(BOT_ID).parent)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--no-smoke", action="store_true")
     parser.add_argument(
@@ -768,7 +653,7 @@ def main(argv: list[str] | None = None) -> int:
         "--gate",
         action="store_true",
         help="play the AGENTS.md competition gate with the extracted bundle "
-        "(minutes, not seconds; vendored variant only on a non-Linux host)",
+        "(minutes, not seconds)",
     )
     parser.add_argument("--gate-opponent", default="cm_expander")
     parser.add_argument("--gate-seed", type=int, default=0)
@@ -779,61 +664,51 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    variants = ("vendored", "static") if args.variant == "both" else (args.variant,)
-    results = []
-    failures = []
-    for variant in variants:
-        try:
-            built = package(
-                variant,
-                out_dir=args.out_dir,
-                force=args.force,
-                run_smoke=not args.no_smoke,
-                minify=not args.no_minify,
-            )
-        except (PackageError, BundleError) as exc:
-            failures.append({"variant": variant, "error": str(exc)})
-            continue
-        row = {
-            "variant": built.variant,
-            "zip": str(built.zip_path),
-            "zip_sha256": built.zip_sha256,
-            "zip_bytes": built.zip_bytes,
-            "zip_limit": MAX_ZIP_BYTES,
-            "unpacked_bytes": built.unpacked_bytes,
-            "unpacked_limit": MAX_UNPACKED_BYTES,
-            "files": built.file_count,
-            "files_limit": MAX_FILES,
-            "smoked": built.smoked,
-            "smoke": built.smoke_note,
-            "selfcheck": built.selfcheck,
-        }
-        if args.gate and built.smoked:
-            try:
-                row["gate"] = gate(
-                    built.zip_path,
-                    opponent=args.gate_opponent,
-                    seed=args.gate_seed,
-                    keep=args.keep_extracted,
-                )
-            except (subprocess.SubprocessError, OSError) as exc:
-                row["gate"] = {"error": str(exc)}
-            if row["gate"].get("returncode") not in (0, None):
-                failures.append({"variant": variant, "error": "competition gate failed"})
-        elif args.gate:
-            row["gate"] = {"skipped": "variant did not smoke on this host"}
-        results.append(row)
-
-    print(
-        json.dumps(
-            {
-                "content_hash": bot_content_hash(BOT_DIR / "run.sh"),
-                "packages": results,
-                "failures": failures,
-            },
-            indent=2,
+    failures: list[dict] = []
+    try:
+        built = package(
+            out_dir=args.out_dir,
+            force=args.force,
+            run_smoke=not args.no_smoke,
+            minify=not args.no_minify,
         )
-    )
+    except (PackageError, BundleError) as exc:
+        print(json.dumps({"package": None, "failures": [{"error": str(exc)}]}, indent=2))
+        return 1
+
+    row: dict = {
+        "content_hash": built.content_hash,
+        "zip": str(built.zip_path),
+        "zip_sha256": built.zip_sha256,
+        "zip_bytes": built.zip_bytes,
+        "zip_limit": MAX_ZIP_BYTES,
+        "unpacked_bytes": built.unpacked_bytes,
+        "unpacked_limit": MAX_UNPACKED_BYTES,
+        "files": built.file_count,
+        "files_limit": MAX_FILES,
+        "smoked": built.smoked,
+        "smoke": built.smoke_note,
+        "selfcheck": built.selfcheck,
+    }
+    # With one variant left, a smoke that ran and did not pass is a failed
+    # packaging run rather than a row in a table nobody reads. `--no-smoke` is
+    # the caller saying they know.
+    if not args.no_smoke and not built.smoked:
+        failures.append({"error": f"smoke test did not pass: {built.smoke_note}"})
+    if args.gate and built.smoked:
+        try:
+            row["gate"] = gate(
+                built.zip_path,
+                opponent=args.gate_opponent,
+                seed=args.gate_seed,
+                keep=args.keep_extracted,
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            row["gate"] = {"error": str(exc)}
+        if row["gate"].get("returncode") != 0:
+            failures.append({"error": "competition gate failed"})
+
+    print(json.dumps({"package": row, "failures": failures}, indent=2))
     return 1 if failures else 0
 
 
