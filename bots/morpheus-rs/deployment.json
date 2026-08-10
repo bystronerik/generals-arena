@@ -1,6 +1,6 @@
 {
   "admission_guard_ms": 0.0,
-  "belief_limitation_note": "Parity knobs, copied field-for-field from bots/morpheus/deployment.json at M5 so the M6 contrast runs both bots at the same configuration. The offline_p99_ms values are the PYTHON's measured costs and are wrong for this binary by roughly the ratios in docs/research/measurements/morpheus-rs-belief-bench.md; they are here to make admission behave identically, not because they describe this bot. Qualification verdict is no on this host. M7 re-derives every field.",
+  "belief_limitation_note": "M7 decision arm, config n8-s32-b4-d8. A temporary sibling of bots/morpheus-rs so both knob settings can be rated in one round; removed once the contrast is read.",
   "belief_quality_threshold": null,
   "evaluator": "network",
   "first_move_limit_ms": 8500.0,
@@ -35,7 +35,7 @@
   "quantization_format": "float32",
   "reserve_ms": 10.0,
   "resident_memory_target_mb": 310.2734375,
-  "search_depth": 2,
+  "search_depth": 8,
   "shaping_floor_frac": 0.001,
   "shaping_lambda_post_contact": 1.0,
   "shaping_lambda_pre_contact": 1.0,
