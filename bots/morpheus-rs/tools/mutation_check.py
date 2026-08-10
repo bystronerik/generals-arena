@@ -52,10 +52,10 @@ FILE_SURFACES: dict[str, tuple[str, ...]] = {
     "board/action.rs": (),
     "board/memory.rs": (),
     "board/hashing.rs": ("hash", "propose"),
-    "tensor.rs": ("tensor", "net", "prior"),
+    "nn/tensor.rs": ("tensor", "net", "prior"),
     "board/symmetry.rs": ("symmetry",),
-    "network.rs": ("net", "prior"),
-    "gemm.rs": ("net", "prior"),
+    "nn/network.rs": ("net", "prior"),
+    "nn/gemm.rs": ("net", "prior"),
     "support/rng.rs": ("npsum", "argsort", "summary", "propose", "filter",
                "rejuvenate", "maxent", "reservoir", "toplegal", "initbelief"),
     "belief.rs": ("summary", "filter", "rejuvenate", "maxent", "reservoir",
@@ -245,13 +245,13 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "army compression in single precision",
-        "tensor.rs",
+        "nn/tensor.rs",
         "let out = x.max(0.0).ln_1p() / denom;",
         "let out = ((x.max(0.0) as f32).ln_1p() / denom as f32) as f64;",
     ),
     Mutation(
         "coordinate planes in double precision",
-        "tensor.rs",
+        "nn/tensor.rs",
         "set(P_ROW_FROM_GENERAL, r, c, (r as f32 - gr as f32) / 20.0);",
         "set(P_ROW_FROM_GENERAL, r, c, ((r as f64 - gr as f64) / 20.0) as f32);",
         note=(
@@ -264,7 +264,7 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "sight age left unclamped",
-        "tensor.rs",
+        "nn/tensor.rs",
         "set(P_SIGHT_AGE, r, c, age.clamp(0.0, 1.0) as f32);",
         "set(P_SIGHT_AGE, r, c, age as f32);",
         note=(
@@ -278,25 +278,25 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "neutral plane ignores mountains",
-        "tensor.rs",
+        "nn/tensor.rs",
         "let passable_vis = visible && !memory.known_mountain[i];",
         "let passable_vis = visible;",
     ),
     Mutation(
         "half-splits paint as full moves",
-        "tensor.rs",
+        "nn/tensor.rs",
         "if split == 1 { 0.5 } else { 1.0 };",
         "1.0;",
     ),
     Mutation(
         "bulk growth countdown off by one",
-        "tensor.rs",
+        "nn/tensor.rs",
         "(((50 - ((turn + 1) % 50)) % 50) as f64) / 49.0",
         "(((50 - (turn % 50)) % 50) as f64) / 49.0",
     ),
     Mutation(
         "constants painted over the padding",
-        "tensor.rs",
+        "nn/tensor.rs",
         "for r in 0..h {\n            for c in 0..w {\n                tensor[plane * PLANE_CELLS + r * PAD + c] = v;",
         "for r in 0..PAD {\n            for c in 0..PAD {\n                tensor[plane * PLANE_CELLS + r * PAD + c] = v;",
     ),
@@ -321,13 +321,13 @@ MUTATIONS: tuple[Mutation, ...] = (
     # padding column, a precision — to find out where the budget stops seeing.
     Mutation(
         "group norm epsilon an order of magnitude out",
-        "network.rs",
+        "nn/network.rs",
         "const GROUP_NORM_EPS: f64 = 1e-5;",
         "const GROUP_NORM_EPS: f64 = 1e-4;",
     ),
     Mutation(
         "group norm sums over the pad columns",
-        "network.rs",
+        "nn/network.rs",
         "let plane = &buf[c * STRIDE..c * STRIDE + CELLS];",
         "let plane = &buf[c * STRIDE..(c + 1) * STRIDE];",
         note=(
@@ -341,31 +341,31 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "group norm divides by the padded width",
-        "network.rs",
+        "nn/network.rs",
         "let n = (per_group * CELLS) as f64;",
         "let n = (per_group * STRIDE) as f64;",
     ),
     Mutation(
         "group norm over the whole layer, not eight groups",
-        "network.rs",
+        "nn/network.rs",
         "pub const GROUP_NORM_GROUPS: usize = 8;",
         "pub const GROUP_NORM_GROUPS: usize = 4;",
     ),
     Mutation(
         "dilation cycle flattened to 1",
-        "network.rs",
+        "nn/network.rs",
         "pub const DILATION_CYCLE: [usize; 3] = [1, 2, 4];",
         "pub const DILATION_CYCLE: [usize; 3] = [1, 1, 1];",
     ),
     Mutation(
         "ReLU6 with no upper clamp",
-        "network.rs",
+        "nn/network.rs",
         "*v = v.clamp(0.0, 6.0);",
         "*v = v.max(0.0);",
     ),
     Mutation(
         "residual connection dropped",
-        "network.rs",
+        "nn/network.rs",
         "s.trunk[i] += s.residual[i];",
         "s.trunk[i] += 0.0;",
     ),
@@ -375,43 +375,43 @@ MUTATIONS: tuple[Mutation, ...] = (
         # the tool reported it `stale` — which is the point of failing on a
         # misaimed mutation rather than counting it as a survivor.
         "depthwise kernel transposed",
-        "network.rs",
+        "nn/network.rs",
         "let dy = (tap / 3) as isize - 1;\n            let dx = (tap % 3) as isize - 1;",
         "let dy = (tap % 3) as isize - 1;\n            let dx = (tap / 3) as isize - 1;",
     ),
     Mutation(
         "global mean ignores the board mask",
-        "network.rs",
+        "nn/network.rs",
         "sum += (v * mask[p]) as f64;",
         "sum += v as f64;",
     ),
     Mutation(
         "global max ignores the board mask",
-        "network.rs",
+        "nn/network.rs",
         "let candidate = if mask[p] < 0.5 { MASK_FILL } else { v };",
         "let candidate = v;",
     ),
     Mutation(
         "global mean channels reversed",
-        "network.rs",
+        "nn/network.rs",
         "self.scratch.feat[c] = (sum / safe) as f32;",
         "self.scratch.feat[TRUNK - 1 - c] = (sum / safe) as f32;",
     ),
     Mutation(
         "stem weights laid out with the tap axis outermost",
-        "network.rs",
+        "nn/network.rs",
         "stem[oc * IN_CHANNELS * 9 + ic * 9 + k] =",
         "stem[oc * IN_CHANNELS * 9 + k * IN_CHANNELS + ic] =",
     ),
     Mutation(
         "1x1 head bias dropped",
-        "network.rs",
+        "nn/network.rs",
         "Some(&head.bias),",
         "None,",
     ),
     Mutation(
         "softmax in double precision",
-        "network.rs",
+        "nn/network.rs",
         "let e = (v - max).exp();",
         "let e = ((v - max) as f64).exp() as f32;",
         note=(
@@ -427,7 +427,7 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "illegal actions keep their softmax mass",
-        "network.rs",
+        "nn/network.rs",
         ".map(|i| if mask[i] { (exps[i] / total) as f64 } else { 0.0 })",
         ".map(|i| (exps[i] / total) as f64)",
         note=(
@@ -442,25 +442,25 @@ MUTATIONS: tuple[Mutation, ...] = (
     ),
     Mutation(
         "backup value not negated off the root",
-        "network.rs",
+        "nn/network.rs",
         "    if from_root {\n        v\n    } else {\n        -v\n    }",
         "    let _ = from_root;\n    v",
     ),
     Mutation(
         "WDL value is win minus draw",
-        "network.rs",
+        "nn/network.rs",
         "((exps[0] / total) - (exps[2] / total)) as f64",
         "((exps[0] / total) - (exps[1] / total)) as f64",
     ),
     Mutation(
         "GEMM bias applied to the wrong row",
-        "gemm.rs",
+        "nn/gemm.rs",
         "let add = bias.map_or(0.0, |v| v[m0 + i]);",
         "let add = bias.map_or(0.0, |v| v[m0]);",
     ),
     Mutation(
         "linear head drops its bias",
-        "gemm.rs",
+        "nn/gemm.rs",
         "y[m] = sum + bias[m];",
         "y[m] = sum;",
     ),

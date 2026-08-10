@@ -18,7 +18,7 @@
 use crate::belief::{ess_fraction, BeliefState};
 use crate::board::observe::visibility_from_owned;
 use crate::support::rng::npsum;
-use crate::tensor::BeliefSummary;
+use crate::nn::tensor::BeliefSummary;
 
 /// Weighted particle aggregates for the belief planes.
 ///

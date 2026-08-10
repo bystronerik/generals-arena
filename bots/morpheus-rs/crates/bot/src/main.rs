@@ -24,8 +24,8 @@ use morpheus_core::deployment::{
     DeploymentConfig, EvaluatorKind,
 };
 use morpheus_core::evaluator::{NetworkEvaluator, ShapedUniformEvaluator};
-use morpheus_core::inference::Session;
-use morpheus_core::network::Heads;
+use morpheus_core::nn::inference::Session;
+use morpheus_core::nn::network::Heads;
 use morpheus_core::support::rng::{SharedRng, SmallRng};
 use morpheus_core::runtime::{MonotonicClock, RuntimeController};
 use morpheus_core::search::SearchEvaluator;
@@ -74,7 +74,7 @@ impl Seat {
                     deployment.warmup_batch_shapes.clone()
                 };
                 let warm = Instant::now();
-                let x = vec![0f32; morpheus_core::network::IN_CHANNELS * 441];
+                let x = vec![0f32; morpheus_core::nn::network::IN_CHANNELS * 441];
                 for batch in shapes {
                     for _ in 0..batch {
                         session.forward(&x, Heads::Policy);
@@ -198,7 +198,7 @@ fn run_bench(iters: usize) -> ! {
     // Print the one build flag that can change this measurement by 49x. A
     // benchmark that does not say what it compiled is a benchmark that can be
     // wrong twice.
-    println!("hardware_fma {}", morpheus_core::gemm::HAS_HARDWARE_FMA);
+    println!("hardware_fma {}", morpheus_core::nn::gemm::HAS_HARDWARE_FMA);
     println!("warmup_ms {:.3}", warm.elapsed().as_secs_f64() * 1e3);
 
     // The same deterministic stream the candle and tract spikes used, so the
@@ -271,8 +271,8 @@ fn run_selfcheck() -> ! {
 
     // Reported before anything else: it is the one fact that changes a
     // correct binary into a 49x-too-slow one, and M3 shipped it wrong once.
-    say("hardware_fma", morpheus_core::gemm::HAS_HARDWARE_FMA.to_string());
-    if !morpheus_core::gemm::HAS_HARDWARE_FMA {
+    say("hardware_fma", morpheus_core::nn::gemm::HAS_HARDWARE_FMA.to_string());
+    if !morpheus_core::nn::gemm::HAS_HARDWARE_FMA {
         failures.push(
             "no hardware FMA in this build: every `f32::mul_add` in the inference \
              kernels becomes a libm `fmaf()` call, measured at 277 ms per forward \

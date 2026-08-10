@@ -32,8 +32,8 @@
 //! path (§6) — and it still beats the batched TorchScript it replaces, because
 //! four sequential forwards here are cheaper than one batch-4 forward there.
 
-use crate::gemm::{gemm_bias, matvec, NR};
-use crate::safetensors::SafeTensors;
+use crate::nn::gemm::{gemm_bias, matvec, NR};
+use crate::nn::safetensors::SafeTensors;
 
 pub const BOARD: usize = 21;
 pub const CELLS: usize = BOARD * BOARD;

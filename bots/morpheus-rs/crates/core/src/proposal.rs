@@ -27,7 +27,7 @@ use crate::board::memory::{update_memory, VisibleMemory};
 use crate::board::observe::emit_observation;
 use crate::support::rng::{argsort_desc_numpy, npsum, Rng};
 use crate::support::sha256::sha256;
-use crate::tensor::{build_tensor, BeliefSummary, ARMY_SCALE};
+use crate::nn::tensor::{build_tensor, BeliefSummary, ARMY_SCALE};
 use crate::io::wire::Observation;
 
 pub type Action5 = [i32; 5];

@@ -21,10 +21,10 @@
 use std::path::{Path, PathBuf};
 
 use crate::io::json::{parse, Json};
-use crate::network::{
+use crate::nn::network::{
     Heads, Network, Output, BOARD, IN_CHANNELS, N_ARMY_BINS, N_BLOCKS,
 };
-use crate::safetensors::SafeTensors;
+use crate::nn::safetensors::SafeTensors;
 use crate::support::sha256::sha256;
 
 pub const MANIFEST_NAME: &str = "manifest.json";
@@ -111,7 +111,7 @@ impl Session {
         // log would say why every move timed out. Not fatal here, because M3's
         // bot does not yet infer on the play path; revisit refusing to play
         // when it does.
-        if !crate::gemm::HAS_HARDWARE_FMA {
+        if !crate::nn::gemm::HAS_HARDWARE_FMA {
             eprintln!(
                 "[morpheus-rs] WARNING: built without hardware FMA; inference will be \
                  roughly 50x slower than it should be. Build with \

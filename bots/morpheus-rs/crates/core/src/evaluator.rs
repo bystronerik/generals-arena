@@ -19,8 +19,8 @@
 
 use crate::board::action::legal_mask;
 use crate::belief::{Action5, BeliefState};
-use crate::inference::Session;
-use crate::network::{backup_value, legal_normalized_policy, Heads, IN_CHANNELS, N_ACTIONS};
+use crate::nn::inference::Session;
+use crate::nn::network::{backup_value, legal_normalized_policy, Heads, IN_CHANNELS, N_ACTIONS};
 use crate::particle_summary::summarize_belief;
 use crate::proposal::ProposalPolicy;
 use crate::search::{EvalItem, SearchEvaluator};
@@ -28,7 +28,7 @@ use crate::tactics::{
     apply_pre_contact_prior, default_shaping_log_clip, enemy_is_visible, play_mask,
     DEFAULT_SHAPING_FLOOR_FRAC, DEFAULT_SHAPING_LAMBDA,
 };
-use crate::tensor::build_tensor;
+use crate::nn::tensor::build_tensor;
 use crate::io::wire::Observation;
 use crate::board::memory::VisibleMemory;
 

@@ -33,7 +33,7 @@ use crate::board::hashing::{
 };
 use crate::matrix;
 use crate::board::memory::{update_memory, VisibleMemory};
-use crate::network;
+use crate::nn::network;
 use crate::board::observe::emit_observation;
 use crate::particle_summary::summarize_belief;
 use crate::proposal::{
@@ -46,7 +46,7 @@ use crate::support::rng::{argsort_desc_numpy, npsum, Method, RecordedDraw, Repla
 use crate::board::state::GameState;
 use crate::board::symmetry;
 use crate::tactics;
-use crate::tensor::{build_tensor, BeliefSummary, ARMY_SCALE};
+use crate::nn::tensor::{build_tensor, BeliefSummary, ARMY_SCALE};
 use crate::board::transition::{determine_move_order, transition, Actions};
 use crate::io::wire::Observation;
 
@@ -616,7 +616,7 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
     let mut out: Vec<i64> = Vec::new();
     // Loading the artifact costs a few milliseconds and only the `net` kind
     // needs it, so it is paid on first use rather than on every subcommand.
-    let mut net_session: Option<crate::inference::Session> = None;
+    let mut net_session: Option<crate::nn::inference::Session> = None;
 
     for case in 0..cases {
         out.clear();
@@ -758,7 +758,7 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
             // modules, so the comparison is entry point against entry point.
             "net" => {
                 let session = net_session.get_or_insert_with(|| {
-                    crate::inference::Session::load_default()
+                    crate::nn::inference::Session::load_default()
                         .unwrap_or_else(|e| panic!("loading the artifact: {e}"))
                 });
                 let tensor = ints.floats(network::IN_CHANNELS * network::CELLS)?;
@@ -1403,7 +1403,7 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
             // builder that `tensor` already checks.
             "decide" => {
                 let session = net_session.get_or_insert_with(|| {
-                    crate::inference::Session::load_default()
+                    crate::nn::inference::Session::load_default()
                         .unwrap_or_else(|e| panic!("loading the artifact: {e}"))
                 });
                 let obs = read_observation(&mut ints)?;
