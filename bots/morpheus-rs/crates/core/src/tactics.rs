@@ -25,16 +25,16 @@
 
 use std::sync::OnceLock;
 
-use crate::action::{decode_action, encode_action, legal_mask, live_build_cost, PASS_INDEX};
+use crate::board::action::{decode_action, encode_action, legal_mask, live_build_cost, PASS_INDEX};
 use crate::belief::{Action5, BeliefState};
-use crate::memory::{
+use crate::board::memory::{
     VisibleMemory, OWNER_ENEMY, OWNER_NEUTRAL, TYPE_CASTLE, TYPE_FOG, TYPE_GENERAL, TYPE_MOUNTAIN,
     TYPE_STRUCTURE_FOG,
 };
-use crate::observe::visibility_from_owned;
+use crate::board::observe::visibility_from_owned;
 use crate::support::rng::npsum;
-use crate::state::MAX_CELLS;
-use crate::transition::{BASE_COST, DEATHTOUCH_TURN, DIRECTIONS};
+use crate::board::state::MAX_CELLS;
+use crate::board::transition::{BASE_COST, DEATHTOUCH_TURN, DIRECTIONS};
 use crate::io::wire::Observation;
 
 pub const N_ACTIONS: usize = PASS_INDEX + 1;

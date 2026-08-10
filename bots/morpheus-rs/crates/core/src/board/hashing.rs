@@ -19,8 +19,8 @@
 //! hashed only when it is folded into a key. Kept as raw bytes because the
 //! belief filter compares payloads directly for exact observation matching.
 
-use crate::action::encode_action;
-use crate::memory::VisibleMemory;
+use crate::board::action::encode_action;
+use crate::board::memory::VisibleMemory;
 use crate::support::sha256::{sha256, Sha256};
 use crate::io::wire::Observation;
 
@@ -140,7 +140,7 @@ pub fn child_edge_key(action: [i32; 5], obs_payload: &[u8]) -> [u8; 32] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::MAX_CELLS;
+    use crate::board::state::MAX_CELLS;
 
     fn memory() -> VisibleMemory {
         let mut m = VisibleMemory::empty(2, 3);

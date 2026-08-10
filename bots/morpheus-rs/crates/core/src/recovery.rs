@@ -27,17 +27,17 @@
 
 use std::rc::Rc;
 
-use crate::action::{decode_action, encode_action, legal_mask};
+use crate::board::action::{decode_action, encode_action, legal_mask};
 use crate::belief::{
     filter_step, normalize_weights, resample, Action5, BeliefConfig, BeliefState, HistoryFrame,
     Particle, PASS_ACTION,
 };
-use crate::memory::{update_memory, VisibleMemory, TYPE_FOG, TYPE_STRUCTURE_FOG};
-use crate::observe::{emit_observation, observations_match, visibility_mask};
+use crate::board::memory::{update_memory, VisibleMemory, TYPE_FOG, TYPE_STRUCTURE_FOG};
+use crate::board::observe::{emit_observation, observations_match, visibility_mask};
 use crate::proposal::{policy_action_probs, top_legal_actions, ProposalPolicy};
 use crate::support::rng::{npsum, Rng};
-use crate::state::GameState;
-use crate::transition::{transition, Actions};
+use crate::board::state::GameState;
+use crate::board::transition::{transition, Actions};
 use crate::io::wire::Observation;
 
 /// True when the enemy's action changes what Morpheus can see, versus a pass.

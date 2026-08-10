@@ -12,7 +12,7 @@
 //! that has never been passable is a **mountain**. Get that backwards and the
 //! bot builds its map of the board wrong in a way no single frame reveals.
 
-use crate::state::MAX_CELLS;
+use crate::board::state::MAX_CELLS;
 use crate::io::wire::Observation;
 
 // Competition type codes, perspective-relative wire.

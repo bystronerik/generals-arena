@@ -10,8 +10,8 @@
 //! Coordinates transform on the padded square, not the live board. The pass
 //! logit never moves: it has no position to move to.
 
-use crate::action::{decode_action, encode_action, N_ACTIONS, PAD, PASS_INDEX};
-use crate::memory::VisibleMemory;
+use crate::board::action::{decode_action, encode_action, N_ACTIONS, PAD, PASS_INDEX};
+use crate::board::memory::VisibleMemory;
 
 /// 0 up, 1 down, 2 left, 3 right.
 const DIR_UP: usize = 0;

@@ -14,19 +14,19 @@
 
 use std::rc::Rc;
 
-use crate::action::{legal_mask, live_build_cost, N_ACTIONS};
+use crate::board::action::{legal_mask, live_build_cost, N_ACTIONS};
 use crate::belief::{Action5, BeliefConfig, BeliefState, Particle, PASS_ACTION};
-use crate::hashing::{
+use crate::board::hashing::{
     child_edge_key, enemy_info_hash_prehashed, info_state_key_prehashed, memory_digest,
     observation_payload, roll_history_digest,
 };
 use crate::matrix::{enemy_widening_limit, mixed_strategy, sample_index, self_widening_limit};
-use crate::memory::{update_memory, VisibleMemory};
-use crate::observe::emit_observation;
+use crate::board::memory::{update_memory, VisibleMemory};
+use crate::board::observe::emit_observation;
 use crate::support::rng::SharedRng;
-use crate::state::GameState;
+use crate::board::state::GameState;
 use crate::tactics::{mandatory_action_indices, play_mask, policy_ordered_candidates};
-use crate::transition::{transition, Actions};
+use crate::board::transition::{transition, Actions};
 use crate::tree::{Digest, SearchTree};
 
 pub const SEARCH_DEPTH: usize = 16;
@@ -649,8 +649,8 @@ impl SearchController {
                     sample_index(&sigma_b, &mut rng),
                 )
             };
-            let a = crate::action::decode_action(node_actions[a_idx]).unwrap_or(PASS_ACTION);
-            let b = crate::action::decode_action(table_actions[b_idx]).unwrap_or(PASS_ACTION);
+            let a = crate::board::action::decode_action(node_actions[a_idx]).unwrap_or(PASS_ACTION);
+            let b = crate::board::action::decode_action(table_actions[b_idx]).unwrap_or(PASS_ACTION);
 
             let mut actions: Actions = [PASS_ACTION; 2];
             actions[self.seat] = a;
@@ -937,7 +937,7 @@ impl SearchController {
     pub fn best_action(&self) -> Option<Action5> {
         let index = self.tree.root_action_index().ok()?;
         let root = self.tree.node(self.tree.root?);
-        crate::action::decode_action(root.actions[index])
+        crate::board::action::decode_action(root.actions[index])
     }
 
     /// Highest marginal visit, ties by root prior — the 1–7 simulation band.
@@ -953,7 +953,7 @@ impl SearchController {
                 best = i;
             }
         }
-        crate::action::decode_action(root.actions[best])
+        crate::board::action::decode_action(root.actions[best])
     }
 
     pub fn best_action_or_pass(&self) -> Action5 {
@@ -972,7 +972,7 @@ impl SearchController {
                     best = i;
                 }
             }
-            return crate::action::decode_action(root.actions[best]).unwrap_or(PASS_ACTION);
+            return crate::board::action::decode_action(root.actions[best]).unwrap_or(PASS_ACTION);
         }
         self.best_action().unwrap_or(PASS_ACTION)
     }
@@ -996,7 +996,7 @@ impl SearchEvaluator for UniformEvaluator {
         let live = mask.iter().filter(|&&m| m).count();
         let mut prior = vec![0.0f64; N_ACTIONS];
         if live == 0 {
-            prior[crate::action::PASS_INDEX] = 1.0;
+            prior[crate::board::action::PASS_INDEX] = 1.0;
         } else {
             for (i, &m) in mask.iter().enumerate() {
                 if m {

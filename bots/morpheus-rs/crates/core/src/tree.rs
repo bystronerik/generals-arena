@@ -22,13 +22,13 @@ use std::collections::HashMap;
 use std::hash::{BuildHasherDefault, Hasher};
 
 
-use crate::hashing::enemy_info_hash;
+use crate::board::hashing::enemy_info_hash;
 use crate::matrix::{
     accumulate_average_strategy, aggregate_self_utilities, apply_joint_backup, effective_q,
     matrix_utilities, mixed_strategy, regret_plus_update, select_root_action,
 };
-use crate::memory::update_memory;
-use crate::observe::emit_observation;
+use crate::board::memory::update_memory;
+use crate::board::observe::emit_observation;
 use crate::reservoir::ParticleReservoir;
 use crate::support::rng::npsum;
 

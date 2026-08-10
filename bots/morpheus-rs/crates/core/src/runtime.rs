@@ -16,11 +16,11 @@
 
 use std::time::Instant;
 
-use crate::action::{decode_action, encode_action, PASS_INDEX};
+use crate::board::action::{decode_action, encode_action, PASS_INDEX};
 use crate::belief::{
     ess, filter_step, initialize_belief, Action5, BeliefConfig, BeliefState, PASS_ACTION,
 };
-use crate::memory::{update_memory, VisibleMemory};
+use crate::board::memory::{update_memory, VisibleMemory};
 use crate::proposal::{propose_enemy_actions, ProposalPolicy, ProposalTelemetry};
 use crate::recovery::recover_belief;
 use crate::support::rng::SharedRng;

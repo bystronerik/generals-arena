@@ -17,7 +17,7 @@
 //! sequentially and the caller's "leaf batch" stays a scheduling unit, which is
 //! what the runtime charges it as.
 
-use crate::action::legal_mask;
+use crate::board::action::legal_mask;
 use crate::belief::{Action5, BeliefState};
 use crate::inference::Session;
 use crate::network::{backup_value, legal_normalized_policy, Heads, IN_CHANNELS, N_ACTIONS};
@@ -30,7 +30,7 @@ use crate::tactics::{
 };
 use crate::tensor::build_tensor;
 use crate::io::wire::Observation;
-use crate::memory::VisibleMemory;
+use crate::board::memory::VisibleMemory;
 
 /// The four shaping knobs, exactly as `deployment.json` carries them.
 #[derive(Clone, Copy)]

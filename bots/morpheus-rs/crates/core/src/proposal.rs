@@ -20,11 +20,11 @@
 //! proposal *every legal action carries the same probability* — the ordering
 //! recovery walks is decided entirely by how NumPy's introsort breaks ties.
 
-use crate::action::{decode_action, encode_action, legal_mask, N_ACTIONS, PASS_INDEX};
+use crate::board::action::{decode_action, encode_action, legal_mask, N_ACTIONS, PASS_INDEX};
 use crate::belief::{BeliefState, Particle, PASS_ACTION};
-use crate::hashing::{memory_digest, observation_payload};
-use crate::memory::{update_memory, VisibleMemory};
-use crate::observe::emit_observation;
+use crate::board::hashing::{memory_digest, observation_payload};
+use crate::board::memory::{update_memory, VisibleMemory};
+use crate::board::observe::emit_observation;
 use crate::support::rng::{argsort_desc_numpy, npsum, Rng};
 use crate::support::sha256::sha256;
 use crate::tensor::{build_tensor, BeliefSummary, ARMY_SCALE};
@@ -368,7 +368,7 @@ mod tests {
     use super::*;
     use crate::belief::BeliefConfig;
     use crate::support::rng::SmallRng;
-    use crate::state::GameState;
+    use crate::board::state::GameState;
     use std::rc::Rc;
 
     fn small_belief() -> BeliefState {

@@ -17,7 +17,7 @@
 //! `memcpy` a 5 KB state and a 5 KB memory on every one of those rebuilds —
 //! and `resample` alone rebuilds the whole set. `Rc` reproduces the Python's
 //! sharing exactly, because the values genuinely are immutable here: a state
-//! is built by [`crate::transition::transition`] and never touched again.
+//! is built by [`crate::board::transition::transition`] and never touched again.
 //! This is the answer to M1's note that "`transition` clones a ~3 KB state
 //! per call; M4 should measure before assuming the clone is free" — the
 //! transition still builds one state, but nothing downstream duplicates it.
@@ -35,11 +35,11 @@
 
 use std::rc::Rc;
 
-use crate::memory::{update_memory, VisibleMemory, TYPE_FOG, TYPE_MOUNTAIN, TYPE_STRUCTURE_FOG};
-use crate::observe::{emit_observation, observations_match, visibility_from_owned};
+use crate::board::memory::{update_memory, VisibleMemory, TYPE_FOG, TYPE_MOUNTAIN, TYPE_STRUCTURE_FOG};
+use crate::board::observe::{emit_observation, observations_match, visibility_from_owned};
 use crate::support::rng::{npsum, Rng};
-use crate::state::GameState;
-use crate::transition::{transition, Actions};
+use crate::board::state::GameState;
+use crate::board::transition::{transition, Actions};
 use crate::io::wire::Observation;
 
 /// Defaults from `belief.py`. `deployment.json` overrides `n_particles`.

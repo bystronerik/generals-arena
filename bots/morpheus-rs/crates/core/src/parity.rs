@@ -21,20 +21,20 @@
 use std::io::{BufRead, Write};
 use std::rc::Rc;
 
-use crate::action::{
+use crate::board::action::{
     decode_action, encode_action, legal_mask, live_build_cost, N_ACTIONS, PAD,
 };
 use crate::belief::{
     ess, ess_fraction, filter_step, Action5, BeliefConfig, BeliefState, HistoryFrame, Particle,
 };
-use crate::hashing::{
+use crate::board::hashing::{
     child_edge_key, enemy_info_hash_prehashed, info_state_key_prehashed, memory_digest,
     observation_payload, roll_history_digest,
 };
 use crate::matrix;
-use crate::memory::{update_memory, VisibleMemory};
+use crate::board::memory::{update_memory, VisibleMemory};
 use crate::network;
-use crate::observe::emit_observation;
+use crate::board::observe::emit_observation;
 use crate::particle_summary::summarize_belief;
 use crate::proposal::{
     propose_enemy_actions, singleton_probs, softmax_masked, top_legal_actions, uniform_legal_probs,
@@ -43,11 +43,11 @@ use crate::proposal::{
 use crate::recovery::{maximum_entropy_reconstruction, recover_belief, rejuvenate};
 use crate::reservoir::ParticleReservoir;
 use crate::support::rng::{argsort_desc_numpy, npsum, Method, RecordedDraw, Replay};
-use crate::state::GameState;
-use crate::symmetry;
+use crate::board::state::GameState;
+use crate::board::symmetry;
 use crate::tactics;
 use crate::tensor::{build_tensor, BeliefSummary, ARMY_SCALE};
-use crate::transition::{determine_move_order, transition, Actions};
+use crate::board::transition::{determine_move_order, transition, Actions};
 use crate::io::wire::Observation;
 
 /// Positional reader over the whitespace-separated integer stream.

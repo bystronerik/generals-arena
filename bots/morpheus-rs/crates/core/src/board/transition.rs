@@ -14,7 +14,7 @@
 //! semantics (index wrapping, bitwise ops on int32 action fields) that a
 //! straight reading of the intent would get subtly wrong.
 
-use crate::state::{GameInfo, GameState, MAX_CELLS};
+use crate::board::state::{GameInfo, GameState, MAX_CELLS};
 
 /// `pass` field: 0 move, 1 skip, 2 build.
 pub const BUILD: i32 = 2;

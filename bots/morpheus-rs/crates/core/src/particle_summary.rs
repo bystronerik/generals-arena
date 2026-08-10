@@ -16,7 +16,7 @@
 //! bit-for-bit.
 
 use crate::belief::{ess_fraction, BeliefState};
-use crate::observe::visibility_from_owned;
+use crate::board::observe::visibility_from_owned;
 use crate::support::rng::npsum;
 use crate::tensor::BeliefSummary;
 
@@ -103,8 +103,8 @@ pub fn summarize_belief(belief: &BeliefState) -> BeliefSummary {
 mod tests {
     use super::*;
     use crate::belief::{BeliefConfig, Particle};
-    use crate::memory::VisibleMemory;
-    use crate::state::GameState;
+    use crate::board::memory::VisibleMemory;
+    use crate::board::state::GameState;
     use std::rc::Rc;
 
     fn enemy_at(cell: usize, army: i32) -> GameState {

@@ -9,11 +9,11 @@
 //! the engine cell for cell — a fog rule that is off by one cell turns a
 //! correct particle into a rejected one.
 
-use crate::memory::{
+use crate::board::memory::{
     TYPE_CASTLE, TYPE_FOG, TYPE_GENERAL, TYPE_MOUNTAIN, TYPE_PLAIN, TYPE_STRUCTURE_FOG,
 };
-use crate::state::{GameState, MAX_CELLS};
-use crate::transition::get_info;
+use crate::board::state::{GameState, MAX_CELLS};
+use crate::board::transition::get_info;
 use crate::io::wire::Observation;
 
 /// Chebyshev-1 (3×3) visibility around every owned cell.

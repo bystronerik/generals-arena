@@ -14,7 +14,7 @@
 //! Belief planes arrive through an injected `BeliefSummary`; aggregating
 //! particles into one is M4's job (`particle_summary.py`).
 
-use crate::memory::{
+use crate::board::memory::{
     VisibleMemory, OWNER_ENEMY, OWNER_ME, OWNER_NEUTRAL, TYPE_FOG, TYPE_STRUCTURE_FOG,
 };
 use crate::io::wire::Observation;
@@ -374,7 +374,7 @@ pub fn observation_tensor(
     previous_action: Option<[i32; 5]>,
     army_scale: f64,
 ) -> (Vec<f32>, VisibleMemory) {
-    let next = crate::memory::update_memory(memory, obs);
+    let next = crate::board::memory::update_memory(memory, obs);
     let tensor = build_tensor(obs, &next, belief, previous_action, army_scale);
     (tensor, next)
 }

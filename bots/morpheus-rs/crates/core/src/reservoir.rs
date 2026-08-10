@@ -140,9 +140,9 @@ impl ParticleReservoir {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory::VisibleMemory;
+    use crate::board::memory::VisibleMemory;
     use crate::support::rng::SmallRng;
-    use crate::state::GameState;
+    use crate::board::state::GameState;
     use std::rc::Rc;
 
     fn particle(tag: i32, weight: f64) -> Particle {
