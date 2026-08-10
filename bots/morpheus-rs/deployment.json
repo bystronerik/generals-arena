@@ -1,6 +1,6 @@
 {
   "admission_guard_ms": 0.0,
-  "belief_limitation_note": "M7 decision arm, config n8-s32-b4-d8. A temporary sibling of bots/morpheus-rs so both knob settings can be rated in one round; removed once the contrast is read.",
+  "belief_limitation_note": "Config n8-s16-b4-d8: eight particles, sixteen target simulations, leaf batch four, search depth eight. Shipped deliberately, and it is not a configuration anyone has measured. M7 latency-qualified n8-s32-b4-d8 on one x86 core (p99.9 140 ms, max 141, zero moves over 150, twenty simulations) and left its strength unproven at +18.15 +/- 23.42; the parity config M6 rated and the parity harness ran against is s16-d2. This is neither. M7's cost model says a simulation's cost is its leaf forward rather than its tree walk, so depth 2 -> 8 is expected to be nearly free, but that is an inference from other points of the grid and not a measurement of this one. The offline_p99_ms values below are still the PYTHON's measured costs, wrong for this binary by roughly the ratios in docs/research/measurements/morpheus-rs-belief-bench.md; they are here to make admission behave predictably, not because they describe this bot. Qualification verdict: no on any host.",
   "belief_quality_threshold": null,
   "evaluator": "network",
   "first_move_limit_ms": 8500.0,
