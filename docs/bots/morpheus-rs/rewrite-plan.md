@@ -602,6 +602,13 @@ nothing more.
   `docs/bots/morpheus-rs/` per docs-keeper rules (`inference.md`,
   `parity.md`, `packaging.md`, …), and `docs/index.md` gains the entries.
 - Measurements: `docs/research/measurements/morpheus-rs-*.md`.
+- **Module layout inside the crate:**
+  [`refactor-plan.md`](refactor-plan.md). The flat module list `crates/core`
+  grew through M1–M8 became nine directories on 2026-08-11, in nine
+  separately-revertible pure moves. §16–§23 below describe the tree as it was
+  on the day each milestone landed and are deliberately not rewritten; read a
+  path in them as history, and the refactor plan's §2 table for where that
+  file is now.
 - Bot code: `bots/morpheus-rs/` as in §10. Training-side and Python-bot
   files change only where §3's artifact contract says (one additive export
   step in `export.py`) and where the capture probe (§5) needs telemetry —

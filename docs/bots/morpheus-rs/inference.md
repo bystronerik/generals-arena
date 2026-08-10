@@ -90,7 +90,7 @@ inference win anyway; this is a bonus on top of the transition kernel.
 
 ## What the engine is
 
-`crates/core/network.rs` plus `gemm.rs`, about 1,080 lines including their
+`crates/core/src/nn/network.rs` plus `nn/gemm.rs`, about 1,080 lines including their
 tests. No dependencies, no `unsafe`, no intrinsics.
 
 - **Layout.** Channel-major planes of 448 floats — 441 board cells rounded up
@@ -219,7 +219,7 @@ Two things about it are load-bearing:
   "the artifact drifted" from "the library reshuffled a dict". The writer is
   canonical; the result is round-tripped through the reference reader so the
   layout is not graded by its own mirror image.
-- **The bot refuses to start on a mismatch.** `inference.rs` re-checks the
+- **The bot refuses to start on a mismatch.** `nn/inference.rs` re-checks the
   manifest version, all three schema tags, the four architecture dimensions,
   the quantization format, the 17 army-bin edges, and the SHA-256 of the
   weights — the same guardrails as `inference.validate_manifest`, because a bot

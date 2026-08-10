@@ -119,7 +119,7 @@ on invalid input too: it validates internally and silently no-ops, and
 ## Wire format, and a deviation from the plan
 
 A flat stream of whitespace-separated integers, documented positionally in
-`crates/core/src/parity.rs` and mirrored in `tests/parity_cases.py`. The plan
+`crates/core/src/parity/` and mirrored in `tests/parity_cases.py`. The plan
 says "canonical JSON"; this is a narrow, deliberate departure. Rust's standard
 library has no JSON, so the options were a dependency inside the *shipped*
 binary or a hand-rolled parser, for a machine-to-machine channel whose entire
@@ -487,7 +487,7 @@ NumPy's own pairwise reduction (mean 0.4 ulp, max 3). There is no order to
 copy: **the Python bot disagrees with itself across hosts here**, exactly as
 `np.argsort` does under AVX-512.
 
-So `matrix.rs` reduces with `npsum`, the surface carries a tolerance set from
+So `search/matrix.rs` reduces with `npsum`, the surface carries a tolerance set from
 measurement (5e-12, against a worst observed 4.4e-16), and the decision gate
 expects the resulting flips on near-ties rather than being surprised by them.
 That is the third host-conditional behaviour the harness has had to name, after
@@ -673,8 +673,9 @@ rather than a number.
 
 ## Adding a surface
 
-1. Add the kind to `run()` in `crates/core/src/parity.rs`, reading its inputs
-   through the positional helpers and writing integers out.
+1. Add the function to `crates/core/src/parity/surfaces/<group>.rs`, reading
+   its inputs through `parity/codec.rs`'s positional helpers and writing
+   integers out, then add its one-line arm to `run()` in `parity/mod.rs`.
 2. Mirror the encode/decode in `tests/parity_cases.py` and add the comparison
    branch, reporting *where* it differs — a cell index, an action index — so a
    failure is actionable without a debugger.
@@ -692,7 +693,8 @@ Running all twenty surfaces per mutation was the honest default until M4 made
 it the dominant cost: eighty-odd mutations against a torch import and two
 million integers through a pipe. `FILE_SURFACES` maps each source file to the
 kinds that could possibly see a break in it, and the board layer
-(`transition.rs`, `observe.rs`, `action.rs`, `memory.rs`, `state.rs`) still
+(everything under `board/`: `transition.rs`, `observe.rs`, `action.rs`,
+`memory.rs`, `state.rs`) still
 maps to *everything*, because every belief and every tensor is downstream of it.
 
 An over-narrow entry would report a caught mutation as a survivor, which reads

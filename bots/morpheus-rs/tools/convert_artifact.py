@@ -17,7 +17,7 @@ weights-only safetensors file the Rust bot can mmap. Nothing that consumes the
 exporter.
 
 **Why weights-only is enough.** safetensors carries tensors and no graph. The
-graph lives in `crates/core/src/network.rs`, written against `network.py` and
+graph lives in `crates/core/src/nn/network.rs`, written against `network.py` and
 proved against TorchScript outputs by the `net` parity surface. That is the
 same split the plan chose over ONNX: no translation layer between two graph
 formats, and the numerics are ours to control.

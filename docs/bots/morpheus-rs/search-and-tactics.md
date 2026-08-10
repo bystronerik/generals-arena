@@ -46,7 +46,8 @@ by construction and no draw site re-enters another.
 
 ## The one reduction that cannot be bit-exact, and why the oracle is at fault
 
-Everything M1 through M4 ported matched the Python to the last bit. `matrix.rs`
+Everything M1 through M4 ported matched the Python to the last bit.
+`search/matrix.rs`
 does not, and the reason is worth stating plainly because it is the same shape
 as M4's `np.argsort` finding.
 

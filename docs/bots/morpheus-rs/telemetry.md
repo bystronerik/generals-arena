@@ -24,7 +24,7 @@ MORPHEUS_RS_TRACE=/tmp/seat.jsonl bash bots/morpheus-rs/run.sh
 MORPHEUS_RS_TRACE=/tmp/traces/seat-%p.jsonl python -m arena.tournaments.competition ...
 ```
 
-One JSON object per turn, in `crates/core/src/telemetry.rs`. Unset — which is
+One JSON object per turn, in `crates/core/src/runtime/telemetry.rs`. Unset — which is
 every rated game — the whole mechanism is one `Option` check per turn and no
 disk at all.
 

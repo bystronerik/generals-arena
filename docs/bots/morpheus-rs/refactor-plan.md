@@ -1,8 +1,39 @@
 # Morpheus-rs refactor plan — a flat module list into real subpackages
 
-Status: **proposed, not started (2026-08-10).** Nothing under `crates/**` has
-moved. This is a plan for a **pure move**: files change place, code does not
-change meaning. Every stage is separately shippable and separately revertible.
+Status: **done (2026-08-11).** All nine stages landed, one commit each, in the
+order below. This was a **pure move**: files changed place, code did not change
+meaning. Every stage was separately shippable and separately revertible.
+
+What the plan did not predict, recorded here because the next refactor will hit
+the same three things:
+
+- **Sibling modules need `pub(super)`; child modules do not.** §1's claim that
+  a split costs nothing in visibility holds for *fields declared in `mod.rs`*
+  — `search/select.rs` reaches `SearchController`'s private fields for free.
+  It does not hold for private helpers that end up in a sibling file, and it
+  does not hold for `RuntimeController`, whose fields are declared in
+  `runtime/controller.rs` rather than in `runtime/mod.rs`. 73 items were
+  widened across the refactor — 17 to `pub(super)` and, in `parity/`, 56 to
+  `pub(in crate::parity)`, which is where `run()` calling into
+  `surfaces/<group>.rs` lands you. Every one was private before; none became
+  `pub` or `pub(crate)`; no item was renamed.
+- **`mod.rs` re-exports are what make a split a non-event for callers.** Every
+  directory that split a namespace (`tactics/`, `search/`, `runtime/`)
+  re-exports its leaves, so not one `crate::tactics::<item>` path outside the
+  directory was touched. The `use` sweeps in the move-only stages were the
+  whole cost; the split stages were cheaper than them.
+- **`cargo fix` prunes against the target you name.** Twice it removed imports
+  that only a `#[cfg(test)]` module reached, and `cargo test` stopped
+  compiling. Use `--all-targets`, and expect the test module to want its own
+  `use` lines once its file has one subject instead of twelve.
+
+Result: 30 flat modules became 9 directories and 68 files under
+`crates/core/src`. The crate's largest
+file went from 2,560 lines (`tactics.rs`) to 917 (`nn/network.rs`, deliberately
+whole, §3). The mutation map's 167 entries name 33 files where they named 21.
+`selfcheck`'s `warmup_ms` read 103.0 ± 0.4 ms across all nine stages against a
+Stage 0 baseline of 109.1 — which was a first-run sample; the same tree reads
+109.9 on a first run and 103.4 after. No latency moved.
 
 Scope: `bots/morpheus-rs/crates/core`, 30 modules and 17,261 lines behind a
 flat `lib.rs`, four of them large enough that "which file is this in" has

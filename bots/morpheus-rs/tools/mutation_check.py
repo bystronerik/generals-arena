@@ -39,11 +39,18 @@ SRC = BOT_DIR / "crates" / "core" / "src"
 #
 # Running all twenty surfaces per mutation was the honest default until M4
 # made it the dominant cost: eighty-odd mutations times a torch import and two
-# million integers through a pipe is hours, and the surfaces a `reservoir.rs`
-# mutation could ever reach is one. The map is deliberately **generous** — the
-# board layer feeds everything downstream, so `transition.rs` still runs the
-# whole set — because an over-narrow entry would report a caught mutation as a
-# survivor and be read as a coverage hole.
+# million integers through a pipe is hours, and the surfaces a
+# `belief/reservoir.rs` mutation could ever reach is one. The map is
+# deliberately **generous** — the board layer feeds everything downstream, so
+# `board/transition.rs` still runs the whole set — because an over-narrow entry
+# would report a caught mutation as a survivor and be read as a coverage hole.
+#
+# Keys are paths relative to `crates/core/src`, one per file that a mutation
+# names. The 2026-08-11 module refactor turned eleven of them into thirty:
+# splitting a file splits its key, and each part deliberately keeps the whole
+# of its parent's surface set. Narrowing `tactics/oscillation.rs` to
+# `("playmask",)` is tempting and would misreport a caught mutation as a
+# survivor; tightening the map is a separate, measured change.
 FILE_SURFACES: dict[str, tuple[str, ...]] = {
     # The board layer is upstream of every belief and every tensor.
     "board/transition.rs": (),
@@ -57,15 +64,17 @@ FILE_SURFACES: dict[str, tuple[str, ...]] = {
     "nn/network.rs": ("net", "prior"),
     "nn/gemm.rs": ("net", "prior"),
     "support/rng.rs": ("npsum", "argsort", "summary", "propose", "filter",
-               "rejuvenate", "maxent", "reservoir", "toplegal", "initbelief"),
+                       "rejuvenate", "maxent", "reservoir", "toplegal",
+                       "initbelief"),
     "belief/mod.rs": ("summary", "filter", "rejuvenate", "maxent", "reservoir",
-                  "initbelief"),
+                      "initbelief"),
     "belief/summary.rs": ("summary",),
     "belief/proposal.rs": ("propose", "rejuvenate", "maxent", "toplegal"),
     "belief/recovery.rs": ("rejuvenate", "maxent"),
     "belief/reservoir.rs": ("reservoir",),
-    # M5. `tactics.rs` reaches the decision through five surfaces and is also
-    # upstream of the search's candidate sets, so it maps to all of them.
+    # M5. `tactics/` reaches the decision through five surfaces and is also
+    # upstream of the search's candidate sets, so every file in it maps to all
+    # of them.
     "search/matrix.rs": ("matrix",),
     "tactics/castle.rs": ("playmask", "candidates", "planners", "shaping", "constrain", "decide"),
     "tactics/defense.rs": ("playmask", "candidates", "planners", "shaping", "constrain", "decide"),

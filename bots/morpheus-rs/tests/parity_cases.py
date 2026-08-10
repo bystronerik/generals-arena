@@ -15,7 +15,7 @@ states, not expected answers, so a case can exercise action pairs the recorded
 game never played (a build, a deathtouch, a move from an unowned cell).
 
 Wire format is a flat stream of integers, documented in
-`crates/core/src/parity.rs`. Layouts here and there are positional and must be
+`crates/core/src/parity/`. Layouts here and there are positional and must be
 edited together.
 """
 from __future__ import annotations
@@ -169,7 +169,7 @@ def load_frames(paths: list[Path], limit: int = 0) -> list[dict]:
     return frames
 
 
-# --- serialization (mirrors crates/core/src/parity.rs) ----------------------
+# --- serialization (mirrors crates/core/src/parity/codec.rs) ----------------
 
 
 def encode_state(state) -> list[int]:
@@ -1173,7 +1173,7 @@ def _crafted_memory_pairs():
 
 # --- M4: beliefs, and the recorded RNG stream -------------------------------
 
-# Method codes shared with `read_draws` in crates/core/src/parity.rs.
+# Method codes shared with `read_draws` in crates/core/src/parity/codec.rs.
 _DRAW_CODES = {"integers": 0, "choice": 1, "random": 2}
 
 

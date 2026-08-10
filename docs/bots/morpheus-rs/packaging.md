@@ -13,7 +13,15 @@ bots/morpheus-rs/
   Cargo.lock            pins the graph; the reason vendor/ need not be hashed
   rust-toolchain.toml   dev-side pin, deliberately NOT shipped (below)
   .cargo/config.toml    target-cpu for the Linux targets only
-  crates/core/src/      the ported bot; wire, board, network, parity
+  crates/core/src/      the ported bot, one directory per layer:
+    support/ io/          rng and sha256; the wire protocol and JSON
+    board/                state, transition, action, observe, memory, hashing
+    nn/                   the 49-plane contract, the graph, the kernels
+    belief/               the particle filter and its recovery paths
+    tactics/              the play mask, the planners, the shaping, the rules
+    search/               the tree, the regret matrices, the evaluators
+    runtime/              the deadline, plus deployment.json and telemetry
+    parity/               the harness half; never plays
   crates/bot/src/       main: read frames, decide, reply; `parity` and `bench`
   artifact/             safetensors weights + manifest; inside the content hash
   deployment.json       the coupled knobs; inside the content hash (M5)
