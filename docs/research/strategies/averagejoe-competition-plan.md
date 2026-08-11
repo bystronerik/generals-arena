@@ -23,9 +23,15 @@ entry `scripts/joe_modal_train.py`; checkpoints (learner + optimizer + EMA
 `/vol/joe/<run>/`. Smoke-verified on 1×H100, 2026-08-12: tier M at the
 frozen config shape runs 118k samples/s (8.9 s/iter, no OOM at 80 GB);
 greedy win-rate vs random climbed 2% → 60% at stage 0 (distance 2–6),
-crossed the 60% gate, and the run advanced to stage 1 live. Resume from a
-Volume checkpoint (weights + optimizer + EMA, `iteration_offset`)
-reproduced the pre-kill eval level. Two observations for later phases:
+crossed the 60% gate, and the run advanced to stage 1 live; by cumulative
+iteration ~380 it hit 61% at stage 1 and advanced again to stage 2
+(distance 6–13). Resume from a Volume checkpoint (weights + optimizer +
+EMA, `iteration_offset`) reproduced the pre-kill eval level. Each stage
+transition shows the same dip-and-recover shape (stage 1: 47% → 12% →
+61% over ~250 iters): the value head ends a stage near-certain (EV 0.98),
+is confidently wrong at the new distance, and the |adv| filter chews on
+that noise until the critic re-calibrates — expect it, don't page on it.
+Two more observations for later phases:
 early stage-0 self-play wins skew hard to the p0 seat (up to 8:1 by iter
 80 — likely a move-order edge at close spawns; re-check at distance 17+),
 and the vs-random gate reads low early because greedy argmax favors the
