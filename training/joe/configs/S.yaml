@@ -1,0 +1,107 @@
+# Frozen 2026-08-11 — Phase 0 of docs/research/strategies/averagejoe-competition-plan.md.
+# Base: AverageJoe released configs/S.yaml. Deviations are either competition
+# env numbers (GeneralsEnv(mode="competition"), RULES.md) or D1-D6 resolutions
+# from the plan; each is commented at the key it affects.
+run_name: joe-S
+
+# ---- Environment: GeneralsEnv(mode="competition") numbers ----
+# The final curriculum stage must be bit-identical to the mode preset's
+# parameters; a Phase 2 unit test asserts that equality (plan §4).
+pad_to: 21                    # competition preset; with patch 3: 7x7 = 49 patch tokens
+min_grid_size: 18             # each side drawn independently in [18, 21]
+max_grid_size: 21
+truncation: 1200              # competition draw turn (preset), not the released 1024
+mountain_density_min: 0.24
+mountain_density_max: 0.26
+build_castles: true           # castles are built, not captured — 10th per-cell
+                              # action, build mask, build-cost obs channel (plan §4)
+deathtouch_turn: 800          # env-internal; the timestep channel carries the regime change
+# castle_val_* / num_cities_* deliberately absent: build_castles strips neutral
+# castles from generated grids, so those knobs have no effect in this ruleset.
+
+pool_size: 200000
+reset_pool_every: 10
+
+# ---- Curriculum ----
+# D4: the code's win-rate-gated stages (threshold 0.6, evaluated vs random),
+# not the paper's gradual cap increase. Distance ladder shaped after the
+# released L.yaml; the final stage equals the preset (min 17, max unbounded).
+# D5: reward_fn / opponent / population_* / ckpt_pool_size / magnet_policy are
+# vestigial in the released configs and are NOT ported — reward is always
+# sparse terminal win/loss.
+curriculum:
+  - min_generals_distance: 2
+    max_generals_distance: 6
+  - win_rate_threshold: 0.6
+    min_generals_distance: 4
+    max_generals_distance: 8
+  - win_rate_threshold: 0.6
+    min_generals_distance: 6
+    max_generals_distance: 13
+  - win_rate_threshold: 0.6
+    min_generals_distance: 11
+    max_generals_distance: 17
+  - win_rate_threshold: 0.6
+    min_generals_distance: 17
+    max_generals_distance: null   # preset leaves the max unset
+
+# ---- Network (S tier; D1 depth-7-vs-11 applies to the L tier only) ----
+network: history_transformer
+depth: 4
+embed_dim: 352
+n_head: 8
+ff_factor: 2
+patch_size: 3                 # released S uses 2, but 21 % 2 != 0; plan §2 fixes S at 3
+# Observation is 39 channels: the paper's 38 plus the own-build-cost channel
+# from build_cost_grid (decision 4). Policy head is H x W x 10 — pass, 4 full,
+# 4 half, build (plan §4).
+
+ema_decay: 0.999              # EMA is the deployment policy (paper: +~30 Elo)
+
+# ---- Rollout ----
+num_envs: 2048
+num_steps: 256
+num_iters: 50000
+minibatch_size: 2048
+seed: 44
+
+# ---- PPO ----
+num_epochs: 1
+gamma: 1.0
+gae_lambda: 0.9               # D6: paper/L value (released M drifts to 0.7)
+clip_eps: 0.2
+max_grad_norm: 0.267
+vf_coef: 0.5
+target_kl: 0.02
+adv_top_frac: 0.25            # D3: top 25% ranked by |advantage|, per the code.
+                              # D6: paper value (released S drifts to 0.5).
+
+# ---- Entropy ----
+# D2: plain entropy bonus only. The expander-magnet reverse KL in the released
+# ppo.py is not ported at all — no flag, no magnet.py.
+ent_schedule: power_law
+ent_coef_start: 0.05
+ent_power: 0.2
+ent_coef_min: 0.001
+
+# ---- Learning rate: paper's clip(0.5 * t^-1.1, 5e-6, 1e-4) ----
+lr_schedule: power_law
+lr_power_law_numerator: 0.5
+lr_power_law_exponent: 1.1    # D6: paper value (released L/M drift to 1.17/1.2)
+lr_power_law_min: 5e-6
+lr_power_law_max: 1e-4
+
+# ---- Value loss: categorical HL-Gauss ----
+value_loss: ce
+num_bins: 128
+v_min: -1.0                   # sparse +-1 reward; released M's +-1.6 not adopted
+v_max: 1.0
+hl_sigma: 0.04                # NOT the released config.py default 0.75 (plan §2: a trap)
+
+# ---- Eval / checkpoints ----
+eval_every: 50
+eval_games: 512
+ckpt_every: 500
+save_every: 500
+
+use_bf16: true

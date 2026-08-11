@@ -5,8 +5,12 @@ Phased plan to replace the current Morpheus NN training workflow
 Average Joe pipeline: pure self-play PPO in a JAX-vectorized env, trained end
 to end on GPU, under **competition rules**.
 
-Status: **plan only — nothing implemented**. Phase 0 decisions below block
-implementation start.
+Status: **Phases 0–1 complete (2026-08-12)** — decisions resolved,
+`training/joe/configs/{S,M}.yaml` frozen, and the throughput benchmark
+measured on A10G / A100-80G / H100. Numbers and re-anchored costs:
+[`joe-phase1-throughput.md`](../measurements/joe-phase1-throughput.md).
+Training GPU decided by $/sample: 1×H100. Next: Phase 2 (port + CPU
+latency spike).
 
 Sources of truth, in order:
 
@@ -311,5 +315,6 @@ Running total to a deployed, arena-rated M-tier agent: **≈ $400–650**.
 8. **Budget:** no L-size run — M is the terminal tier.
 9. **`bots/morpheus`:** kept permanently as a reference opponent.
 
-Implementation is unblocked; Phase 0's remaining work is writing the frozen
-`training/joe/configs/{S,M}.yaml`.
+Implementation is unblocked. Phase 0 is done: the frozen
+`training/joe/configs/{S,M}.yaml` exist, with the D1–D6 resolutions and the
+competition-preset deviations recorded as comments at the keys they affect.
