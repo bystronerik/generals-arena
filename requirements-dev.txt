@@ -11,6 +11,13 @@ pytest
 # not import it.
 elote
 
+# Average Joe pipeline: the `joe`-marked test gate (`pytest -m joe`) needs
+# the training stack locally; `scripts/joe_modal_*` need the modal client.
+# The GPU container pins its own copies inside the Modal image.
+equinox
+optax
+modal
+
 # Build-time only: `arena/bundle.py` minifies each Python member on the way
 # into a submission zip. Never installed on the judge and never imported by a
 # bot — the zip carries plain source, just rewritten. Pinned because the

@@ -5,7 +5,7 @@ Phased plan to replace the current Morpheus NN training workflow
 Average Joe pipeline: pure self-play PPO in a JAX-vectorized env, trained end
 to end on GPU, under **competition rules**.
 
-Status: **Phases 0–2 complete (2026-08-12)** — decisions resolved,
+Status: **Phases 0–3 complete (2026-08-12)** — decisions resolved,
 `training/joe/configs/{S,M}.yaml` frozen, throughput measured on
 A10G / A100-80G / H100
 ([`joe-phase1-throughput.md`](../measurements/joe-phase1-throughput.md),
@@ -16,7 +16,21 @@ one hard-limited core
 M is the single tier we train; S is never trained.** The network port
 lives in `training/joe/networks/` (39 channels, 10-action head; S 5.09M /
 M 8.56M params) with `joe`-marked tests under `training/joe/tests/`.
-Next: Phase 3 — port the training loop. Only one training run happens in
+Phase 3 (the training-loop port) is in
+`training/joe/{train/,config.py,env.py,main.py,logger.py}` with the Modal
+entry `scripts/joe_modal_train.py`; checkpoints (learner + optimizer + EMA
++ config + engine SHA) go to the `morpheus-training` Volume under
+`/vol/joe/<run>/`. Smoke-verified on 1×H100, 2026-08-12: tier M at the
+frozen config shape runs 118k samples/s (8.9 s/iter, no OOM at 80 GB);
+greedy win-rate vs random climbed 2% → 60% at stage 0 (distance 2–6),
+crossed the 60% gate, and the run advanced to stage 1 live. Resume from a
+Volume checkpoint (weights + optimizer + EMA, `iteration_offset`)
+reproduced the pre-kill eval level. Two observations for later phases:
+early stage-0 self-play wins skew hard to the p0 seat (up to 8:1 by iter
+80 — likely a move-order edge at close spawns; re-check at distance 17+),
+and the vs-random gate reads low early because greedy argmax favors the
+never-masked pass channel until the policy sharpens.
+Next: Phase 4 — the full M training run. Only one training run happens in
 this plan (§7, §8 item 10).
 
 Sources of truth, in order:
