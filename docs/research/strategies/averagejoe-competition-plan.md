@@ -5,14 +5,19 @@ Phased plan to replace the current Morpheus NN training workflow
 Average Joe pipeline: pure self-play PPO in a JAX-vectorized env, trained end
 to end on GPU, under **competition rules**.
 
-Status: **Phases 0–1 complete (2026-08-12)** — decisions resolved,
-`training/joe/configs/{S,M}.yaml` frozen, and the throughput benchmark
-measured on A10G / A100-80G / H100. Numbers and re-anchored costs:
-[`joe-phase1-throughput.md`](../measurements/joe-phase1-throughput.md).
-Training GPU decided by $/sample: 1×H100. Next: Phase 2 — the x86 CPU
-latency benchmark on randomly initialized S/M nets. Its verdict picks the
-**single** tier we train: M if it fits the move budget, otherwise S. Only
-one training run happens in this plan (§7, §8 item 10).
+Status: **Phases 0–2 complete (2026-08-12)** — decisions resolved,
+`training/joe/configs/{S,M}.yaml` frozen, throughput measured on
+A10G / A100-80G / H100
+([`joe-phase1-throughput.md`](../measurements/joe-phase1-throughput.md),
+training GPU: 1×H100), and the Phase 2 x86 CPU latency benchmark run on
+one hard-limited core
+([`joe-phase2-cpu-latency.md`](../measurements/joe-phase2-cpu-latency.md)).
+**Verdict: M fits the 150 ms budget with ~8× margin (true p99 ≈ 19 ms) —
+M is the single tier we train; S is never trained.** The network port
+lives in `training/joe/networks/` (39 channels, 10-action head; S 5.09M /
+M 8.56M params) with `joe`-marked tests under `training/joe/tests/`.
+Next: Phase 3 — port the training loop. Only one training run happens in
+this plan (§7, §8 item 10).
 
 Sources of truth, in order:
 
