@@ -9,8 +9,10 @@ Status: **Phases 0–1 complete (2026-08-12)** — decisions resolved,
 `training/joe/configs/{S,M}.yaml` frozen, and the throughput benchmark
 measured on A10G / A100-80G / H100. Numbers and re-anchored costs:
 [`joe-phase1-throughput.md`](../measurements/joe-phase1-throughput.md).
-Training GPU decided by $/sample: 1×H100. Next: Phase 2 (port + CPU
-latency spike).
+Training GPU decided by $/sample: 1×H100. Next: Phase 2 — the x86 CPU
+latency benchmark on randomly initialized S/M nets. Its verdict picks the
+**single** tier we train: M if it fits the move budget, otherwise S. Only
+one training run happens in this plan (§7, §8 item 10).
 
 Sources of truth, in order:
 
@@ -155,8 +157,13 @@ forward-pass math at 52 tokens (~2 × torso-params × tokens):
 | L 15.35M | ~1.6 G | ~60–150 ms — **at the edge** |
 
 So the deployable tier is decided by a measured CPU benchmark, not by
-training results — and we run that benchmark in Phase 2 on randomly
-initialized nets, before spending GPU money on a size we can't ship.
+training results — and we run that benchmark **first**, in Phase 2, on
+randomly initialized S and M nets, before spending GPU money on a size we
+can't ship. The benchmark must run on **x86** (a 1-core Modal CPU
+container): the competition machines are x86, and numbers from a local
+Apple-Silicon core do not transfer. The same measurement also picks the one
+tier we train — if M fits the budget with margin, we train M directly and
+never train S (§8 item 10).
 **Decided 2026-08-11:** inference is Python numpy/jax-CPU first — simplest,
 good enough for the arena and the local gate. Before an actual competition
 submission the net gets converted to the morpheus-rs candle stack (which
@@ -172,23 +179,23 @@ Nothing is silently kept. Every current piece, explicitly:
 
 | Current piece | Fate | When |
 | --- | --- | --- |
-| `self_play/league.py` + `sampler.py` (league, roles, mixtures) | **Delete** — paper's core claim is that the outer loop is unnecessary | Phase 5 cleanup |
-| `self_play/driver.py`, `seats.py`, `verify.py`, `schema.py`, `explore.py`, `ingest.py` (CPU shard producers, search-based self-play) | **Delete** — replaced by in-graph GPU rollouts; shards cease to exist as a concept | Phase 5 |
-| `trainer/` (torch loop, replay buffer, step, calibrate, manifest, metrics) | **Delete** — replaced by the JAX loop; the manifest/checkpoint *ideas* (immutable manifest, resumable state, engine SHA pinning) are re-implemented in the new loop | Phase 5 |
-| `objective/` (reward shaping, aux losses, targets) | **Delete** — sparse win/loss only; paper's ablation shows shaping destabilizes at high throughput | Phase 5 |
-| `scraped_rebuild/`, `curriculum/` (scraped-replay reconstruction and curriculum), `corpus/` | **Delete from training** — training is self-play from scratch; the scrapers and `competition-replays/` stay as observational analysis per AGENTS.md, they just never feed training | Phase 5 |
-| `compute/`, `jax_preflight/`, `export_preflight/`, `measure_*.py` | **Delete** — tied to the torch net and the old cadence | Phase 5 |
+| `self_play/league.py` + `sampler.py` (league, roles, mixtures) | **Delete** — paper's core claim is that the outer loop is unnecessary | Phase 6 cleanup |
+| `self_play/driver.py`, `seats.py`, `verify.py`, `schema.py`, `explore.py`, `ingest.py` (CPU shard producers, search-based self-play) | **Delete** — replaced by in-graph GPU rollouts; shards cease to exist as a concept | Phase 6 |
+| `trainer/` (torch loop, replay buffer, step, calibrate, manifest, metrics) | **Delete** — replaced by the JAX loop; the manifest/checkpoint *ideas* (immutable manifest, resumable state, engine SHA pinning) are re-implemented in the new loop | Phase 6 |
+| `objective/` (reward shaping, aux losses, targets) | **Delete** — sparse win/loss only; paper's ablation shows shaping destabilizes at high throughput | Phase 6 |
+| `scraped_rebuild/`, `curriculum/` (scraped-replay reconstruction and curriculum), `corpus/` | **Delete from training** — training is self-play from scratch; the scrapers and `competition-replays/` stay as observational analysis per AGENTS.md, they just never feed training | Phase 6 |
+| `compute/`, `jax_preflight/`, `export_preflight/`, `measure_*.py` | **Delete** — tied to the torch net and the old cadence | Phase 6 |
 | `network.py` → `bots/morpheus` MorpheusNet (torch CNN) | **Keep** — `bots/morpheus` stays in the roster as a reference opponent even after the new bot passes it (decided 2026-08-11) | permanent |
-| `scripts/morpheus_modal.py`, `_modal_self_play.py`, `_modal_materialize.py`, `_materialize.py`, `_self_play.py`, `_sp_ingest.py`, `_modal_sp_ingest.py`, `_sp_prepare_league.py`, `_corpus.py`, `_curriculum.py`, `_rebuild_scraped.py`, `_objective.py`, `_shaping_variant.py`, `_modal_preflight.py`, `_modal_export_preflight.py`, `_export_preflight.py`, `_cadence_evidence.py`, probes | **Delete** | Phase 5 |
+| `scripts/morpheus_modal.py`, `_modal_self_play.py`, `_modal_materialize.py`, `_materialize.py`, `_self_play.py`, `_sp_ingest.py`, `_modal_sp_ingest.py`, `_sp_prepare_league.py`, `_corpus.py`, `_curriculum.py`, `_rebuild_scraped.py`, `_objective.py`, `_shaping_variant.py`, `_modal_preflight.py`, `_modal_export_preflight.py`, `_export_preflight.py`, `_cadence_evidence.py`, probes | **Delete** | Phase 6 |
 | `scripts/morpheus_rs_*` (Rust/candle inference lineage) | **Keep** — the competition-submission conversion target (§5); untouched until a submission is actually prepared | permanent |
-| `training/morpheus/tests/*` | **Delete with their subjects**; new pipeline brings its own tests under the 12 s suite ceiling | Phase 5 |
+| `training/morpheus/tests/*` | **Delete with their subjects**; new pipeline brings its own tests under the 12 s suite ceiling | Phase 6 |
 | Uncommitted worktree changes (`sp-from-c13-ckpt10k` ingest/league work, `explore.py`, modified `driver.py`/`loop.py`…) | **Discard** (decided 2026-08-11) — `git restore` + drop the untracked files when implementation starts | Phase 2 start |
-| `data/morpheus/` local artifacts, Modal Volume `morpheus-training` | Volume stays primary storage; new runs go under a fresh `/vol/joe/` prefix so old runs remain inspectable; local dir stays gitignored | Phase 2 |
+| `data/morpheus/` local artifacts, Modal Volume `morpheus-training` | Volume stays primary storage; new runs go under a fresh `/vol/joe/` prefix so old runs remain inspectable; local dir stays gitignored | Phase 3 |
 
 New code lives in a fresh package — **decided 2026-08-11: `training/joe/`**,
 mirroring the AverageJoe layout (`networks/`, `train/`, `configs/`), with
 Modal entry scripts as `scripts/joe_modal_*.py` and the bot as `bots/joe/`.
-Old and new never interleave, so the Phase 5 deletion is a clean
+Old and new never interleave, so the Phase 6 deletion is a clean
 `git rm training/morpheus scripts/morpheus_*` minus the kept
 `morpheus_rs_*`.
 
@@ -225,30 +232,50 @@ in** before walking away.
   cost estimate below.
 - **Cost:** < $10 (a few GPU-hours).
 
-### Phase 2 — port the training loop + CPU latency spike
+### Phase 2 — x86 CPU latency benchmark (random weights, no training)
 
-- **Build:** `training/joe/` port of `networks/common.py`,
-  `networks/transformer.py`, `train/{ppo,rollout_selfplay,rewards,evaluations}.py`,
-  `config.py`, `main.py`, adapted for: our fork's constructor/API drift, the
-  10-action head + build mask + the build-cost channel, competition env
-  kwargs, curriculum-final-stage == mode-preset assertion. Checkpoints
-  (learner + optimizer + EMA + config + engine SHA) to the Modal Volume with
-  `Volume.commit()`. Plus the **CPU latency benchmark**: exported random-init
-  S/M/L nets, single core, ms/move — decides the deployable tier (§5).
+- **Build:** the network port only — `networks/common.py` +
+  `networks/transformer.py` adapted for the 39-channel obs and the
+  10-action head — just enough to instantiate **randomly initialized S and
+  M nets** and run forward passes. Benchmark ms/move (p50/p99 over
+  game-length step counts) on **one x86 core** in a Modal CPU container,
+  with the jax-CPU/numpy stack from §5. Not on the local Apple-Silicon
+  machine: the competition runs on x86 and the numbers do not transfer.
+  Random weights are fine — latency does not depend on what the weights are.
+- **Delete:** the uncommitted `sp-from-c13-ckpt10k` worktree changes are
+  discarded now (§6 — implementation starts here).
+- **Verify (runnable):** benchmark report in
+  `docs/research/measurements/joe-phase2-cpu-latency.md` with the tier
+  decision applied: **if M's p99 fits 150 ms with margin on one core, M is
+  the single tier we train and S is never trained; otherwise S is the tier
+  and M is dead.** Either way exactly one training run remains in the plan.
+- **Cost:** ≈ $0 (CPU minutes on Modal).
+
+### Phase 3 — port the training loop
+
+- **Build:** the rest of the `training/joe/` port —
+  `train/{ppo,rollout_selfplay,rewards,evaluations}.py`, `config.py`,
+  `main.py`, adapted for: our fork's constructor/API drift, the 10-action
+  head + build mask + the build-cost channel, competition env kwargs,
+  curriculum-final-stage == mode-preset assertion. Checkpoints (learner +
+  optimizer + EMA + config + engine SHA) to the Modal Volume with
+  `Volume.commit()`.
 - **Delete:** nothing yet (old pipeline still the fallback).
 - **Verify (runnable):** (a) unit tests: GAE truncation handling, HL-Gauss
   targets, 10-action encode/decode round-trip, build mask vs
   `build_cost_grid`, curriculum/preset equality — inside the 12 s suite
-  budget; (b) a ~30-min Modal GPU smoke run at spawn distance 2–6 showing
-  loss movement and win-rate vs random climbing above 50%; startup checked
-  via `modal app logs` per AGENTS.md.
+  budget; (b) a ~30-min Modal GPU smoke run at spawn distance 2–6, at the
+  tier Phase 2 decided, showing loss movement and win-rate vs random
+  climbing above 50%; startup checked via `modal app logs` per AGENTS.md.
 - **Cost:** ~$10–20.
 
-### Phase 3 — S-config run that beats a heuristic bot
+### Phase 4 — full run at the decided tier
 
-- **Build:** full S-tier run on 1 GPU (S net, pad 21, full curriculum to
-  distance 17+, paper schedules). Resumability proven by killing and
-  resuming the run once.
+- **Build:** one full training run at the tier Phase 2 selected — M if its
+  x86 latency fits, otherwise S. Same frozen recipe either way: pad 21,
+  full curriculum to distance 17+, paper schedules, 1×H100. Resumability
+  proven by killing and resuming the run once. The other tier is never
+  trained.
 - **Delete:** nothing yet.
 - **Verify (runnable):** (a) curriculum reaches its final stage; (b)
   in-training eval ≥ ~90% vs random at full distance; (c) **the competition
@@ -257,9 +284,12 @@ in** before walking away.
   --mode competition --seed 0` (with `PYTHON=.venv/bin/python`), plus a small
   A/B via `arena/matches/run_match.py` into `data/games/` showing it beats at
   least one mid-tier heuristic bot per `docs/arena/decision-rule.md`.
-- **Cost:** 1×H100 ≈ 12–24 h ≈ **$50–100** (Phase 1 numbers refine this).
+- **Cost:** M: 1×H100 × 3–5 days ≈ **$300–500** (2×H100 halves wall-clock).
+  S: 1×H100 ≈ 12–24 h ≈ **$50–100**. Phase 1 numbers refine both. For
+  scale: the paper's 4×H200×4d is ≈ $1900–2400 at Modal rates —
+  deliberately not bought.
 
-### Phase 4 — deployment path and arena entry
+### Phase 5 — deployment path and arena entry
 
 - **Build:** the real bot under `bots/joe/`: EMA export, obs/temporal-state
   reconstruction from the stdio protocol, numpy/jax-CPU inference (§5),
@@ -274,10 +304,10 @@ in** before walking away.
   contrast quoted per the decision rule.
 - **Cost:** CPU only, ≈ $0 beyond dev time.
 
-### Phase 5 — delete the old pipeline
+### Phase 6 — delete the old pipeline
 
 - **Build:** nothing.
-- **Delete:** everything marked "Phase 5" in §6, one commit, ASD-STE100
+- **Delete:** everything marked "Phase 6" in §6, one commit, ASD-STE100
   message. Docs under `docs/bots/morpheus/` gain a pointer to the new
   pipeline; `AGENTS.md` file-placement table updated
   (`training/joe/`, `/vol/joe/`).
@@ -286,21 +316,14 @@ in** before walking away.
   checkout.
 - **Cost:** $0.
 
-### Phase 6 — M-tier scale-up
+Running total to a deployed, arena-rated agent: **≈ $320–530** on the M
+path, **≈ $70–130** if the benchmark forces the S tier — down from the
+previous $400–650, because exactly one tier is trained instead of an S run
+followed by an M scale-up. M stays the terminal tier; L remains out of
+budget (§8 item 8) and appears in this doc only as the paper-scale
+reference point.
 
-- **Build:** M-tier run (~8M net) on 1–2 GPUs with the same frozen recipe.
-  **M is the terminal tier** — the L tier is out of budget (decided
-  2026-08-11) and stays in this doc only as the paper-scale reference point.
-- **Verify (runnable):** same gates as Phase 3/4; the M-tier EMA bot enters
-  the arena as a new immutable bot version; before/after pairwise contrast
-  with an interval decides promotion.
-- **Cost:** 1×H100 × 3–5 days ≈ **$300–500** (or 2×H100 halving
-  wall-clock). For scale: the paper's 4×H200×4d is ≈ $1900–2400 at Modal
-  rates — deliberately not bought.
-
-Running total to a deployed, arena-rated M-tier agent: **≈ $400–650**.
-
-## 8. Decisions — all resolved 2026-08-11
+## 8. Decisions — 1–9 resolved 2026-08-11, 10 added 2026-08-12
 
 1. **D1 depth:** paper's 7.
 2. **D2 regularizer:** plain entropy; magnet not ported.
@@ -314,6 +337,10 @@ Running total to a deployed, arena-rated M-tier agent: **≈ $400–650**.
    self-play changes when implementation starts.
 8. **Budget:** no L-size run — M is the terminal tier.
 9. **`bots/morpheus`:** kept permanently as a reference opponent.
+10. **Benchmark first, train once (2026-08-12):** random-init S and M nets
+    are latency-tested on one x86 core (Phase 2) before any training. If M
+    fits the 150 ms budget with margin, we train M directly and skip the S
+    run entirely; otherwise we train S and drop M. One training run total.
 
 Implementation is unblocked. Phase 0 is done: the frozen
 `training/joe/configs/{S,M}.yaml` exist, with the D1–D6 resolutions and the
