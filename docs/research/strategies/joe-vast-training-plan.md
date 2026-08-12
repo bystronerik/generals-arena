@@ -276,8 +276,9 @@ injected R2 env vars:
 
 `scripts/joe_vast_train.py` — local CLI wrapping `vastai`:
 
-- `launch --tier M --run-name … [--bid …]`: pack + upload code, pick an
-  offer, create the interruptible instance with the onstart script.
+- `launch --tier M --run-name … [--bid …] [--num-gpus N]`: pack + upload
+  code, pick an offer (H100, default 1 GPU — §7), create the
+  interruptible instance with the onstart script.
 - `status`: `vastai show instances` + the R2 heartbeat + last metrics
   line, in one view.
 - `resume`: destroy the stopped instance (if any) and launch a
@@ -313,18 +314,14 @@ Two guards, both cheap:
 
 ### Who restarts preempted instances
 
-Options, with a recommendation (also listed under open questions):
-
-1. **Local watchdog (recommended):** `scripts/joe_vast_train.py watch` —
-   polls `vastai show instances` and the heartbeat every few minutes; when
-   the instance is stopped/dead and the heartbeat is stale, runs the
-   `resume` path (destroy → search offers → create). Runs on the laptop
-   (or any always-on box) under launchd/cron. Simple, debuggable, and the
-   run tolerates watchdog downtime — it just pauses.
-2. vast.ai autoscaler/autogroups: platform-managed relaunch, but the
-   feature is oriented at serving workloads; evaluate, do not depend on.
-3. Manual: acceptable fallback given checkpoint exposure is only
-   ~15-30 min of work; the run pauses until noticed.
+**Decided (2026-08-12): a local watchdog.** `scripts/joe_vast_train.py
+watch` polls `vastai show instances` and the heartbeat every few minutes;
+when the instance is stopped/dead and the heartbeat is stale, it runs the
+`resume` path (destroy → search offers → create). It runs on the laptop
+(or any always-on box) under launchd/cron. The run tolerates watchdog
+downtime — it just pauses, and checkpoint exposure stays at ~15-30 min of
+work. Manual `resume` remains the fallback; the vast autoscaler is not
+used.
 
 ### Monitoring
 
@@ -415,26 +412,34 @@ dir lives.
 
 ---
 
-## 7. Open questions
+## 7. Decisions and open questions
 
-1. **GPU type.** The Joe plan assumes 1×H100 (measured 8.9 s/iter, no OOM
-   at 80 GB). Interruptible A100-80G may beat H100 on $/sample some weeks;
-   Phase 1 throughput numbers cover both. 24 GB cards (4090) very likely
-   OOM at `num_envs=2048` and would need config surgery — treat 80 GB as
-   the floor unless a Phase 2 probe says otherwise.
-2. **Single- vs multi-GPU.** The loop already pmaps, but the Joe plan
-   decided 1×H100 for the full run; multi-GPU interruptible offers are
-   scarcer and a preemption costs the whole node. Default: single GPU;
-   revisit only if wall-clock (3-5 days) becomes the problem.
-3. **Who restarts preempted instances.** Recommendation is the local
-   watchdog (§4); decide whether the laptop is reliably awake enough or
-   whether the watchdog needs an always-on home. The vast autoscaler is
-   the fallback to evaluate, manual the floor.
-4. **Bid level.** Bid amount trades price against preemption frequency;
+Decided (2026-08-12):
+
+1. **GPU type: H100.** Best price/performance for this run; the Phase 1
+   throughput numbers and the no-OOM-at-80-GB smoke both measured it
+   (8.9 s/iter at tier M). The launcher's offer filter targets
+   `gpu_name=H100_SXM` (PCIe as fallback). 24 GB cards stay out — they
+   very likely OOM at `num_envs=2048`.
+2. **Single GPU by default; keep multi-GPU working.** The full run uses
+   1×H100. The loop already pmaps and `save_checkpoint` stores the
+   unreplicated leaves, so a checkpoint moves between 1- and N-GPU
+   machines. The launcher takes `--num-gpus` (default 1) and passes
+   `num_gpus=N` to the offer filter; nothing else changes. Constraint to
+   preserve: `minibatch_size` divides the per-device sample count for any
+   supported N. Multi-GPU interruptible offers are scarcer and one
+   preemption costs the whole node — use only if wall-clock (3-5 days)
+   becomes the problem.
+3. **Restarts: the local watchdog** (§4). Manual `resume` is the
+   fallback; the vast autoscaler is not used.
+
+Open:
+
+1. **Bid level.** Bid amount trades price against preemption frequency;
    with 15-30 min checkpoint exposure, frequent preemption is cheap but
    not free (boot + JIT warm-up per restart). Pick after watching offer
    prices for a day or two.
-5. **Same-machine stopped instances.** After a replacement launches, the
+2. **Same-machine stopped instances.** After a replacement launches, the
    old stopped instance still bills disk until destroyed —
    destroy-before-create handles it, but a `watch` sweep for orphaned
    stopped instances is cheap insurance.
