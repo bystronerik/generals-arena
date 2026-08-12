@@ -42,6 +42,11 @@ competition-replays/*
 data/morpheus/*
 !data/morpheus/.gitkeep
 
+# Joe local checkpoint dirs (derived; the Modal Volume and the R2 bucket are
+# primary for remote runs). Keep the directory.
+data/joe/*
+!data/joe/.gitkeep
+
 # Curriculum manifests are rebuilt from trajectories; keep the directory.
 training/morpheus/manifests/*
 !training/morpheus/manifests/.gitkeep

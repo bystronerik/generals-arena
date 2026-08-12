@@ -36,6 +36,8 @@ Process rules for agents that work in this repo. Put game and bot knowledge in `
 | Scraped sprint tournaments (derived, gitignored) | `competition-replays/_sprints/<tourney-id>/` |
 | Morpheus training-only modules | `training/morpheus/` |
 | Morpheus local derived training data (gitignored) | `data/morpheus/` |
+| Joe local checkpoint dirs (derived, gitignored) | `data/joe/<run>/` |
+| Joe remote durable state (vast.ai runs) | R2 bucket `joe-training`, prefix `joe/<run>/` |
 | Submission-harness failure fixtures | `tests/fixtures/submission_bots/` |
 | Cursor skills | `.cursor/skills/` |
 
@@ -43,6 +45,12 @@ Modal Volumes remain the primary storage for remote Morpheus training runs.
 Local `data/morpheus/` shards, checkpoints, and materializations stay
 gitignored and never enter `data/games/`, `data/ratings/`, or
 `data/bot_versions/`.
+
+For Joe, the Modal Volume holds prototyping runs and the Cloudflare R2
+bucket `joe-training` holds the durable state of interruptible vast.ai runs
+(`training/joe/store.py`). The R2 token is scoped to that one bucket and
+lives only in the gitignored `.env` or the environment — never in a script,
+template, or commit. Local `data/joe/` dirs are derived and gitignored.
 
 Do not put strategy content in `AGENTS.md` or skill files beyond process pointers that link into `docs/`.
 

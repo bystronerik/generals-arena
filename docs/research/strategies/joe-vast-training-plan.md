@@ -3,8 +3,8 @@
 Phased plan to add a vast.ai training path for `training/joe`, alongside the
 existing Modal entry. This plan feeds
 [Phase 4 of the Joe plan](averagejoe-competition-plan.md): the one full M
-training run. Status: **Phase 0 done and verified (2026-08-12), local and
-Modal gates green; Phases 1-3 not started**.
+training run. Status: **Phases 0-1 done and verified (2026-08-13), local
+gates and the live R2 round-trip green; Phases 2-3 not started**.
 
 Division of labor:
 
@@ -373,7 +373,7 @@ on it.
   `/vol/joe/joe-M-resume-test-20260812` (~0.6 GB) can be pruned.
 - **Gate:** no vast.ai work starts before this phase is green.
 
-### Phase 1 — R2 store + checkpoint/run-state schema
+### Phase 1 — R2 store + checkpoint/run-state schema — DONE 2026-08-13
 
 - **Build:** `training/joe/store.py` (§2), the background uploader wired
   to `on_checkpoint`, R2 bucket + scoped token, `.gitignore` entry for
@@ -385,6 +385,22 @@ on it.
   `latest.json` still resolves to the previous complete set, resume-load
   verifies checksums).
 - **Cost:** R2 ≈ pennies (≤10 GB storage, no egress fees).
+- **Result (2026-08-12):** `store.py` landed with `R2Store` (ordered
+  upload, latest pointer, SHA-256 verification on both directions,
+  heartbeat) and `CheckpointUploader` (the background `on_checkpoint`
+  hook: joins the previous upload, re-reads `state.json`, mirrors
+  manifest/config/metrics, retries a failed upload on the next
+  checkpoint). Eleven fake-client tests in
+  `training/joe/tests/test_r2_store.py` (renamed from the planned
+  `test_store.py` — the basename collides with the arena's
+  `tests/test_store.py` under pytest); default suite 687 passed in
+  13.8 s. `boto3` added to `requirements-dev.txt`, imported lazily so
+  the cheap suite never loads it. The live round-trip
+  (`scripts/joe_r2_roundtrip.py` against the real `joe-training` bucket
+  with the scoped token in `.env`) passed 2026-08-13: kill-mid-checkpoint
+  left `latest.json` on the previous complete set, resume-load verified
+  checksums, the retry moved `latest.json` forward, and the script
+  cleaned up its throwaway prefix.
 
 ### Phase 2 — vast.ai bootstrap
 
@@ -428,7 +444,8 @@ on it.
 | `training/joe/store.py` | **New** — R2Store: ordered upload, latest pointer, checksums, heartbeat |
 | `training/joe/tests/test_resume.py` | **New** — kill-and-resume, curriculum restore, no-clobber (joe-marked) |
 | `training/joe/tests/test_resume_state.py` | **New** — state round-trip, atomic replace, stage guard (cheap suite) |
-| `training/joe/tests/test_store.py` | **New** — store logic against a fake S3 client (cheap suite) |
+| `training/joe/tests/test_r2_store.py` | **New** — store logic against a fake S3 client (cheap suite) |
+| `scripts/joe_r2_roundtrip.py` | **New** — Phase 1 live verification: kill-mid-checkpoint drill against the real bucket |
 | `scripts/joe_vast_train.py` | **New** — launch / status / resume / watch / destroy |
 | `scripts/joe_vast_onstart.sh` | **New** — idempotent boot: deps, code, resolve `latest.json`, train |
 | `scripts/joe_modal_train.py` | Untouched (prototyping path) |
