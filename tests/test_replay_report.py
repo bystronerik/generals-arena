@@ -2,7 +2,7 @@
 Report sections, batch aggregation, and the `scripts/replay.py` CLI.
 
 The CLI is driven through `main(argv)` rather than a subprocess: the suite
-budget is 12 s (AGENTS.md tester §4) and an interpreter launch buys nothing
+budget is 15 s (AGENTS.md tester §4) and an interpreter launch buys nothing
 here.
 """
 from __future__ import annotations

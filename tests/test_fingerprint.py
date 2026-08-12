@@ -105,7 +105,17 @@ def test_edit_propagates_to_exactly_the_dependents(
     import arena.records.fingerprint as fingerprint
 
     sandbox = tmp_path / "bots"
-    shutil.copytree(BOTS_DIR, sandbox, ignore=shutil.ignore_patterns("__pycache__"))
+    # Copy only what the closure can reach. `target/`, `vendor/`, and `tools/`
+    # are excluded from the hash by the two tests at the end of this file, so
+    # copying them decides nothing here — and they are the whole cost: `bots/`
+    # is 411 MB, of which 402 MB is morpheus-rs build output. Copying all of it
+    # took 1.60 s per case (6.4 s over the four), grew with every `cargo build`,
+    # and wrote 2.3 GB of /tmp per run. Skipping them: 0.08 s.
+    shutil.copytree(
+        BOTS_DIR,
+        sandbox,
+        ignore=shutil.ignore_patterns("__pycache__", "target", "vendor", "tools"),
+    )
     monkeypatch.setattr(fingerprint, "BOTS_DIR", sandbox)
     monkeypatch.setattr(fingerprint, "REPO_ROOT", tmp_path)
 

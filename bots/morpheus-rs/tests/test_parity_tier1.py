@@ -2,9 +2,17 @@
 Parity, smoke slice: the Rust port must match the Python oracle exactly.
 
 The CI-sized half of the harness in `parity_cases.py`. It runs the committed
-seven-frame slice plus the synthetic states through every ported surface, in
-under a second. The full corpus — tens of thousands of cases — runs from
-`tools/run_parity.sh` before a milestone gate.
+seven-frame slice plus the synthetic states through every ported surface. The
+full corpus — tens of thousands of cases — runs from `tools/run_parity.sh`
+before a milestone gate.
+
+Marked `morpheus`, so it is a gate rather than part of the default suite:
+`pytest -m morpheus bots/morpheus-rs`. M4 through M6 took this from eleven
+kinds to thirty-three and the cost from under a second to 11.4 s, which is
+more than the whole suite budget (AGENTS.md tester §4). It is also thirty-three
+subprocess round-trips into a release binary that a cold checkout does not
+have — so the default suite was paying eleven seconds for something that
+silently skips wherever the binary is absent.
 
 What "exact" means here is bit-exact — including the 49-plane tensor, whose
 tier-2 budget is 1e-6 but which matches to the last bit. Everything downstream
@@ -28,6 +36,8 @@ if str(TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(TESTS_DIR))
 
 import parity_cases as pc  # noqa: E402
+
+pytestmark = pytest.mark.morpheus
 
 KINDS = (
     "transition", "order", "observe", "mask", "cost",

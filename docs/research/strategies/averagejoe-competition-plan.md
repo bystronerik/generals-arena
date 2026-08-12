@@ -213,7 +213,7 @@ Nothing is silently kept. Every current piece, explicitly:
 | `network.py` → `bots/morpheus` MorpheusNet (torch CNN) | **Keep** — `bots/morpheus` stays in the roster as a reference opponent even after the new bot passes it (decided 2026-08-11) | permanent |
 | `scripts/morpheus_modal.py`, `_modal_self_play.py`, `_modal_materialize.py`, `_materialize.py`, `_self_play.py`, `_sp_ingest.py`, `_modal_sp_ingest.py`, `_sp_prepare_league.py`, `_corpus.py`, `_curriculum.py`, `_rebuild_scraped.py`, `_objective.py`, `_shaping_variant.py`, `_modal_preflight.py`, `_modal_export_preflight.py`, `_export_preflight.py`, `_cadence_evidence.py`, probes | **Delete** | Phase 6 |
 | `scripts/morpheus_rs_*` (Rust/candle inference lineage) | **Keep** — the competition-submission conversion target (§5); untouched until a submission is actually prepared | permanent |
-| `training/morpheus/tests/*` | **Delete with their subjects**; new pipeline brings its own tests under the 12 s suite ceiling | Phase 6 |
+| `training/morpheus/tests/*` | **Delete with their subjects**; new pipeline brings its own tests under the 15 s suite ceiling | Phase 6 |
 | Uncommitted worktree changes (`sp-from-c13-ckpt10k` ingest/league work, `explore.py`, modified `driver.py`/`loop.py`…) | **Discard** (decided 2026-08-11) — `git restore` + drop the untracked files when implementation starts | Phase 2 start |
 | `data/morpheus/` local artifacts, Modal Volume `morpheus-training` | Volume stays primary storage; new runs go under a fresh `/vol/joe/` prefix so old runs remain inspectable; local dir stays gitignored | Phase 3 |
 
@@ -288,7 +288,7 @@ in** before walking away.
 - **Delete:** nothing yet (old pipeline still the fallback).
 - **Verify (runnable):** (a) unit tests: GAE truncation handling, HL-Gauss
   targets, 10-action encode/decode round-trip, build mask vs
-  `build_cost_grid`, curriculum/preset equality — inside the 12 s suite
+  `build_cost_grid`, curriculum/preset equality — inside the 15 s suite
   budget; (b) a ~30-min Modal GPU smoke run at spawn distance 2–6, at the
   tier Phase 2 decided, showing loss movement and win-rate vs random
   climbing above 50%; startup checked via `modal app logs` per AGENTS.md.
@@ -336,7 +336,7 @@ in** before walking away.
   message. Docs under `docs/bots/morpheus/` gain a pointer to the new
   pipeline; `AGENTS.md` file-placement table updated
   (`training/joe/`, `/vol/joe/`).
-- **Verify (runnable):** full test suite green under the 12 s budget;
+- **Verify (runnable):** full test suite green under the 15 s budget;
   `matchup.py --mode competition` gate re-run on the new bot from a clean
   checkout.
 - **Cost:** $0.

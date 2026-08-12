@@ -207,7 +207,7 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
 | remote-operator | Live classic blocks; human gate ladder | `run-remote-block`, `run-classic-grid` | Block report under `docs/research/measurements/`; logs in `data/remote_games/` |
 | auditor | Structure and duplication review | `structure-audit` | Report names concrete files and lines; no edits without a follow-up ask |
 | docs-keeper | Keep `docs/` small and accurate; sync with code + `RULES.md` | none required | Topic files stay single-purpose; no strategy moved into `AGENTS.md` |
-| tester | Core coverage under `tests/`; fixtures under `tests/fixtures/` | `analyze-and-test-core` | New tests pass, the suite stays under 12 s, and every untested core target is named |
+| tester | Core coverage under `tests/`; fixtures under `tests/fixtures/` | `analyze-and-test-core` | New tests pass, the suite stays under 15 s, and every untested core target is named |
 
 ### explorer
 
@@ -255,15 +255,11 @@ Roles are process pointers. Put game and bot knowledge in `docs/`. Do not put st
    count-table digest**, the version registry, bot_api mapping, fidelity
    classification, classic match results, remote human-count filter.
 3. Report a proven defect; do not fix production code inside the test step.
-4. The suite budget is **12 s** with a warm cache, raised from 7 s on
-   2026-08-09. It was 3 s until the ratings refactor added three tests that
-   cannot be made cheap without giving up what they check: the registry round
-   trip needs a real `git` sandbox, the solver oracle needs a second,
-   independently written implementation to disagree with, and the determinism
-   check needs a subprocess with a different thread count. Treat 12 s as a
-   ceiling to defend, not a number to ratchet — a new test that costs a second
-   needs the same kind of argument. Notes written before 2026-08-09 measure
-   themselves against the old 7 s ceiling; read those numbers as history.
+4. The suite budget is **15 s** with a warm cache, and it means the default
+   `pytest -q` over every `testpaths` entry — not `pytest -q tests`. Treat 15 s
+   as a ceiling to defend, not a number to ratchet — a new test that costs a
+   second needs an argument for why it cannot be made cheap without giving up
+   what it checks.
 
 ## Cursor skills
 

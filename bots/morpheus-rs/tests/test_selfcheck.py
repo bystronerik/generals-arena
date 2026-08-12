@@ -13,6 +13,11 @@ produces a bot that answers the protocol perfectly and loses every game.
 `morpheus-rs selfcheck` is the one place that refuses, and `build.sh` runs it at
 intake so a broken submission is rejected instead of rated. These tests are here
 because a checker nobody checks is the thing it was written to prevent.
+
+Marked `morpheus`, so it is a gate rather than part of the default suite:
+`pytest -m morpheus bots/morpheus-rs`. Each case copies the release tree and
+runs the binary, which costs 1.4 s and needs a build the default suite cannot
+assume (AGENTS.md tester §4).
 """
 from __future__ import annotations
 
@@ -21,6 +26,8 @@ import subprocess
 from pathlib import Path
 
 import pytest
+
+pytestmark = pytest.mark.morpheus
 
 BOT_DIR = Path(__file__).resolve().parents[1]
 BINARY = BOT_DIR / "target" / "release" / "morpheus-rs"

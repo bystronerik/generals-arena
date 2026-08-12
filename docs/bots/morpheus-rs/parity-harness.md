@@ -57,11 +57,18 @@ surfaces are checked. Tier 1 is bit-exact by specification; tier 2 allows 1e-6 â
 | `decide` | 3 | the whole no-search decision, network included |
 
 The smoke slice grew from ~1.5 s to ~7 s at M3, almost all of it importing
-torch and loading three TorchScript modules, to ~8 s at M4, and to ~10 s at M5. That is the
-price of having the network oracle in CI at all, and it buys the surface the
-milestone exists for. AGENTS.md's 12 s ceiling governs the repo's `tests/`,
-which this is not part of; if this suite is ever folded in, the torch import is
-the thing to move behind a marker rather than the coverage to drop.
+torch and loading three TorchScript modules, to ~8 s at M4, to ~10 s at M5, and
+to 11.4 s at M6. That is the price of having the network oracle at all, and it
+buys the surface the milestone exists for.
+
+**It is not in the default suite.** This paragraph used to say AGENTS.md's
+ceiling "governs the repo's `tests/`, which this is not part of" â€” but
+`pytest.ini` has always had `testpaths = tests bots ...`, so `pytest -q` ran
+this harness on every invocation, and by 2026-08-12 it was 11.4 s of a 34.7 s
+suite against a stated 12 s ceiling. `test_parity_tier1.py` and
+`test_selfcheck.py` now carry `pytestmark = pytest.mark.morpheus` and run as a
+gate: `pytest -m morpheus bots/morpheus-rs` (36 tests, ~13 s). Keep the
+coverage; keep it out of the default suite.
 
 ## Randomness: recorded, replayed, and argued with
 

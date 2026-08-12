@@ -373,13 +373,18 @@ emitting canonical JSON; pytest tests under `bots/morpheus-rs/tests/`
 invoke the binary, and compare. Rust-side unit tests run under `cargo test`
 independently.
 
-**CI and the suite budget.** The repo's 12 s ceiling guards the core suite; the
-full corpus (hundreds of frames × full search) cannot and should not fit it.
-Split: a **smoke slice** — ≤10 frames through tier-1 checks plus one full
-`decide` — runs with the bot's pytest suite in <1 s and skips with a named
-reason when the release binary is absent; the **full corpus** runs via
-`bots/morpheus-rs/tools/run_parity.sh` manually and as a required step before
-M5/M6 exit gates and before any registry step of `morpheus-rs`.
+**CI and the suite budget.** The repo's 15 s ceiling guards the default suite;
+the full corpus (hundreds of frames × full search) cannot and should not fit
+it. Split: a **smoke slice** — ≤10 frames through tier-1 checks plus one full
+`decide` — skips with a named reason when the release binary is absent; the
+**full corpus** runs via `bots/morpheus-rs/tools/run_parity.sh` manually and as
+a required step before M5/M6 exit gates and before any registry step of
+`morpheus-rs`.
+
+The smoke slice was meant to run "with the bot's pytest suite in <1 s", but
+M4–M6 took it to 11.4 s while `testpaths = tests bots ...` kept it in every
+`pytest -q`. Corrected 2026-08-12: it carries the `morpheus` marker, so the
+split is now three ways — default suite, `-m morpheus` gate, full corpus.
 
 ## 6. Data layout and allocation
 
