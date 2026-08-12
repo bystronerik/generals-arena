@@ -224,7 +224,9 @@ From the [vast.ai docs](https://docs.vast.ai) (CLI `vastai`, re-verify at
 implementation):
 
 - `vastai search offers '<filters>' -o 'dlperf_usd-'` with filters like
-  `gpu_name=H100_SXM num_gpus=1 verified=true rentable=true`.
+  `gpu_name in [H100_SXM, H100_NVL, H100_PCIE] num_gpus=1 verified=true
+  rentable=true` (any H100 variant — §7; verify the exact name syntax
+  against the CLI at implementation).
 - `vastai create instance <offer_id> --image <img> --disk <GB>
   --onstart <file> --ssh --direct`, interruptible type with a bid price.
 - Preemption semantics: when outbid (or the host rents on-demand), the
@@ -416,11 +418,13 @@ dir lives.
 
 Decided (2026-08-12):
 
-1. **GPU type: H100.** Best price/performance for this run; the Phase 1
-   throughput numbers and the no-OOM-at-80-GB smoke both measured it
-   (8.9 s/iter at tier M). The launcher's offer filter targets
-   `gpu_name=H100_SXM` (PCIe as fallback). 24 GB cards stay out — they
-   very likely OOM at `num_envs=2048`.
+1. **GPU type: H100, any variant.** Best price/performance for this run;
+   the Phase 1 throughput numbers and the no-OOM-at-80-GB smoke both
+   measured it (8.9 s/iter at tier M). SXM, NVL, and PCIe variants count
+   as interchangeable — the throughput differences between them are too
+   small to matter here, so the launcher matches any H100 and takes the
+   cheapest offer. No per-variant benchmarking. 24 GB cards stay out —
+   they very likely OOM at `num_envs=2048`.
 2. **Single GPU by default; keep multi-GPU working.** The full run uses
    1×H100. The loop already pmaps and `save_checkpoint` stores the
    unreplicated leaves, so a checkpoint moves between 1- and N-GPU
