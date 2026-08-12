@@ -68,7 +68,11 @@ def test_train_two_iterations(tmp_path):
     with open(os.path.join(ckpt_dir, "state.json")) as f:
         state = json.load(f)
     assert state["engine_sha"] == "test-sha"
-    assert state["iteration"] == 2
+    assert state["schema"] == 2
+    assert state["global_step"] == 2
+    assert state["curriculum_stage"] == 0
+    assert state["files"] == {"full": "joe-test_2.eqx",
+                              "ema": "joe-test_ema_2.eqx"}
     assert commits == [1]
 
     # Metrics: an eval row (it==0 baseline) and two train rows

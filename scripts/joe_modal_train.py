@@ -11,8 +11,10 @@ Smoke run (Phase 3 verification — ~30-40 min on one H100):
     modal app list           # then check startup a few minutes in (AGENTS.md)
     modal app logs <app-id>
 
-Full run (Phase 4): same entry without --smoke; resumable via
---init-checkpoint/--ema-checkpoint/--iteration-offset overrides.
+Full run (Phase 4): same entry without --smoke. Re-launching with the same
+--run-name resumes from the run dir's state.json on the Volume (global step
+and curriculum stage); --init-checkpoint/--iteration-offset stay as the
+manual path when no state file exists.
 
 Never pipe the output through tail/head — redirect to a file (AGENTS.md).
 All repo imports live inside functions: Modal re-imports this file in the

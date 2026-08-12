@@ -10,12 +10,13 @@ Ported from AverageJoe ``train/ppo.py`` with the plan's resolutions:
   from explicit competition kwargs (see ``training/joe/env.py``) instead of
   mutating distance attributes — the fork's pool generator is jit-cached
   with the env static, so mutation would reuse stale kernels.
-- Checkpoints carry learner + optimizer + EMA + iteration + engine SHA;
+- Checkpoints carry learner + optimizer + EMA + global step + engine SHA;
   ``on_checkpoint`` lets the Modal entry commit the Volume after each save.
+  Full saves refresh ``state.json`` (schema v2, ``training/joe/state.py``)
+  so a killed run resumes at the same global step and curriculum stage.
 - No gamma annealing and no reference-Elo eval (see evaluations.py).
 """
 
-import json
 import os
 import time
 from functools import partial
@@ -27,6 +28,7 @@ import jax.random as jrandom
 
 from training.joe.config import CurriculumStage
 from training.joe.env import make_competition_env, preset_min_generals_distance
+from training.joe.state import check_curriculum_stage, write_state
 from training.joe.train.evaluations import periodic_eval
 from training.joe.train.rollout_selfplay import collect_rollout
 
@@ -238,11 +240,13 @@ def ppo_update(network, opt_state, batch, optimizer, key, clip_eps, vf_coef,
 
 
 def save_checkpoint(ckpt_dir, run_name, it, network, opt_state, ema_network,
-                    engine_sha, full):
-    """Write checkpoint files and the resume manifest.
+                    engine_sha, full, curriculum_stage=0, last_eval_wr=0.0):
+    """Write checkpoint files and, on full saves, the resume state.
 
-    full=True writes (network, opt_state) + EMA + latest-EMA; full=False
-    writes the EMA snapshot only (the cheap ckpt_every cadence).
+    full=True writes (network, opt_state) + EMA + latest-EMA and refreshes
+    ``state.json``; full=False writes the EMA snapshot only (the cheap
+    ckpt_every cadence). ``it`` is the global step, so a resumed run never
+    rewrites a step-named file an earlier process wrote.
     """
     ema_path = os.path.join(ckpt_dir, f"{run_name}_ema_{it}.eqx")
     eqx.tree_serialise_leaves(ema_path, ema_network)
@@ -253,9 +257,10 @@ def save_checkpoint(ckpt_dir, run_name, it, network, opt_state, ema_network,
         ema_latest = os.path.join(ckpt_dir, f"{run_name}_ema.eqx")
         eqx.tree_serialise_leaves(ema_latest, ema_network)
         written = [path] + written + [ema_latest]
-    with open(os.path.join(ckpt_dir, "state.json"), "w") as f:
-        json.dump({"run_name": run_name, "iteration": it,
-                   "engine_sha": engine_sha, "time": time.time()}, f, indent=2)
+        write_state(ckpt_dir, run_name, it, curriculum_stage, last_eval_wr,
+                    engine_sha,
+                    files={"full": os.path.basename(path),
+                           "ema": os.path.basename(ema_path)})
     return written
 
 
@@ -270,18 +275,23 @@ def _replicate(tree, num_devices):
 
 
 def train(cfg, network, optimizer, opt_state, logger, key, bundle,
-          ckpt_dir, engine_sha, on_checkpoint=None, env_factory=None):
+          ckpt_dir, engine_sha, on_checkpoint=None, env_factory=None,
+          start_step=0, start_stage=0, start_eval_wr=0.0):
     """Main PPO training loop with multi-GPU data parallelism via pmap.
 
     ``env_factory(min_generals_distance, max_generals_distance, pool_size)``
     defaults to the competition preset; tests inject a tiny env instead.
+
+    ``start_step`` / ``start_stage`` / ``start_eval_wr`` restore a resumed
+    run: the loop runs the global steps ``start_step..num_iters``, so
+    ``num_iters`` is the run's total target, and checkpoint names,
+    schedules, and cadences all use the global step.
     """
     if env_factory is None:
         env_factory = make_competition_env
     num_envs = cfg.num_envs
     num_devices = jax.device_count()
     run_name = cfg.run_name
-    iter_offset = cfg.iteration_offset
 
     init_obs_state_fn = bundle["init_obs_state"]
     augment_fn = bundle["augment_obs"]
@@ -291,8 +301,9 @@ def train(cfg, network, optimizer, opt_state, logger, key, bundle,
     # Curriculum stages; without one, a single stage at the preset window.
     stages = cfg.curriculum_stages or [CurriculumStage(
         min_generals_distance=preset_min_generals_distance())]
-    current_stage_idx = 0
-    last_eval_wr = 0.0
+    check_curriculum_stage(start_stage, len(stages))
+    current_stage_idx = start_stage
+    last_eval_wr = start_eval_wr
 
     def stage_envs(stage, pool_key):
         """Fresh train + eval envs and pools for one curriculum stage."""
@@ -308,17 +319,21 @@ def train(cfg, network, optimizer, opt_state, logger, key, bundle,
         return env, eval_env, pool, eval_pool
 
     key, pool_key = jrandom.split(key)
-    stage = stages[0]
+    stage = stages[current_stage_idx]
     print(f"Curriculum: {len(stages)} stages")
     for i, s in enumerate(stages):
         gate = f"wr>={s.win_rate_threshold:.0%}" if i > 0 else "start"
         print(f"  stage {i}: {gate} -> dist={s.min_generals_distance}-"
               f"{s.max_generals_distance}")
+    if start_step > 0:
+        print(f"Resuming at global step {start_step}, stage "
+              f"{current_stage_idx} (last eval wr {last_eval_wr:.0%})",
+              flush=True)
     t0 = time.time()
     env, eval_env, pool, eval_pool = stage_envs(stage, pool_key)
     jax.block_until_ready(pool.armies)
     print(f"Pool generated in {time.time() - t0:.1f}s "
-          f"(size {env.pool_size}, stage 0)", flush=True)
+          f"(size {env.pool_size}, stage {current_stage_idx})", flush=True)
 
     # Partition network for pmap: array leaves replicated, static in closures
     params, static = eqx.partition(network, eqx.is_array)
@@ -409,7 +424,7 @@ def train(cfg, network, optimizer, opt_state, logger, key, bundle,
 
     print(f"Training (self-play, {num_devices} device(s))...", flush=True)
     train_start = time.time()
-    for it in range(cfg.num_iters):
+    for it in range(start_step, cfg.num_iters):
         # Eval before training so it==0 gives a baseline
         network = _get_network()
         on_last_stage = current_stage_idx >= len(stages) - 1
@@ -513,23 +528,22 @@ def train(cfg, network, optimizer, opt_state, logger, key, bundle,
         metrics = {}
         epochs_used = 0
 
-        # Entropy coefficient schedule
-        sched_it = it + iter_offset
+        # Entropy coefficient schedule (global step)
         if cfg.ent_schedule == "power_law":
             current_ent_coef = max(
-                cfg.ent_coef_start / (sched_it + 1) ** cfg.ent_power,
+                cfg.ent_coef_start / (it + 1) ** cfg.ent_power,
                 cfg.ent_coef_min)
         else:
-            t = min(sched_it / max(cfg.ent_coef_decay_iters, 1), 1.0)
+            t = min(it / max(cfg.ent_coef_decay_iters, 1), 1.0)
             current_ent_coef = cfg.ent_coef_start + t * (cfg.ent_coef_end - cfg.ent_coef_start)
 
         # Learning rate (for logging; the optax schedule applies it)
         if cfg.lr_schedule == "power_law":
-            iteration = sched_it + 1.0
+            iteration = it + 1.0
             raw = cfg.lr_power_law_numerator / (iteration ** cfg.lr_power_law_exponent)
             current_lr = max(min(raw, cfg.lr_power_law_max), cfg.lr_power_law_min)
         elif cfg.lr_decay_iters > 0:
-            t_lr = min(sched_it / cfg.lr_decay_iters, 1.0)
+            t_lr = min(it / cfg.lr_decay_iters, 1.0)
             current_lr = cfg.lr + t_lr * (cfg.final_lr - cfg.lr)
         else:
             current_lr = cfg.lr
@@ -645,7 +659,8 @@ def train(cfg, network, optimizer, opt_state, logger, key, bundle,
             ema_network = eqx.combine(ema_params, static)
             written = save_checkpoint(
                 ckpt_dir, run_name, it + 1, network, _get_opt_state(),
-                ema_network, engine_sha, full=save_full)
+                ema_network, engine_sha, full=save_full,
+                curriculum_stage=current_stage_idx, last_eval_wr=last_eval_wr)
             print(f"  SAVED: {', '.join(written)}", flush=True)
             if on_checkpoint is not None:
                 on_checkpoint()

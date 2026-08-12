@@ -76,7 +76,8 @@ class Config:
     max_grad_norm: float = 0.267
     target_kl: Optional[float] = 0.02
     adv_top_frac: float = 0.25  # D3: fraction kept, ranked by |advantage|
-    iteration_offset: int = 0   # shift schedules on checkpoint resumption
+    iteration_offset: int = 0   # legacy manual start step; ignored when the
+                                # ckpt_dir has a v2 state.json (auto-resume)
 
     # Entropy schedule (D2: plain entropy bonus)
     ent_schedule: str = "power_law"  # "power_law" or "linear"

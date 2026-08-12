@@ -22,6 +22,7 @@ import yaml
 from training.joe.config import Config
 from training.joe.logger import Logger
 from training.joe.networks import build_network, get_network_bundle
+from training.joe.state import read_state
 from training.joe.train.ppo import train
 
 
@@ -66,13 +67,25 @@ def make_optimizer(cfg):
 
 
 def run(cfg: Config, ckpt_dir: str, engine_sha: str | None = None,
-        on_checkpoint=None):
-    """Build the network and optimizer, write the run manifest, train."""
+        on_checkpoint=None, env_factory=None):
+    """Build the network and optimizer, write the run manifest, train.
+
+    A v2 ``state.json`` in ``ckpt_dir`` resumes the run at its recorded
+    global step and curriculum stage; ``init_checkpoint`` /
+    ``iteration_offset`` stay as the legacy manual path when no state file
+    exists.
+    """
     # TF32 matmul: free speedup on Ampere+, no accuracy loss for training
     jax.config.update("jax_default_matmul_precision", "tensorfloat32")
 
     engine_sha = engine_sha or detect_engine_sha()
     bundle = get_network_bundle(cfg.network)
+
+    resume = read_state(ckpt_dir)
+    if resume is not None and cfg.iteration_offset:
+        print(f"NOTE: state.json found in {ckpt_dir}; ignoring "
+              f"iteration_offset={cfg.iteration_offset}")
+        object.__setattr__(cfg, "iteration_offset", 0)
 
     print(f"JAX PPO with {cfg.network} ({bundle['cls'].__name__})")
     print(f"Grid: {cfg.min_grid_size}-{cfg.max_grid_size} "
@@ -88,8 +101,27 @@ def run(cfg: Config, ckpt_dir: str, engine_sha: str | None = None,
     optimizer = make_optimizer(cfg)
     opt_state = optimizer.init(eqx.filter(network, eqx.is_array))
 
-    # Load checkpoint: (network, opt_state) tuple first, network-only fallback
-    if cfg.init_checkpoint:
+    # Resume from state.json when present; else the legacy manual path:
+    # --init-checkpoint weights + iteration_offset as the start step.
+    start_step, start_stage, start_eval_wr = cfg.iteration_offset, 0, 0.0
+    if resume is not None:
+        if resume["run_name"] != cfg.run_name:
+            raise ValueError(
+                f"state.json in {ckpt_dir} belongs to run "
+                f"'{resume['run_name']}', not '{cfg.run_name}'")
+        full_path = os.path.join(ckpt_dir, resume["files"]["full"])
+        network, opt_state = eqx.tree_deserialise_leaves(
+            full_path, (network, opt_state))
+        object.__setattr__(cfg, "ema_checkpoint",
+                           os.path.join(ckpt_dir, resume["files"]["ema"]))
+        start_step = resume["global_step"]
+        start_stage = resume["curriculum_stage"]
+        start_eval_wr = resume["last_eval_wr"]
+        print(f"Resuming from {full_path}: global step {start_step}, "
+              f"curriculum stage {start_stage}, last eval wr "
+              f"{start_eval_wr:.0%}")
+    elif cfg.init_checkpoint:
+        # (network, opt_state) tuple first, network-only fallback
         try:
             network, opt_state = eqx.tree_deserialise_leaves(
                 cfg.init_checkpoint, (network, opt_state))
@@ -120,9 +152,16 @@ def run(cfg: Config, ckpt_dir: str, engine_sha: str | None = None,
     if on_checkpoint is not None:
         on_checkpoint()  # persist the manifest before the long haul
 
+    if start_step > 0:
+        # Fresh rollout randomness per resume point; bit-exact replay is a
+        # non-goal (vast plan, section 1)
+        key = jrandom.fold_in(jrandom.PRNGKey(cfg.seed), start_step)
+
     network, opt_state, ema_network = train(
         cfg, network, optimizer, opt_state, logger, key, bundle,
-        ckpt_dir, engine_sha, on_checkpoint=on_checkpoint)
+        ckpt_dir, engine_sha, on_checkpoint=on_checkpoint,
+        env_factory=env_factory, start_step=start_step,
+        start_stage=start_stage, start_eval_wr=start_eval_wr)
 
     logger.finish()
     final_path = os.path.join(ckpt_dir, f"{cfg.run_name}_final.eqx")

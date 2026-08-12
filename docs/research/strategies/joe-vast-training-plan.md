@@ -3,7 +3,8 @@
 Phased plan to add a vast.ai training path for `training/joe`, alongside the
 existing Modal entry. This plan feeds
 [Phase 4 of the Joe plan](averagejoe-competition-plan.md): the one full M
-training run. Status: **planned, not started (2026-08-12)**.
+training run. Status: **Phase 0 done and verified (2026-08-12), local and
+Modal gates green; Phases 1-3 not started**.
 
 Division of labor:
 
@@ -24,7 +25,7 @@ and a launcher; it does not fork the training loop.
 
 ---
 
-## 1. The two resume bugs (fix before any vast.ai run)
+## 1. The two resume bugs (fixed in Phase 0, 2026-08-12)
 
 Both bugs break resume on every provider. They are latent on Modal because
 Modal runs rarely restart; on interruptible instances a restart is the
@@ -336,16 +337,37 @@ on it.
 
 ## 5. Phases
 
-### Phase 0 — resume correctness (local, no GPU spend)
+### Phase 0 — resume correctness (local, no GPU spend) — DONE 2026-08-12
 
 - **Build:** the two fixes from §1 (`training/joe/train/ppo.py`,
   `training/joe/main.py`, `training/joe/config.py`), the v2 `state.json`
   schema, atomic local writes, and `training/joe/tests/test_resume.py`.
+  The state read/write/guard logic landed as its own stdlib-only module,
+  `training/joe/state.py`, so the round-trip tests need no JAX import and
+  stay in the cheap default suite (`test_resume_state.py`). Resume
+  detection lives in `main.run()`: a v2 `state.json` in the checkpoint dir
+  wins over `--init-checkpoint`; a v1 file (pre-Phase-0 run dirs) falls
+  back to the legacy manual path. Modal auto-resumes by re-launching with
+  the same `--run-name`.
 - **Verify (runnable):** `pytest -m joe training/joe/tests/test_resume.py`
   green — continuation at the same global step, same curriculum stage, no
   checkpoint clobbering (byte-hash check). Default suite still green under
   the 12 s budget. One Modal smoke resume (`--init-checkpoint` path) still
   works, since Modal shares the loop.
+- **Result (2026-08-12):** all three resume tests plus the updated
+  `test_train_loop.py` green in 65 s (`pytest -m joe`); default suite
+  712 passed with the seven new state tests adding no measurable time.
+  The suite as a whole measured ~30 s warm on this machine — over the
+  12 s budget before this change too; tracked separately, not caused
+  here. Modal resume verified the same day with two short tier-M jobs on
+  the run `joe-M-resume-test-20260812` (H100, ~5 min GPU total): job 1
+  ran global steps 1-10 with full saves at 5 and 10; job 2, re-launched
+  with the same `--run-name` and `num_iters=20`, printed the resume
+  banner (global step 10, stage 0, last eval wr 2% — job 1's final
+  eval), continued at `Iter 11/20`, and saved at 15 and 20. The Volume
+  kept all four step-named checkpoint pairs intact and `state.json`
+  ended at schema 2, `global_step` 20. The test run dir
+  `/vol/joe/joe-M-resume-test-20260812` (~0.6 GB) can be pruned.
 - **Gate:** no vast.ai work starts before this phase is green.
 
 ### Phase 1 — R2 store + checkpoint/run-state schema
@@ -399,8 +421,10 @@ on it.
 | `training/joe/train/ppo.py` | Global step in loop/names/cadences; persist + restore curriculum state; atomic `state.json` |
 | `training/joe/main.py` | Resume detection from `ckpt_dir/state.json`; pass start state into `train()` |
 | `training/joe/config.py` | Deprecate `iteration_offset` (legacy manual override only) |
+| `training/joe/state.py` | **New** — v2 `state.json` read/write/guard, stdlib-only (Phase 0) |
 | `training/joe/store.py` | **New** — R2Store: ordered upload, latest pointer, checksums, heartbeat |
 | `training/joe/tests/test_resume.py` | **New** — kill-and-resume, curriculum restore, no-clobber (joe-marked) |
+| `training/joe/tests/test_resume_state.py` | **New** — state round-trip, atomic replace, stage guard (cheap suite) |
 | `training/joe/tests/test_store.py` | **New** — store logic against a fake S3 client (cheap suite) |
 | `scripts/joe_vast_train.py` | **New** — launch / status / resume / watch / destroy |
 | `scripts/joe_vast_onstart.sh` | **New** — idempotent boot: deps, code, resolve `latest.json`, train |
