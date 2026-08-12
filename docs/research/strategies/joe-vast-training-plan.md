@@ -3,8 +3,8 @@
 Phased plan to add a vast.ai training path for `training/joe`, alongside the
 existing Modal entry. This plan feeds
 [Phase 4 of the Joe plan](averagejoe-competition-plan.md): the one full M
-training run. Status: **Phases 0-1 done and verified (2026-08-13), local
-gates and the live R2 round-trip green; Phases 2-3 not started**.
+training run. Status: **Phases 0-2 done and verified (2026-08-13). Phase 3
+not started**.
 
 Division of labor:
 
@@ -402,10 +402,14 @@ on it.
   checksums, the retry moved `latest.json` forward, and the script
   cleaned up its throwaway prefix.
 
-### Phase 2 — vast.ai bootstrap
+### Phase 2 — vast.ai bootstrap — VERIFIED 2026-08-13
 
 - **Build:** `scripts/joe_vast_onstart.sh`, `scripts/joe_vast_train.py`
-  (§3), account env vars for the R2 token, code-tarball packing.
+  (§3), account env vars for the R2 token (`sync-env`), code-tarball packing
+  (`training/joe/pack.py`). Instance boot is `training.joe.vast_boot`
+  (lease check, heartbeat, `CheckpointUploader`, `main.run`). The vast.ai
+  CLI is the pip package `vastai`; the launcher finds `.venv/bin/vastai`
+  next to the venv interpreter when it is not on `PATH`.
 - **Verify (runnable):** a paid micro-smoke on one cheap interruptible
   GPU (RTX 4090 class, S-config-sized overrides, a few iterations):
   (a) fresh boot trains and lands checkpoints + `latest.json` in R2;
@@ -413,6 +417,17 @@ on it.
   machine, and the run continues at the same global step and stage —
   the cloud twin of the Phase 0 test.
 - **Cost:** ≈ $1-5.
+- **Result (2026-08-13):** cheap suite still green. Paid micro-smoke
+  `joe-S-vast-smoke-20260813` on interruptible RTX 4090 completed both
+  gates. Gate (a): instance `47570031` wrote `logs/boot.json` (Python
+  3.12.13) and `state/latest.json` at `global_step=6` / stage 0, with
+  checkpoints at 2/4/6 plus `_final`. Gate (b): `num_iters` raised to 10
+  in R2, then `resume` created instance `47570422` on a different
+  machine. Logs showed restore at global step 6 / stage 0 / last eval wr
+  2%, then `Iter 7/10`. `latest.json` moved to `global_step=10`; step
+  2/4/6 blobs stayed in the bucket. Onstart creates a Python 3.12 venv
+  via `uv` because the stock PyTorch image is 3.11 and `jax==0.11.0`
+  needs 3.12. Both instances were destroyed; the R2 prefix is kept.
 
 ### Phase 3 — supervised full run (feeds Joe plan Phase 4)
 
@@ -446,8 +461,14 @@ on it.
 | `training/joe/tests/test_resume_state.py` | **New** — state round-trip, atomic replace, stage guard (cheap suite) |
 | `training/joe/tests/test_r2_store.py` | **New** — store logic against a fake S3 client (cheap suite) |
 | `scripts/joe_r2_roundtrip.py` | **New** — Phase 1 live verification: kill-mid-checkpoint drill against the real bucket |
-| `scripts/joe_vast_train.py` | **New** — launch / status / resume / watch / destroy |
+| `scripts/joe_vast_train.py` | **New** — launch / status / resume / destroy / sync-env (`watch` is Phase 3) |
 | `scripts/joe_vast_onstart.sh` | **New** — idempotent boot: deps, code, resolve `latest.json`, train |
+| `training/joe/pack.py` | **New** — checkout tarball (working tree, not `git archive`) |
+| `training/joe/launch.py` | **New** — offer query, smoke overrides, vastai binary lookup |
+| `training/joe/vast_boot.py` | **New** — instance-side lease, heartbeat, R2 resume, `run()` |
+| `training/joe/tests/test_pack.py` | **New** — tarball include/exclude round-trip (cheap suite) |
+| `training/joe/tests/test_launch.py` | **New** — offer query, smoke overrides, binary lookup (cheap suite) |
+| `docs/engine/joe-vast-train.md` | **New** — how to launch; not strategy |
 | `scripts/joe_modal_train.py` | Untouched (prototyping path) |
 | `.gitignore` | Add `data/joe/*` (+ `.gitkeep` carve-out) |
 | `AGENTS.md` | File-placement rows for `data/joe/` and the R2 bucket (at implementation, not before) |

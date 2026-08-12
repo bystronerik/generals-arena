@@ -51,6 +51,10 @@ bucket `joe-training` holds the durable state of interruptible vast.ai runs
 (`training/joe/store.py`). The R2 token is scoped to that one bucket and
 lives only in the gitignored `.env` or the environment — never in a script,
 template, or commit. Local `data/joe/` dirs are derived and gitignored.
+Interruptible runs launch through `scripts/joe_vast_train.py` (onstart:
+`scripts/joe_vast_onstart.sh`). The vast.ai CLI is the pip package `vastai`
+(console script `.venv/bin/vastai`). See
+[`docs/engine/joe-vast-train.md`](docs/engine/joe-vast-train.md).
 
 Do not put strategy content in `AGENTS.md` or skill files beyond process pointers that link into `docs/`.
 

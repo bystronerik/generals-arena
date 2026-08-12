@@ -26,6 +26,7 @@ Small topic files for the Generals Arena research repo.
 - [leaderboard replays](engine/leaderboard-replays.md) — scraped generals.bot games: format, layout, and why they are not arena matches
 - [sprint replays](engine/sprint-replays.md) — whole generals.bot tournaments: the results asset, the blob layout, and the organizers' ruleset
 - [replay analysis](engine/replay-analysis.md) — `scripts/replay.py`: timeline, events, fog vs action, and flaw aggregates over scraped replays
+- [Joe vast.ai training](engine/joe-vast-train.md) — interruptible GPU runs; durable state in R2, not the Modal Volume
 
 ## Bots
 

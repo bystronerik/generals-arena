@@ -26,6 +26,8 @@ from training.joe.state import STATE_FILENAME, read_state
 DEFAULT_BUCKET = "joe-training"
 DEFAULT_PREFIX = "joe"
 LATEST_SCHEMA = 1
+LAUNCH_SCHEMA = 1
+LEASE_STALE_S = 5 * 60
 
 # Run-dir file -> remote key (relative to the run prefix). Start files are
 # written once at run start; mutable files re-upload on every checkpoint.
@@ -41,6 +43,52 @@ def _sha256_file(path):
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def load_dotenv(path=None):
+    """Fill missing ``R2_*`` vars from a gitignored ``.env``, if present.
+
+    Does not override variables already in the environment. Looks at
+    ``JOE_DOTENV``, then ``<repo>/.env`` next to ``training/``.
+    """
+    if path is None:
+        path = os.environ.get("JOE_DOTENV")
+        if not path:
+            here = os.path.dirname(os.path.abspath(__file__))
+            path = os.path.join(here, "..", "..", ".env")
+    if not os.path.exists(path):
+        return
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip().removeprefix("export ").strip()
+            if key.startswith("R2_") and key not in os.environ:
+                os.environ[key] = value.strip().strip("'\"")
+
+
+def check_lease(heartbeat, instance_id, now=None, stale_s=LEASE_STALE_S):
+    """None if this instance may start; a reason string if it must refuse.
+
+    A heartbeat newer than ``stale_s`` from a *different* instance id means
+    another writer holds the run. The same id (this machine rebooted) or a
+    stale heartbeat is fine. ``resume`` writes the new instance id into the
+    heartbeat before the replacement boots, so destroy-then-create does not
+    trip this guard.
+    """
+    if heartbeat is None:
+        return None
+    now = time.time() if now is None else now
+    age = now - float(heartbeat["time"])
+    if age > stale_s:
+        return None
+    held = str(heartbeat.get("instance_id", ""))
+    if held == str(instance_id):
+        return None
+    return (f"lease held by instance {held} "
+            f"(heartbeat age {age:.0f}s < {stale_s}s)")
 
 
 class R2Store:
@@ -62,6 +110,7 @@ class R2Store:
         """
         import boto3
 
+        load_dotenv()
         missing = [k for k in ("R2_ENDPOINT_URL", "R2_ACCESS_KEY_ID",
                                "R2_SECRET_ACCESS_KEY") if not os.environ.get(k)]
         if missing:
@@ -176,12 +225,58 @@ class R2Store:
         os.replace(tmp, state_path)
         return dest_dir
 
-    # -- run files and lease --
+    def download_file(self, key, dest_path, expected=None):
+        """Download one object; verify size/sha if ``expected`` is a ref dict."""
+        try:
+            resp = self.client.get_object(Bucket=self.bucket, Key=key)
+        except self.client.exceptions.NoSuchKey:
+            raise FileNotFoundError(key)
+        data = resp["Body"].read()
+        if expected is not None:
+            sha = hashlib.sha256(data).hexdigest()
+            if len(data) != expected["size"] or sha != expected["sha256"]:
+                raise IOError(
+                    f"Checksum mismatch for {key}: got "
+                    f"size={len(data)} sha={sha}, expected "
+                    f"size={expected['size']} sha={expected['sha256']}")
+        parent = os.path.dirname(dest_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        tmp = dest_path + ".tmp"
+        with open(tmp, "wb") as f:
+            f.write(data)
+        os.replace(tmp, dest_path)
+        return dest_path
+
+    # -- run files, launch pointer, and lease --
 
     def upload_run_file(self, run_name, rel, local_path):
         """Whole-file PUT of a small mutable run file (logs, manifest)."""
         with open(local_path, "rb") as f:
             self._put_bytes(self.key(run_name, *rel.split("/")), f)
+
+    def download_run_file(self, run_name, rel, dest_path):
+        return self.download_file(self.key(run_name, *rel.split("/")), dest_path)
+
+    def put_launch(self, run_name, launch):
+        """Write the launch pointer (code key, engine SHA, instance shape)."""
+        if launch.get("schema", LAUNCH_SCHEMA) != LAUNCH_SCHEMA:
+            raise ValueError(f"unsupported launch schema {launch.get('schema')}")
+        self._put_json(self.key(run_name, "launch.json"), launch)
+        return launch
+
+    def read_launch(self, run_name):
+        return self._get_json(self.key(run_name, "launch.json"))
+
+    def put_instance(self, run_name, instance_id, extra=None):
+        obj = {"instance_id": str(instance_id), "time": time.time()}
+        if extra:
+            obj.update(extra)
+        self._put_json(self.key(run_name, "lease", "instance.json"), obj)
+        return obj
+
+    def read_instance(self, run_name):
+        return self._get_json(self.key(run_name, "lease", "instance.json"))
 
     def put_heartbeat(self, run_name, instance_id):
         self._put_json(self.key(run_name, "lease", "heartbeat.json"),
@@ -189,6 +284,35 @@ class R2Store:
 
     def read_heartbeat(self, run_name):
         return self._get_json(self.key(run_name, "lease", "heartbeat.json"))
+
+    def put_boot(self, run_name, phase, extra=None):
+        """Onstart progress marker. Written before the long JAX pip install."""
+        obj = {"schema": 1, "phase": str(phase), "time": time.time()}
+        if extra:
+            obj.update(extra)
+        self._put_json(self.key(run_name, "logs", "boot.json"), obj)
+        return obj
+
+    def read_boot(self, run_name):
+        return self._get_json(self.key(run_name, "logs", "boot.json"))
+
+    def delete_prefix(self, run_name):
+        """Delete every object under ``joe/<run_name>/``. Smoke cleanup only."""
+        prefix = self.key(run_name) + "/"
+        token = None
+        deleted = 0
+        while True:
+            kw = {"Bucket": self.bucket, "Prefix": prefix}
+            if token:
+                kw["ContinuationToken"] = token
+            resp = self.client.list_objects_v2(**kw)
+            for obj in resp.get("Contents", []):
+                self.client.delete_object(Bucket=self.bucket, Key=obj["Key"])
+                deleted += 1
+            if not resp.get("IsTruncated"):
+                break
+            token = resp.get("NextContinuationToken")
+        return deleted
 
 
 class CheckpointUploader:

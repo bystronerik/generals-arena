@@ -17,7 +17,11 @@ import os
 import pytest
 
 from training.joe.state import write_state
-from training.joe.store import CheckpointUploader, R2Store
+from training.joe.store import (
+    CheckpointUploader,
+    R2Store,
+    check_lease,
+)
 
 
 class NoSuchKey(Exception):
@@ -55,6 +59,13 @@ class FakeS3Client:
             raise NoSuchKey(Key)
         data, _ = self.objects[Key]
         return {"Body": io.BytesIO(data)}
+
+    def delete_object(self, Bucket, Key):
+        self.objects.pop(Key, None)
+
+    def list_objects_v2(self, Bucket, Prefix="", ContinuationToken=None):
+        keys = sorted(k for k in self.objects if k.startswith(Prefix))
+        return {"Contents": [{"Key": k} for k in keys], "IsTruncated": False}
 
     exceptions = FakeExceptions
 
@@ -168,6 +179,16 @@ def test_heartbeat_round_trip(store):
     assert hb["time"] > 0
 
 
+def test_boot_json_round_trip(store):
+    assert store.read_boot("joe-x") is None
+    rec = store.put_boot("joe-x", "installing_pip_stack",
+                         extra={"python_version": "3.12.0"})
+    got = store.read_boot("joe-x")
+    assert got["phase"] == "installing_pip_stack"
+    assert got["python_version"] == "3.12.0"
+    assert got["time"] == rec["time"]
+
+
 def test_uploader_mirrors_checkpoints_and_run_files(store, tmp_path):
     (tmp_path / "manifest.json").write_text("{}")
     (tmp_path / "config.yaml").write_text("run_name: joe-x")
@@ -231,3 +252,61 @@ def test_uploader_uploads_final_artifacts(store, tmp_path):
     assert "joe/joe-x/checkpoints/joe-x_ema_final.eqx" in store.client.objects
     assert store.resolve_latest("joe-x")["state"] == \
         json.loads(json.dumps(state))
+
+
+def test_launch_pointer_round_trip(store):
+    launch = {"schema": 1, "run_name": "joe-x", "code_key": "joe/joe-x/code/a.tar.gz",
+              "code_sha256": "abc", "engine_sha": "def"}
+    store.put_launch("joe-x", launch)
+    assert store.read_launch("joe-x") == launch
+    assert store.read_launch("missing") is None
+
+
+def test_download_file_verifies_checksum(store, tmp_path):
+    src = tmp_path / "blob.bin"
+    src.write_bytes(b"hello-r2")
+    ref = store.upload_file("joe/joe-x/code/x.tar.gz", str(src))
+    dest = tmp_path / "out.bin"
+    store.download_file(ref["key"], str(dest), expected=ref)
+    assert dest.read_bytes() == b"hello-r2"
+    store.client.objects[ref["key"]] = (b"tampered!", {"sha256": ref["sha256"]})
+    with pytest.raises(IOError, match="Checksum mismatch"):
+        store.download_file(ref["key"], str(tmp_path / "bad.bin"), expected=ref)
+
+
+def test_download_missing_file_raises(store, tmp_path):
+    with pytest.raises(FileNotFoundError):
+        store.download_file("joe/nope", str(tmp_path / "x"))
+
+
+def test_instance_and_delete_prefix(store, tmp_path):
+    store.put_instance("joe-x", "42", extra={"offer_id": "9"})
+    rec = store.read_instance("joe-x")
+    assert rec["instance_id"] == "42"
+    assert rec["offer_id"] == "9"
+    src = tmp_path / "a.bin"
+    src.write_bytes(b"aa")
+    store.upload_file("joe/joe-x/code/a.tar.gz", str(src))
+    store.put_launch("joe-x", {"schema": 1, "run_name": "joe-x"})
+    n = store.delete_prefix("joe-x")
+    assert n >= 3
+    assert store.read_launch("joe-x") is None
+    assert store.read_instance("joe-x") is None
+    assert all(not k.startswith("joe/joe-x/") for k in store.client.objects)
+
+
+def test_lease_same_instance_or_stale_allows():
+    now = 10_000.0
+    assert check_lease(None, "a", now=now) is None
+    assert check_lease({"instance_id": "a", "time": now - 1}, "a",
+                       now=now) is None
+    assert check_lease({"instance_id": "b", "time": now - 900}, "a",
+                       now=now) is None
+
+
+def test_lease_fresh_other_instance_refuses():
+    now = 10_000.0
+    reason = check_lease({"instance_id": "b", "time": now - 10}, "a",
+                         now=now)
+    assert reason is not None
+    assert "b" in reason

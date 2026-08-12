@@ -1,0 +1,105 @@
+# Joe vast.ai training (interruptible, R2-backed)
+
+How to launch a Joe PPO run on a vast.ai interruptible instance. Durable
+state lives in the Cloudflare R2 bucket `joe-training` under `joe/<run_name>/`.
+This is **competition-rules training**, not live generals.io. It does not
+feed `data/games/` or `data/ratings/`.
+
+The Modal entry (`scripts/joe_modal_train.py`) stays the prototyping path.
+The plan is
+[`docs/research/strategies/joe-vast-training-plan.md`](../research/strategies/joe-vast-training-plan.md).
+
+---
+
+## Prerequisites
+
+```bash
+source .venv/bin/activate
+pip install -r requirements-dev.txt   # includes boto3 and the vastai CLI
+vastai set api-key <key>              # once; key from console.vast.ai
+```
+
+The vast.ai CLI is the pip package `vastai`. The console script is
+`.venv/bin/vastai`. The launcher finds it on `PATH`, then next to the
+running interpreter, then at `.venv/bin/vastai`. You do not need a
+separate curl install.
+
+The API key must include the **secrets** permission (`api.secrets`).
+A key without that route makes `sync-env` look successful while storing
+nothing: `show env-vars` stays empty and `launch` reports the vars as
+missing. Create a key with secrets access at
+[console.vast.ai/manage-keys](https://console.vast.ai/manage-keys/), then
+`vastai set api-key <key>`.
+
+R2 credentials stay in the gitignored `.env` (or the shell environment):
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `R2_ENDPOINT_URL` | yes | S3-compatible endpoint for the `joe-training` bucket |
+| `R2_ACCESS_KEY_ID` | yes | Token scoped to that one bucket |
+| `R2_SECRET_ACCESS_KEY` | yes | Matching secret |
+| `R2_BUCKET` | no | Defaults to `joe-training` |
+
+Copy those into vast.ai **account-level encrypted env vars** so the
+instance sees them without putting secrets on `--env` or in the image:
+
+```bash
+python scripts/joe_vast_train.py sync-env
+```
+
+`sync-env` prints key names only. It never prints values.
+
+---
+
+## Commands
+
+```bash
+# Phase 2 micro-smoke (4090-class, few iterations, S-sized net)
+python scripts/joe_vast_train.py launch --smoke
+
+# Upload code + launch.json only (no instance, no GPU spend)
+python scripts/joe_vast_train.py launch --smoke --pack-only
+
+# Full M run on interruptible H100 (Phase 3)
+python scripts/joe_vast_train.py launch --tier M --run-name joe-M-vast-...
+
+python scripts/joe_vast_train.py status --run-name <run>
+python scripts/joe_vast_train.py resume --run-name <run>
+python scripts/joe_vast_train.py destroy --run-name <run>
+python scripts/joe_vast_train.py destroy --run-name <run> --purge-r2
+```
+
+`launch` packs `competition-module/` plus `training/joe` (same set as the
+Modal `add_local_dir` mounts), uploads `code/<git_sha>.tar.gz`, writes
+`launch.json` and `config.yaml`, then creates an interruptible instance
+with `scripts/joe_vast_onstart.sh`. `resume` destroys the old instance
+before it creates a replacement for the same `run_name`.
+
+Never pipe the output through `tail` or `head`. Redirect to a file.
+
+---
+
+## What the instance does
+
+On every boot (including a same-machine resume after an outbid):
+
+1. Install `boto3` if needed and write `logs/boot.json` (`phase=
+   installing_pip_stack`). This is the first R2 object from the instance.
+   `state/latest.json` is not a boot signal; it appears at the first
+   checkpoint (`save_every`).
+2. Install the pinned pip stack if it is not already present. The stock
+   PyTorch image is Python 3.11; `jax==0.11.0` needs 3.12, so onstart
+   creates `/workspace/joe/venv` with CPython 3.12 via `uv`. First-boot
+   `jax[cuda12]` can take 10-20 min. Onstart tees stdout so `vastai logs`
+   shows pip progress.
+3. Download and unpack the code tarball from R2 (skip if the checksum
+   marker matches).
+4. Read `state/latest.json`. If it is present, restore that checkpoint
+   set. If it is absent, start fresh from `config.yaml`.
+5. Refuse to start if `lease/heartbeat.json` is fresher than five minutes
+   and carries a different instance id.
+6. Train through `training.joe.main.run` with the R2 uploader as
+   `on_checkpoint`.
+
+The training loop is the same loop Modal calls. The only difference is
+the checkpoint hook and where the files live.

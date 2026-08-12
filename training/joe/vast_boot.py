@@ -1,0 +1,149 @@
+"""Instance-side boot for a vast.ai Joe run.
+
+Onstart unpacks the code tarball, then runs ``python -m training.joe.vast_boot``.
+This module: checks the heartbeat lease, restores ``latest.json`` if present,
+starts the heartbeat + log uploaders, and calls ``training.joe.main.run`` with
+the R2 ``CheckpointUploader`` as ``on_checkpoint``. No vastai CLI.
+"""
+
+from __future__ import annotations
+
+import os
+import socket
+import sys
+import threading
+import time
+import traceback
+
+from training.joe.store import (
+    CheckpointUploader,
+    R2Store,
+    check_lease,
+)
+
+
+HEARTBEAT_S = 60
+LOG_UPLOAD_S = 60
+
+
+def _instance_id():
+    return (os.environ.get("CONTAINER_ID")
+            or os.environ.get("VAST_CONTAINERLABEL")
+            or socket.gethostname())
+
+
+class _IntervalUploader(threading.Thread):
+    """Daemon thread: call ``fn`` every ``interval_s`` until ``stop()``."""
+
+    def __init__(self, fn, interval_s, name):
+        super().__init__(name=name, daemon=True)
+        self._fn = fn
+        self._interval_s = interval_s
+        self._stop = threading.Event()
+
+    def run(self):
+        while not self._stop.is_set():
+            try:
+                self._fn()
+            except Exception:
+                print(f"{self.name} failed (will retry)", flush=True)
+                traceback.print_exc()
+            if self._stop.wait(self._interval_s):
+                break
+
+    def stop(self):
+        self._stop.set()
+        self.join(timeout=self._interval_s + 5)
+        try:
+            self._fn()
+        except Exception:
+            traceback.print_exc()
+
+
+def _upload_log(store, run_name, log_path, boot_id):
+    if not log_path or not os.path.exists(log_path):
+        return
+    rel = f"logs/train-{boot_id}.log"
+    store.upload_run_file(run_name, rel, log_path)
+
+
+def main(argv=None):
+    argv = argv if argv is not None else sys.argv[1:]
+    del argv  # parameterized only by env vars (vast plan §3)
+
+    run_name = os.environ.get("RUN_NAME")
+    if not run_name:
+        raise SystemExit("RUN_NAME is not set")
+    joe_root = os.environ.get("JOE_ROOT", "/workspace/joe")
+    ckpt_dir = os.environ.get("CKPT_DIR", os.path.join(joe_root, "ckpt"))
+    log_path = os.environ.get("JOE_TRAIN_LOG", "")
+    boot_id = os.environ.get("JOE_BOOT_ID", str(int(time.time())))
+    instance_id = _instance_id()
+
+    os.makedirs(ckpt_dir, exist_ok=True)
+    cache_dir = os.path.join(joe_root, "jax-cache")
+    os.makedirs(cache_dir, exist_ok=True)
+
+    store = R2Store.from_env()
+    reason = check_lease(store.read_heartbeat(run_name), instance_id)
+    if reason:
+        raise SystemExit(f"Refusing to start: {reason}")
+
+    store.put_heartbeat(run_name, instance_id)
+    print(f"Lease acquired: instance {instance_id} run {run_name}", flush=True)
+
+    launch = store.read_launch(run_name)
+    if launch is None:
+        raise SystemExit(f"no launch.json under joe/{run_name}/")
+
+    latest = store.resolve_latest(run_name)
+    if latest is not None:
+        state = latest["state"]
+        print(f"Restoring checkpoint set at global step "
+              f"{state['global_step']}, curriculum stage "
+              f"{state['curriculum_stage']}", flush=True)
+        store.download_checkpoint(latest, ckpt_dir)
+    else:
+        print("No latest.json; fresh start", flush=True)
+
+    cfg_path = os.path.join(ckpt_dir, "config.yaml")
+    if not os.path.exists(cfg_path):
+        store.download_run_file(run_name, "config.yaml", cfg_path)
+
+    heartbeat = _IntervalUploader(
+        lambda: store.put_heartbeat(run_name, instance_id),
+        HEARTBEAT_S, name="joe-heartbeat")
+    heartbeat.start()
+    log_thread = None
+    if log_path:
+        log_thread = _IntervalUploader(
+            lambda: _upload_log(store, run_name, log_path, boot_id),
+            LOG_UPLOAD_S, name="joe-log-upload")
+        log_thread.start()
+
+    import jax
+    jax.config.update("jax_compilation_cache_dir", cache_dir)
+
+    from training.joe.config import Config
+    from training.joe.main import run
+
+    cfg = Config.from_yaml(cfg_path)
+    if cfg.run_name != run_name:
+        print(f"NOTE: config run_name={cfg.run_name!r}; "
+              f"overriding to {run_name!r}", flush=True)
+        object.__setattr__(cfg, "run_name", run_name)
+
+    uploader = CheckpointUploader(store, ckpt_dir, run_name)
+    engine_sha = launch.get("engine_sha") or None
+    try:
+        run(cfg, ckpt_dir, engine_sha=engine_sha, on_checkpoint=uploader)
+    finally:
+        uploader.wait()
+        heartbeat.stop()
+        if log_thread is not None:
+            log_thread.stop()
+        print("vast_boot finished", flush=True)
+
+
+if __name__ == "__main__":
+    main()
