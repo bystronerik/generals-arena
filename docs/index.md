@@ -32,6 +32,7 @@ Small topic files for the Generals Arena research repo.
 
 - [adding a bot](bots/adding-a-bot.md)
 - [benchmark agents](bots/benchmark-agents.md) — fixed `cm_*` wrappers over competition-module JAX agents
+- [joe](bots/joe.md) — deployed Average Joe self-play PPO policy (EMA, greedy)
 - [smoke](bots/smoke.md) — stdio smoke test, not competitive
 - [expand_plus](bots/expand-plus.md) — greedy capture + BFS frontier march
 - [castle_builder](bots/castle-builder.md) — rested-general castle investment

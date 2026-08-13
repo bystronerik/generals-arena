@@ -36,8 +36,24 @@ early stage-0 self-play wins skew hard to the p0 seat (up to 8:1 by iter
 80 — likely a move-order edge at close spawns; re-check at distance 17+),
 and the vs-random gate reads low early because greedy argmax favors the
 never-masked pass channel until the policy sharpens.
-Next: Phase 4 — the full M training run. Only one training run happens in
-this plan (§7, §8 item 10).
+**Phase 5 complete (2026-08-13), built against an interim Phase 4
+checkpoint while the full run continues.** The deployed bot is
+`bots/joe/` ([`docs/bots/joe.md`](../../bots/joe.md)): self-contained
+copies of the obs/network code (content-hash closure — parity pinned by
+`bots/joe/tests/`), EMA weights exported from R2 by
+`scripts/joe_export_bot.py`, greedy argmax, float32 jax-CPU, thread-pinned
+`run.sh`. With the step-3000 EMA of `joe-M-vast-20260813-0213` (stage 4,
+97.7% vs random) it passed the competition gate against morpheus-rs (win,
+seed 0) and entered the arena at **2483.5 ± 58.8 — the new top rating —
+140W/9L/1D** over a 5-bot panel; vs the previous best (morpheus-rs) the
+contrast is +115.8 ± 59.1, P = 0.975, formally unproven pending a
+replication round at the final checkpoint
+([`joe-phase5-arena.md`](../measurements/joe-phase5-arena.md)). Per-move
+latency of the deployed bot over full games: p50 5.0 ms / p99 5.4 ms
+local (x86 budget evidence stays with Phase 2). Joe built zero castles in
+151 rated games — re-examine at the final checkpoint.
+Next: finish Phase 4 (run in progress), re-export the final EMA (a new
+rated entity), replicate the morpheus-rs contrast, then Phase 6 cleanup.
 
 Sources of truth, in order:
 

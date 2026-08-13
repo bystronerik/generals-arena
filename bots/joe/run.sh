@@ -5,9 +5,11 @@
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Pin every math backend to one thread BEFORE the interpreter starts (same
-# rationale as bots/morpheus/run.sh: pools size themselves at library init,
+# rationale as the morpheus launcher: pools size themselves at library init,
 # and two bot subprocesses on one host would otherwise oversubscribe every
-# core). XLA gets the same treatment — these are the flags the Phase 2 x86
+# core; a literal path here would also drag that launcher into this bot's
+# content-hash closure via the shell-reference scan). XLA gets the same
+# treatment — these are the flags the Phase 2 x86
 # latency measurement ran under (docs/research/measurements/
 # joe-phase2-cpu-latency.md), so play matches its budget evidence.
 export OMP_NUM_THREADS=1
