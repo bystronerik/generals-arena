@@ -47,6 +47,7 @@ from training.joe.launch import (  # noqa: E402
     SMOKE_DISK_GB,
     apply_smoke,
     code_object_name,
+    default_bid,
     destroy_in_progress,
     env_var_names,
     find_vastai_bin,
@@ -282,7 +283,7 @@ def _create_instance(launch, bid):
             if bid is not None:
                 this_bid = float(bid)
             elif min_bid is not None:
-                this_bid = float(min_bid)
+                this_bid = default_bid(min_bid)
             else:
                 last_err = "offer has no min_bid; pass --bid"
                 continue
@@ -720,7 +721,8 @@ def build_parser():
                         help="h100, 4090, or comma-separated gpu_name list")
     launch.add_argument("--num-gpus", type=int, default=1)
     launch.add_argument("--bid", type=float, default=None,
-                        help="interruptible bid $/hr (default: offer min_bid)")
+                        help="interruptible bid $/hr "
+                             "(default: 5%% more than the offer min_bid)")
     launch.add_argument("--disk", type=int, default=None)
     launch.add_argument("--image", default="",
                         help=f"docker image (default {DEFAULT_IMAGE})")

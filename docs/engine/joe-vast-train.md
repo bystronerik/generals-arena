@@ -75,6 +75,11 @@ Modal `add_local_dir` mounts), uploads `code/<git_sha>.tar.gz`, writes
 with `scripts/joe_vast_onstart.sh`. `resume` destroys the old instance
 before it creates a replacement for the same `run_name`.
 
+The bid for an offer is 5% more than the `min_bid` of that offer. A bid
+equal to `min_bid` loses the machine to the next bidder that gives one
+cent more. Give `--bid <$/hr>` to set the price yourself. The launcher
+writes the price it sends to `launch.json` and to the instance record.
+
 Never pipe the output through `tail` or `head`. Redirect to a file.
 
 ### Adopting an existing instance

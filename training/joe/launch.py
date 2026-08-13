@@ -39,6 +39,10 @@ DEFAULT_IMAGE = "pytorch/pytorch:2.4.0-cuda12.4-cudnn9-runtime"
 SMOKE_DISK_GB = 40
 FULL_DISK_GB = 80
 
+# A bid equal to min_bid loses the machine to the next bidder that gives one
+# cent more. The margin keeps the instance through small bid movements.
+BID_OVER_MIN = 1.05
+
 RUN_NAME_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
                      "0123456789._-")
 
@@ -71,6 +75,14 @@ def offer_unavailable(exc):
     text = str(exc).lower()
     return ("no_such_ask" in text or "no longer available" in text
             or "error 410" in text or " 410:" in text or "410/" in text)
+
+
+def default_bid(min_bid):
+    """The default interruptible bid: 5% more than the offer ``min_bid``.
+
+    Rounded, because the CLI shows the value that it sends.
+    """
+    return round(float(min_bid) * BID_OVER_MIN, 6)
 
 
 def instance_label(run_name):

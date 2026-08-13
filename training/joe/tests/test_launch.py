@@ -11,6 +11,7 @@ from training.joe.launch import (
     SMOKE_OVERRIDES,
     apply_smoke,
     code_object_name,
+    default_bid,
     destroy_in_progress,
     env_var_names,
     find_vastai_bin,
@@ -65,6 +66,13 @@ def test_run_name_and_code_object_name():
         "abc-dirty-deadbeefcafe")
     assert instance_label("joe-x") == "joe-x"
     assert instance_label("run-1") == "joe-run-1"
+
+
+def test_default_bid_is_five_percent_over_min_bid():
+    assert default_bid(0.20) == pytest.approx(0.21)
+    assert default_bid("0.10") == pytest.approx(0.105)
+    # Rounded, so the CLI does not show 0.31500000000000006.
+    assert default_bid(0.30) == 0.315
 
 
 def test_find_vastai_bin_order(tmp_path):
