@@ -8,7 +8,9 @@ and R1's candle tripwire p99 > 75 ms (port-plan §5, §9).
 `joe-rs bench < game.in.log` replays a recorded wire log through the full
 per-move path — frame parse, obs pipeline, candle forward, greedy decode,
 reply encode to a sink — and reports per-turn percentiles. The input is
-`synthetic-long.in.log` (1,320 turns, deep late-game states).
+`synthetic-long.in.log` (1,572 turns at step 6000, deep late-game states;
+it was 1,320 turns at step 5000 — the file is rebuilt from whatever the
+longest corpus game is, see [parity.md](parity.md)).
 
 `scripts/joe_rs_modal_bench.py` runs it on a Modal 1-core x86 container
 (cargo 1.97.1, `target-cpu=x86-64-v3` from the crate's `.cargo/config.toml`),

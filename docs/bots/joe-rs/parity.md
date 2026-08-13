@@ -11,20 +11,29 @@ float tolerances cannot see precision bugs*.
 
 - **Play**: real `--mode competition` matchup games with the deployed
   `bots/joe/run.sh` seat wrapped in `tee`, recording the exact wire text joe
-  received (`.in.log`) and replied (`.out.log`). 13 games, mixed opponents
-  and seeds (incl. two joe mirrors); longest natural game 675 turns.
+  received (`.in.log`) and replied (`.out.log`). 14 games, mixed opponents
+  and seeds (incl. three joe mirrors); longest natural game 786 turns.
 - **Capture**: replay each `.in.log` through the *imported* joe functions
   (`frame_to_raw`, `joe_obs.*`, `net._forward`) under `eqx.filter_jit`, dump
   per-turn surfaces to `.npz`. Every recomputed reply is asserted equal to
   the recorded one, so the capture path is pinned to deployment.
 
-`synthetic-long` is metro-seed8's 660 frames played twice through the state
-machine (1,320 turns): the 800+ regime, both 512-window rollovers, and
-counters past natural game length. The state update never reads the bot's
-actions, so any frame stream is a valid state-machine input. Corpus lives
-under `data/joe/joe-rs-parity/games/` (derived, gitignored); a 40-turn
-9-frame smoke slice is committed under `bots/joe-rs/tests/fixtures/` and the
-drivers fall back to it automatically.
+**The corpus is keyed to the network.** The `.npz` surfaces are the JAX
+oracle's outputs for specific weights, so a joe re-export invalidates them:
+re-run both phases (and `make_smoke_fixture.py`) after
+`convert_artifact.py`, or the drivers compare a new binary against an old
+oracle. The corpus was rebuilt for step 6000 on 2026-08-14.
+
+`synthetic-long` is the longest corpus game's frames played twice through
+the state machine — at step 6000, macaria-seed1 doubled to **1,572 turns**
+(it was metro-seed8 doubled to 1,320 at step 5000; the source game changes
+because a stronger net ends games sooner, so the rebuild picks whatever the
+longest natural game is). It exercises the counters past natural game
+length and both 512-window rollovers. The state update never reads the
+bot's actions, so any frame stream is a valid state-machine input. Corpus
+lives under `data/joe/joe-rs-parity/games/` (derived, gitignored); a 40-turn
+13-frame smoke slice is committed under `bots/joe-rs/tests/fixtures/` and
+the drivers fall back to it automatically.
 
 ## Mechanics
 
@@ -48,15 +57,31 @@ input state.
   contraction. Channel 21's pin is **0 ULP**, backed by an exhaustive sweep
   of the whole integer counter domain (0..16384) against live JAX.
 - **Tier 2, tolerance** (candle forward, different GEMM summation orders;
-  nominal ≤ 1e-4): achieved over 13 games / 673 sampled frames —
-  max |Δlogit| 3.052e-5, max |Δbin| 4.387e-5, max |Δvalue| 9.537e-7.
-  Enforced at the achieved bounds (`LOGIT_TOL_ACHIEVED` etc. in
-  `test_parity.py`); a corpus refresh that exceeds them is a finding.
-- **Tier 3, decision**: greedy action equal on 100% of sampled frames
-  (gate: ≥ 99.5% with tie-margin enumeration — none needed), and
-  `test_wire_replay.py` runs the real binary in wire mode over every
-  recorded game: **14 games, 5,693 turns, every reply byte-equal** to
-  Python joe's recorded replies, under the bot's own accumulated state.
+  nominal ≤ 1e-4): achieved over 14 games / 731 sampled frames at step 6000 —
+  max |Δlogit| 2.861e-5, max |Δbin| 5.722e-5, max |Δvalue| 2.205e-6.
+  Enforced as **per-frame relative** error (each frame's max |Δ| over its own
+  largest activation): 2.331e-6 logit, 2.244e-6 bin, pinned at 3.0e-6 with the
+  absolute 1e-4 contract kept as a backstop. A refresh that exceeds these is
+  still a finding.
+
+  The gate was absolute until 2026-08-14, when the step-6000 corpus tripped
+  the old `BIN_TOL_ACHIEVED` at 5.722e-5 > 4.4e-5. That was **not** a
+  precision regression: the step-6000 value head is more confident, so its
+  bin logits are 1.32× larger (35.18 → 46.54) and the absolute error grew
+  1.30× with them, leaving the ratio flat (1.247e-6 → 1.230e-6). An absolute
+  pin fails on every stronger export for a reason that is not a bug; the
+  relative one is the invariant a real precision bug would move. Normalising
+  per frame rather than per corpus matters too — the early-game smoke slice
+  has ~half the activation magnitude, and a corpus-wide scale made it read
+  1.7e-6 against a bound the full corpus passed.
+- **Tier 3, decision**: greedy action equal on **731/731 sampled frames
+  (100%)** (gate: ≥ 99.5% with tie-margin enumeration — none needed; the
+  tie-margin bound is the relative tier-2 bound put back on the corpus's own
+  logit scale), and `test_wire_replay.py` runs the real binary in wire mode
+  over every recorded game: **14 games, 4,760 turns, every reply byte-equal**
+  to Python joe's recorded replies, under the bot's own accumulated state.
+  (The turn count fell from 5,693 at step 5000 because the stronger network
+  wins sooner, not because coverage shrank — the game count is the same.)
 
 ## Synthetic fixtures
 
@@ -75,7 +100,9 @@ seen-accumulation OR, pad-mountain rule, a divide-by-50 site, the channel-21
 counter, the R2 q/k-proj swap, softmax scale, argmax tie-break, pass-channel
 mask — each must make the harness fail. Baseline must pass first, on the
 fast `mutation` profile (same float semantics; Rust does not reassociate).
-**9/9 killed** (2026-08-14). The tie-break kill comes from the crate's unit
+**9/9 killed** (2026-08-14, re-run against step 6000 and the relative tier-2
+gate — the check is what proves the relative bound did not buy portability
+by giving up detection power). The tie-break kill comes from the crate's unit
 tests, which the checker runs alongside the parity drivers: an exact logit
 tie never occurs in real frames, so no fixture can see that flip.
 

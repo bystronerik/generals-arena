@@ -69,3 +69,11 @@ the parity evidence is [joe-rs/parity.md](joe-rs/parity.md). Editing
 `bots/joe/` is still off-limits from the joe-rs side; the one shared object
 is the exported artifact, converted read-only
 ([joe-rs/export.md](joe-rs/export.md)).
+
+"Same network" is a claim someone has to maintain: it holds only while
+joe-rs's artifact is a conversion of joe's *current* one. A joe re-export
+breaks it silently — joe-rs keeps its own `model.safetensors` and goes on
+playing the previous checkpoint — so every re-export must be followed by the
+re-conversion and parity rebuild in
+[joe-rs/export.md](joe-rs/export.md#after-a-joe-re-export). Both bots are on
+**step 6000** as of 2026-08-14.

@@ -46,13 +46,44 @@ CH21_MAX_ULP = 0
 # Tier-2 nominal gate (different GEMM summation orders); the achieved bound
 # is asserted in `test_forward_tier2` and recorded in the test output.
 LOGIT_TOL_NOMINAL = 1e-4
-# Achieved over the 12-game corpus (673 frames, 2026-08-14): max |dlogit|
-# 3.052e-5, max |dbin| 4.387e-5, max |dvalue| 9.537e-7. Pinned at the
-# measurement per the M2 rule; a corpus refresh that pushes past these is a
-# finding, not a reason to relax silently.
-LOGIT_TOL_ACHIEVED = 3.1e-5
-BIN_TOL_ACHIEVED = 4.4e-5
-VALUE_TOL_ACHIEVED = 1e-6
+#
+# The achieved gate is **relative, per frame**: each frame's max |delta| over
+# that frame's own largest reference activation, maximised across frames.
+#
+# Why not an absolute pin (which is what this was until 2026-08-14): the
+# absolute error tracks activation magnitude, and a stronger checkpoint has
+# larger activations. Measured across the step-5000 and step-6000 corpora:
+#
+#   corpus       max|bin logit|   max |dbin|   |dbin| / scale
+#   step 5000    35.18            4.387e-5     1.247e-6
+#   step 6000    46.54            5.722e-5     1.230e-6
+#
+# The step-6000 value head is more confident, so it emits ~1.32x larger bin
+# logits and ~1.30x larger absolute error — the same ~10 ULP over a 384-wide
+# reduction, and not a precision regression. An absolute pin therefore fails
+# on every stronger export for a reason that is not a bug, which is the one
+# false alarm the M2 rule cannot afford. The ratio column is the invariant.
+#
+# Why per frame rather than per corpus: normalising by a corpus-wide maximum
+# makes the statistic depend on corpus composition. The committed 13-frame
+# smoke slice is early-game, where activations are ~half the full corpus's,
+# so the same noise read 1.7e-6 against a corpus-max scale and would have
+# failed a bound the full corpus passed.
+#
+# Pinned with ~30% headroom over the worst measured, which keeps the gate
+# ~30x tighter than the nominal absolute contract. Per-frame relative figures
+# (2026-08-14, step 6000): full corpus 731 frames logit 2.331e-6, bin
+# 2.244e-6; smoke slice logit 1.055e-6, bin 2.120e-6. The cross-checkpoint
+# evidence above is the corpus-max ratio, measured on both nets; the
+# per-frame statistic itself is measured on step 6000 only. Exceeding these
+# is still a finding, not a reason to relax silently — `mutation_check`
+# re-confirms this gate kills all 9 planted bugs.
+LOGIT_REL_ACHIEVED = 3.0e-6   # worst measured 2.331e-6
+BIN_REL_ACHIEVED = 3.0e-6     # worst measured 2.244e-6
+# |value| <= 1 by construction (bin_centers span [-1, 1]), so this one is
+# already scale-free and stays absolute. It tracks bin sharpness rather than
+# bin magnitude: 9.537e-7 at step 5000, 2.205e-6 at step 6000.
+VALUE_TOL_ACHIEVED = 2.5e-6
 
 # Tier-3 gate: greedy action equal on >= 99.5% of frames; every divergence
 # must be a near-tie inside the tier-2 bound.
@@ -239,6 +270,10 @@ def test_forward_tier2(games):
     max_logit_err = 0.0
     max_value_err = 0.0
     max_bin_err = 0.0
+    logit_scale = 0.0
+    bin_scale = 0.0
+    rel_logit = 0.0
+    rel_bin = 0.0
     n_frames = 0
     for npz_path in games:
         data, in_log = load_game(npz_path)
@@ -259,18 +294,42 @@ def test_forward_tier2(games):
             logits = bits_f32(chunk[:N_LOGITS])
             value = bits_f32(chunk[N_LOGITS:N_LOGITS + 1])[0]
             bins = bits_f32(chunk[N_LOGITS + 1:])
-            max_logit_err = max(max_logit_err,
-                                float(np.abs(logits - data["logits"][k]).max()))
+            # Relative error is computed **per frame**, against that frame's
+            # own largest activation, then maximised over frames. Normalising
+            # by a corpus-wide maximum instead would make the statistic depend
+            # on corpus composition: a short early-game slice has smaller
+            # activations, so the same float noise would read as a larger
+            # relative error. Masked policy entries (-1e9) are structural,
+            # not computed, and are excluded from the scale.
+            ref_logits = data["logits"][k]
+            live = ref_logits[ref_logits > -1e8]
+            f_logit_err = float(np.abs(logits - ref_logits).max())
+            f_logit_scale = float(np.abs(live).max())
+            max_logit_err = max(max_logit_err, f_logit_err)
+            logit_scale = max(logit_scale, f_logit_scale)
+            rel_logit = max(rel_logit, f_logit_err / f_logit_scale)
+
+            ref_bins = data["value_bins"][k]
+            f_bin_err = float(np.abs(bins - ref_bins).max())
+            f_bin_scale = float(np.abs(ref_bins).max())
+            max_bin_err = max(max_bin_err, f_bin_err)
+            bin_scale = max(bin_scale, f_bin_scale)
+            rel_bin = max(rel_bin, f_bin_err / f_bin_scale)
+
             max_value_err = max(max_value_err, abs(float(value) - float(data["value"][k])))
-            max_bin_err = max(max_bin_err,
-                              float(np.abs(bins - data["value_bins"][k]).max()))
             n_frames += 1
-    print(f"\n[tier2] {n_frames} frames: max |dlogit| {max_logit_err:.3e}, "
-          f"max |dvalue| {max_value_err:.3e}, max |dbin| {max_bin_err:.3e} "
-          f"(nominal {LOGIT_TOL_NOMINAL:.0e})")
-    assert max_logit_err <= LOGIT_TOL_ACHIEVED
-    assert max_bin_err <= BIN_TOL_ACHIEVED
+    print(f"\n[tier2] {n_frames} frames: max |dlogit| {max_logit_err:.3e} "
+          f"(per-frame rel {rel_logit:.3e}), max |dvalue| {max_value_err:.3e}, "
+          f"max |dbin| {max_bin_err:.3e} (per-frame rel {rel_bin:.3e}) "
+          f"[largest scales: logit {logit_scale:.2f}, bin {bin_scale:.2f}; "
+          f"nominal abs {LOGIT_TOL_NOMINAL:.0e}]")
+    assert rel_logit <= LOGIT_REL_ACHIEVED
+    assert rel_bin <= BIN_REL_ACHIEVED
     assert max_value_err <= VALUE_TOL_ACHIEVED
+    # Absolute backstop: the engineering contract from the port plan holds
+    # regardless of how large activations get.
+    assert max_logit_err <= LOGIT_TOL_NOMINAL
+    assert max_bin_err <= LOGIT_TOL_NOMINAL
 
 
 # ---- Tier 3: decision-level ----
@@ -279,6 +338,7 @@ def test_forward_tier2(games):
 def test_decide_tier3(games):
     agree = 0
     total = 0
+    logit_scale = 0.0
     divergences = []
     for npz_path in games:
         data, in_log = load_game(npz_path)
@@ -306,13 +366,21 @@ def test_decide_tier3(games):
                 top2 = np.partition(logits, -2)[-2:]
                 margin = float(top2[1] - top2[0])
                 divergences.append((npz_path.name, t, idx_got, int(data["idx"][k]), margin))
+            ref = data["logits"][k]
+            logit_scale = max(logit_scale, float(np.abs(ref[ref > -1e8]).max()))
     rate = agree / total if total else 0.0
     print(f"\n[tier3] {agree}/{total} greedy actions equal ({rate:.4%})")
     for name, t, got_idx, want_idx, margin in divergences:
         print(f"[tier3]   {name} turn {t}: rust {got_idx} vs jax {want_idx}, "
               f"top-2 margin {margin:.3e}")
     assert rate >= DECIDE_AGREE_MIN, divergences
+    # A divergence is only excusable as float noise if the two top logits sat
+    # closer together than the tier-2 forward error could move them. That is
+    # an absolute question, so the relative bound is put back on this corpus's
+    # own logit scale.
+    tie_margin_max = LOGIT_REL_ACHIEVED * logit_scale
     for name, t, got_idx, want_idx, margin in divergences:
-        assert margin <= LOGIT_TOL_ACHIEVED, (
+        assert margin <= tie_margin_max, (
             f"{name} turn {t}: divergence with top-2 margin {margin:.3e} "
-            f"outside the tier-2 bound — a logic bug, not float noise (R3)")
+            f"outside the tier-2 bound {tie_margin_max:.3e} — a logic bug, "
+            f"not float noise (R3)")

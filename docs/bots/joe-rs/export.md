@@ -48,3 +48,26 @@ a checkout is missing. Fetch joe's `.eqx` first (its manifest's `r2_key`),
 then run the converter. The content hash covers `model.safetensors`, so a
 re-conversion forks joe-rs's rating identity — intended behavior, same as a
 joe re-export.
+
+## After a joe re-export
+
+The converter alone is not the whole job. joe-rs tracks joe's artifact only
+because someone re-runs this sequence; skipping it leaves the two bots
+playing different networks while the docs claim otherwise.
+
+```bash
+.venv/bin/python bots/joe-rs/tools/convert_artifact.py
+export PATH="$HOME/.cargo/bin:$PATH"          # cargo is off the default PATH
+cargo build --release --manifest-path bots/joe-rs/Cargo.toml
+# the parity corpus is keyed to the network — rebuild it, do not reuse
+.venv/bin/python bots/joe-rs/tools/capture_fixtures.py --play --capture
+.venv/bin/python bots/joe-rs/tools/make_smoke_fixture.py   # committed fixture
+.venv/bin/pytest bots/joe-rs/tests/ -m joe
+.venv/bin/python bots/joe-rs/tools/mutation_check.py
+```
+
+The `.npz` surfaces are the JAX oracle's outputs for particular weights, and
+the committed smoke fixture is a slice of them, so both go stale the moment
+joe's weights change. A stale smoke fixture is the dangerous one: it is
+committed, so a clean checkout would compare the new binary against the old
+oracle's recorded replies.
