@@ -1,0 +1,35 @@
+[package]
+name = "joe-rs"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# candle first (port-plan §5): the graph is plain GEMMs + LayerNorm + softmax
+# + SiLU, all present in candle-core/candle-nn. R1's tripwire (full-move
+# p99 > 75 ms on one x86 core) swaps this for a bespoke fixed-shape path; the
+# safetensors artifact contract is identical either way.
+[dependencies]
+candle-core = { version = "0.9", default-features = false }
+candle-nn = { version = "0.9", default-features = false }
+safetensors = "0.6"
+memmap2 = "0.9"
+# Rides in transitively with safetensors anyway (port-plan §6 allowed it on
+# exactly that condition — check the lockfile); used only for manifest.json.
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+# The judge treats a crash as a forfeit but a bad reply as one fault out of
+# fifty (RULES.md §08). Unwinding lets catch_unwind turn a panicking turn
+# into a pass.
+panic = "unwind"
+
+# Mutation testing only (tools/mutation_check.py): fast links, same float
+# semantics — Rust does not reassociate floats across opt levels.
+[profile.mutation]
+inherits = "release"
+lto = false
+codegen-units = 16

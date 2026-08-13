@@ -1,0 +1,50 @@
+# joe-rs weight export
+
+The joe-rs artifact is **derived from the joe artifact**, never trained or
+edited on its own. `bots/joe-rs/tools/convert_artifact.py` turns
+`bots/joe/artifact/ema.eqx` into `bots/joe-rs/artifact/model.safetensors`
+plus a manifest.
+
+```bash
+.venv/bin/python bots/joe-rs/tools/convert_artifact.py
+```
+
+## Why the converter never parses the .eqx
+
+An `.eqx` file has 100 unnamed leaves in pytree order; a converter that read
+the framing itself could permute two same-shaped tensors (`q_proj` vs
+`k_proj`) and load cleanly while playing plausibly badly (port-plan R2). So
+the converter goes through `eqx.tree_deserialise_leaves` into the exact
+template `bots/joe/agent.py` builds — the code path the deployed Python bot
+trusts — then names each leaf from its pytree path.
+
+Checks, all refusing to write on failure:
+
+1. `weights_sha256` of the source `.eqx` matches joe's manifest.
+2. Exactly 100 tensors with the `joe-net-v1` names/shapes, all float32,
+   summing to 8,556,250 parameters (= the manifest's `n_params`).
+3. Round-trip: the written safetensors reloads bit-exact against the
+   deserialised leaves.
+
+`bin_centers` is a serialized leaf and is **exported, not recomputed** — a
+`linspace` reimplementation would be a parity risk with zero upside.
+
+## The manifest
+
+`bots/joe-rs/artifact/manifest.json` copies joe's manifest (checkpoint
+provenance intact) and adds:
+
+- `tensor_schema: joe-net-v1` — the Rust loader (`src/net.rs`) refuses to
+  start on any schema-tag, name, shape, or dtype mismatch, and on any
+  unexpected extra tensor.
+- `safetensors_sha256`, `safetensors_size` — pins the derived file.
+- `weights_sha256` (inherited) — pins the source `.eqx`.
+
+## Checkout policy
+
+Same rule as joe's `.eqx` (see `.gitignore`): the `.safetensors` is
+gitignored and re-creatable; the committed manifest pins exactly which bytes
+a checkout is missing. Fetch joe's `.eqx` first (its manifest's `r2_key`),
+then run the converter. The content hash covers `model.safetensors`, so a
+re-conversion forks joe-rs's rating identity — intended behavior, same as a
+joe re-export.

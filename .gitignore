@@ -57,6 +57,15 @@ bots/joe/artifact/*.eqx
 # are not comparators). Same weights rule.
 bots/joe_base/artifact/*.eqx
 
+# joe-rs weights follow the same rule as joe's: derived from the joe artifact
+# by bots/joe-rs/tools/convert_artifact.py, pinned by the committed
+# manifest.json (safetensors_sha256), re-creatable on any checkout that has
+# the joe .eqx. The content hash still covers the .safetensors, so a
+# re-conversion forks the rating identity. Build output stays out of the
+# tree like morpheus-rs's.
+bots/joe-rs/artifact/*.safetensors
+bots/joe-rs/target/
+
 # Curriculum manifests are rebuilt from trajectories; keep the directory.
 training/morpheus/manifests/*
 !training/morpheus/manifests/.gitkeep

@@ -33,6 +33,11 @@ Small topic files for the Generals Arena research repo.
 - [adding a bot](bots/adding-a-bot.md)
 - [benchmark agents](bots/benchmark-agents.md) — fixed `cm_*` wrappers over competition-module JAX agents
 - [joe](bots/joe.md) — deployed Average Joe self-play PPO policy (EMA, greedy)
+- [joe-rs port plan](bots/joe-rs/port-plan.md) — Rust sibling of joe: constraints, milestones, risks
+- [joe-rs export](bots/joe-rs/export.md) — ema.eqx → safetensors through the deployment template, and the schema the loader enforces
+- [joe-rs parity](bots/joe-rs/parity.md) — corpus, tiers, pinned bounds, wire replay, and the mutation pass that checks the proof
+- [joe-rs XLA semantics](bots/joe-rs/xla-semantics.md) — the reciprocal-multiply rewrite and XLA's log1p with FMA contraction, mirrored bit-for-bit
+- [joe-rs latency](bots/joe-rs/latency.md) — full-path percentiles on one x86 core; why candle stays
 - [smoke](bots/smoke.md) — stdio smoke test, not competitive
 - [expand_plus](bots/expand-plus.md) — greedy capture + BFS frontier march
 - [castle_builder](bots/castle-builder.md) — rested-general castle investment

@@ -1,0 +1,9 @@
+{
+  "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+  "machine": "x86_64",
+  "online_cpus": 17,
+  "cpu_model": "unknown",
+  "build_s": 110.4,
+  "bench_stdout": "turns 1320 startup_ms 1071.0 p50 24.17 p90 24.49 p99 25.39 max 35.63",
+  "bench_rc": 0
+}

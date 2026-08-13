@@ -1,0 +1,60 @@
+{
+  "total": 9,
+  "killed": 9,
+  "mutations": [
+    {
+      "name": "history-roll-direction",
+      "file": "obs.rs",
+      "breaks": "army history stack rolls the wrong way",
+      "killed": true
+    },
+    {
+      "name": "seen-accumulation-or",
+      "file": "obs.rs",
+      "breaks": "seen memory forgets instead of accumulating",
+      "killed": true
+    },
+    {
+      "name": "pad-mountain-rule",
+      "file": "obs.rs",
+      "breaks": "visible padding never becomes a confirmed mountain",
+      "killed": true
+    },
+    {
+      "name": "normalize-divisor",
+      "file": "obs.rs",
+      "breaks": "a divide-by-50 site divides by 5",
+      "killed": true
+    },
+    {
+      "name": "timestep-decay-off-by-one",
+      "file": "obs.rs",
+      "breaks": "channel 21's counter counts twice as fast",
+      "killed": true
+    },
+    {
+      "name": "qk-proj-swap",
+      "file": "net.rs",
+      "breaks": "the R2 leaf-misalignment bug, planted deliberately",
+      "killed": true
+    },
+    {
+      "name": "softmax-scale",
+      "file": "net.rs",
+      "breaks": "attention scale sqrt(48) becomes 48",
+      "killed": true
+    },
+    {
+      "name": "argmax-tie-break",
+      "file": "action.rs",
+      "breaks": "argmax returns the last maximum instead of the first",
+      "killed": true
+    },
+    {
+      "name": "mask-pass-channel",
+      "file": "obs.rs",
+      "breaks": "the pass action is masked out",
+      "killed": true
+    }
+  ]
+}

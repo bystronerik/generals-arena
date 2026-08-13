@@ -1,0 +1,93 @@
+{
+  "bot_id": "joe-rs",
+  "steps": [
+    {
+      "at": "2026-08-13T17:32:53Z",
+      "content_hash": "0995d03a59c8",
+      "seq": 1
+    }
+  ],
+  "version": 1,
+  "versions": [
+    {
+      "closure_ref": "refs/bot-versions/0995d03a59c8",
+      "closure_tree": "af9bc6d37b9bda5e501e81c8c0a64b33a9d8863b",
+      "content_hash": "0995d03a59c8",
+      "files": [
+        {
+          "blob": "a0c89260a153bb9b5aa70bea3b8c9900a0377f6a",
+          "path": "bots/joe-rs/.cargo/config.toml",
+          "sha256": "070c62350674ebb7dc151ff3047ee2f16cfd6bf9a00b934cf537ff5aff53674a"
+        },
+        {
+          "blob": "cad25c45fbabdfcd3533d51c2650fe9cf3f11448",
+          "path": "bots/joe-rs/Cargo.lock",
+          "sha256": "4882c9c9e65d96b2b99b70bf788e7b38bb8a04336d3060b947ab06cbaa9d41d0"
+        },
+        {
+          "blob": "a3d3652a81979660165b8d5804fd71b0a88eb3dc",
+          "path": "bots/joe-rs/Cargo.toml",
+          "sha256": "e352aa04e70466bec09756185692cad868220535a9ac697c104359d458a77962"
+        },
+        {
+          "blob": "d515aec377f3b80537c6371fd0db271418201f79",
+          "path": "bots/joe-rs/artifact/manifest.json",
+          "sha256": "d69e40d61972dd474db28848a7e13b77801dae447407dabbd7212c1d07613244"
+        },
+        {
+          "blob": "8bec94e3c0235b933e316021db067d68d2b96050",
+          "path": "bots/joe-rs/artifact/model.safetensors",
+          "sha256": "59b7000e919a41200a2870c3c78dc8bb000c4ff0dcadae96eeb265931e20179c"
+        },
+        {
+          "blob": "f48cf9395d72cac63765d1d162f64523e2c12d6f",
+          "path": "bots/joe-rs/run.sh",
+          "sha256": "1329e8ae373bedcb0746ff959902205885e4d638388458079d50fcb8a1a92bc4"
+        },
+        {
+          "blob": "f827fe55a31954be2c5d9ac6d9bb21655fa38e30",
+          "path": "bots/joe-rs/rust-toolchain.toml",
+          "sha256": "436dd7bc962fef2cd92375e062fb55eacc270c2c73d1adfd693422b8da497aee"
+        },
+        {
+          "blob": "0d6004b650323f20758037ca35fdb9de482b49f1",
+          "path": "bots/joe-rs/src/action.rs",
+          "sha256": "a9951c9eaecffc6489115b1d2b5208dc147856d239eb0aa52764d2b16f1b6e0a"
+        },
+        {
+          "blob": "d9bb8fdf0c5005b35a2b5b6bdc3288b8be52ae59",
+          "path": "bots/joe-rs/src/main.rs",
+          "sha256": "a682fbb409d9e32d978595712ccd7f9ffbfb9deab0d5af265944d57ff83fc21a"
+        },
+        {
+          "blob": "9d66593e8f9196911b79a91b954a577d08806430",
+          "path": "bots/joe-rs/src/net.rs",
+          "sha256": "b9becada16165111a3b27486e2b8eeac6e4301b1b28df03e67280c8c376fa786"
+        },
+        {
+          "blob": "c427adcdbe4bedf77d31b7397ee5d34e5538d371",
+          "path": "bots/joe-rs/src/obs.rs",
+          "sha256": "893aadcf72a15848d83cc95021f2ea6826bff328d2061bfc47a691ecf819e590"
+        },
+        {
+          "blob": "3a70230d8344f67e5437bfc42b02720a63975bae",
+          "path": "bots/joe-rs/src/parity.rs",
+          "sha256": "fb27e46069f51d725b95dd90d4cb1ec395effa48efbf864922fd859c913c5ce1"
+        },
+        {
+          "blob": "671ca774c868f8fce85af05303dc5bb1742a6085",
+          "path": "bots/joe-rs/src/wire.rs",
+          "sha256": "a720abb8e66d87a7f96dd22f20299cd8772a7a2fcbc8542222a000ff295a66b7"
+        },
+        {
+          "blob": "c25fe8589fd610805353e7fdca9c0ede164a2166",
+          "path": "bots/joe-rs/src/xla_math.rs",
+          "sha256": "8a14034b1dfeb0782b000a17183df4baad84b3b321ebfe79fb69772f5e904805"
+        }
+      ],
+      "first_seen_at": "2026-08-13T17:32:53Z",
+      "git_commit": "0b7def69353ae92d162941d36ddb4f26230489a6",
+      "git_dirty": true
+    }
+  ]
+}
