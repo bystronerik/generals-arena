@@ -13,6 +13,13 @@ instance whose onstart script converges on ``joe/<run_name>/`` (vast plan
     python scripts/joe_vast_train.py resume --run-name ...
     python scripts/joe_vast_train.py destroy --run-name ... --purge-r2
 
+``launch`` and ``resume`` also accept ``--instance-id <id>`` to adopt an
+existing, already-running vast.ai instance instead of searching offers
+and renting one. The launcher labels the instance, records it in R2, and
+runs ``scripts/joe_vast_onstart.sh`` on it over SSH (``vastai ssh-url``)
+with ``RUN_NAME`` and ``JOE_ROOT`` exported. ``--bid`` does not combine
+with ``--instance-id``: there is no offer.
+
 Never pipe the output through tail/head — redirect to a file (AGENTS.md).
 R2 tokens never go on the vastai command line; they live in account env
 vars (``sync-env``) and the gitignored ``.env``.
@@ -326,6 +333,116 @@ def _record_instance(store, run_name, instance_id, offer_id, bid):
     return instance_id
 
 
+ADOPT_ONSTART_REMOTE = "/workspace/joe-adopt-onstart.sh"
+ADOPT_ONSTART_LOG = "/workspace/joe-adopt-onstart.log"
+
+# Runs on the instance. Account env vars are injected into PID 1 at create
+# time but a plain SSH session may not see them (the onstart script copies
+# them to /etc/environment only once it runs), so pull R2_* from
+# /proc/1/environ without echoing any value, then start onstart detached.
+_ADOPT_BOOT_PY = """\
+import os, subprocess
+try:
+    raw = open("/proc/1/environ", "rb").read().split(b"\\0")
+except OSError:
+    raw = []
+for kv in raw:
+    if b"=" not in kv:
+        continue
+    key, val = kv.split(b"=", 1)
+    key = key.decode()
+    if key.startswith("R2_") and key not in os.environ:
+        os.environ[key] = val.decode()
+log = open("{log}", "ab")
+proc = subprocess.Popen(["/bin/sh", "{script}"], stdout=log, stderr=log,
+                        start_new_session=True)
+print("adopt onstart pid", proc.pid, flush=True)
+"""
+
+
+def _verify_instance(instance_id):
+    """The instance must exist and be running before we touch it."""
+    instance_id = str(instance_id)
+    data = vastai("show", "instance", instance_id)
+    inst = None
+    for cand in _as_list(data):
+        if not isinstance(cand, dict):
+            continue
+        iid = str(cand.get("id") or cand.get("instance_id") or "")
+        if iid == instance_id or inst is None:
+            inst = cand
+        if iid == instance_id:
+            break
+    if not inst:
+        raise SystemExit(
+            f"vast.ai instance {instance_id} not found "
+            f"(vastai show instance returned nothing); check the id")
+    status = inst.get("actual_status") or inst.get("status")
+    if status != "running":
+        raise SystemExit(
+            f"vast.ai instance {instance_id} is not running "
+            f"(actual_status={status!r}); start it or pick another instance")
+    return inst
+
+
+def _ssh_target(instance_id):
+    import urllib.parse
+
+    out = vastai("ssh-url", str(instance_id), raw=False)
+    text = str(out or "").strip().splitlines()[-1] if out else ""
+    parsed = urllib.parse.urlparse(text)
+    if parsed.scheme != "ssh" or not parsed.hostname or not parsed.port:
+        raise SystemExit(f"could not parse vastai ssh-url output: {text!r}")
+    return (parsed.username or "root", parsed.hostname, parsed.port)
+
+
+def _ssh_run(target, command, stdin_text=None, timeout=180):
+    user, host, port = target
+    cmd = ["ssh", "-o", "StrictHostKeyChecking=accept-new",
+           "-o", "BatchMode=yes", "-o", "ConnectTimeout=20",
+           "-p", str(port), f"{user}@{host}", command]
+    print("+", " ".join(cmd), flush=True)
+    try:
+        proc = subprocess.run(cmd, input=stdin_text, capture_output=True,
+                              text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise SystemExit(f"ssh to the instance timed out after {timeout}s")
+    if proc.returncode:
+        raise SystemExit(
+            f"ssh to the instance failed ({proc.returncode}): "
+            f"{proc.stderr.strip() or proc.stdout.strip()}\n"
+            "Adoption needs SSH access; check that your vast.ai SSH key "
+            "is attached to the instance.")
+    out = proc.stdout.strip()
+    if out:
+        print(out, flush=True)
+    return out
+
+
+def _adopt_instance(store, run_name, instance_id):
+    """Adopt a pre-existing instance: verify, label, record, run onstart.
+
+    launch.json must already be in R2 — onstart reads it to fetch the
+    code. The instance record and heartbeat go in before boot (vast plan
+    §4), with no offer_id or bid_price because there is no offer.
+    """
+    instance_id = str(instance_id)
+    _verify_instance(instance_id)
+    vastai("label", "instance", instance_id, instance_label(run_name))
+    _record_instance(store, run_name, instance_id, None, None)
+    target = _ssh_target(instance_id)
+    _ssh_run(target,
+             f"mkdir -p /workspace && cat > {ADOPT_ONSTART_REMOTE}",
+             stdin_text=ONSTART.read_text())
+    boot_py = _ADOPT_BOOT_PY.format(
+        log=ADOPT_ONSTART_LOG, script=ADOPT_ONSTART_REMOTE)
+    _ssh_run(target,
+             f"RUN_NAME={run_name} JOE_ROOT=/workspace/joe python3 -",
+             stdin_text=boot_py)
+    print(f"onstart started on instance {instance_id} "
+          f"(remote log: {ADOPT_ONSTART_LOG})", flush=True)
+
+
 def _instance_ids_for_run(run_name, store):
     ids = set()
     rec = store.read_instance(run_name)
@@ -348,9 +465,11 @@ def _instance_ids_for_run(run_name, store):
     return ids, matched
 
 
-def destroy_run_instances(run_name, store):
+def destroy_run_instances(run_name, store, keep=None):
     require_vastai()
     ids, _matched = _instance_ids_for_run(run_name, store)
+    if keep is not None:
+        ids.discard(str(keep))
     if not ids:
         print(f"no vast.ai instance found for {run_name}", flush=True)
         return []
@@ -367,6 +486,15 @@ def destroy_run_instances(run_name, store):
 
 def cmd_launch(args):
     load_dotenv()
+    instance_id = str(args.instance_id or "").strip()
+    if instance_id and args.bid is not None:
+        raise SystemExit(
+            "--bid has no meaning with --instance-id: there is no offer "
+            "to bid on. Drop --bid.")
+    if instance_id and args.dry_run:
+        raise SystemExit(
+            "--dry-run searches offers; it does not combine with "
+            "--instance-id.")
     smoke = bool(args.smoke)
     tier = args.tier or ("S" if smoke else "M")
     gpu = args.gpu or ("4090" if smoke else "h100")
@@ -387,6 +515,11 @@ def cmd_launch(args):
             f"launch.json already exists for {run_name}; "
             f"use resume, or destroy --purge-r2, or pass --force")
 
+    if instance_id and not args.pack_only:
+        # Fail before the upload work if the instance is gone or stopped.
+        require_vastai()
+        _verify_instance(instance_id)
+
     from training.joe.pack import repo_git_state
     git_sha, dirty = repo_git_state(REPO)
     engine = engine_sha(REPO)
@@ -405,6 +538,11 @@ def cmd_launch(args):
 
     require_vastai()
     ensure_vast_r2_env()
+    if instance_id:
+        _adopt_instance(store, run_name, instance_id)
+        print(f"launched {run_name} on adopted instance {instance_id}",
+              flush=True)
+        return
     if args.dry_run:
         query = offer_query(gpu_names, args.num_gpus)
         order = "min_bid" if smoke else "dlperf_usd-"
@@ -426,12 +564,25 @@ def cmd_launch(args):
 def cmd_resume(args):
     load_dotenv()
     run_name = validate_run_name(args.run_name)
+    adopt_id = str(args.instance_id or "").strip()
+    if adopt_id and args.bid is not None:
+        raise SystemExit(
+            "--bid has no meaning with --instance-id: there is no offer "
+            "to bid on. Drop --bid.")
     store = R2Store.from_env()
     launch = store.read_launch(run_name)
     if launch is None:
         raise SystemExit(f"no launch.json for {run_name}; run launch first")
     require_vastai()
     ensure_vast_r2_env()
+    if adopt_id:
+        _verify_instance(adopt_id)
+        print(f"resume {run_name}: destroy-before-adopt", flush=True)
+        destroy_run_instances(run_name, store, keep=adopt_id)
+        _adopt_instance(store, run_name, adopt_id)
+        print(f"resumed {run_name} on adopted instance {adopt_id}",
+              flush=True)
+        return
     print(f"resume {run_name}: destroy-before-create", flush=True)
     destroy_run_instances(run_name, store)
     instance_id, offer_id, bid = _create_instance(launch, args.bid)
@@ -543,7 +694,8 @@ def build_parser():
         description="Joe vast.ai launcher (interruptible, R2-backed)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    launch = sub.add_parser("launch", help="pack, upload, create instance")
+    launch = sub.add_parser(
+        "launch", help="pack, upload, create (or adopt) an instance")
     launch.add_argument("--tier", default="",
                         help="S or M (default M; S when --smoke)")
     launch.add_argument("--run-name", default="",
@@ -566,6 +718,9 @@ def build_parser():
                         help="pack, upload, search offers; do not create")
     launch.add_argument("--force", action="store_true",
                         help="overwrite an existing launch.json")
+    launch.add_argument("--instance-id", default="",
+                        help="adopt this existing, running vast.ai instance "
+                             "instead of searching offers and renting one")
     launch.set_defaults(func=cmd_launch)
 
     status = sub.add_parser("status", help="instance + R2 heartbeat + metrics")
@@ -573,9 +728,14 @@ def build_parser():
     status.set_defaults(func=cmd_status)
 
     resume = sub.add_parser(
-        "resume", help="destroy-before-create a replacement for the same run")
+        "resume",
+        help="destroy-before-create (or destroy-before-adopt with "
+             "--instance-id) a replacement for the same run")
     resume.add_argument("--run-name", required=True)
     resume.add_argument("--bid", type=float, default=None)
+    resume.add_argument("--instance-id", default="",
+                        help="adopt this existing, running vast.ai instance "
+                             "instead of renting a replacement")
     resume.set_defaults(func=cmd_resume)
 
     destroy = sub.add_parser("destroy", help="tear down the instance")

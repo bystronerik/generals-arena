@@ -77,6 +77,37 @@ before it creates a replacement for the same `run_name`.
 
 Never pipe the output through `tail` or `head`. Redirect to a file.
 
+### Adopting an existing instance
+
+`launch` and `resume` accept `--instance-id <id>` to use a vast.ai
+instance you already rented instead of searching offers and creating one:
+
+```bash
+python scripts/joe_vast_train.py launch --smoke --instance-id 1234567
+python scripts/joe_vast_train.py resume --run-name <run> --instance-id 1234567
+```
+
+The R2 side is unchanged: `launch` still uploads the code and writes
+`launch.json` first, and `resume` still requires an existing
+`launch.json`. The launcher then verifies the instance exists and is
+running (`vastai show instance`), labels it with the run label, records
+it in R2 (instance record + heartbeat, with no `offer_id` or
+`bid_price` — there is no offer), and runs
+`scripts/joe_vast_onstart.sh` on it over SSH (`vastai ssh-url`) with
+`RUN_NAME` and `JOE_ROOT` exported. The remote onstart log is
+`/workspace/joe-adopt-onstart.log`.
+
+Constraints:
+
+- `--bid` does not combine with `--instance-id`; there is no offer to
+  bid on.
+- `resume --instance-id` destroys any *other* instances recorded for
+  the run (destroy-before-adopt) but never the adopted one.
+- Adoption needs SSH access to the instance (your vast.ai account SSH
+  key). The `R2_*` account env vars must already be synced
+  (`sync-env`); the bootstrap reads them from the container
+  environment without printing them.
+
 ---
 
 ## What the instance does
