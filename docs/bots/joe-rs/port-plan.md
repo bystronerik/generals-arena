@@ -1,6 +1,9 @@
 # Joe-rs port plan
 
-Status: **draft — awaiting review. No Rust exists yet.**
+Status: **implemented, 2026-08-14 — J0–J4 done, J5 not attempted.** Landed
+knowledge lives in the sibling topic files ([export.md](export.md),
+[parity.md](parity.md), [xla-semantics.md](xla-semantics.md),
+[latency.md](latency.md)); this plan stays as the design record.
 
 Goal: a minimal Rust sibling bot `bots/joe-rs/` that plays the greedy policy
 of the frozen joe network (`bots/joe/artifact/ema.eqx`, manifest at

@@ -38,6 +38,7 @@ Small topic files for the Generals Arena research repo.
 - [joe-rs parity](bots/joe-rs/parity.md) — corpus, tiers, pinned bounds, wire replay, and the mutation pass that checks the proof
 - [joe-rs XLA semantics](bots/joe-rs/xla-semantics.md) — the reciprocal-multiply rewrite and XLA's log1p with FMA contraction, mirrored bit-for-bit
 - [joe-rs latency](bots/joe-rs/latency.md) — full-path percentiles on one x86 core; why candle stays
+- [joe-rs A/B sanity](research/measurements/joe-rs-ab-sanity.md) — matched arms vs the panel: 100 identical game pairs, verdict `no change`
 - [smoke](bots/smoke.md) — stdio smoke test, not competitive
 - [expand_plus](bots/expand-plus.md) — greedy capture + BFS frontier march
 - [castle_builder](bots/castle-builder.md) — rested-general castle investment

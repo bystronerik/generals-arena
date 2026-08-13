@@ -59,3 +59,13 @@ wire): p50 5.0 ms, p99 5.4 ms per move on an M3 Pro core; first move 2.2 s.
 The x86 budget evidence is
 [`joe-phase2-cpu-latency.md`](../research/measurements/joe-phase2-cpu-latency.md)
 (M tier p99 ≈ 19 ms on one hard-limited core vs the 150 ms limit).
+
+## Rust sibling
+
+`bots/joe-rs/` plays this same frozen network — identical greedy decisions,
+proved turn-for-turn over recorded games — as a separate rated entity with
+its own lineage. Port design: [joe-rs/port-plan.md](joe-rs/port-plan.md);
+the parity evidence is [joe-rs/parity.md](joe-rs/parity.md). Editing
+`bots/joe/` is still off-limits from the joe-rs side; the one shared object
+is the exported artifact, converted read-only
+([joe-rs/export.md](joe-rs/export.md)).
