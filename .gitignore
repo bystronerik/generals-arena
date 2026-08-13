@@ -47,6 +47,12 @@ data/morpheus/*
 data/joe/*
 !data/joe/.gitkeep
 
+# Joe deployed weights (~33 MB float32) are re-fetchable from R2 by the
+# manifest's r2_key + sha256 (scripts/joe_export_bot.py). The committed
+# manifest.json pins exactly which weights a checkout is missing; the content
+# hash still covers the .eqx, so an export forks the rating identity.
+bots/joe/artifact/*.eqx
+
 # Curriculum manifests are rebuilt from trajectories; keep the directory.
 training/morpheus/manifests/*
 !training/morpheus/manifests/.gitkeep

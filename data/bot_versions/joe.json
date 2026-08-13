@@ -1,0 +1,73 @@
+{
+  "bot_id": "joe",
+  "steps": [
+    {
+      "at": "2026-08-13T11:03:48Z",
+      "content_hash": "04974d0e206b",
+      "seq": 1
+    }
+  ],
+  "version": 1,
+  "versions": [
+    {
+      "closure_ref": "refs/bot-versions/04974d0e206b",
+      "closure_tree": "b2f048395e9473041eb23302c71da12c28826c8c",
+      "content_hash": "04974d0e206b",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "cdfa3b26f8734684ccceaee864be22f639650af7",
+          "path": "bots/joe/agent.py",
+          "sha256": "d77dc6e1ebe65841a3ff5b0c8c6e2200fb098288d4b0f199542b2641e821ac9d"
+        },
+        {
+          "blob": "a8f4d60c419630f12bb2d796dc3ca39ed5ce4790",
+          "path": "bots/joe/artifact/ema.eqx",
+          "sha256": "dcc99e80087734d1c2a554e72ae81e0adce4bc3ecdc6198818036dc99ba39d4d"
+        },
+        {
+          "blob": "536b3ffce92dd11ea9a3fb7eeecf19da21ef97aa",
+          "path": "bots/joe/artifact/manifest.json",
+          "sha256": "8abae98d60e94df545b5b1c3ca2f772aba5576581792d980ec474d1acc34ca24"
+        },
+        {
+          "blob": "fbe207282692fc038ca320db77b929feecc99b4a",
+          "path": "bots/joe/joe_net.py",
+          "sha256": "b0061a13d3a10f1192102ca4beea7d39ae0ad4e7eb3ab23e022c217edc051c82"
+        },
+        {
+          "blob": "6fb0b4a1a115036f6178dcde442dfbe9382569e4",
+          "path": "bots/joe/joe_obs.py",
+          "sha256": "36c18cd7b741f900c570c54b0153645110b5de8f1e7472c313cd5cd7d79bfebe"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/joe/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "e3931f26d75295892148f84c8fd14f4687c6845a",
+          "path": "bots/joe/run.sh",
+          "sha256": "f8c98d377709005c15386476aa66d75093db151e0c2fea1a249d485a0940bb8f"
+        },
+        {
+          "blob": "34efaa47c4d06730b8be55be53e310ebf8a1efff",
+          "path": "bots/morpheus/run.sh",
+          "sha256": "4aa88706e2f51d6b2fdf91bca8c9c75572d68ab4573172a11db861b2c2563a48"
+        }
+      ],
+      "first_seen_at": "2026-08-13T11:03:48Z",
+      "git_commit": "45ae34ce41d31124ccf01f1450cab7c0f20c6cd5",
+      "git_dirty": true
+    }
+  ]
+}
