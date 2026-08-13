@@ -80,6 +80,17 @@ def instance_label(run_name):
     return f"joe-{run_name}"[:64]
 
 
+def destroy_in_progress(inst):
+    """True when vast.ai already accepted a destroy for this instance.
+
+    A second ``destroy instance`` call on such an instance blocks until
+    the teardown finishes, so the launcher skips it.
+    """
+    states = {str(inst.get(key) or "").lower()
+              for key in ("cur_state", "next_state", "intended_status")}
+    return bool(states & {"destroying", "destroyed", "deleted"})
+
+
 def find_vastai_bin(path_which=None, executable=None, repo=None):
     """Locate the pip-installed ``vastai`` console script.
 

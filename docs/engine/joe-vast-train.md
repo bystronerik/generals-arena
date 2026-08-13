@@ -103,6 +103,10 @@ Constraints:
   bid on.
 - `resume --instance-id` destroys any *other* instances recorded for
   the run (destroy-before-adopt) but never the adopted one.
+- Teardown skips instances that vast.ai no longer lists and instances
+  whose state (`cur_state`, `next_state`, `intended_status`) shows a
+  destroy already in progress. A second `destroy instance` call on
+  such an instance blocks until the teardown finishes.
 - Adoption needs SSH access to the instance (your vast.ai account SSH
   key). The `R2_*` account env vars must already be synced
   (`sync-env`); the bootstrap reads them from the container

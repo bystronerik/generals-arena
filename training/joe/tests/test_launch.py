@@ -11,6 +11,7 @@ from training.joe.launch import (
     SMOKE_OVERRIDES,
     apply_smoke,
     code_object_name,
+    destroy_in_progress,
     env_var_names,
     find_vastai_bin,
     instance_label,
@@ -125,6 +126,19 @@ def test_vastai_cli_error_exit_zero_http_error():
         "Failed to create environment variable: existing_key"
     assert vastai_cli_error(
         "Environment variable created successfully.", "", 0) is None
+
+
+def test_destroy_in_progress_states():
+    assert destroy_in_progress({"cur_state": "destroying"})
+    assert destroy_in_progress({"next_state": "destroyed"})
+    assert destroy_in_progress({"intended_status": "deleted"})
+    assert destroy_in_progress({"cur_state": "running",
+                                "next_state": "Destroyed"})
+    assert not destroy_in_progress({"cur_state": "running",
+                                    "next_state": "running",
+                                    "intended_status": "running"})
+    assert not destroy_in_progress({"cur_state": None})
+    assert not destroy_in_progress({})
 
 
 def test_offer_unavailable_detects_410():

@@ -47,6 +47,7 @@ from training.joe.launch import (  # noqa: E402
     SMOKE_DISK_GB,
     apply_smoke,
     code_object_name,
+    destroy_in_progress,
     env_var_names,
     find_vastai_bin,
     instance_label,
@@ -448,11 +449,13 @@ def _instance_ids_for_run(run_name, store):
     rec = store.read_instance(run_name)
     if rec and rec.get("instance_id"):
         ids.add(str(rec["instance_id"]))
+    listed = True
     try:
         instances = _as_list(vastai("show", "instances"))
     except SystemExit as e:
         print(f"warning: could not list instances: {e}", flush=True)
         instances = []
+        listed = False
     label = instance_label(run_name)
     matched = []
     for inst in instances:
@@ -462,19 +465,32 @@ def _instance_ids_for_run(run_name, store):
         if inst.get("label") == label or iid in ids:
             ids.add(iid)
             matched.append(inst)
-    return ids, matched
+    return ids, matched, listed
 
 
 def destroy_run_instances(run_name, store, keep=None):
     require_vastai()
-    ids, _matched = _instance_ids_for_run(run_name, store)
+    ids, matched, listed = _instance_ids_for_run(run_name, store)
     if keep is not None:
         ids.discard(str(keep))
     if not ids:
         print(f"no vast.ai instance found for {run_name}", flush=True)
         return []
+    by_id = {str(inst.get("id") or inst.get("instance_id")): inst
+             for inst in matched}
     destroyed = []
     for iid in sorted(ids):
+        inst = by_id.get(iid)
+        if inst is None and listed:
+            # In the listing set but not in the listing itself: the id came
+            # from the R2 record and vast.ai no longer shows the instance,
+            # so it is already destroyed.
+            print(f"instance {iid} is already gone; skip", flush=True)
+            continue
+        if inst is not None and destroy_in_progress(inst):
+            print(f"instance {iid} is already being destroyed; skip",
+                  flush=True)
+            continue
         print(f"destroying instance {iid}", flush=True)
         try:
             vastai("destroy", "instance", iid, "-y")
@@ -677,7 +693,7 @@ def cmd_status(args):
     except SystemExit:
         print("  vastai CLI not found; skip instance list", flush=True)
         return
-    _ids, matched = _instance_ids_for_run(run_name, store)
+    _ids, matched, _listed = _instance_ids_for_run(run_name, store)
     if not matched:
         print("  no matching vast.ai instance", flush=True)
         return
