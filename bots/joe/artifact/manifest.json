@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "weights": "ema.eqx",
-  "weights_sha256": "8ce6cf7d6bfa2d4237d8ef2788f5050c3c4ee0b4ded7a5d39e639e9a91207baf",
+  "weights_sha256": "3dfd6c985eff2ee2539f78137bb76af0839997e63ef0b27cceb7c648b2320024",
   "weights_size": 34237800,
   "n_params": 8556250,
   "network": {
@@ -20,12 +20,12 @@
   },
   "checkpoint": {
     "source": "r2",
-    "r2_key": "joe/joe-M-vast-20260813-0213/checkpoints/joe-M-vast-20260813-0213_ema_6000.eqx",
+    "r2_key": "joe/joe-M-vast-20260813-0213/checkpoints/joe-M-vast-20260813-0213_ema_10000.eqx",
     "run_name": "joe-M-vast-20260813-0213",
-    "global_step": 6000,
+    "global_step": 10000,
     "curriculum_stage": 4,
-    "last_eval_wr": 0.98828125,
+    "last_eval_wr": 0.984375,
     "engine_sha": "9e3b9d13cca51caa1bb07db48bb85c9e90ce0462"
   },
-  "exported_at": 1786643810.623845
+  "exported_at": 1786684564.07438
 }
