@@ -361,9 +361,12 @@ so a shippable skeleton exists from day one (morpheus-rs M1 lesson).
   with the real bot; `joe-rs` registered; the A/B sanity check run and
   quoted.
 - **J5 — submission packaging (optional, only if joe-rs is to be
-  submitted).** Reuse the morpheus-rs packager pattern: vendored crates,
-  offline `build.sh`, no `rust-toolchain.toml` in the zip, `build.sh` kept
-  out of `matchup.py::build_agent`'s trap, size/file audit.
+  submitted).** Extract the morpheus-rs packager into shared logic both Rust
+  bots drive: vendored crates, offline `build.sh`, no `rust-toolchain.toml`
+  in the zip, `build.sh` kept out of `matchup.py::build_agent`'s trap,
+  size/file audit. Planned in detail — split, milestones, tests, tripwires —
+  in [packaging.md](packaging.md), which also corrects R4 below: the measured
+  binding limit is the 50 MB zip cap (80.5% used), not the file count (39.6%).
   *Done when:* the offline one-core container build passes, counts quoted
   against the 10,000-file / 50 MB limits.
 
