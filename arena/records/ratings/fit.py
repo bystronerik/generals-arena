@@ -112,6 +112,9 @@ class RatingFit:
         report: SolverReport,
         prior: Prior,
         policy: Policy,
+        round_name: str | None = None,
+        anchor_kind: str | None = None,
+        scale_id: str | None = None,
     ) -> None:
         self.counts = counts
         self.entities = list(counts.entities)
@@ -120,6 +123,13 @@ class RatingFit:
         self.prior = prior
         self.policy = policy
         self.solver = report
+        # Provenance, set by `rounds.fit_rounds`. A fit is over one round's games
+        # and is on that round's own scale; `scale_id` is the token that says so,
+        # and two rounds never share one. `None` means a caller fitted a table
+        # directly, which is what the tests and the round-local report snippet do.
+        self.round = round_name
+        self.anchor_kind = anchor_kind
+        self.scale_id = scale_id
         # Set by `cli.refit` when the per-round cache was consulted. Reporting
         # only — it says nothing about the fit, which is identical either way.
         self.cache_stats: Any | None = None
@@ -322,6 +332,9 @@ def fit_ratings(
     policy: Policy | None = None,
     fit_seat: bool = True,
     fit_draws: bool = True,
+    round_name: str | None = None,
+    anchor_kind: str | None = None,
+    scale_id: str | None = None,
 ) -> RatingFit:
     """
     Fit BTDS to a count table by damped Newton, anchored on one entity.
@@ -358,6 +371,9 @@ def fit_ratings(
         report=report,
         prior=prior,
         policy=policy,
+        round_name=round_name,
+        anchor_kind=anchor_kind,
+        scale_id=scale_id,
     )
 
 
@@ -384,10 +400,16 @@ class LoadedFit:
     prior: Prior
     policy: Policy
     excluded: dict[str, int]
-    # The connectivity grouping, as stored in `fit.json`. `None` means the file
+    # The connectivity grouping, as stored in the fit file. `None` means the file
     # predates the field: the games are not in the payload, so the grouping
     # cannot be recomputed here, and `comparable` refuses rather than guesses.
     components: tuple[tuple[str, ...], ...] | None = None
+    # Which round this fit is over, and which scale it is on. Two fits are on one
+    # scale only when `scale_id` matches, and no two rounds ever produce the same
+    # token — so a caller joining ratings from two files has a mechanical check.
+    round: str | None = None
+    anchor_kind: str | None = None
+    scale_id: str | None = None
 
     def rating(self, entity: str) -> float:
         return self.ratings[entity]

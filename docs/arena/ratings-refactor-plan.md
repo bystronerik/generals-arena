@@ -4,8 +4,18 @@ Replace sequential elote Elo with a batch-fit rating model that can answer one
 question: **did this bot change make the bot stronger?**
 
 Status: **implemented, 2026-07-31.** §6's nine migration steps all landed; this
-document is kept as the audit and design record, not as a work item. The
-shipped result is documented in [ratings.md](ratings.md),
+document is kept as the audit and design record, not as a work item.
+
+**Superseded in one respect, 2026-08-14.** Everything here describes a *single
+pooled fit* over every eligible game. That pooling is gone: ratings are now fitted
+one round at a time, with no pooled table and no global rank, because two
+byte-identical programs measured in different rounds fitted 46 Elo apart. The
+model, the identity, the eligibility rules and the connectivity guard are all
+unchanged — only the scope of a fit changed. See
+[per-round-ratings-plan.md](per-round-ratings-plan.md). Read the pooled framing
+below as a historical record.
+
+The shipped result is documented in [ratings.md](ratings.md),
 [decision-rule.md](decision-rule.md), and
 [bot-version-registry.md](bot-version-registry.md). Links below to
 `arena/records/ratings.py` point at the module the refactor deleted — it is now

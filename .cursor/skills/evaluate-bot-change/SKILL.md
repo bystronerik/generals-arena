@@ -25,19 +25,27 @@ before reporting a verdict; do not restate its numbers here or invent new ones.
 
 ## What a decision is
 
-A **pairwise contrast between two content hashes**, with an interval:
+A **pairwise contrast between two content hashes, inside one round**, with an
+interval:
 
 ```python
 from arena.records.ratings.cli import refit
 
-fit = refit()
+fits = refit()                       # one independent fit per round
+fit = fits["<round>"]                # the round both arms played in
 delta = fit.delta("expand_plus@<baseline_hash>", "expand_plus@<candidate_hash>")
 delta.value, delta.se, delta.ci, delta.p_stronger
 ```
 
-Never a leaderboard rank, and never a bare winrate. The two revisions are
-separate rated entities because identity is the content hash, so "did
-expand_plus improve?" has a direct answer.
+Never a rank, and never a bare winrate. The two revisions are separate rated
+entities because identity is the content hash, so "did expand_plus improve?" has a
+direct answer.
+
+**Both arms must be in the same round, and there is no pooled fit to fall back
+on.** A baseline measured in an earlier round is not a comparator: two
+byte-identical programs measured in different rounds fitted 46 Elo apart, which is
+more than the thresholds. Re-measure the baseline in the candidate's round — a
+frozen copy of the pre-change bot under `bots/`, kept for the comparison.
 
 ## Workflow
 
@@ -71,8 +79,13 @@ python scripts/measure_heuristics.py --round round<N> --games-per-pair 50 --roun
 ```
 
 ```bash
-python -m arena.records.ratings --print --lineage <bot>
+python -m arena.records.ratings --print --round round<N> --lineage <bot>
 ```
+
+`--lineage` prints one table per round the bot played in. A step whose predecessor
+did not play in the same round shows `—` with `predecessor not_in_this_round`
+instead of a number: that delta would be arithmetic over two scales that were
+never joined.
 
 Round reports: [`docs/research/measurements/`](../../../docs/research/measurements/).
 Override the roster with `--bots`; default is `DEFAULT_ROSTER` in the script.

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Thin CLI: one stored smoke vs expander match (competition mode)."""
+"""
+Thin CLI: one stored smoke vs expander match (competition mode).
+
+Storing is all it does. Rate with `python -m arena.records.ratings`, which
+refits every round from `data/games/`.
+"""
 
 from __future__ import annotations
 
@@ -30,11 +35,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--bot-a", type=Path, default=DEFAULT_A)
     parser.add_argument("--bot-b", type=Path, default=DEFAULT_B)
     parser.add_argument("--timeout", type=float, default=None)
-    parser.add_argument(
-        "--update-ratings",
-        action="store_true",
-        help="refit ratings after the game is stored",
-    )
     args = parser.parse_args(argv)
     run_and_store(
         args.bot_a,
@@ -42,7 +42,6 @@ def main(argv: list[str] | None = None) -> int:
         seed=args.seed,
         mode="competition",
         timeout=args.timeout,
-        update_ratings=args.update_ratings,
     )
     return 0
 

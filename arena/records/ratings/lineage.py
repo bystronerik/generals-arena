@@ -10,6 +10,12 @@ cannot disturb the order-independence guarantee.
 A hash that reappears after a revert is the **same entity** (its games pool)
 but a **new step** (`seq` 3 pointing at `seq` 1's hash). The delta is always
 reported against the previous *step*, not the previous occurrence of that hash.
+
+Lineage is **per round**, because a fit is. A step measured in round N against a
+predecessor measured in round N−1 is the +46 Elo trap in its purest form: the
+number is real arithmetic over two scales that were never joined. Such a step
+now renders `—` with the reason `not_in_this_round`, and a bot with steps in
+three rounds gets three tables.
 """
 
 from __future__ import annotations
@@ -37,6 +43,10 @@ class StepDelta:
     previous_seq: int | None
     previous_hash: str | None
     delta: Delta | None
+    # Whether the predecessor played in *this round*. False with a predecessor
+    # present in the registry means there is no contrast to report, and the
+    # missing number is the point: the two steps were measured on two scales.
+    previous_rated: bool = False
     # q4: the hash moved only because a bot this one imports changed. `proteus`
     # dispatches to aegis/blitz/boom/metro, so editing any of those forks
     # proteus's lineage. The fork is behaviourally correct and must stay; the
@@ -66,7 +76,13 @@ def _own_directory_changed(
 
 
 def lineage_deltas(bot_id: str, fit: RatingFit, registry: Registry) -> list[StepDelta]:
-    """Walk the registry's ordered steps and score each against the one before."""
+    """
+    Walk the registry's ordered steps and score each against the one before.
+
+    `fit` is one round's fit, so "rated" means "played in that round". A step
+    whose predecessor did not is reported without a delta rather than against a
+    predecessor from somewhere else.
+    """
     entry = registry.load(bot_id)
     if entry is None:
         return []
@@ -79,8 +95,9 @@ def lineage_deltas(bot_id: str, fit: RatingFit, registry: Registry) -> list[Step
         previous_entity = (
             entity_key(bot_id, previous.content_hash) if previous is not None else None
         )
+        previous_rated = previous_entity is not None and previous_entity in fit.entities
         delta = None
-        if rated and previous_entity is not None and previous_entity in fit.entities:
+        if rated and previous_rated:
             delta = fit.delta(previous_entity, entity)
 
         inherited = False
@@ -105,6 +122,7 @@ def lineage_deltas(bot_id: str, fit: RatingFit, registry: Registry) -> list[Step
                 previous_seq=previous.seq if previous is not None else None,
                 previous_hash=previous.content_hash if previous is not None else None,
                 delta=delta,
+                previous_rated=previous_rated,
                 inherited=inherited,
             )
         )
@@ -118,13 +136,22 @@ LINEAGE_TABLE_HEADER = (
 )
 
 
-def lineage_table_lines(bot_id: str, fit: RatingFit, registry: Registry) -> list[str]:
-    """Render one bot's improvement history as a markdown table."""
+def lineage_table_lines(
+    bot_id: str, fit: RatingFit, registry: Registry, *, round_name: str | None = None
+) -> list[str]:
+    """
+    Render one bot's improvement history inside one round, as a markdown table.
+
+    `round_name` defaults to the fit's own round. It names the scale the deltas
+    are on, so the table cannot be read as a history across rounds.
+    """
     rows = lineage_deltas(bot_id, fit, registry)
     if not rows:
         return [f"_no registered versions for `{bot_id}`_"]
 
-    lines = list(LINEAGE_TABLE_HEADER)
+    label = round_name or fit.round
+    lines = [f"**`{bot_id}` in round `{label}`**", ""] if label else []
+    lines += list(LINEAGE_TABLE_HEADER)
     for row in rows:
         rating = "—" if row.rating is None else f"{row.rating:.1f}"
         incomparable = row.delta is not None and not row.delta.comparable
@@ -145,7 +172,12 @@ def lineage_table_lines(bot_id: str, fit: RatingFit, registry: Registry) -> list
         if incomparable:
             notes.append("**no games link this step to the previous one**")
         if not row.rated:
-            notes.append("unrated")
+            notes.append("not_in_this_round")
+        elif row.previous_seq is not None and not row.previous_rated:
+            # The predecessor exists, but not here. Its rating is on another
+            # round's scale, so there is no delta to print — that is the fix,
+            # not a gap in the report.
+            notes.append("predecessor not_in_this_round")
         lines.append(
             f"| {row.seq} | `{row.content_hash}` | {rating} | {row.games} "
             f"| {change} | {ci} | {probability} | {'; '.join(notes)} |"

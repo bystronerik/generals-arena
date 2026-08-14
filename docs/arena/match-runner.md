@@ -20,9 +20,21 @@ python -m arena.matches.run_match \
   --mode competition --seed 0
 ```
 
-Optional: `--round <name>` labels the record (default `adhoc`), and
-`--update-ratings` refits the whole pool after the game file exists — there is
-no incremental rating update.
+Optional: `--round <name>` (default `adhoc`) sets both the record's `round` field
+**and the directory it lands in** — `data/games/<round>/`. A record whose `round`
+names a directory that does not exist is invisible to the rating layer, which is
+how 102 loose files carrying 49 distinct round names accumulated under
+`data/games/` and contributed to nothing.
+
+Rating is a separate step, and there is no per-game option for it:
+
+```bash
+python -m arena.records.ratings
+```
+
+Ratings are fitted one round at a time, so a per-game refit would solve every
+round in the store to publish one game — and a one-game round cannot clear the
+30-game gate anyway. See [ratings.md](ratings.md#per-round-fits).
 
 Thin smoke CLI:
 

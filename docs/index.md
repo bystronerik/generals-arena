@@ -77,12 +77,15 @@ Small topic files for the Generals Arena research repo.
 
 - [game record schema](arena/game-record-schema.md)
 - [match runner](arena/match-runner.md)
-- [ratings](arena/ratings.md) — batch Bradley–Terry + Davidson draws + seat term
+- [ratings](arena/ratings.md) — batch Bradley–Terry + Davidson draws + seat term,
+  fitted once per round
 - [decision rule](arena/decision-rule.md) — the keep/revert thresholds, in one place
 - [bot version registry](arena/bot-version-registry.md) — content hash → source, commit, git ref
 - [trajectories](arena/trajectories.md) — per-turn recording, probes, replay
 - [tournament](arena/tournament.md)
 - [classic tournament](arena/classic-tournament.md)
+- [ratings refactor plan](arena/ratings-refactor-plan.md) — the audit that replaced sequential Elo with a batch fit; a historical record of the pooled design
+- [per-round ratings plan](arena/per-round-ratings-plan.md) — why the pool itself went away: one independent fit per round, with the measurements behind it
 
 ## Research
 

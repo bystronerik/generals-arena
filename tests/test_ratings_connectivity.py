@@ -39,6 +39,34 @@ CONNECTED = {("a", "b"): (6, 4, 0), ("b", "c"): (5, 5, 0)}
 SPLIT = {("a", "b"): (6, 4, 0), ("c", "d"): (5, 5, 0)}
 
 
+def round_for(pairs, *, name="r1", anchor="a", entities=(), min_games=30):
+    """A `RoundResult` over a hand-built count table, without touching disk."""
+    from arena.records.ratings.cache import RoundCounts
+    from arena.records.ratings.rounds import fit_round
+
+    return fit_round(
+        RoundCounts(round=name, table=table(pairs, entities=entities)),
+        global_anchor=anchor,
+        policy=Policy(min_games_display=min_games),
+    )
+
+
+def fits_for(rounds: dict, *, anchor="a", min_games=30):
+    """`{round name: pairs}` -> RoundFits, one independent fit each."""
+    from arena.records.ratings.policy import Prior
+    from arena.records.ratings.rounds import RoundFits
+
+    policy = Policy(min_games_display=min_games)
+    return RoundFits(
+        [
+            round_for(pairs, name=name, anchor=anchor, min_games=min_games)
+            for name, pairs in rounds.items()
+        ],
+        policy=policy,
+        prior=Prior(),
+    )
+
+
 # --- the component computation ----------------------------------------------
 
 
@@ -147,30 +175,74 @@ def test_component_of_rejects_an_unknown_entity():
 # --- what a reader sees ------------------------------------------------------
 
 
-def test_the_leaderboard_warns_and_groups_when_the_pool_is_split():
-    markdown = io.leaderboard_markdown(fit_for(SPLIT), updated_at="2026-01-01T00:00:00Z")
+def test_a_round_section_warns_and_groups_when_the_round_is_split():
+    markdown = io.leaderboard_markdown(
+        fits_for({"split": SPLIT}), updated_at="2026-01-01T00:00:00Z"
+    )
     assert "not connected: 2 groups" in markdown
     assert "only within one group" in markdown
     # A rank must not read as a comparison between entities that never met.
     assert "| Rank | Group | Entity |" in markdown
 
 
-def test_a_connected_leaderboard_is_unchanged():
-    markdown = io.leaderboard_markdown(fit_for(CONNECTED), updated_at="2026-01-01T00:00:00Z")
+def test_a_connected_round_section_is_unchanged():
+    markdown = io.leaderboard_markdown(
+        fits_for({"linked": CONNECTED}, min_games=0), updated_at="2026-01-01T00:00:00Z"
+    )
     assert "not connected" not in markdown
     assert "| Rank | Entity |" in markdown
-    assert "Group" not in markdown
+    # The index reports a group *count* for every round; the round's own table
+    # carries no group column when there is only one group to carry.
+    section = markdown.split("## linked", 1)[1]
+    assert "Group" not in section
+
+
+def test_a_disconnected_round_annotates_only_its_own_section():
+    """A split in one round must not annotate another. Scope is the point."""
+    markdown = io.leaderboard_markdown(
+        fits_for({"linked": CONNECTED, "split": SPLIT}, min_games=0),
+        updated_at="2026-01-01T00:00:00Z",
+    )
+    linked, _, rest = markdown.partition("## split")
+    linked_section = linked.split("## linked", 1)[1]
+
+    assert "not connected" not in linked_section
+    assert "| Rank | Entity |" in linked_section  # no Group column
+    assert "not connected: 2 groups" in rest
+    assert "| Rank | Group | Entity |" in rest
+    # The index states the group counts without annotating either section.
+    assert "| [linked](#linked) | rated" in markdown
+    assert markdown.count("not connected: 2 groups") == 1
+
+
+def test_a_round_records_which_component_holds_its_anchor():
+    """
+    When the anchor lands in a minority group, most rows are prior-located.
+
+    The warning has to say which group is the measured one, or a reader takes the
+    whole table as measured against the anchor.
+    """
+    result = round_for(SPLIT, anchor="c")
+    assert result.anchor == "c" and result.anchor_component == 1
+
+    markdown = io.leaderboard_markdown(
+        fits_for({"split": SPLIT}, anchor="c"), updated_at="2026-01-01T00:00:00Z"
+    )
+    assert "The anchor sits in group 1" in markdown
 
 
 def test_the_stored_payload_records_the_grouping(tmp_path):
     import json
 
-    io.write_leaderboard(fit_for(SPLIT), tmp_path)
+    io.write_leaderboard(fits_for({"split": SPLIT}), tmp_path)
     payload = json.loads((tmp_path / "leaderboard.json").read_text(encoding="utf-8"))
+    entry = payload["rounds"][0]
 
-    assert payload["connected"] is False
-    assert payload["components"] == [["a", "b"], ["c", "d"]]
-    assert {row["entity"]: row["component"] for row in payload["entities"]} == {
+    assert entry["round"] == "split"
+    assert entry["connected"] is False
+    assert entry["components"] == [["a", "b"], ["c", "d"]]
+    assert entry["anchor_component"] == 0
+    assert {row["entity"]: row["component"] for row in entry["entities"]} == {
         "a": 0, "b": 0, "c": 1, "d": 1
     }
 
@@ -179,14 +251,16 @@ def test_provisional_rows_carry_the_group_too():
     """
     Ranked and provisional tables are rendered separately.
 
-    Either one on its own can look connected while the pool is not, so the
+    Either one on its own can look connected while the round is not, so the
     split has to be decided from the fit and passed down — not inferred from
     whichever rows a given table happens to hold.
     """
-    fit = fit_for({("a", "b"): (20, 20, 0), ("c", "d"): (5, 5, 0)})
-    markdown = io.leaderboard_markdown(fit, updated_at="2026-01-01T00:00:00Z")
+    markdown = io.leaderboard_markdown(
+        fits_for({"split": {("a", "b"): (20, 20, 0), ("c", "d"): (5, 5, 0)}}),
+        updated_at="2026-01-01T00:00:00Z",
+    )
 
-    assert "## Provisional" in markdown  # c and d are under the games floor
+    assert "### Provisional in this round" in markdown  # c and d are under the floor
     assert markdown.count("| Rank | Group | Entity |") == 2
 
 
@@ -205,28 +279,31 @@ def test_games_to_resolve_answers_the_question_the_guard_raises():
 # --- the stored fit ----------------------------------------------------------
 
 
-def roundtrip(fit):
-    """`fit.json` and back, through actual JSON so types survive nothing."""
+def roundtrip(result):
+    """`fits/<round>.json` and back, through actual JSON so types survive nothing."""
     import json
 
-    return io.fit_from_payload(json.loads(json.dumps(io.fit_payload(fit))))
+    return io.fit_from_payload(json.loads(json.dumps(io.round_fit_payload(result))))
 
 
-def test_fit_json_records_the_grouping():
-    payload = io.fit_payload(fit_for(SPLIT))
+def test_the_fit_file_records_the_grouping_and_its_round():
+    payload = io.round_fit_payload(round_for(SPLIT))
     assert payload["connected"] is False
     assert payload["components"] == [["a", "b"], ["c", "d"]]
+    assert payload["round"] == "r1"
+    assert payload["anchor_kind"] == "global"
+    assert payload["scale_id"].startswith("scale:")
 
 
 def test_a_reloaded_split_fit_refuses_the_same_contrast():
     """
-    The guard must survive `fit.json`.
+    The guard must survive the round's fit file.
 
     Without this, the stored covariance hands back a small finite SE for the
     cross-group pair — the exact confident number the guard exists to refuse,
     resurfacing one file-read later.
     """
-    loaded = roundtrip(fit_for(SPLIT))
+    loaded = roundtrip(round_for(SPLIT))
     assert not loaded.connected
     assert loaded.components == (("a", "b"), ("c", "d"))
     delta = loaded.delta("a", "c")
@@ -236,7 +313,7 @@ def test_a_reloaded_split_fit_refuses_the_same_contrast():
 
 
 def test_a_reloaded_connected_fit_still_answers():
-    loaded = roundtrip(fit_for(CONNECTED))
+    loaded = roundtrip(round_for(CONNECTED))
     assert loaded.connected
     delta = loaded.delta("a", "c")
     assert delta.comparable
@@ -244,7 +321,7 @@ def test_a_reloaded_connected_fit_still_answers():
 
 
 def test_a_reloaded_fit_keeps_within_group_contrasts():
-    delta = roundtrip(fit_for(SPLIT)).delta("a", "b")
+    delta = roundtrip(round_for(SPLIT)).delta("a", "b")
     assert delta.comparable
     assert math.isfinite(delta.se)
 
@@ -256,7 +333,7 @@ def test_a_legacy_payload_without_the_grouping_refuses_rather_than_guesses():
     "connected" is exactly the bug; the honest answer is a refusal, and a
     refit rewrites the file with the grouping in it.
     """
-    payload = io.fit_payload(fit_for(SPLIT))
+    payload = io.round_fit_payload(round_for(SPLIT))
     del payload["components"]
     del payload["connected"]
     loaded = io.fit_from_payload(payload)
@@ -270,4 +347,4 @@ def test_a_legacy_payload_without_the_grouping_refuses_rather_than_guesses():
 
 def test_a_reloaded_fit_rejects_an_unknown_entity():
     with pytest.raises(KeyError):
-        roundtrip(fit_for(SPLIT)).comparable("a", "never-played")
+        roundtrip(round_for(SPLIT)).comparable("a", "never-played")

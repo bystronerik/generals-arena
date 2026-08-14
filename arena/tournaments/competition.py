@@ -225,8 +225,10 @@ def run_tournament(
     """
     Run games_per_pair (or fixed_seeds) × pairs under competition mode.
 
-    Stores each game under data/games/<round>/, then refits ratings once when
-    update_ratings is True.
+    Stores each game under data/games/<round>/, then refits ratings once after the
+    whole round when update_ratings is True. One refit per round is the correct
+    granularity: ratings are fitted per round, and this round now has a directory
+    for the fitter to find.
     """
     pairs = bot_pairs(run_scripts, include_self=include_self)
     specs = expand_pair_seeds(
@@ -312,17 +314,32 @@ def run_tournament(
         from arena.records.ratings.cli import MissingAnchor, refit
 
         try:
-            fit = refit(games_dir=GAMES_DIR)
+            fits = refit(games_dir=GAMES_DIR)
         except MissingAnchor as exc:
-            # The games are stored; a refit is a pure function of them and can
-            # be re-run at any time. Losing a round's results over a missing
+            # Now rare: a round without the global anchor falls back to a
+            # round-local one, so this fires only when the anchor *bot* is not
+            # registered at all. Kept because the games are stored and a refit is
+            # a pure function of them — losing a round's results over a missing
             # anchor would be the worse outcome.
             print(f"[tournament] ratings not refitted: {exc}")
         else:
+            this_round = fits.get(round_name)
             print(
-                f"[tournament] refitted ratings from {GAMES_DIR} "
-                f"({fit.counts.games} rated game(s), {len(fit.entities)} entit(ies))"
+                f"[tournament] refitted {len(fits.rated)} round(s) from {GAMES_DIR} "
+                f"({fits.rated_games} rated game(s))"
             )
+            if this_round is None:
+                print(f"[tournament] round {round_name} is not under {GAMES_DIR}")
+            elif this_round.rated:
+                print(
+                    f"[tournament] {round_name}: {this_round.rated_games} rated "
+                    f"game(s), {len(this_round.entities)} entit(ies), anchor "
+                    f"{this_round.anchor} ({this_round.anchor_kind})"
+                )
+            else:
+                print(
+                    f"[tournament] {round_name} is unrated: {this_round.reason}"
+                )
     return records
 
 

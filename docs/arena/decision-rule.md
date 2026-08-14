@@ -31,8 +31,14 @@ python -m arena.tournaments.competition \
 
 ## Cross-round baselines are not comparators
 
-Both arms must be measured in the same rounds. This is measured, not
-theoretical: in the macaria hunt evaluation (2026-08-01), two **byte-identical**
+Both arms must be measured in the same round. **This is now enforced by the data
+model rather than by discipline:** ratings are fitted one round at a time, so
+`fits["<round>"].delta(A, B)` needs both arms inside that round and a contrast
+across two rounds has no answer to give. See
+[ratings.md](ratings.md#per-round-fits).
+
+This is measured, not theoretical: in the macaria hunt evaluation (2026-08-01),
+two **byte-identical**
 macaria programs — `macaria@80f3047ac205` from rounds `macaria-r1`/`macaria-r2`
 vs `macaria_base@862ac0189a1a` from rounds `macaria-hunt-*` — fitted at
 **+46.07 ± 22.01 Elo, P = 0.982**, though no code differed. Round-to-round
@@ -76,9 +82,9 @@ byte-identical programs.
 
 Any failure means `unproven`, with the reason named.
 
-1. `A` and `B` are both registered; every game is `mode == "competition"`;
-   both arms share one `engine_version`; both arms use the same opponent panel
-   and seed set.
+1. `A` and `B` are both registered; **both arms are in the same round**; every
+   game is `mode == "competition"`; both arms share one `engine_version`; both
+   arms use the same opponent panel and seed set.
 2. **`A` and `B` are in the same connectivity group** — `fit.comparable(A, B)`.
    They need not have played each other, but some chain of games must link
    them, or their difference is prior rather than evidence (see below).
@@ -95,12 +101,21 @@ the failure mode it guards against is a *whole roster* forking at once.
 
 ## Verdict
 
-Refit the whole pool, then read the contrast:
+Refit, then read the contrast **inside the round both arms played**:
 
 ```python
-delta = fit.delta(baseline_entity, candidate_entity)   # theta_B - theta_A
+from arena.records.ratings.cli import refit
+
+fits = refit()                                          # one fit per round
+fit = fits["<round>"]                                   # the round of the arms
+delta = fit.delta(baseline_entity, candidate_entity)    # theta_B - theta_A
 delta.value, delta.se, delta.ci, delta.p_stronger
 ```
+
+There is no pooled fit to read instead. Asking for a round that is unrated raises
+and names the rated rounds; asking for a contrast whose arms are not both in the
+round raises a `KeyError` on the missing entity. Both refusals are the point:
+gate 1 has no soft failure mode any more.
 
 | Verdict | Rule |
 | --- | --- |

@@ -188,10 +188,14 @@ def cmd_pairwise(args: argparse.Namespace) -> int:
     if not args.skip_play:
         run_pool(payloads, run_one_worker, jobs=jobs, on_result=_on_result)
 
-    fit = refit()
+    fits = refit()
     prior_entity = f"{args.prior_bot}@{content_hashes[args.prior_bot]}"
     later_entity = f"{args.later_bot}@{content_hashes[args.later_bot]}"
-    delta = fit.delta(prior_entity, later_entity)
+    # The contrast comes off *this round's* fit, which is the only one the
+    # decision rule licenses: both arms played here, on one scale, in one design.
+    # A pooled fit would answer the same call from games played elsewhere.
+    round_fit = fits[round_name]
+    delta = round_fit.delta(prior_entity, later_entity)
     verdict = decision_rule_verdict(delta)
 
     from arena.records.store import list_game_paths, load_game
@@ -250,7 +254,7 @@ def cmd_pairwise(args: argparse.Namespace) -> int:
     if verdict == "unproven":
         try:
             report["games_to_resolve"] = int(
-                fit.games_to_resolve(prior_entity, later_entity, target_se=12.75)
+                round_fit.games_to_resolve(prior_entity, later_entity, target_se=12.75)
             )
         except Exception as exc:  # noqa: BLE001
             report["games_to_resolve_error"] = str(exc)

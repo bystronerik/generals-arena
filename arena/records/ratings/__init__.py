@@ -17,7 +17,12 @@ stronger?** — and everything here follows from what that needs:
   Splitting them half-and-half compresses the draw-heavy tail ~3x, exactly
   among the bots that draw with each other.
 
-There is no incremental update. Every write refits.
+- **A round is the unit.** Each round gets its own independent fit; there is no
+  pooled table. Two byte-identical programs measured in different rounds fitted
+  46 Elo apart, which is more than the decision rule's own thresholds, so a
+  pooled column reported drift as strength.
+
+There is no incremental update. Every write refits every round.
 
 Module map:
 
@@ -25,9 +30,10 @@ Module map:
     counts.py    GameRecord[] -> canonical integer CountTable
     model.py     the likelihood, gradient and Hessian (pure math)
     fit.py       damped Newton -> RatingFit (estimates + covariance)
+    rounds.py    one fit per round -> RoundResult / RoundFits
     lineage.py   registry steps -> per-step deltas
     cache.py     per-round count caches
-    io.py        fit.json / leaderboard.{json,md}
+    io.py        fits/<round>.json / leaderboard.{json,md}
     cli.py       python -m arena.records.ratings
 """
 
@@ -49,9 +55,10 @@ from arena.records.ratings.io import (
     load_fit,
     split_entity,
     stored_counts_digest,
+    stored_rounds_digest,
     write_all,
-    write_fit,
     write_leaderboard,
+    write_round_fits,
 )
 from arena.records.ratings.lineage import (
     StepDelta,
@@ -61,6 +68,13 @@ from arena.records.ratings.lineage import (
 )
 from arena.records.ratings.model import ELO_SCALE
 from arena.records.ratings.policy import Policy, Prior, eligible, entity_key, rejection_reason
+from arena.records.ratings.rounds import (
+    RoundFits,
+    RoundResult,
+    fit_rounds,
+    resolve_round_anchor,
+    scale_id,
+)
 
 __all__ = [
     "Cell",
@@ -74,11 +88,14 @@ __all__ = [
     "Prior",
     "RATINGS_DIR",
     "RatingFit",
+    "RoundFits",
+    "RoundResult",
     "StepDelta",
     "count_table",
     "eligible",
     "entity_key",
     "fit_ratings",
+    "fit_rounds",
     "leaderboard_markdown",
     "leaderboard_rows",
     "lineage_deltas",
@@ -86,10 +103,13 @@ __all__ = [
     "load_fit",
     "merge",
     "rejection_reason",
+    "resolve_round_anchor",
+    "scale_id",
     "split_entity",
     "steps",
     "stored_counts_digest",
+    "stored_rounds_digest",
     "write_all",
-    "write_fit",
     "write_leaderboard",
+    "write_round_fits",
 ]

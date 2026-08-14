@@ -1,13 +1,19 @@
 """
 Reading and writing `data/ratings/`.
 
-**No timestamp goes into `fit.json`.** Identical games must produce a
+**No timestamp goes into a fit file.** Identical games must produce a
 byte-identical file, so that two rebuilds can be diffed and a stale fit can be
 spotted. The only clock that appears anywhere is in the Markdown leaderboard's
 header, which is presentation, not state.
 
-`counts_digest` lets a caller decide whether a refit is needed without doing
-one.
+Fits are **one file per round**, under `data/ratings/fits/<round>.json`. That is
+what keeps the byte-identical property worth having: a fit file carries the
+covariance matrix, one new game in one round would otherwise rewrite every
+round's covariance, and `load_fit` would parse 16 matrices to answer one
+contrast. With the split, a new round changes exactly one file.
+
+`stored_counts_digest(round=...)` says whether one round needs refitting;
+`stored_rounds_digest()` answers the same question for the whole store.
 """
 
 from __future__ import annotations
@@ -15,22 +21,34 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 
 from arena.paths import REPO_ROOT
+from arena.records.ratings.cache import round_file_stem
 from arena.records.ratings.fit import Estimate, LoadedFit, RatingFit
 from arena.records.ratings.policy import Policy, Prior
-from arena.records.reporting import leaderboard_table_lines
+from arena.records.ratings.rounds import RoundFits, RoundResult
+from arena.records.reporting import round_section_lines
 from arena.records.store import utc_now_iso
 
 RATINGS_DIR = REPO_ROOT / "data" / "ratings"
-FIT_JSON = "fit.json"
+FITS_DIRNAME = "fits"
 LEADERBOARD_JSON = "leaderboard.json"
 LEADERBOARD_MD = "leaderboard.md"
 
-FIT_FORMAT_VERSION = 1
+# The pooled fit's filename. Nothing writes it any more; the writer deletes it,
+# because a file called `fit.json` holding one table over every round is the
+# claim this refactor exists to withdraw.
+LEGACY_FIT_JSON = "fit.json"
+
+# v2: one file per round, with the round, its anchor tier and its scale token in
+# the payload. There is no v1 reader — the directory is derived and gitignored,
+# so the migration is a refit.
+FIT_FORMAT_VERSION = 2
+LEADERBOARD_FORMAT_VERSION = 2
+LEADERBOARD_FORMAT = "per_round"
 
 # Ratings are published to 2 dp, which makes the published numbers literally
 # identical across runs even though the fitted floats agree only to ~1e-9.
@@ -121,7 +139,7 @@ def _row(fit: RatingFit, entity: str, rank: int) -> LeaderboardRow:
 
 
 def fit_payload(fit: RatingFit) -> dict[str, Any]:
-    """The `fit.json` body. Contains no clock reading, by design."""
+    """One fit's body. Contains no clock reading, by design."""
     order = list(fit.entities)
     lower: list[float] = []
     for i in range(len(order)):
@@ -149,7 +167,10 @@ def fit_payload(fit: RatingFit) -> dict[str, Any]:
 
     return {
         "version": FIT_FORMAT_VERSION,
+        "round": fit.round,
         "anchor": fit.anchor,
+        "anchor_kind": fit.anchor_kind,
+        "scale_id": fit.scale_id,
         "anchor_rating": fit.spec.anchor_rating,
         "prior": fit.prior.to_dict(),
         "policy": fit.policy.to_dict(),
@@ -205,6 +226,9 @@ def fit_from_payload(data: dict[str, Any]) -> LoadedFit:
 
     policy_data = data.get("policy", {})
     return LoadedFit(
+        round=data.get("round"),
+        anchor_kind=data.get("anchor_kind"),
+        scale_id=data.get("scale_id"),
         anchor=data["anchor"],
         entities=order,
         ratings=ratings,
@@ -227,127 +251,329 @@ def fit_from_payload(data: dict[str, Any]) -> LoadedFit:
     )
 
 
+def round_fit_payload(result: RoundResult) -> dict[str, Any]:
+    """
+    One rated round's fit file body.
+
+    The fit's own payload plus the round-level provenance that is not a property
+    of the solve: how many games were stored versus rated, and which engine eras
+    the stored games came from.
+    """
+    if result.fit is None:
+        raise ValueError(
+            f"round {result.round!r} is unrated ({result.reason}); an unrated round "
+            f"gets no fit file, only a status in {LEADERBOARD_JSON}"
+        )
+    payload = fit_payload(result.fit)
+    payload.update(
+        {
+            "status": result.status,
+            "round": result.round,
+            "anchor_kind": result.anchor_kind,
+            "scale_id": result.scale_id,
+            "stored_games": result.stored_games,
+            "engine_versions": list(result.engine_versions),
+            "era_split": result.era_split,
+        }
+    )
+    return payload
+
+
+def round_leaderboard_entry(result: RoundResult) -> dict[str, Any]:
+    """One element of `leaderboard.json`'s `rounds` array."""
+    entry: dict[str, Any] = {
+        "round": result.round,
+        "status": result.status,
+        "stored_games": result.stored_games,
+        "rated_games": result.rated_games,
+        "excluded": dict(result.excluded),
+        "engine_versions": list(result.engine_versions),
+        "era_split": result.era_split,
+        "counts_digest": result.counts_digest,
+    }
+    if result.fit is None:
+        entry["reason"] = result.reason
+        return entry
+
+    fit = result.fit
+    entry.update(
+        {
+            "scale_id": result.scale_id,
+            "anchor": result.anchor,
+            "anchor_kind": result.anchor_kind,
+            "anchor_rating": result.anchor_rating,
+            "anchor_component": result.anchor_component,
+            "connected": fit.connected,
+            "components": [list(group) for group in fit.components],
+            "seat_advantage": fit.seat_advantage.to_dict(),
+            "draw_log_nu": fit.draw_log_nu.to_dict(),
+            "solver": {
+                "iterations": fit.solver.iterations,
+                "max_abs_grad": fit.solver.max_abs_grad,
+                "converged": fit.solver.converged,
+            },
+            "entities": [row.to_dict() for row in leaderboard_rows(fit)],
+        }
+    )
+    return entry
+
+
+def leaderboard_payload(fits: RoundFits) -> dict[str, Any]:
+    """
+    `leaderboard.json` at format version 2: per-round, with no pooled snapshot.
+
+    `rounds` is an array rather than an object keyed by round name: `sort_keys`
+    would re-sort an object anyway, and JSON object order is not a contract to
+    any consumer. An array is ordered by construction — round name ascending —
+    and each element self-identifies.
+    """
+    return {
+        "version": LEADERBOARD_FORMAT_VERSION,
+        "format": LEADERBOARD_FORMAT,
+        "engine_era": fits.policy.engine_version,
+        "policy": fits.policy.to_dict(),
+        "prior": fits.prior.to_dict(),
+        "rounds_digest": fits.rounds_digest,
+        "rounds": [round_leaderboard_entry(result) for result in fits],
+    }
+
+
 def _write_json(payload: dict[str, Any], path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
 
 
-def write_fit(fit: RatingFit, ratings_dir: Path | None = None) -> Path:
-    return _write_json(fit_payload(fit), (ratings_dir or RATINGS_DIR) / FIT_JSON)
+def fits_dir(ratings_dir: Path | None = None) -> Path:
+    return (ratings_dir or RATINGS_DIR) / FITS_DIRNAME
 
 
-def load_fit(ratings_dir: Path | None = None) -> LoadedFit | None:
-    path = (ratings_dir or RATINGS_DIR) / FIT_JSON
+def round_fit_path(round_name: str, ratings_dir: Path | None = None) -> Path:
+    return fits_dir(ratings_dir) / f"{round_file_stem(round_name)}.json"
+
+
+def available_rounds(ratings_dir: Path | None = None) -> list[str]:
+    """Rounds that have a published fit file, from the files themselves."""
+    directory = fits_dir(ratings_dir)
+    if not directory.exists():
+        return []
+    names = []
+    for path in sorted(directory.glob("*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        names.append(data.get("round") or path.stem)
+    return sorted(names)
+
+
+def write_round_fits(
+    fits: RoundFits, ratings_dir: Path | None = None
+) -> tuple[list[Path], list[Path]]:
+    """
+    Write one fit file per rated round, and delete the files that no longer apply.
+
+    `(written, pruned)`. Pruning matters more here than one directory over: a
+    stale count cache is harmless, but a stale *published fit* is a table for a
+    round that no longer exists, and nothing on it says so.
+    """
+    directory = fits_dir(ratings_dir)
+    written = [
+        _write_json(
+            round_fit_payload(result), round_fit_path(result.round, ratings_dir)
+        )
+        for result in fits.rated
+    ]
+    keep = {path.name for path in written}
+    pruned = []
+    if directory.exists():
+        for path in sorted(directory.glob("*.json")):
+            if path.name not in keep:
+                path.unlink()
+                pruned.append(path)
+    legacy = (ratings_dir or RATINGS_DIR) / LEGACY_FIT_JSON
+    if legacy.exists():
+        legacy.unlink()
+        pruned.append(legacy)
+    return written, pruned
+
+
+def load_fit(ratings_dir: Path | None = None, *, round: str | None = None) -> LoadedFit | None:
+    """
+    Read one round's published fit.
+
+    `round` is required: there is no pooled fit to fall back to, and returning
+    "the first one" would hand back a table on a scale the caller did not ask
+    for. Returns None when that round has no published fit.
+    """
+    if round is None:
+        raise ValueError(
+            "load_fit needs a round: fits are per-round and are not comparable "
+            f"across rounds. Available: {', '.join(available_rounds(ratings_dir)) or 'none'}"
+        )
+    path = round_fit_path(round, ratings_dir)
     if not path.exists():
         return None
     return fit_from_payload(json.loads(path.read_text(encoding="utf-8")))
 
 
-def stored_counts_digest(ratings_dir: Path | None = None) -> str | None:
-    """Whether a refit is needed, without doing one."""
-    path = (ratings_dir or RATINGS_DIR) / FIT_JSON
+def stored_counts_digest(
+    ratings_dir: Path | None = None, *, round: str | None = None
+) -> str | None:
+    """Whether one round needs a refit, without doing one."""
+    if round is None:
+        raise ValueError(
+            "stored_counts_digest needs a round; use stored_rounds_digest() for "
+            "the whole-store question"
+        )
+    path = round_fit_path(round, ratings_dir)
     if not path.exists():
         return None
     return json.loads(path.read_text(encoding="utf-8")).get("counts_digest")
 
 
-def _connectivity_lines(fit: RatingFit) -> list[str]:
-    """The warning block, or nothing at all when the pool is connected."""
-    if fit.connected:
-        return []
-    sizes = ", ".join(str(len(group)) for group in fit.components)
-    return [
-        f"> **This pool is not connected: {len(fit.components)} groups "
-        f"({sizes} entities).**",
-        ">",
-        "> Groups share no games, so nothing links their scales — the offset",
-        "> between them comes from the prior, not from evidence. Ratings and",
-        "> ranks are meaningful **only within one group**. A contrast across",
-        "> groups reports an infinite interval and `P(better) = 0.50`.",
-        ">",
-        "> Fix it by playing games between the groups, not by comparing anyway.",
-        "",
-    ]
+def stored_rounds_digest(ratings_dir: Path | None = None) -> str | None:
+    """Whether *anything* needs a refit: one read over the combined output."""
+    path = (ratings_dir or RATINGS_DIR) / LEADERBOARD_JSON
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8")).get("rounds_digest")
 
 
-def leaderboard_markdown(fit: RatingFit, *, updated_at: str | None = None) -> str:
-    rows = leaderboard_rows(fit)
-    ranked = [r for r in rows if not r.provisional]
-    provisional = [r for r in rows if r.provisional]
-    seat = fit.seat_advantage
+BANNER = (
+    "> **Ratings in two different tables are on two different scales. Do not",
+    "> compare them.** Each table is anchored inside its own round and carries its",
+    "> own `scale` token; two tables share a scale only if the tokens match, and no",
+    "> two rounds ever do. A shared anchor fixes the additive constant, not the",
+    "> conditions the games were played under: two byte-identical programs measured",
+    "> in different rounds fitted **46 Elo apart** in this repo. Rank is per-round",
+    "> and is never a result — decide from a pairwise contrast **inside one round**.",
+    "> See [decision-rule.md](../../docs/arena/decision-rule.md).",
+)
+
+ROUNDS_INDEX_HEADER = (
+    "| Round | Status | Rated / stored | Entities | Ranked | Groups | Anchor | Scale |",
+    "| --- | --- | ---: | ---: | ---: | ---: | --- | --- |",
+)
+
+
+def _anchor_link(name: str) -> str:
+    """A GitHub-style heading anchor for a round name."""
+    return name.lower().replace(" ", "-")
+
+
+def rounds_index_lines(fits: RoundFits) -> list[str]:
+    """
+    The index: provenance and counts, never a rating and never a rank.
+
+    A cross-round comparison has to be a deliberate act — open two sections and
+    do the arithmetic — rather than reading two rows of one table.
+    """
+    lines = list(ROUNDS_INDEX_HEADER)
+    for result in fits:
+        link = f"[{result.round}](#{_anchor_link(result.round)})"
+        if not result.rated:
+            lines.append(
+                f"| {link} | **unrated** | {result.rated_games:,} / "
+                f"{result.stored_games:,} | — | — | — | — | — |"
+            )
+            continue
+        ranked = result.ranked_count
+        lines.append(
+            f"| {link} | rated | {result.rated_games:,} / {result.stored_games:,} "
+            f"| {len(result.entities)} | {'**0**' if ranked == 0 else ranked} "
+            f"| {len(result.components)} | `{result.anchor}` ({result.anchor_kind}) "
+            f"| `{result.scale_token}` |"
+        )
+    return lines
+
+
+def leaderboard_markdown(
+    fits: RoundFits,
+    *,
+    updated_at: str | None = None,
+    only: Sequence[str] | None = None,
+) -> str:
+    """
+    The whole document: banner, index, then one section per round in name order.
+
+    There is no pooled ranked table, by design. `only` filters which sections are
+    rendered — a reporting convenience; it never affects what is written.
+    """
+    selected = [r for r in fits if only is None or r.round in set(only)]
+    era = fits.policy.engine_version
     lines = [
         "# Arena leaderboard",
         "",
         f"Updated: {updated_at or utc_now_iso()}",
-        f"Rated games: {fit.counts.games}",
-        f"Anchor: `{fit.anchor}` pinned at {fit.spec.anchor_rating:.1f}",
-        f"Seat-A advantage: {seat.value:+.1f} ± {seat.se:.1f} Elo",
-        f"Draw log-nu: {fit.draw_log_nu.value:.3f} ± {fit.draw_log_nu.se:.3f}",
+        f"Engine era: `{era[:12]}`" if era else "Engine era: every era (`--all-eras`)",
+        f"Rounds: {len(fits.rated)} rated, {len(fits.unrated)} unrated "
+        f"· {fits.rated_games:,} rated games",
         "",
-        "Ratings are Bradley-Terry + Davidson draws + a shared seat term, fitted",
-        "jointly over every eligible game. Decide from the pairwise contrast, never",
-        "from rank: see [decision-rule.md](../../docs/arena/decision-rule.md).",
+        "Each round below is an **independent** Bradley-Terry + Davidson + seat fit",
+        "over that round's games only. No number here is fitted across rounds.",
         "",
-        *_connectivity_lines(fit),
-        *leaderboard_table_lines(ranked, split=not fit.connected),
+        *BANNER,
+        "",
+        "## Rounds",
+        "",
+        *rounds_index_lines(fits),
     ]
-    if provisional:
+    for result in selected:
+        rows = leaderboard_rows(result.fit) if result.fit is not None else []
         lines += [
             "",
-            f"## Provisional (< {fit.policy.min_games_display} games)",
+            "---",
             "",
-            "In the fit, but not ranked and not eligible as a decision baseline.",
-            "",
-            *leaderboard_table_lines(provisional, split=not fit.connected),
+            *round_section_lines(
+                result,
+                ranked=[r for r in rows if not r.provisional],
+                provisional=[r for r in rows if r.provisional],
+            ),
         ]
     lines.append("")
     return "\n".join(lines)
 
 
 def write_leaderboard(
-    fit: RatingFit, ratings_dir: Path | None = None, *, updated_at: str | None = None
+    fits: RoundFits, ratings_dir: Path | None = None, *, updated_at: str | None = None
 ) -> tuple[Path, Path]:
     directory = ratings_dir or RATINGS_DIR
-    rows = leaderboard_rows(fit)
-    payload = {
-        "anchor": fit.anchor,
-        "rated_games": fit.counts.games,
-        "counts_digest": fit.counts.digest,
-        "min_games_display": fit.policy.min_games_display,
-        "seat_advantage": fit.seat_advantage.to_dict(),
-        "connected": fit.connected,
-        "components": [list(group) for group in fit.components],
-        "entities": [row.to_dict() for row in rows],
-    }
-    json_path = _write_json(payload, directory / LEADERBOARD_JSON)
+    json_path = _write_json(leaderboard_payload(fits), directory / LEADERBOARD_JSON)
     md_path = directory / LEADERBOARD_MD
     md_path.parent.mkdir(parents=True, exist_ok=True)
-    md_path.write_text(leaderboard_markdown(fit, updated_at=updated_at), encoding="utf-8")
+    md_path.write_text(leaderboard_markdown(fits, updated_at=updated_at), encoding="utf-8")
     return json_path, md_path
 
 
 def write_all(
-    fit: RatingFit, ratings_dir: Path | None = None
-) -> tuple[Path, Path, Path]:
+    fits: RoundFits, ratings_dir: Path | None = None
+) -> tuple[list[Path], Path, Path]:
     directory = ratings_dir or RATINGS_DIR
-    fit_path = write_fit(fit, directory)
-    json_path, md_path = write_leaderboard(fit, directory)
-    return fit_path, json_path, md_path
+    fit_paths, _ = write_round_fits(fits, directory)
+    json_path, md_path = write_leaderboard(fits, directory)
+    return fit_paths, json_path, md_path
 
 
 __all__ = [
-    "FIT_JSON",
+    "FITS_DIRNAME",
     "LEADERBOARD_JSON",
     "LEADERBOARD_MD",
     "LeaderboardRow",
     "RATINGS_DIR",
+    "available_rounds",
+    "fits_dir",
     "leaderboard_markdown",
+    "leaderboard_payload",
     "leaderboard_rows",
     "load_fit",
+    "round_fit_path",
+    "round_fit_payload",
+    "rounds_index_lines",
     "split_entity",
     "stored_counts_digest",
+    "stored_rounds_digest",
     "write_all",
-    "write_fit",
     "write_leaderboard",
+    "write_round_fits",
 ]

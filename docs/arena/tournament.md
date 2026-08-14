@@ -97,11 +97,16 @@ writes only its own game's files into it, the same pattern that makes
 `save_game` pool-safe — no shared writer, no lock. Recording costs ~1.4% wall
 clock and never changes a game's outcome. See [trajectories.md](trajectories.md).
 
-The rating refit scans `data/games/` recursively (skipping `manifest.json`)
-and filters on each record's own `mode`, `round`, `engine_version` and content
-hashes — never on the directory it happens to sit in.
+The rating refit walks each `data/games/<round>/` directory and fits it
+**independently** — there is no pooled fit. Eligibility still comes from each
+record's own `mode`, `round`, `engine_version` and content hashes, never from the
+directory it sits in; the directory decides which *fit* a record belongs to. Loose
+games directly under `data/games/` are in no round and enter nothing. See
+[ratings.md](ratings.md#per-round-fits).
 
 ## Verification
 
 Every match uses competition mode via the in-process runner. After the grid,
-check `data/games/<round>/` and `data/ratings/leaderboard.md`.
+check `data/games/<round>/` and this round's section of
+`data/ratings/leaderboard.md`. Ratings in another round's section are on another
+scale and are not comparable to it.

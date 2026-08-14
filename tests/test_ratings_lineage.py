@@ -123,6 +123,36 @@ def test_unrated_versions_are_reported_without_a_delta(registry):
     assert rows[2].delta is None  # its predecessor is unrated
 
 
+def test_a_step_whose_predecessor_is_absent_from_the_round_renders_no_number(registry):
+    """
+    The +46 Elo trap in its purest form, refused.
+
+    Lineage is per round. A step measured here against a predecessor measured in
+    another round is arithmetic over two scales that were never joined, so the
+    table prints `—` and says why.
+    """
+    anchor = entity_key("cm_expander", "cccccccccccc")
+    # Only seq 2's hash played in this round; seq 1's did not.
+    second = entity_key("expand_plus", SECOND)
+    fit = fit_ratings(
+        build({(anchor, second): (10, 10, 5), (second, anchor): (10, 10, 5)}),
+        anchor=anchor,
+        round_name="joe-r4",
+    )
+    rows = lineage_deltas("expand_plus", fit, registry)
+
+    assert [r.rated for r in rows] == [False, True, False, False]
+    assert rows[1].previous_rated is False
+    assert rows[1].delta is None
+
+    lines = lineage_table_lines("expand_plus", fit, registry)
+    assert lines[0] == "**`expand_plus` in round `joe-r4`**"
+    seq2 = next(line for line in lines if line.startswith("| 2 |"))
+    assert "predecessor not_in_this_round" in seq2
+    assert "+" not in seq2  # no delta, no CI, no P(better)
+    assert "not_in_this_round" in next(line for line in lines if line.startswith("| 1 |"))
+
+
 def test_lineage_table_renders_every_step(registry, fit):
     lines = lineage_table_lines("expand_plus", fit, registry)
     assert lines[0].startswith("| Step |")

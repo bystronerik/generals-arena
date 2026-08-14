@@ -22,11 +22,9 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from arena.tournaments.parallel import default_jobs
-from arena.records.ratings.policy import Policy
 from arena.records.reporting import (
     aggregate_stats,
     bot_run_sh,
-    leaderboard_table_lines,
     winner_bot_id,
     winrate_table_lines,
 )
@@ -179,7 +177,6 @@ def game_entry_from_record(record: GameRecord, *, tag: str = "") -> GameEntry:
 def run_one(
     spec: MatchSpec,
     *,
-    update_ratings: bool,
     round_name: str,
     games_dir: Path | None = None,
 ) -> GameEntry:
@@ -194,7 +191,6 @@ def run_one(
         mode="competition",
         round_name=round_name,
         games_dir=games_dir,
-        update_ratings=update_ratings,
     )
     return game_entry_from_record(record, tag=spec.tag)
 
@@ -226,49 +222,60 @@ def notable_matchups(games: list[GameEntry]) -> list[dict[str, Any]]:
 
 
 ROUND_LOCAL_BANNER = (
-    "**Round-local ratings.** Fitted over this round's games only and anchored "
-    "on the round's most-played bot, keyed on `bot_id` rather than on the "
-    "content hash. They are **not comparable** to `data/ratings/leaderboard.md` "
-    "or to any other round. Use the global fit for decisions."
+    "**Round-local ratings.** Fitted over this round's games only, by the same "
+    "per-round fitter that writes `data/ratings/leaderboard.md` — this *is* that "
+    "file's section for this round. It is **not comparable** to any other "
+    "round's table: every round is anchored inside itself and carries its own "
+    "`scale` token. Decide from a pairwise contrast inside this round; see "
+    "`docs/arena/decision-rule.md`."
 )
 
 
-def round_leaderboard_snippet(games: list[GameEntry]) -> str:
+def round_leaderboard_snippet(round_name: str) -> str:
     """
-    Ratings from this round's games alone, explicitly labelled as such.
+    This round's section of the published leaderboard, quoted into the report.
 
-    The old version built a fresh sequential Elo book in list order, so every
-    published round report showed numbers that disagreed with the global
-    leaderboard *and* with any other run of the same round. This one is a real
-    batch fit, but it is still round-local: it sees a fraction of the games and
-    a different anchor, so it carries a banner saying so.
+    It used to be a second fit with a weaker identity — keyed on `bot_id` rather
+    than `bot_id@content_hash` — which made two round-local conventions in one
+    repo. Ratings are now per-round everywhere, so this reads the shared fitter
+    instead of re-deriving one.
     """
-    from arena.records.ratings.counts import build
-    from arena.records.ratings.fit import fit_ratings
-    from arena.records.ratings.io import leaderboard_rows
+    from arena.records.ratings.cache import CACHE_DIRNAME
+    from arena.records.ratings.cli import DEFAULT_ANCHOR_BOT, MissingAnchor, resolve_anchor
+    from arena.records.ratings.io import RATINGS_DIR, leaderboard_rows
+    from arena.records.ratings.policy import Policy
+    from arena.records.ratings.rounds import fit_rounds
+    from arena.records.registry import Registry
+    from arena.records.reporting import round_section_lines
+    from arena.records.store import GAMES_DIR, engine_version
 
-    tallies: dict[tuple[str, str], list[int]] = {}
-    appearances: dict[str, int] = {}
-    for g in games:
-        cell = tallies.setdefault((g.bot_a, g.bot_b), [0, 0, 0])
-        cell[0 if g.winner == "a" else 1 if g.winner == "b" else 2] += 1
-        for bot in (g.bot_a, g.bot_b):
-            appearances[bot] = appearances.get(bot, 0) + 1
-    if not tallies:
-        return "_no games in this round_"
+    registry = Registry()
+    try:
+        anchor = resolve_anchor(registry, DEFAULT_ANCHOR_BOT)
+    except MissingAnchor as exc:
+        return f"_no round-local fit: {exc}_"
 
-    table = build({k: (v[0], v[1], v[2]) for k, v in tallies.items()})
-    anchor = max(sorted(appearances), key=lambda b: appearances[b])
-    fit = fit_ratings(table, anchor=anchor, policy=Policy(min_games_display=0))
-    return "\n".join(
-        [
-            ROUND_LOCAL_BANNER,
-            "",
-            f"Anchor: `{anchor}` pinned at 1500.0.",
-            "",
-            *leaderboard_table_lines(leaderboard_rows(fit)),
-        ]
+    fits = fit_rounds(
+        games_dir=GAMES_DIR,
+        cache_dir=RATINGS_DIR / CACHE_DIRNAME,
+        policy=Policy(engine_version=engine_version()),
+        registry=registry,
+        global_anchor=anchor,
     )
+    result = fits.get(round_name)
+    if result is None:
+        return f"_no stored games under `{GAMES_DIR}/{round_name}/`_"
+
+    rows = leaderboard_rows(result.fit) if result.fit is not None else []
+    section = round_section_lines(
+        result,
+        ranked=[r for r in rows if not r.provisional],
+        provisional=[r for r in rows if r.provisional],
+    )
+    # The report already carries its own `# Heuristic measurement — <round>`
+    # heading, so drop the section's own `## <round>` header line and the blank
+    # line after it.
+    return "\n".join([ROUND_LOCAL_BANNER, "", *section[2:]])
 
 
 def write_reports(
@@ -330,9 +337,9 @@ def write_reports(
     md_lines.extend(
         [
             "",
-            "## Round Elo (this grid only)",
+            "## Round Elo (this round only)",
             "",
-            round_leaderboard_snippet(games),
+            round_leaderboard_snippet(round_name),
             "",
             "## Notable matchups",
             "",
@@ -388,9 +395,7 @@ def _run_legacy_grid(
             f"[measure] ({i}/{len(specs)}) {spec.bot_a} vs {spec.bot_b} "
             f"seed={spec.seed} [{spec.tag}]"
         )
-        entry = run_one(
-            spec, update_ratings=False, round_name=round_name, games_dir=games_dir
-        )
+        entry = run_one(spec, round_name=round_name, games_dir=games_dir)
         games.append(entry)
         print(
             f"[measure]   -> {entry.winner_bot} turns={entry.turns} "
@@ -400,8 +405,11 @@ def _run_legacy_grid(
         from arena.records.ratings.cli import refit
         from arena.records.store import GAMES_DIR
 
-        fit = refit(games_dir=GAMES_DIR)
-        print(f"[measure] refitted ratings ({fit.counts.games} game(s))")
+        fits = refit(games_dir=GAMES_DIR)
+        print(
+            f"[measure] refitted {len(fits.rated)} round(s) "
+            f"({fits.rated_games} rated game(s))"
+        )
     return games
 
 

@@ -14,13 +14,16 @@ from arena.records.store import (
     bot_id_from_run_sh,
     engine_version,
     make_game_id,
+    round_games_dir,
     save_game,
 )
 from arena.records.telemetry import record_from_match_result
 from arena.records.trajectories import round_trajectory_dir
 
-# Round name for one-off matches that belong to no measurement round. Stored
-# explicitly so the eligibility filter never has to guess from a path.
+# Round name for one-off matches that belong to no measurement round. It is both
+# stored on the record and used as the directory, but the two answer different
+# questions: eligibility still reads the record's own field, never the path, while
+# the directory decides which round's fit the game belongs to.
 ADHOC_ROUND = "adhoc"
 
 
@@ -59,12 +62,17 @@ def run_and_store(
     bot_a_content_hash: str | None = None,
     bot_b_content_hash: str | None = None,
     timeout: float | None = None,
-    update_ratings: bool = False,
     record_trajectory: bool = False,
     trajectories_dir: Path | None = None,
     engine: str | None = None,
 ) -> GameRecord:
-    """Run one competition match, store JSON, optionally refit ratings."""
+    """
+    Run one competition match and store its JSON under `data/games/<round>/`.
+
+    Rating is a separate step — `python -m arena.records.ratings` — and not an
+    option here. Ratings are fitted per round, so a per-game refit would solve
+    every round in the store to publish one game.
+    """
     a_path = bot_a_run.resolve()
     b_path = bot_b_run.resolve()
     bot_a = bot_a_id or bot_id_from_run_sh(a_path)
@@ -104,7 +112,11 @@ def run_and_store(
         bot_b_content_hash=hash_b,
         engine_version=engine,
     )
-    path = save_game(record, games_dir or GAMES_DIR)
+    # Default to the round's own directory, not the flat root. A record whose
+    # `round` field names a round that no directory backs is invisible to the
+    # rating layer: that is how 102 loose files carrying 49 distinct round names
+    # accumulated under `data/games/`, contributing to no published number.
+    path = save_game(record, games_dir or round_games_dir(round_name))
     print(f"[run_match] stored {path}")
     print(
         f"[run_match] winner={record.winner} turns={record.turns} "
@@ -113,21 +125,16 @@ def run_and_store(
     if record_request is not None:
         print(f"[run_match] recorded trajectory under {record_request.directory}")
 
-    if update_ratings:
-        # Refit, not "apply one update". There is no incremental path: a
-        # path-dependent estimator has no single right answer, and the two
-        # paths it used to have silently disagreed.
-        from arena.records.ratings.cli import refit
-
-        fit = refit()
-        print(f"[run_match] refitted ratings over {fit.counts.games} game(s)")
-
     return record
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Run a competition match and store data/games/<game_id>.json."
+        description=(
+            "Run a competition match and store "
+            "data/games/<round>/<game_id>.json. Rate with "
+            "`python -m arena.records.ratings` afterwards."
+        )
     )
     parser.add_argument("bot_a", type=Path, help="path to bot A run.sh")
     parser.add_argument("bot_b", type=Path, help="path to bot B run.sh")
@@ -140,26 +147,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--games-dir",
         type=Path,
-        default=GAMES_DIR,
-        help=f"output directory (default: {GAMES_DIR})",
+        default=None,
+        help=f"output directory (default: {GAMES_DIR}/<round>/)",
     )
     parser.add_argument("--bot-a-id", default=None, help="override bot A id label")
     parser.add_argument("--bot-b-id", default=None, help="override bot B id label")
     parser.add_argument(
         "--round",
         default=ADHOC_ROUND,
-        help=f"round name stored on the record (default: {ADHOC_ROUND})",
+        help=(
+            f"round name stored on the record, and the directory it lands in "
+            f"(default: {ADHOC_ROUND})"
+        ),
     )
     parser.add_argument(
         "--timeout",
         type=float,
         default=None,
         help="optional wall-clock match timeout in seconds",
-    )
-    parser.add_argument(
-        "--update-ratings",
-        action="store_true",
-        help="after storing the game, refit ratings and rewrite the leaderboard",
     )
     parser.add_argument(
         "--record",
@@ -188,7 +193,6 @@ def main(argv: list[str] | None = None) -> int:
         bot_a_id=args.bot_a_id,
         bot_b_id=args.bot_b_id,
         timeout=args.timeout,
-        update_ratings=args.update_ratings,
         record_trajectory=args.record or args.trajectories_dir is not None,
         trajectories_dir=args.trajectories_dir,
     )

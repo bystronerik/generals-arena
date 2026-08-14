@@ -82,7 +82,7 @@ python -m arena.matches.run_match \
   --mode competition --seed 0
 
 # or
-python scripts/smoke_match.py --seed 0 --update-ratings
+python scripts/smoke_match.py --seed 0
 ```
 
 A valid competition match must finish under `--mode competition`. Full games can run to 1200 turns.
@@ -103,13 +103,20 @@ python scripts/tournament.py \
 python scripts/leaderboard.py --print
 ```
 
-Ratings are a batch Bradley-Terry + Davidson-draws + seat-term fit over every
-eligible stored game, keyed on `bot_id@content_hash`, with a covariance matrix
-behind every interval. There is no incremental update: every write refits.
-Snapshots land under `data/ratings/` (gitignored); `data/bot_versions/` is
+Ratings are a batch Bradley-Terry + Davidson-draws + seat-term fit, keyed on
+`bot_id@content_hash`, with a covariance matrix behind every interval. The fit is
+**per round**: each `data/games/<round>/` is fitted independently and there is no
+pooled table, because two byte-identical programs measured in different rounds
+fitted 46 Elo apart — more than the decision thresholds. Every table is anchored
+inside its own round and carries a `scale` token; **ratings from two different
+rounds are not comparable**, and a contrast needs both arms in one round. There is
+no incremental update: every write refits every round.
+
+Output lands under `data/ratings/` (gitignored) — `fits/<round>.json` per rated
+round, plus `leaderboard.json` and `leaderboard.md`. `data/bot_versions/` is
 committed, and `git log -p data/bot_versions/<bot>.json` is a bot's improvement
-history. Commit round reports under `docs/research/measurements/` when
-publishing results.
+history. Commit round reports under `docs/research/measurements/` when publishing
+results. See [`docs/arena/ratings.md`](docs/arena/ratings.md).
 
 Decide keep-or-revert from the pairwise contrast, never from rank:
 [`docs/arena/decision-rule.md`](docs/arena/decision-rule.md).

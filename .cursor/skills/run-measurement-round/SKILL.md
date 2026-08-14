@@ -70,16 +70,18 @@ Read `docs/research/measurements/round<N>.md` and report:
 - any bot with zero decisive games
 - whether stored games are schema v4 (`bot_a_content_hash`, `engine_version`, `round`)
 
-The round report's own rating table is **round-local**: fitted over this round's
-games only, anchored on the round's most-played bot, keyed on `bot_id` rather
-than the content hash. It is not comparable to `data/ratings/leaderboard.md`.
-Report the global fit for anything that matters.
+The round report's own rating table is **round-local**, and so is every table in
+`data/ratings/leaderboard.md` — the report quotes that file's section for this
+round, from the same per-round fitter, keyed on `bot_id@content_hash`. What it is
+not comparable to is **any other round's table**: each is anchored inside its own
+round and carries its own `scale` token. There is no global fit to report instead.
 
 ## Rules
 
 - Never rate from stdout. Store first, then refit (see **update-leaderboard**).
-- Never quote a round-report rating as a decision. Thresholds and the contrast
-  live in [`docs/arena/decision-rule.md`](../../../docs/arena/decision-rule.md).
+- Never quote a rating or a rank as a decision. A decision is a pairwise contrast
+  inside one round; thresholds live in
+  [`docs/arena/decision-rule.md`](../../../docs/arena/decision-rule.md).
 - Always competition mode (enforced by the script).
 - Do not write a new runner — use the script.
 

@@ -1,6 +1,25 @@
 # Per-round ratings: refactor plan
 
-Status: **proposed, not implemented.**
+Status: **implemented, 2026-08-14.** All 15 ordered steps landed. This document is
+kept as the design record; the shipped behaviour is documented in
+[ratings.md](ratings.md) and [decision-rule.md](decision-rule.md).
+
+Three things came out differently from the plan below, and they are noted where
+they occur rather than rewritten out of it:
+
+- `round_count_tables` returns `RoundCounts` (round, table, engine eras) rather
+  than `(str, CountTable)` pairs, because the schema's `engine_versions` and
+  `era_split` need the round's stored eras and the cache is where they are read.
+  `CACHE_FORMAT_VERSION` went to 2 to carry them.
+- `solver_failed` covers a solve that **raises**, not one that merely fails to
+  converge. A non-converged round still publishes, with `solver.converged` false
+  and the residual printed next to its table — the same contract the pooled fit
+  had. `morpheus-castle-r1` is that case today: `max|grad| 5.9e-9` against a 1e-9
+  tolerance, because the round has no draws and `κ` runs toward −∞ against its
+  prior alone.
+- The writer also deletes a leftover top-level `data/ratings/fit.json`. A file of
+  that name holding one table over every round is the claim this refactor
+  withdraws, so leaving it published would keep making it.
 
 Today `arena/records/ratings/` fits one BTDS model over every eligible stored
 game and publishes one ranked table. This plan replaces that with **one
