@@ -35,8 +35,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator, Mapping
 
-from arena.records.ratings.cache import (
-    CacheStats,
+from arena.records.ratings.scan import (
     RoundCounts,
     round_count_tables,
 )
@@ -279,14 +278,12 @@ class RoundFits:
         *,
         policy: Policy,
         prior: Prior,
-        cache_stats: CacheStats | None = None,
     ) -> None:
         # Sorted here rather than trusted from the caller: the order is part of
         # the published format, and directory discovery order is not a contract.
         self.results = tuple(sorted(results, key=lambda r: r.round))
         self.policy = policy
         self.prior = prior
-        self.cache_stats = cache_stats
         self._by_name = {result.round: result for result in self.results}
 
     def __iter__(self) -> Iterator[RoundResult]:
@@ -415,12 +412,10 @@ def fit_round(
 def fit_rounds(
     *,
     games_dir: Path | None = None,
-    cache_dir: Path,
     policy: Policy,
     prior: Prior | None = None,
     registry: Registry | None = None,
     global_anchor: str,
-    use_cache: bool = True,
 ) -> RoundFits:
     """
     Fit every round under `games_dir`, independently.
@@ -428,24 +423,17 @@ def fit_rounds(
     `include_root=False` is the whole `_root` exclusion: one line, named, and
     testable. Loose games contribute to no published number.
     """
-    rounds, stats = round_count_tables(
+    rounds = round_count_tables(
         games_dir=games_dir,
-        cache_dir=cache_dir,
         policy=policy,
         registry=registry,
-        use_cache=use_cache,
         include_root=False,
     )
     results = [
         fit_round(counts, global_anchor=global_anchor, policy=policy, prior=prior)
         for counts in rounds
     ]
-    return RoundFits(
-        results,
-        policy=policy,
-        prior=prior or Prior(),
-        cache_stats=stats,
-    )
+    return RoundFits(results, policy=policy, prior=prior or Prior())
 
 
 __all__ = [

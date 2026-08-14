@@ -275,7 +275,7 @@ def list_game_paths(games_dir: Path) -> list[Path]:
     Game JSON files directly in `games_dir`, sorted, skipping `manifest.json`.
 
     Non-recursive, deliberately: the rating layer walks rounds one directory at
-    a time (`ratings/cache.py`) so it can cache each of them separately. This
+    a time (`ratings/scan.py`) so it can build each round's table separately. This
     used to recurse when handed the arena root and not otherwise, which meant
     the same call did two different things depending on its argument.
     """

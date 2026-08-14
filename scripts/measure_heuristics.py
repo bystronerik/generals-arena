@@ -240,9 +240,8 @@ def round_leaderboard_snippet(round_name: str) -> str:
     repo. Ratings are now per-round everywhere, so this reads the shared fitter
     instead of re-deriving one.
     """
-    from arena.records.ratings.cache import CACHE_DIRNAME
     from arena.records.ratings.cli import DEFAULT_ANCHOR_BOT, MissingAnchor, resolve_anchor
-    from arena.records.ratings.io import RATINGS_DIR, leaderboard_rows
+    from arena.records.ratings.io import leaderboard_rows
     from arena.records.ratings.policy import Policy
     from arena.records.ratings.rounds import fit_rounds
     from arena.records.registry import Registry
@@ -257,7 +256,6 @@ def round_leaderboard_snippet(round_name: str) -> str:
 
     fits = fit_rounds(
         games_dir=GAMES_DIR,
-        cache_dir=RATINGS_DIR / CACHE_DIRNAME,
         policy=Policy(engine_version=engine_version()),
         registry=registry,
         global_anchor=anchor,

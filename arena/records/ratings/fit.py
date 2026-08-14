@@ -130,9 +130,6 @@ class RatingFit:
         self.round = round_name
         self.anchor_kind = anchor_kind
         self.scale_id = scale_id
-        # Set by `cli.refit` when the per-round cache was consulted. Reporting
-        # only — it says nothing about the fit, which is identical either way.
-        self.cache_stats: Any | None = None
 
         theta, beta, kappa = unpack(free, spec)
         self._theta = theta

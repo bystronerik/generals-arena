@@ -157,8 +157,15 @@ files, a commit, and a diffable git ref
 ([bot-version-registry.md](bot-version-registry.md)).
 
 A hash that reappears after a revert is the **same entity** — its games pool,
-which is correct and is why the estimate keeps improving instead of restarting
-— but a **new lineage step**. See `arena/records/ratings/lineage.py`.
+which is correct and is why the estimate keeps improving instead of restarting.
+
+There is no lineage table. Registry-step lineage was removed on 2026-08-14: it
+needs one `bot_id` with two registered hashes **in one round**, and no round in
+the store has ever had that. The decision workflow freezes the baseline under a
+separate bot id (`joe_prev`, `joe_base`), exactly as
+[decision-rule.md](decision-rule.md) prescribes, so the two arms are two bot ids
+and a lineage table renders every step as `not_in_this_round`. Read the contrast
+between the two frozen entities instead.
 
 ## Eligibility
 
@@ -185,7 +192,7 @@ Specifically:
   terms cancel) but is a clean, strength-free estimator of `β` and `κ`.
 - **Engine eras never pool.** A submodule bump moves win probabilities, so
   pooling across one would be a silent correctness bug. `--era` refits a past
-  one; `--all-eras` disables the filter and is unsound.
+  one. There is deliberately no flag that disables the filter.
 
 The era is a policy value applied identically to every round, so one publish is
 always one era. A round whose stored games **span** a bump is rated on the current
@@ -261,9 +268,8 @@ python scripts/leaderboard.py --print
 ```
 
 Useful flags: `--list-rounds` prints the round set and exits, `--round <name>`
-(repeatable) filters what is *reported*, `--lineage <bot>` prints one table per
-round the bot played in, `--dry-run` fits without writing, `--era <sha>` refits a
-past engine era, `--no-cache` re-reads every game.
+(repeatable) filters what is *reported*, `--dry-run` fits without writing,
+`--era <sha>` refits a past engine era.
 
 `--round` is a read filter, never a write filter. A write filter would mean
 `leaderboard.json` either loses the unlisted rounds or carries them forward from
@@ -279,7 +285,6 @@ buy.
 | `data/ratings/fits/<round>.json` | one rated round: estimates, covariance, policy, prior, counts digest, scale |
 | `data/ratings/leaderboard.json` | every round's status and rows, format version 2 |
 | `data/ratings/leaderboard.md` | the same, as one document of per-round sections |
-| `data/ratings/cache/<round>.counts.json` | per-round integer count tables |
 
 Everything under `data/ratings/` is derived and gitignored. **No fit file contains
 a timestamp**, so identical games produce byte-identical files and two rebuilds can
@@ -291,9 +296,14 @@ round's covariance, and `load_fit` parse 16 matrices to answer one contrast. Spl
 a new round changes exactly one file.
 
 The writer **prunes**. Any `fits/*.json` whose round is no longer under
-`data/games/` is deleted, and so is any stale `cache/*.counts.json` — a stale cache
-is harmless, but a stale *published fit* is a table for a round that no longer
-exists with nothing on it saying so.
+`data/games/` is deleted: a stale *published fit* is a table for a round that no
+longer exists with nothing on it saying so.
+
+There is **no count cache**. Rounds were cached to `data/ratings/cache/` until
+2026-08-14; the cache saved about one second on a full refit and cost a file
+signature, a rules digest, a prune step and a staleness API that could disagree
+with the games on disk. Reading all 9,000 games costs 1.3 s and cannot go stale.
+Reinstate a cache when a cold refit costs seconds.
 
 `stored_counts_digest(round=...)` tells a caller whether one round needs refitting;
 `stored_rounds_digest()` answers it for the whole store in one read.

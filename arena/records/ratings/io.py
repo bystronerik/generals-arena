@@ -26,7 +26,6 @@ from typing import Any, Sequence
 import numpy as np
 
 from arena.paths import REPO_ROOT
-from arena.records.ratings.cache import round_file_stem
 from arena.records.ratings.fit import Estimate, LoadedFit, RatingFit
 from arena.records.ratings.policy import Policy, Prior
 from arena.records.ratings.rounds import RoundFits, RoundResult
@@ -344,6 +343,11 @@ def _write_json(payload: dict[str, Any], path: Path) -> Path:
     return path
 
 
+def round_file_stem(round_name: str) -> str:
+    """A round name as a filename component, for `data/ratings/fits/`."""
+    return round_name.replace("/", "_")
+
+
 def fits_dir(ratings_dir: Path | None = None) -> Path:
     return (ratings_dir or RATINGS_DIR) / FITS_DIRNAME
 
@@ -506,7 +510,7 @@ def leaderboard_markdown(
         "# Arena leaderboard",
         "",
         f"Updated: {updated_at or utc_now_iso()}",
-        f"Engine era: `{era[:12]}`" if era else "Engine era: every era (`--all-eras`)",
+        f"Engine era: `{era[:12]}`" if era else "Engine era: unfiltered",
         f"Rounds: {len(fits.rated)} rated, {len(fits.unrated)} unrated "
         f"· {fits.rated_games:,} rated games",
         "",

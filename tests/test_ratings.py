@@ -51,7 +51,7 @@ HASHES = {
 
 
 class FakeRegistry:
-    """Just the surface `policy` and `cache` use, so these tests need no git."""
+    """Just the surface `policy` and `scan` use, so these tests need no git."""
 
     def __init__(self, known: dict[str, str] | None = None) -> None:
         self.known = dict(HASHES if known is None else known)
@@ -135,14 +135,12 @@ def games_tree(root: Path, rounds: dict[str, list[GameRecord]]) -> Path:
     return root
 
 
-def fit_tree(root: Path, cache: Path, *, anchor: str = ANCHOR, **policy_kwargs):
+def fit_tree(root: Path, *, anchor: str = ANCHOR, **policy_kwargs):
     return fit_rounds(
         games_dir=root,
-        cache_dir=cache,
         policy=Policy(engine_version=ENGINE, **policy_kwargs),
         registry=FakeRegistry(),
         global_anchor=anchor,
-        use_cache=False,
     )
 
 
@@ -342,7 +340,7 @@ def test_two_fits_over_the_same_games_write_a_byte_identical_fit_json(tmp_path):
     root = two_round_tree(tmp_path / "games")
     first, second = tmp_path / "one", tmp_path / "two"
     for directory in (first, second):
-        io.write_all(fit_tree(root, tmp_path / f"cache-{directory.name}"), directory)
+        io.write_all(fit_tree(root), directory)
 
     for name in ("alpha", "beta"):
         assert (
@@ -365,12 +363,12 @@ def test_each_round_is_fitted_only_from_its_own_games(tmp_path):
     """
     root = two_round_tree(tmp_path / "games")
     before = tmp_path / "before"
-    io.write_all(fit_tree(root, tmp_path / "c1"), before)
+    io.write_all(fit_tree(root), before)
     alpha_before = io.round_fit_path("alpha", before).read_bytes()
 
     save_game(record("aegis", "metro", "a", index=900), root / "beta")
     after = tmp_path / "after"
-    io.write_all(fit_tree(root, tmp_path / "c2"), after)
+    io.write_all(fit_tree(root), after)
 
     assert io.round_fit_path("alpha", after).read_bytes() == alpha_before
     assert io.round_fit_path("beta", after).read_bytes() != io.round_fit_path(
@@ -386,11 +384,11 @@ def test_root_games_influence_no_published_number(tmp_path):
     files — so a fit over them would be a fit over an invented design.
     """
     root = two_round_tree(tmp_path / "games")
-    clean = fit_tree(root, tmp_path / "c1")
+    clean = fit_tree(root)
 
     ghost = record("smoke", "blitz", "a", index=700)
     save_game(ghost, root)
-    with_root = fit_tree(root, tmp_path / "c2")
+    with_root = fit_tree(root)
 
     assert with_root.names == clean.names == ("alpha", "beta")
     assert with_root.rounds_digest == clean.rounds_digest
@@ -408,7 +406,7 @@ def test_round_order_is_name_ascending_and_stable_under_shuffled_discovery(tmp_p
             "mike": pair_games("smoke", "metro", wins_a=2, wins_b=1, start=90),
         },
     )
-    fits = fit_tree(root, tmp_path / "cache")
+    fits = fit_tree(root)
     assert fits.names == ("alpha", "mike", "zulu")
 
     # And the ordering is enforced by the container, not by discovery order.
@@ -432,7 +430,7 @@ def test_a_round_without_the_global_anchor_uses_its_most_played_entity(tmp_path)
             ),
         },
     )
-    fits = fit_tree(root, tmp_path / "cache")
+    fits = fit_tree(root)
 
     with_anchor = fits.result("with_anchor")
     assert (with_anchor.anchor, with_anchor.anchor_kind) == (ANCHOR, ANCHOR_GLOBAL)
@@ -464,7 +462,7 @@ def test_the_global_anchor_is_never_forced_into_a_round_that_did_not_play_it(tmp
         tmp_path / "games",
         {"no_anchor": pair_games("aegis", "metro", wins_a=5, wins_b=1, start=0)},
     )
-    result = fit_tree(root, tmp_path / "cache").result("no_anchor")
+    result = fit_tree(root).result("no_anchor")
 
     assert ANCHOR not in result.entities
     assert len(result.components) == 1
@@ -487,7 +485,7 @@ def test_a_round_with_no_eligible_games_is_reported_unrated_with_its_exclusions(
             ),
         },
     )
-    fits = fit_tree(root, tmp_path / "cache")
+    fits = fit_tree(root)
 
     bad = fits.result("unregistered")
     assert not bad.rated
@@ -509,7 +507,7 @@ def test_a_round_with_no_eligible_games_is_reported_unrated_with_its_exclusions(
 def test_a_round_where_nobody_reaches_the_gate_ranks_nobody_and_still_renders(tmp_path):
     """A 6-game probe *is* a probe and should read like one."""
     root = two_round_tree(tmp_path / "games")
-    fits = fit_tree(root, tmp_path / "cache")
+    fits = fit_tree(root)
     alpha = fits.result("alpha")
 
     assert alpha.rated and alpha.ranked_count == 0
@@ -532,7 +530,7 @@ def test_a_round_split_by_the_era_filter_rates_one_era_and_reports_era_split(tmp
             )
         },
     )
-    result = fit_tree(root, tmp_path / "cache").result("spanning")
+    result = fit_tree(root).result("spanning")
 
     assert result.rated
     assert result.era_split
@@ -547,7 +545,7 @@ def test_a_round_split_by_the_era_filter_rates_one_era_and_reports_era_split(tmp
 def test_two_rounds_with_identical_games_get_different_scale_ids(tmp_path):
     same = lambda start: pair_games("smoke", "blitz", wins_a=4, wins_b=2, start=start)
     root = games_tree(tmp_path / "games", {"first": same(0), "second": same(0)})
-    fits = fit_tree(root, tmp_path / "cache")
+    fits = fit_tree(root)
 
     first, second = fits.result("first"), fits.result("second")
     assert first.counts_digest == second.counts_digest  # byte-identical games
@@ -559,7 +557,7 @@ def test_the_markdown_has_no_pooled_ranked_table(tmp_path):
     """Guards the removal: a single ranked list asserts what is not true."""
     root = two_round_tree(tmp_path / "games")
     markdown = io.leaderboard_markdown(
-        fit_tree(root, tmp_path / "cache"), updated_at="2026-01-01T00:00:00Z"
+        fit_tree(root), updated_at="2026-01-01T00:00:00Z"
     )
 
     assert "Do not\n> compare them" in markdown
@@ -587,7 +585,7 @@ def test_a_leftover_pooled_fit_json_is_deleted(tmp_path):
     legacy = ratings / io.LEGACY_FIT_JSON
     legacy.write_text("{}", encoding="utf-8")
 
-    _, pruned = io.write_round_fits(fit_tree(root, tmp_path / "cache"), ratings)
+    _, pruned = io.write_round_fits(fit_tree(root), ratings)
     assert legacy in pruned
     assert not legacy.exists()
 
@@ -595,7 +593,7 @@ def test_a_leftover_pooled_fit_json_is_deleted(tmp_path):
 def test_leaderboard_json_has_no_top_level_entities_key(tmp_path):
     """A partial revert to the v1 flat snapshot must fail loudly."""
     root = two_round_tree(tmp_path / "games")
-    io.write_leaderboard(fit_tree(root, tmp_path / "cache"), tmp_path / "ratings")
+    io.write_leaderboard(fit_tree(root), tmp_path / "ratings")
     payload = json.loads(
         (tmp_path / "ratings" / io.LEADERBOARD_JSON).read_text(encoding="utf-8")
     )
@@ -638,7 +636,7 @@ def test_no_per_game_refit_path_exists():
 
 def test_fit_round_trips_through_its_own_payload(tmp_path):
     root = two_round_tree(tmp_path / "games")
-    fits = fit_tree(root, tmp_path / "cache")
+    fits = fit_tree(root)
     io.write_round_fits(fits, tmp_path / "ratings")
 
     fit = fits["alpha"]
@@ -659,7 +657,7 @@ def test_fit_round_trips_through_its_own_payload(tmp_path):
 def test_load_fit_without_a_round_refuses_and_names_the_rounds(tmp_path):
     """There is no pooled fit, so "the first one" is never the right answer."""
     root = two_round_tree(tmp_path / "games")
-    io.write_round_fits(fit_tree(root, tmp_path / "cache"), tmp_path / "ratings")
+    io.write_round_fits(fit_tree(root), tmp_path / "ratings")
 
     with pytest.raises(ValueError, match="alpha, beta"):
         io.load_fit(tmp_path / "ratings")
@@ -669,7 +667,7 @@ def test_load_fit_without_a_round_refuses_and_names_the_rounds(tmp_path):
 def test_stored_digest_answers_whether_a_refit_is_needed(tmp_path):
     root = two_round_tree(tmp_path / "games")
     ratings = tmp_path / "ratings"
-    fits = fit_tree(root, tmp_path / "c1")
+    fits = fit_tree(root)
     io.write_all(fits, ratings)
 
     assert io.stored_counts_digest(ratings, round="alpha") == fits.result(
@@ -680,7 +678,7 @@ def test_stored_digest_answers_whether_a_refit_is_needed(tmp_path):
         io.stored_counts_digest(ratings)
 
     save_game(record("smoke", "blitz", "a", index=999), root / "alpha")
-    grown = fit_tree(root, tmp_path / "c2")
+    grown = fit_tree(root)
     assert io.stored_counts_digest(ratings, round="alpha") != grown.result(
         "alpha"
     ).counts_digest
@@ -707,7 +705,7 @@ def test_leaderboard_lists_provisional_entities_below_the_ranked_block(tmp_path)
             )
         },
     )
-    fits = fit_tree(root, tmp_path / "cache")
+    fits = fit_tree(root)
     rows = io.leaderboard_rows(fits["big"])
 
     ranks = [r.provisional for r in rows]

@@ -7,8 +7,6 @@ import sys
 from pathlib import Path
 
 from arena.records.ratings import io
-from arena.records.ratings.cache import CACHE_DIRNAME, prune_cache
-from arena.records.ratings.lineage import lineage_table_lines
 from arena.records.ratings.policy import Policy, Prior, entity_key
 from arena.records.ratings.rounds import RoundFits, fit_rounds
 from arena.records.registry import Registry
@@ -56,7 +54,6 @@ def refit(
     registry: Registry | None = None,
     anchor_bot: str = DEFAULT_ANCHOR_BOT,
     persist: bool = True,
-    use_cache: bool = True,
 ) -> RoundFits:
     """
     Rebuild one independent fit per round from `data/games/`.
@@ -67,25 +64,22 @@ def refit(
     the question — it presents rounds that drift by more than the decision
     thresholds as one comparable column.
 
-    Every write refits **every** round. 13 Newton solves cost 0.077 s, so there
-    is nothing to buy by refitting a subset.
+    Every write refits **every** round. Reading the store costs about 1.3 s and
+    13 Newton solves cost 0.077 s, so there is nothing to buy by refitting a
+    subset.
     """
     registry = registry or Registry()
     policy = policy or Policy(engine_version=engine_version())
     anchor = resolve_anchor(registry, anchor_bot)
-    cache_dir = (ratings_dir or io.RATINGS_DIR) / CACHE_DIRNAME
     fits = fit_rounds(
         games_dir=games_dir,
-        cache_dir=cache_dir,
         policy=policy,
         prior=prior,
         registry=registry,
         global_anchor=anchor,
-        use_cache=use_cache,
     )
     if persist:
         io.write_all(fits, ratings_dir)
-        prune_cache(cache_dir, fits.names)
     return fits
 
 
@@ -137,11 +131,6 @@ def main(argv: list[str] | None = None) -> int:
         help="engine_version to rate (default: the current submodule HEAD)",
     )
     parser.add_argument(
-        "--all-eras",
-        action="store_true",
-        help="do not filter on engine_version (unsound across an engine bump)",
-    )
-    parser.add_argument(
         "--sigma",
         type=float,
         default=Prior.sigma,
@@ -163,20 +152,14 @@ def main(argv: list[str] | None = None) -> int:
         metavar="NAME",
         default=None,
         help=(
-            "report filter, repeatable: restricts --print, --lineage and the "
-            "console summary. Every write still refits every round"
+            "report filter, repeatable: restricts --print and the console "
+            "summary. Every write still refits every round"
         ),
     )
     parser.add_argument(
         "--list-rounds",
         action="store_true",
         help="print the round set and exit without writing",
-    )
-    parser.add_argument(
-        "--lineage",
-        metavar="BOT",
-        default=None,
-        help="also print one bot's improvement history, one table per round",
     )
     parser.add_argument(
         "--print",
@@ -189,15 +172,13 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="fit and report without writing data/ratings/",
     )
-    parser.add_argument(
-        "--no-cache",
-        action="store_true",
-        help="re-read every game instead of reusing per-round count caches",
-    )
     args = parser.parse_args(argv)
 
     registry = Registry()
-    era = None if args.all_eras else (args.era or engine_version())
+    # Always exactly one era. `--era` names a past one; there is deliberately no
+    # flag that disables the filter, because pooling across an engine bump moves
+    # win probabilities and is a silent correctness bug.
+    era = args.era or engine_version()
     policy = Policy(engine_version=era, min_games_display=args.min_games)
     try:
         fits = refit(
@@ -208,7 +189,6 @@ def main(argv: list[str] | None = None) -> int:
             registry=registry,
             anchor_bot=args.anchor,
             persist=not (args.dry_run or args.list_rounds),
-            use_cache=not args.no_cache,
         )
     except MissingAnchor as exc:
         print(f"[ratings] {exc}")
@@ -232,9 +212,6 @@ def main(argv: list[str] | None = None) -> int:
         f"[ratings] fitted {len(fits.rated)} round(s) over {fits.rated_games} "
         f"rated game(s); {len(fits.unrated)} round(s) unrated"
     )
-    stats = fits.cache_stats
-    if stats is not None and stats.rounds:
-        print(f"[ratings] rounds: {stats.hits} cached, {stats.misses} re-aggregated")
 
     for result in shown:
         if not result.rated:
@@ -300,31 +277,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.print_table:
         print()
         print(io.leaderboard_markdown(fits, only=args.rounds))
-    if args.lineage:
-        printed = False
-        for result in shown:
-            # One table per round the bot actually played in. A step measured in
-            # one round has no comparator in another, so there is nothing to
-            # print for a round this bot is absent from.
-            if result.fit is None or not _plays_in(args.lineage, result):
-                continue
-            printed = True
-            print()
-            print(
-                "\n".join(
-                    lineage_table_lines(
-                        args.lineage, result.fit, registry, round_name=result.round
-                    )
-                )
-            )
-        if not printed:
-            print()
-            print(f"[ratings] `{args.lineage}` has no rated entity in any round shown")
     return 0
-
-
-def _plays_in(bot_id: str, result) -> bool:
-    return any(entity.partition("@")[0] == bot_id for entity in result.entities)
 
 
 if __name__ == "__main__":

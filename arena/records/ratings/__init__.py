@@ -31,8 +31,7 @@ Module map:
     model.py     the likelihood, gradient and Hessian (pure math)
     fit.py       damped Newton -> RatingFit (estimates + covariance)
     rounds.py    one fit per round -> RoundResult / RoundFits
-    lineage.py   registry steps -> per-step deltas
-    cache.py     per-round count caches
+    scan.py      walk data/games/ -> one RoundCounts per round
     io.py        fits/<round>.json / leaderboard.{json,md}
     cli.py       python -m arena.records.ratings
 """
@@ -60,12 +59,6 @@ from arena.records.ratings.io import (
     write_leaderboard,
     write_round_fits,
 )
-from arena.records.ratings.lineage import (
-    StepDelta,
-    lineage_deltas,
-    lineage_table_lines,
-    steps,
-)
 from arena.records.ratings.model import ELO_SCALE
 from arena.records.ratings.policy import Policy, Prior, eligible, entity_key, rejection_reason
 from arena.records.ratings.rounds import (
@@ -90,7 +83,6 @@ __all__ = [
     "RatingFit",
     "RoundFits",
     "RoundResult",
-    "StepDelta",
     "count_table",
     "eligible",
     "entity_key",
@@ -98,15 +90,12 @@ __all__ = [
     "fit_rounds",
     "leaderboard_markdown",
     "leaderboard_rows",
-    "lineage_deltas",
-    "lineage_table_lines",
     "load_fit",
     "merge",
     "rejection_reason",
     "resolve_round_anchor",
     "scale_id",
     "split_entity",
-    "steps",
     "stored_counts_digest",
     "stored_rounds_digest",
     "write_all",

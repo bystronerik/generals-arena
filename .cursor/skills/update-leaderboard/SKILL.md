@@ -72,7 +72,7 @@ looks wrong.
   token, comparable; different token, not, and no two rounds ever share one.
 - **Rank is per-round and is never a result.** Rank numbers restart at 1 in every
   section. Report the contrast, from inside one round:
-  `python -m arena.records.ratings --round <name> --lineage <bot>`.
+  `fits["<round>"].delta(baseline, candidate)`.
 - **Anchor tiers.** The header names the anchor and its kind. `global` means
   `cm_expander@<hash>` played in that round and is pinned at 1500.0. `round_local`
   means it did not, so the round's most-played entity is pinned instead — the
@@ -106,7 +106,6 @@ looks wrong.
 | `data/ratings/fits/<round>.json` | one rated round: estimates, covariance, policy, prior, counts digest, scale |
 | `data/ratings/leaderboard.json` | every round's status and rows, format version 2 |
 | `data/ratings/leaderboard.md` | the same, as one document of per-round sections |
-| `data/ratings/cache/` | per-round count tables |
 
 Unrated rounds get **no** fit file — there is nothing to describe — and their
 status lives in `leaderboard.json`. The writer prunes: a `fits/*.json` for a round
@@ -132,7 +131,7 @@ policy changed — and only that round's file moves when one round gains a game.
 - **Never compare across rounds.** A contrast needs both arms in one round:
   `fits["<round>"].delta(a, b)`. There is nothing to read instead.
 - Ratings from two engine eras never pool. Use `--era <sha>` to refit a past
-  one; do not use `--all-eras` to make a number look better.
+  one. There is no flag that disables the era filter.
 - Experiment reporting:
   [`docs/research/experiment-protocol.md`](../../../docs/research/experiment-protocol.md).
 

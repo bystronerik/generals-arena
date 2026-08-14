@@ -79,13 +79,12 @@ python scripts/measure_heuristics.py --round round<N> --games-per-pair 50 --roun
 ```
 
 ```bash
-python -m arena.records.ratings --print --round round<N> --lineage <bot>
+python -m arena.records.ratings --print --round round<N>
 ```
 
-`--lineage` prints one table per round the bot played in. A step whose predecessor
-did not play in the same round shows `—` with `predecessor not_in_this_round`
-instead of a number: that delta would be arithmetic over two scales that were
-never joined.
+Read the verdict from `fits["<round>"].delta(baseline, candidate)`, never from a
+rank. Both arms must be entities in that one round — which is why the baseline is
+a frozen copy under its own bot id, kept for the duration of the comparison.
 
 Round reports: [`docs/research/measurements/`](../../../docs/research/measurements/).
 Override the roster with `--bots`; default is `DEFAULT_ROSTER` in the script.

@@ -41,7 +41,7 @@ SPLIT = {("a", "b"): (6, 4, 0), ("c", "d"): (5, 5, 0)}
 
 def round_for(pairs, *, name="r1", anchor="a", entities=(), min_games=30):
     """A `RoundResult` over a hand-built count table, without touching disk."""
-    from arena.records.ratings.cache import RoundCounts
+    from arena.records.ratings.scan import RoundCounts
     from arena.records.ratings.rounds import fit_round
 
     return fit_round(

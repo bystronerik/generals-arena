@@ -91,7 +91,7 @@ The orchestration must satisfy the minimum games, per-opponent games, decisive
 games, connectivity, and same-era gates in the decision rule.
 
 ```bash
-python -m arena.records.ratings --print --lineage morpheus
+python -m arena.records.ratings --print --round <name>
 ```
 
 ```bash
