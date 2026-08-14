@@ -25,6 +25,11 @@
       "at": "2026-08-14T19:40:54Z",
       "content_hash": "08e9f1118c22",
       "seq": 5
+    },
+    {
+      "at": "2026-08-14T20:13:19Z",
+      "content_hash": "c4faee473995",
+      "seq": 6
     }
   ],
   "version": 1,
@@ -442,6 +447,116 @@
       ],
       "first_seen_at": "2026-08-14T19:40:54Z",
       "git_commit": "c9fb987eae251f7f1551a626cc9f7a12d8184bc5",
+      "git_dirty": false
+    },
+    {
+      "closure_ref": "refs/bot-versions/c4faee473995",
+      "closure_tree": "66549aceb8957b788dd829e696335029415c4584",
+      "content_hash": "c4faee473995",
+      "files": [
+        {
+          "blob": "a0c89260a153bb9b5aa70bea3b8c9900a0377f6a",
+          "path": "bots/joe-rs/.cargo/config.toml",
+          "sha256": "070c62350674ebb7dc151ff3047ee2f16cfd6bf9a00b934cf537ff5aff53674a"
+        },
+        {
+          "blob": "295e4c50ffda7d6cd6149e79255d72b1cd143b29",
+          "path": "bots/joe-rs/Cargo.lock",
+          "sha256": "6da7152aae0c72565629ed3254eb58f5f41db2a2b89aef49ba2ea6fdf3395396"
+        },
+        {
+          "blob": "9adb70170ca229a32b0b05f72adca752b88252a8",
+          "path": "bots/joe-rs/Cargo.toml",
+          "sha256": "e9dd11ee5c3c32e0a7a6636627fc8a7efe92083af44815f1010f2867e3d9c5c4"
+        },
+        {
+          "blob": "b860cb7dcb0c051cc157f63f35a2972c0d05c45d",
+          "path": "bots/joe-rs/artifact/manifest.json",
+          "sha256": "91af5524a5f685a5ddd8b7002462c635875049010663ee99bf331ed5ca929cfc"
+        },
+        {
+          "blob": "70eeba8f3c53247bd9f1a929ec63fd3224568b9f",
+          "path": "bots/joe-rs/artifact/model.safetensors",
+          "sha256": "e9b239f0bb0b166ce3476680711d09a42980fc1f9798f109aaa252c470fb04dc"
+        },
+        {
+          "blob": "f48cf9395d72cac63765d1d162f64523e2c12d6f",
+          "path": "bots/joe-rs/run.sh",
+          "sha256": "1329e8ae373bedcb0746ff959902205885e4d638388458079d50fcb8a1a92bc4"
+        },
+        {
+          "blob": "f827fe55a31954be2c5d9ac6d9bb21655fa38e30",
+          "path": "bots/joe-rs/rust-toolchain.toml",
+          "sha256": "436dd7bc962fef2cd92375e062fb55eacc270c2c73d1adfd693422b8da497aee"
+        },
+        {
+          "blob": "520b3fc49ff1ce4c9fc18d84798d35c90156ade6",
+          "path": "bots/joe-rs/src/board/action.rs",
+          "sha256": "5462bdc3231d593783c9986bbaebcc98cbd7c5f44766be113f5715ef6695b605"
+        },
+        {
+          "blob": "b9a4ee25be2667c35ad989a5bdcad6b37fa9c978",
+          "path": "bots/joe-rs/src/board/mod.rs",
+          "sha256": "a9faa884a4985b111d5d3a2e90ad688023cf7b0b3ad46ec2a1bcf6c018ff3d5a"
+        },
+        {
+          "blob": "4dbe0f6653b80c4651fa21bf95add7ff957afb8b",
+          "path": "bots/joe-rs/src/board/obs.rs",
+          "sha256": "bd4a5cb1da47c3654523b7a8ef4666e0bf06e0a86aadd5ba13edd93414d431b2"
+        },
+        {
+          "blob": "25ed176e08925ecc3c46e57853d68dfec1f09177",
+          "path": "bots/joe-rs/src/io/json.rs",
+          "sha256": "095853debeb1d1ec1a3742f956300e94cec20b48f930fb5f1e0c07d53dedf368"
+        },
+        {
+          "blob": "ab2df14aaf642026835cd600a67328a7988f36e3",
+          "path": "bots/joe-rs/src/io/mod.rs",
+          "sha256": "f21064f653a674dfcd13027234a5574b1cb953b69ffd199cceec34ceda4a1428"
+        },
+        {
+          "blob": "671ca774c868f8fce85af05303dc5bb1742a6085",
+          "path": "bots/joe-rs/src/io/wire.rs",
+          "sha256": "a720abb8e66d87a7f96dd22f20299cd8772a7a2fcbc8542222a000ff295a66b7"
+        },
+        {
+          "blob": "e4a71cb8f9a1c6fb3028b83c3f28812f699809e0",
+          "path": "bots/joe-rs/src/main.rs",
+          "sha256": "557b967dcc0c1a02fe5e24db6498c15e3289ff3cddd2069cb507cda6fd45424e"
+        },
+        {
+          "blob": "f8b2ed72996694ae5559f3149d3e27266b1a48d6",
+          "path": "bots/joe-rs/src/nn/gemm.rs",
+          "sha256": "e9feaff0b25128a633ec2661b06958f5aef049da0ad9df3c64fdddbaa6eba336"
+        },
+        {
+          "blob": "0cdf3342a3224e5fb5de8c2d5a42d9636b53a3d8",
+          "path": "bots/joe-rs/src/nn/mod.rs",
+          "sha256": "e7460c6095e595ef7a23301fab63e83aabf040725b5d162fb42f505a63d21a8d"
+        },
+        {
+          "blob": "deca2ec0e4ad49191a74c16e2fc139721295dfad",
+          "path": "bots/joe-rs/src/nn/net.rs",
+          "sha256": "1d7de8a87595379a8b5e8ab3ca347abdc0a37b211e46b84e033b339a911c2dfb"
+        },
+        {
+          "blob": "582e3a4f478b2329731a735190ee62cbb06e8524",
+          "path": "bots/joe-rs/src/nn/safetensors.rs",
+          "sha256": "71971d5b793b4f9060080f09e0453ba0f9be3c676e7e136891ea666a9b5e1f6c"
+        },
+        {
+          "blob": "9a5d42186c3a0dbc832c3da2e693a513e4c1397a",
+          "path": "bots/joe-rs/src/parity.rs",
+          "sha256": "f3b9d7530b0ae11373136c41366f7d533a86263c80dd0f9377a023fec32ec1c4"
+        },
+        {
+          "blob": "c25fe8589fd610805353e7fdca9c0ede164a2166",
+          "path": "bots/joe-rs/src/xla_math.rs",
+          "sha256": "8a14034b1dfeb0782b000a17183df4baad84b3b321ebfe79fb69772f5e904805"
+        }
+      ],
+      "first_seen_at": "2026-08-14T20:13:19Z",
+      "git_commit": "b4516e019d42ea805eead2d1b4952d87636cbe6e",
       "git_dirty": false
     }
   ]

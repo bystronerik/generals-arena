@@ -231,7 +231,8 @@ would collide two different trees.
 What follows:
 
 1. **One lineage step**, registered after the parity corpus and the mutation
-   check were green, with a note that this was a pure move.
+   check were green: `joe-rs@08e9f1118c22` → **`joe-rs@c4faee473995`**, step 6,
+   from a clean tree.
 2. **Existing rating data does not transfer.** Everything measured against
    `joe-rs@08e9f1118c22` — the A/B sanity round, the latency percentiles, the
    parity numbers — is attached to that hash. A round under
