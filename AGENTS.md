@@ -41,6 +41,8 @@ Process rules for agents that work in this repo. Put game and bot knowledge in `
 | Joe local checkpoint dirs (derived, gitignored) | `data/joe/<run>/` |
 | Joe remote durable state (vast.ai runs) | R2 bucket `joe-training`, prefix `joe/<run>/` |
 | Submission-harness failure fixtures | `tests/fixtures/submission_bots/` |
+| Shared Rust dev tooling | `tools/` |
+| Rust submission packager (shared) | `arena/rust_bundle.py` + per-bot `bots/<name>/tools/package_submission.py` |
 | Cursor skills | `.cursor/skills/` |
 
 Joe's Modal Volume holds prototyping runs; R2 holds the durable state of the

@@ -154,7 +154,8 @@ bots — a submission carries logic, not strategy notes — and the Rust side no
 follows the same rule, with the same discipline: **the rewrite happens on the
 way into the zip only, and the repo files are never touched.**
 
-`tools/minify/` is a dev-time crate over
+`tools/rust-minify/` (at the repo root, shared with joe-rs since
+[J5.2](../joe-rs/packaging.md)) is a dev-time crate over
 [`rustminify`](https://docs.rs/rustminify) 0.2.0, pinned exactly, reading one
 `.rs` on stdin and writing the stripped equivalent on stdout. It is a parse and
 a re-print, not a text rewrite: ordinary `//` comments never reach the AST, so

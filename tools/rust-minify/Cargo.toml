@@ -1,0 +1,32 @@
+# Dev-time helper, never shipped and never linked into a bot.
+#
+# Shared by every Rust bot through `arena/rust_bundle.py`, which is why it sits
+# at the repo root rather than inside one bot: a shared packager must not reach
+# into one bot's private tooling, and joe-rs depending on
+# `bots/morpheus-rs/tools/` would make morpheus undeletable.
+#
+# It is outside every bot's rating identity by construction — the content hash
+# walk never leaves `bots/` — and nothing here reaches a submission zip. It
+# runs on the packaging host, where a network exists; the judge's sandbox sees
+# only the strings this produces.
+#
+# `[workspace]` is empty on purpose: without it, cargo walks up looking for a
+# workspace root and refuses to build a crate that no workspace lists as a
+# member.
+[package]
+name = "rust-minify"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+# Pinned exactly. This strips comments out of the program that plays rated
+# games; a silent upgrade to a version whose output differs is a change to the
+# submitted source that nothing here would notice.
+rustminify = "=0.2.0"
+# syn **1.x**, not 2. `rustminify::remove_docs` takes a `syn::File` from the
+# 1.0 line, and cargo will happily link both majors into one graph — the error
+# is a type mismatch between two types spelled identically.
+syn = { version = "1", features = ["full", "parsing", "printing"] }
