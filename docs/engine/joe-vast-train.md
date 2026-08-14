@@ -119,6 +119,31 @@ Constraints:
   (`sync-env`); the bootstrap reads them from the container
   environment without printing them.
 
+### Restarting the trainer in place
+
+`resume --instance-id <id>` restarts the training process without a new
+instance: it keeps the adopted instance, then runs onstart again over
+SSH. Onstart is idempotent, so a warm box skips the venv, the pip stack,
+and the code download, and goes to `training.joe.vast_boot`, which
+restores `state/latest.json`. You lose the steps after the last
+checkpoint and nothing else.
+
+Two rules for that path:
+
+- **Stop the old trainer first** (`pkill -f training.joe.vast_boot`).
+  The launcher does not stop it. Two trainers on one GPU write to the
+  same R2 prefix.
+- **Each boot needs a new `JOE_BOOT_ID`.** It names the local log and
+  the `logs/train-<boot_id>.log` object in R2, so a repeated id writes
+  over the log of the boot before it. Onstart makes a new id on every
+  run and keeps the per-boot variables out of `/etc/environment`,
+  which every later SSH login reads.
+
+New code does not go to a running instance through `resume`: onstart
+skips the download while `repo/.joe-code-sha` agrees with `launch.json`.
+Use `launch --force` with the same `--run-name` and `--instance-id` to
+upload a new tarball. `state/` stays, so the run continues.
+
 ---
 
 ## What the instance does

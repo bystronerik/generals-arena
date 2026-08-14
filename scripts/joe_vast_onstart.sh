@@ -24,7 +24,10 @@ export RUN_NAME="${RUN_NAME:?RUN_NAME is required}"
 export JOE_ROOT="${JOE_ROOT:-/workspace/joe}"
 export REPO_DIR="${REPO_DIR:-${JOE_ROOT}/repo}"
 export CKPT_DIR="${CKPT_DIR:-${JOE_ROOT}/ckpt}"
-export JOE_BOOT_ID="${JOE_BOOT_ID:-$(date +%Y%m%d-%H%M%S)-$$}"
+# Always a new id: each run of this script is a new boot. The id names the
+# log file here and the logs/train-<boot_id>.log object in R2, so an
+# inherited id makes a restart write over the log of the boot before it.
+export JOE_BOOT_ID="$(date +%Y%m%d-%H%M%S)-$$"
 
 # Visible in `vastai logs` even if later redirect fails.
 echo "joe onstart starting run=${RUN_NAME} $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -34,8 +37,16 @@ export JOE_TRAIN_LOG="${JOE_ROOT}/logs/train-${JOE_BOOT_ID}.log"
 touch "${JOE_TRAIN_LOG}"
 
 # Account env vars are visible to onstart; copy them so later SSH sessions
-# see them too (vast.ai docker-environment note).
-env | grep _ >> /etc/environment || true
+# see them too (vast.ai docker-environment note). The per-boot vars stay
+# out: every later SSH login reads /etc/environment, so a copied
+# JOE_BOOT_ID comes back through the adopt session and the next boot keeps
+# the id of the boot before it. Write each line one time only; this script
+# runs on every boot and the file must not grow.
+env | grep '_' \
+  | grep -vE '^(JOE_BOOT_ID|JOE_TRAIN_LOG|JOE_PYTHON|PWD|OLDPWD|SHLVL|_)=' \
+  | while IFS= read -r line; do
+      grep -qxF "${line}" /etc/environment 2>/dev/null || printf '%s\n' "${line}"
+    done >> /etc/environment || true
 
 # Keep a copy on stdout (`vastai logs`) and in the boot log file.
 exec > >(tee -a "${JOE_TRAIN_LOG}") 2>&1
