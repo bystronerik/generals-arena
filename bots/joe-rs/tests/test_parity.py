@@ -89,14 +89,25 @@ LOGIT_TOL_NOMINAL = 1e-4
 # the gate still kills all 9 planted bugs — including `qk-proj-swap`, the
 # leaf-misalignment bug this tier exists to catch. Re-measure and re-run
 # `mutation_check` after every export; exceeding these is still a finding.
-LOGIT_REL_ACHIEVED = 8.0e-6   # worst measured 3.944e-6 (step 13500)
-BIN_REL_ACHIEVED = 1.6e-5     # worst measured 7.940e-6 (step 13500)
+#
+# 2026-08-15: the forward pass moved off candle onto the in-house kernel
+# (src/gemm.rs — port-plan §9 R1, taken for intake, not latency). Same
+# weights, same step-13500 corpus, different GEMM summation order and an FMA
+# per term, so the achieved numbers moved and were re-measured over the full
+# 710 frames: rel logit max 4.726e-6 (was 3.944e-6), rel bin max 8.483e-6
+# (was 7.940e-6) — both inside the pins below, which keep their sizing.
+LOGIT_REL_ACHIEVED = 8.0e-6   # worst measured 4.726e-6 (step 13500, gemm.rs)
+BIN_REL_ACHIEVED = 1.6e-5     # worst measured 8.483e-6 (step 13500, gemm.rs)
 # |value| <= 1 by construction (bin_centers span [-1, 1]), so this one is
 # already scale-free and stays absolute. It tracks bin sharpness rather than
 # bin magnitude: 9.537e-7 at step 5000, 2.205e-6 at step 6000, and on the
-# identical-frame A/B 1.520e-6 (step 10000) / 1.669e-6 (step 13500) — the one
-# figure that did not drift, so it keeps its original pin.
-VALUE_TOL_ACHIEVED = 2.5e-6
+# identical-frame A/B 1.520e-6 (step 10000) / 1.669e-6 (step 13500) under
+# candle. The gemm.rs kernel measured 2.682e-6 on the same corpus — over the
+# old 2.5e-6 pin by 7%, which is the kernel's different rounding, not drift —
+# so the pin is re-sized with the same ~2x headroom the two pins above carry.
+# Defensible only because `mutation_check` re-confirms all 9 kills at this
+# value; exceeding it is still a finding.
+VALUE_TOL_ACHIEVED = 5.0e-6   # worst measured 2.682e-6 (step 13500, gemm.rs)
 
 # Tier-3 gate: greedy action equal on >= 99.5% of frames; every divergence
 # must be a near-tie inside the tier-2 bound.

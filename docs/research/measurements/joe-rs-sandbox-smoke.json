@@ -13,42 +13,42 @@
   "results": [
     {
       "variant": "submission",
-      "files": 3961,
-      "unpacked_bytes": 86297453,
-      "zip_bytes": 42237838,
-      "vendored_files": 3946,
+      "files": 18,
+      "unpacked_bytes": 34298559,
+      "zip_bytes": 31841529,
+      "vendored_files": 0,
       "builds": [
         {
           "jobs": "default",
           "returncode": 0,
-          "seconds": 67.43,
-          "child_maxrss_bytes": 1381031936,
+          "seconds": 6.5,
+          "child_maxrss_bytes": 540971008,
           "cgroup_peak_bytes": null,
-          "stdout_tail": "[build] -rwxr-xr-x 2 root root 2012976 Aug 14 14:45 /tmp/submission/target/release/joe-rs\nhardware_fma true\nhardware_avx2 true\nartifact_dir /tmp/submission/artifact\nsafetensors_sha256 e9b239f0bb0b166ce3476680711d09a42980fc1f9798f109aaa252c470fb04dc\ntensor_schema joe-net-v1\ncheckpoint joe-M-vast-20260813-0213\ncheckpoint_step 13500\nstartup_ms 122.711\ndecide_ms 15.579\ndecision 0 10 10 2 0\nselfcheck ok\n",
-          "stderr_tail": ".0\n   Compiling stable_deref_trait v1.2.1\n   Compiling hashbrown v0.17.1\n   Compiling allocator-api2 v0.2.21\n   Compiling typed-path v0.12.3\n   Compiling byteorder v1.5.0\n   Compiling syn v2.0.119\n   Compiling syn v3.0.3\n   Compiling indexmap v2.14.0\n   Compiling memmap2 v0.9.11\n   Compiling num_cpus v1.17.0\n   Compiling rand_core v0.9.5\n   Compiling rayon v1.12.0\n   Compiling zip v7.2.0\n   Compiling bytemuck_derive v1.12.0\n   Compiling serde_derive v1.0.229\n   Compiling thiserror-impl v2.0.20\n   Compiling hashbrown v0.16.1\n   Compiling bytemuck v1.25.2\n   Compiling num-complex v0.4.6\n   Compiling dyn-stack v0.13.2\n   Compiling synstructure v0.13.2\n   Compiling zerocopy-derive v0.8.56\n   Compiling zerofrom-derive v0.1.7\n   Compiling yoke-derive v0.8.2\n   Compiling zerofrom v0.1.8\n   Compiling yoke v0.8.3\n   Compiling safetensors v0.7.0\n   Compiling safetensors v0.6.2\n   Compiling ppv-lite86 v0.2.21\n   Compiling rand_chacha v0.9.0\n   Compiling rand v0.9.5\n   Compiling rand_distr v0.5.1\n   Compiling half v2.7.1\n   Compiling gemm-common v0.19.0\n   Compiling float8 v0.6.1\n   Compiling gemm-f32 v0.19.0\n   Compiling gemm-f64 v0.19.0\n   Compiling gemm-c64 v0.19.0\n   Compiling gemm-c32 v0.19.0\n   Compiling gemm-f16 v0.19.0\n   Compiling gemm v0.19.0\n   Compiling candle-core v0.9.2\n   Compiling candle-nn v0.9.2\n   Compiling joe-rs v0.1.0 (/tmp/submission)\n    Finished `release` profile [optimized] target(s) in 1m 07s\n[joe-rs] load 95.5 ms, warmup 26.8 ms\n[joe-rs] turn 50 value +0.8355\n"
+          "stdout_tail": "[build] -rwxr-xr-x 2 root root 604048 Aug 14 19:39 /tmp/submission/target/release/joe-rs\nhardware_fma true\nhardware_avx2 true\nartifact_dir /tmp/submission/artifact\nsafetensors_sha256 e9b239f0bb0b166ce3476680711d09a42980fc1f9798f109aaa252c470fb04dc\ntensor_schema joe-net-v1\ncheckpoint joe-M-vast-20260813-0213\ncheckpoint_step 13500\nstartup_ms 96.312\ndecide_ms 21.534\ndecision 0 10 10 2 0\nselfcheck ok\n",
+          "stderr_tail": "   Compiling joe-rs v0.1.0 (/tmp/submission)\n    Finished `release` profile [optimized] target(s) in 6.28s\n[joe-rs] load 74.6 ms, warmup 21.3 ms\n[joe-rs] turn 50 value +0.8355\n"
         },
         {
           "jobs": 1,
           "returncode": 0,
-          "seconds": 124.49,
-          "child_maxrss_bytes": 1700327424,
+          "seconds": 6.57,
+          "child_maxrss_bytes": 559927296,
           "cgroup_peak_bytes": null,
-          "stdout_tail": "[build] -rwxr-xr-x 2 root root 2013104 Aug 14 14:47 /tmp/submission-j1/target/release/joe-rs\nhardware_fma true\nhardware_avx2 true\nartifact_dir /tmp/submission-j1/artifact\nsafetensors_sha256 e9b239f0bb0b166ce3476680711d09a42980fc1f9798f109aaa252c470fb04dc\ntensor_schema joe-net-v1\ncheckpoint joe-M-vast-20260813-0213\ncheckpoint_step 13500\nstartup_ms 121.822\ndecide_ms 15.677\ndecision 0 10 10 2 0\nselfcheck ok\n",
-          "stderr_tail": "0.1.1\n   Compiling dyn-stack v0.13.2\n   Compiling rayon v1.12.0\n   Compiling seq-macro v0.3.6\n   Compiling serde_core v1.0.229\n   Compiling once_cell v1.21.4\n   Compiling gemm-common v0.19.0\n   Compiling zmij v1.0.23\n   Compiling synstructure v0.13.2\n   Compiling serde v1.0.229\n   Compiling memchr v2.8.3\n   Compiling equivalent v1.0.2\n   Compiling serde_json v1.0.151\n   Compiling serde_derive v1.0.229\n   Compiling crc32fast v1.5.0\n   Compiling itoa v1.0.18\n   Compiling zerofrom-derive v0.1.7\n   Compiling gemm-f32 v0.19.0\n   Compiling stable_deref_trait v1.2.1\n   Compiling allocator-api2 v0.2.21\n   Compiling foldhash v0.2.0\n   Compiling hashbrown v0.17.1\n   Compiling thiserror v2.0.20\n   Compiling indexmap v2.14.0\n   Compiling hashbrown v0.16.1\n   Compiling gemm-f16 v0.19.0\n   Compiling zerofrom v0.1.8\n   Compiling yoke-derive v0.8.2\n   Compiling gemm-c64 v0.19.0\n   Compiling gemm-c32 v0.19.0\n   Compiling gemm-f64 v0.19.0\n   Compiling thiserror-impl v2.0.20\n   Compiling typed-path v0.12.3\n   Compiling zip v7.2.0\n   Compiling gemm v0.19.0\n   Compiling yoke v0.8.3\n   Compiling safetensors v0.7.0\n   Compiling memmap2 v0.9.11\n   Compiling float8 v0.6.1\n   Compiling num_cpus v1.17.0\n   Compiling byteorder v1.5.0\n   Compiling candle-core v0.9.2\n   Compiling candle-nn v0.9.2\n   Compiling safetensors v0.6.2\n   Compiling joe-rs v0.1.0 (/tmp/submission-j1)\n    Finished `release` profile [optimized] target(s) in 2m 04s\n[joe-rs] load 98.0 ms, warmup 23.5 ms\n[joe-rs] turn 50 value +0.8355\n"
+          "stdout_tail": "[build] -rwxr-xr-x 2 root root 604048 Aug 14 19:39 /tmp/submission-j1/target/release/joe-rs\nhardware_fma true\nhardware_avx2 true\nartifact_dir /tmp/submission-j1/artifact\nsafetensors_sha256 e9b239f0bb0b166ce3476680711d09a42980fc1f9798f109aaa252c470fb04dc\ntensor_schema joe-net-v1\ncheckpoint joe-M-vast-20260813-0213\ncheckpoint_step 13500\nstartup_ms 89.623\ndecide_ms 20.934\ndecision 0 10 10 2 0\nselfcheck ok\n",
+          "stderr_tail": "   Compiling joe-rs v0.1.0 (/tmp/submission-j1)\n    Finished `release` profile [optimized] target(s) in 6.38s\n[joe-rs] load 68.8 ms, warmup 20.5 ms\n[joe-rs] turn 50 value +0.8355\n"
         }
       ],
       "build_returncode": 0,
-      "build_seconds": 67.43,
-      "build_stdout_tail": "[build] -rwxr-xr-x 2 root root 2012976 Aug 14 14:45 /tmp/submission/target/release/joe-rs\nhardware_fma true\nhardware_avx2 true\nartifact_dir /tmp/submission/artifact\nsafetensors_sha256 e9b239f0bb0b166ce3476680711d09a42980fc1f9798f109aaa252c470fb04dc\ntensor_schema joe-net-v1\ncheckpoint joe-M-vast-20260813-0213\ncheckpoint_step 13500\nstartup_ms 122.711\ndecide_ms 15.579\ndecision 0 10 10 2 0\nselfcheck ok\n",
-      "build_stderr_tail": ".0\n   Compiling stable_deref_trait v1.2.1\n   Compiling hashbrown v0.17.1\n   Compiling allocator-api2 v0.2.21\n   Compiling typed-path v0.12.3\n   Compiling byteorder v1.5.0\n   Compiling syn v2.0.119\n   Compiling syn v3.0.3\n   Compiling indexmap v2.14.0\n   Compiling memmap2 v0.9.11\n   Compiling num_cpus v1.17.0\n   Compiling rand_core v0.9.5\n   Compiling rayon v1.12.0\n   Compiling zip v7.2.0\n   Compiling bytemuck_derive v1.12.0\n   Compiling serde_derive v1.0.229\n   Compiling thiserror-impl v2.0.20\n   Compiling hashbrown v0.16.1\n   Compiling bytemuck v1.25.2\n   Compiling num-complex v0.4.6\n   Compiling dyn-stack v0.13.2\n   Compiling synstructure v0.13.2\n   Compiling zerocopy-derive v0.8.56\n   Compiling zerofrom-derive v0.1.7\n   Compiling yoke-derive v0.8.2\n   Compiling zerofrom v0.1.8\n   Compiling yoke v0.8.3\n   Compiling safetensors v0.7.0\n   Compiling safetensors v0.6.2\n   Compiling ppv-lite86 v0.2.21\n   Compiling rand_chacha v0.9.0\n   Compiling rand v0.9.5\n   Compiling rand_distr v0.5.1\n   Compiling half v2.7.1\n   Compiling gemm-common v0.19.0\n   Compiling float8 v0.6.1\n   Compiling gemm-f32 v0.19.0\n   Compiling gemm-f64 v0.19.0\n   Compiling gemm-c64 v0.19.0\n   Compiling gemm-c32 v0.19.0\n   Compiling gemm-f16 v0.19.0\n   Compiling gemm v0.19.0\n   Compiling candle-core v0.9.2\n   Compiling candle-nn v0.9.2\n   Compiling joe-rs v0.1.0 (/tmp/submission)\n    Finished `release` profile [optimized] target(s) in 1m 07s\n[joe-rs] load 95.5 ms, warmup 26.8 ms\n[joe-rs] turn 50 value +0.8355\n",
-      "build_child_maxrss_bytes": 1381031936,
+      "build_seconds": 6.5,
+      "build_stdout_tail": "[build] -rwxr-xr-x 2 root root 604048 Aug 14 19:39 /tmp/submission/target/release/joe-rs\nhardware_fma true\nhardware_avx2 true\nartifact_dir /tmp/submission/artifact\nsafetensors_sha256 e9b239f0bb0b166ce3476680711d09a42980fc1f9798f109aaa252c470fb04dc\ntensor_schema joe-net-v1\ncheckpoint joe-M-vast-20260813-0213\ncheckpoint_step 13500\nstartup_ms 96.312\ndecide_ms 21.534\ndecision 0 10 10 2 0\nselfcheck ok\n",
+      "build_stderr_tail": "   Compiling joe-rs v0.1.0 (/tmp/submission)\n    Finished `release` profile [optimized] target(s) in 6.28s\n[joe-rs] load 74.6 ms, warmup 21.3 ms\n[joe-rs] turn 50 value +0.8355\n",
+      "build_child_maxrss_bytes": 540971008,
       "cgroup_peak_bytes": null,
       "reply_lines": [
         "0 10 10 2 0",
         "0 10 10 2 0"
       ],
       "run_returncode": 0,
-      "run_stderr_tail": "[joe-rs] load 108.3 ms, warmup 20.7 ms\n[joe-rs] turn 50 value +0.8355\n[joe-rs] turn 51 value +0.8241\n",
+      "run_stderr_tail": "[joe-rs] load 68.6 ms, warmup 21.3 ms\n[joe-rs] turn 50 value +0.8355\n[joe-rs] turn 51 value +0.8241\n",
       "all_pass": false,
       "ok": true,
       "fallback_returncode": 0,

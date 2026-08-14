@@ -29,9 +29,12 @@
 //! where failing is cheaper than playing.
 
 mod action;
+mod gemm;
+mod json;
 mod net;
 mod obs;
 mod parity;
+mod safetensors;
 mod wire;
 mod xla_math;
 
@@ -384,14 +387,28 @@ fn run_selfcheck() -> ! {
     // data/bot_versions/joe-rs.json can be compared without a rebuild.
     match std::fs::read_to_string(dir.join("manifest.json"))
         .map_err(|e| e.to_string())
-        .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).map_err(|e| e.to_string()))
+        .and_then(|t| crate::json::parse(&t))
     {
         Ok(m) => {
             for key in ["safetensors_sha256", "tensor_schema"] {
-                say(key, m[key].as_str().unwrap_or("").to_string());
+                say(key, m.get(key).and_then(|v| v.as_str()).unwrap_or("").to_string());
             }
-            say("checkpoint", m["checkpoint"]["run_name"].as_str().unwrap_or("").to_string());
-            say("checkpoint_step", m["checkpoint"]["global_step"].to_string());
+            let checkpoint = m.get("checkpoint");
+            say(
+                "checkpoint",
+                checkpoint
+                    .and_then(|c| c.get("run_name"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+            );
+            say(
+                "checkpoint_step",
+                checkpoint
+                    .and_then(|c| c.get("global_step"))
+                    .and_then(|v| v.as_i64())
+                    .map_or_else(|| "null".to_string(), |v| v.to_string()),
+            );
         }
         Err(e) => failures.push(format!("manifest.json: {e}")),
     }

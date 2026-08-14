@@ -3,7 +3,7 @@
   "machine": "x86_64",
   "online_cpus": 17,
   "cpu_model": "unknown",
-  "build_s": 110.4,
-  "bench_stdout": "turns 1320 startup_ms 1071.0 p50 24.17 p90 24.49 p99 25.39 max 35.63",
+  "build_s": 12.4,
+  "bench_stdout": "turns 1602 startup_ms 164.2 p50 21.37 p90 22.32 p99 23.67 max 34.53",
   "bench_rc": 0
 }

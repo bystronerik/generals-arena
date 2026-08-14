@@ -1,4 +1,4 @@
-//! The HistoryTransformer forward pass in candle (port-plan §5).
+//! The HistoryTransformer forward pass, dependency-free (port-plan §9, R1).
 //!
 //! Single sample, fixed shapes: 39×21×21 obs → 49 patch tokens of 351 →
 //! 52 tokens × 384 through five pre-norm blocks (MHSA 8 heads / head_dim 48,
@@ -7,18 +7,31 @@
 //! `bin_centers`). Deployment is float32 everywhere — the checkpoint's
 //! `use_bf16` was already off in the Python sibling.
 //!
+//! This used to be candle (the port plan's first choice, and R1's tripwire
+//! never fired on latency). What retired it was intake, not speed: the
+//! 93-crate vendored build is what tournament qualification rejected, so the
+//! whole graph — ~7 distinct GEMM shapes plus LayerNorm, softmax, and SiLU —
+//! now runs on the in-house kernel in `gemm.rs`, the morpheus-rs precedent.
+//! Op order and float width mirror the candle path site by site (reciprocal
+//! multiplies where candle used them, plain multiply-then-add in LayerNorm);
+//! the GEMM accumulation order necessarily differs, which is exactly what the
+//! tier-2 parity tolerance in `tests/test_parity.py` exists to bound.
+//!
 //! Weights come from `artifact/model.safetensors` (written by
 //! `tools/convert_artifact.py`); the loader refuses to start on a schema
 //! tag, tensor name, shape, or dtype mismatch — the same guardrail the
-//! Python loader gets from `tree_deserialise_leaves`.
+//! Python loader gets from `tree_deserialise_leaves`. Every activation buffer
+//! is preallocated at load into a `Scratch` behind a `RefCell`, so a turn
+//! allocates nothing but its own `ForwardOut`.
 
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::collections::BTreeSet;
 use std::path::Path;
 
-use candle_core::{DType, Device, Tensor, D};
-use candle_nn::ops::softmax;
-
+use crate::gemm::gemm_bias;
+use crate::json;
 use crate::obs::{CELLS, N_ACTION_CHANNELS, N_CHANNELS, PAD, TEMPORAL_WINDOW};
+use crate::safetensors::SafeTensors;
 
 pub const TENSOR_SCHEMA: &str = "joe-net-v1";
 pub const EMBED: usize = 384;
@@ -34,32 +47,76 @@ pub const NUM_BINS: usize = 128;
 pub const FF_DIM: usize = 1152;
 pub const POLICY_OUT: usize = N_ACTION_CHANNELS * PATCH * PATCH; // 90
 pub const N_LOGITS: usize = N_ACTION_CHANNELS * CELLS; // 4410
+const TEMPORAL_HIDDEN: usize = 512;
 
 struct Linear {
-    weight_t: Tensor, // (in, out) — transposed once at load
-    bias: Tensor,     // (out,)
+    weight_t: Vec<f32>, // (in, out) — transposed once at load
+    bias: Vec<f32>,     // (out,)
+    in_dim: usize,
+    out_dim: usize,
 }
 
 impl Linear {
-    /// `y = x @ W^T + b` on a (tokens, in) matrix.
-    fn forward(&self, x: &Tensor) -> candle_core::Result<Tensor> {
-        x.matmul(&self.weight_t)?.broadcast_add(&self.bias)
+    /// `y = x @ W^T + b` on a (rows, in) matrix into a (rows, out) buffer.
+    fn forward_into(&self, rows: usize, x: &[f32], y: &mut [f32]) {
+        gemm_bias(rows, self.in_dim, self.out_dim, x, &self.weight_t, &self.bias, y);
     }
 }
 
 struct LayerNorm {
-    weight: Tensor,
-    bias: Tensor,
+    weight: Vec<f32>,
+    bias: Vec<f32>,
 }
 
 impl LayerNorm {
     /// Equinox LayerNorm: biased variance, eps 1e-5, applied per token.
-    fn forward(&self, x: &Tensor) -> candle_core::Result<Tensor> {
-        let mean = x.mean_keepdim(D::Minus1)?;
-        let centered = x.broadcast_sub(&mean)?;
-        let var = centered.sqr()?.mean_keepdim(D::Minus1)?;
-        let normed = centered.broadcast_div(&(var + 1e-5)?.sqrt()?)?;
-        normed.broadcast_mul(&self.weight)?.broadcast_add(&self.bias)
+    /// Mirrors the candle op order: mean, centered, mean of squares,
+    /// `sqrt(var + eps)`, divide, then multiply-add the affine — the divide
+    /// stays a true divide and the affine stays an unfused `mul` + `add`.
+    fn forward_into(&self, rows: usize, x: &[f32], y: &mut [f32]) {
+        for r in 0..rows {
+            let row = &x[r * EMBED..(r + 1) * EMBED];
+            let out = &mut y[r * EMBED..(r + 1) * EMBED];
+            let mut sum = 0f32;
+            for v in row {
+                sum += v;
+            }
+            let mean = sum / EMBED as f32;
+            let mut var_sum = 0f32;
+            for v in row {
+                let d = v - mean;
+                var_sum += d * d;
+            }
+            let denom = (var_sum / EMBED as f32 + 1e-5).sqrt();
+            for j in 0..EMBED {
+                out[j] = (row[j] - mean) / denom * self.weight[j] + self.bias[j];
+            }
+        }
+    }
+}
+
+/// `x * sigmoid(x)`, in candle's f32 form `v / (1 + exp(-v))`.
+fn silu_in_place(values: &mut [f32]) {
+    for v in values.iter_mut() {
+        *v /= 1.0 + (-*v).exp();
+    }
+}
+
+/// Row softmax, the candle op order: subtract the max, exp, sum, divide.
+fn softmax_in_place(row: &mut [f32]) {
+    let mut max = f32::NEG_INFINITY;
+    for &v in row.iter() {
+        if v > max {
+            max = v;
+        }
+    }
+    let mut sum = 0f32;
+    for v in row.iter_mut() {
+        *v = (*v - max).exp();
+        sum += *v;
+    }
+    for v in row.iter_mut() {
+        *v /= sum;
     }
 }
 
@@ -74,10 +131,50 @@ struct Block {
     ff2: Linear,
 }
 
+/// Preallocated activation buffers for the fixed shapes — one set, reused
+/// every turn (port-plan §5's zero-per-turn-allocation target).
+struct Scratch {
+    patched: Vec<f32>,      // (49, 351)
+    x: Vec<f32>,            // (52, 384) — the residual stream
+    normed: Vec<f32>,       // (52, 384)
+    q: Vec<f32>,            // (52, 384)
+    k: Vec<f32>,            // (52, 384)
+    v: Vec<f32>,            // (52, 384)
+    ctx: Vec<f32>,          // (52, 384) — attention context, head-major columns
+    proj: Vec<f32>,         // (52, 384) — out-proj / ff2 output before residual
+    ff: Vec<f32>,           // (52, 1152)
+    scores: Vec<f32>,       // (52, 52) — one head at a time
+    hist: Vec<f32>,         // (2, 512) — scaled temporal windows
+    hidden: Vec<f32>,       // (512,) — temporal MLP hidden
+    tokens: Vec<f32>,       // (2, 384) — temporal tokens
+    patch_logits: Vec<f32>, // (49, 90)
+}
+
+impl Scratch {
+    fn new() -> Self {
+        Self {
+            patched: vec![0.0; N_PATCHES * PATCH_DIM],
+            x: vec![0.0; N_TOKENS * EMBED],
+            normed: vec![0.0; N_TOKENS * EMBED],
+            q: vec![0.0; N_TOKENS * EMBED],
+            k: vec![0.0; N_TOKENS * EMBED],
+            v: vec![0.0; N_TOKENS * EMBED],
+            ctx: vec![0.0; N_TOKENS * EMBED],
+            proj: vec![0.0; N_TOKENS * EMBED],
+            ff: vec![0.0; N_TOKENS * FF_DIM],
+            scores: vec![0.0; N_TOKENS * N_TOKENS],
+            hist: vec![0.0; 2 * TEMPORAL_WINDOW],
+            hidden: vec![0.0; TEMPORAL_HIDDEN],
+            tokens: vec![0.0; 2 * EMBED],
+            patch_logits: vec![0.0; N_PATCHES * POLICY_OUT],
+        }
+    }
+}
+
 pub struct Net {
     embedder: Linear,
-    value_token: Tensor,  // (1, 384)
-    pos_encoding: Tensor, // (52, 384)
+    value_token: Vec<f32>,  // (1, 384)
+    pos_encoding: Vec<f32>, // (52, 384)
     blocks: Vec<Block>,
     norm_out: LayerNorm,
     policy_head: Linear,
@@ -86,9 +183,9 @@ pub struct Net {
     army_l2: Linear,
     land_l1: Linear,
     land_l2: Linear,
-    temporal_type_embed: Tensor, // (2, 384)
-    bin_centers: Vec<f32>,       // (128,)
-    device: Device,
+    temporal_type_embed: Vec<f32>, // (2, 384)
+    bin_centers: Vec<f32>,         // (128,)
+    scratch: RefCell<Scratch>,
 }
 
 /// The forward pass's outputs: masked flat logits, the value scalar, and the
@@ -99,36 +196,40 @@ pub struct ForwardOut {
     pub value_bins: Vec<f32>, // (128,)
 }
 
-fn take(
-    tensors: &mut HashMap<String, Tensor>,
-    name: &str,
-    shape: &[usize],
-) -> Result<Tensor, String> {
-    let t = tensors
-        .remove(name)
-        .ok_or_else(|| format!("artifact missing tensor {name}"))?;
-    if t.dtype() != DType::F32 {
-        return Err(format!("{name}: dtype {:?}, expected f32", t.dtype()));
-    }
-    if t.dims() != shape {
-        return Err(format!("{name}: shape {:?}, expected {shape:?}", t.dims()));
-    }
-    Ok(t)
+/// The artifact's tensors plus the set of names already claimed, so the
+/// loader can refuse an artifact with leftovers — the same guardrail the
+/// candle path got from draining its `HashMap`.
+struct Tensors {
+    st: SafeTensors,
+    taken: BTreeSet<String>,
+}
+
+fn take(tensors: &mut Tensors, name: &str, shape: &[usize]) -> Result<Vec<f32>, String> {
+    // Dtype is already enforced file-wide: the safetensors reader rejects
+    // anything that is not F32 at parse time.
+    let data = tensors.st.get_shaped(name, shape)?.to_vec();
+    tensors.taken.insert(name.to_string());
+    Ok(data)
 }
 
 fn take_linear(
-    tensors: &mut HashMap<String, Tensor>,
+    tensors: &mut Tensors,
     prefix: &str,
     out_dim: usize,
     in_dim: usize,
 ) -> Result<Linear, String> {
     let weight = take(tensors, &format!("{prefix}.weight"), &[out_dim, in_dim])?;
     let bias = take(tensors, &format!("{prefix}.bias"), &[out_dim])?;
-    let weight_t = weight.t().and_then(|t| t.contiguous()).map_err(|e| e.to_string())?;
-    Ok(Linear { weight_t, bias })
+    let mut weight_t = vec![0f32; in_dim * out_dim];
+    for o in 0..out_dim {
+        for i in 0..in_dim {
+            weight_t[i * out_dim + o] = weight[o * in_dim + i];
+        }
+    }
+    Ok(Linear { weight_t, bias, in_dim, out_dim })
 }
 
-fn take_norm(tensors: &mut HashMap<String, Tensor>, prefix: &str) -> Result<LayerNorm, String> {
+fn take_norm(tensors: &mut Tensors, prefix: &str) -> Result<LayerNorm, String> {
     Ok(LayerNorm {
         weight: take(tensors, &format!("{prefix}.weight"), &[EMBED])?,
         bias: take(tensors, &format!("{prefix}.bias"), &[EMBED])?,
@@ -142,15 +243,14 @@ impl Net {
     pub fn load(dir: &Path) -> Result<Self, String> {
         let manifest_text = std::fs::read_to_string(dir.join("manifest.json"))
             .map_err(|e| format!("read manifest.json: {e}"))?;
-        let manifest: serde_json::Value =
-            serde_json::from_str(&manifest_text).map_err(|e| format!("manifest.json: {e}"))?;
-        if manifest["tensor_schema"] != TENSOR_SCHEMA {
+        let manifest = json::parse(&manifest_text).map_err(|e| format!("manifest.json: {e}"))?;
+        let schema = manifest.get("tensor_schema").and_then(|v| v.as_str());
+        if schema != Some(TENSOR_SCHEMA) {
             return Err(format!(
-                "tensor_schema {:?}, this binary needs {TENSOR_SCHEMA:?}",
-                manifest["tensor_schema"]
+                "tensor_schema {schema:?}, this binary needs {TENSOR_SCHEMA:?}"
             ));
         }
-        let net_cfg = &manifest["network"];
+        let net_cfg = manifest.field("network").map_err(|e| format!("manifest: {e}"))?;
         for (key, want) in [
             ("pad_to", PAD as i64),
             ("history_size", 7),
@@ -161,14 +261,15 @@ impl Net {
             ("patch_size", PATCH as i64),
             ("num_bins", NUM_BINS as i64),
         ] {
-            if net_cfg[key] != want {
-                return Err(format!("manifest network.{key} = {}, expected {want}", net_cfg[key]));
+            let got = net_cfg.int_field(key).map_err(|e| format!("manifest network: {e}"))?;
+            if got != want {
+                return Err(format!("manifest network.{key} = {got}, expected {want}"));
             }
         }
 
-        let device = Device::Cpu;
-        let mut tensors = candle_core::safetensors::load(dir.join("model.safetensors"), &device)
+        let st = SafeTensors::load(&dir.join("model.safetensors"))
             .map_err(|e| format!("load model.safetensors: {e}"))?;
+        let mut tensors = Tensors { st, taken: BTreeSet::new() };
 
         let embedder = take_linear(&mut tensors, "embedder", EMBED, PATCH_DIM)?;
         let value_token = take(&mut tensors, "value_token", &[1, EMBED])?;
@@ -190,18 +291,18 @@ impl Net {
         let norm_out = take_norm(&mut tensors, "norm_out")?;
         let policy_head = take_linear(&mut tensors, "policy_head", POLICY_OUT, EMBED)?;
         let value_head = take_linear(&mut tensors, "value_head", NUM_BINS, EMBED)?;
-        let army_l1 = take_linear(&mut tensors, "temporal_encoder.army_l1", 512, TEMPORAL_WINDOW)?;
-        let army_l2 = take_linear(&mut tensors, "temporal_encoder.army_l2", EMBED, 512)?;
-        let land_l1 = take_linear(&mut tensors, "temporal_encoder.land_l1", 512, TEMPORAL_WINDOW)?;
-        let land_l2 = take_linear(&mut tensors, "temporal_encoder.land_l2", EMBED, 512)?;
+        let army_l1 =
+            take_linear(&mut tensors, "temporal_encoder.army_l1", TEMPORAL_HIDDEN, TEMPORAL_WINDOW)?;
+        let army_l2 = take_linear(&mut tensors, "temporal_encoder.army_l2", EMBED, TEMPORAL_HIDDEN)?;
+        let land_l1 =
+            take_linear(&mut tensors, "temporal_encoder.land_l1", TEMPORAL_HIDDEN, TEMPORAL_WINDOW)?;
+        let land_l2 = take_linear(&mut tensors, "temporal_encoder.land_l2", EMBED, TEMPORAL_HIDDEN)?;
         let temporal_type_embed = take(&mut tensors, "temporal_type_embed", &[2, EMBED])?;
-        let bin_centers = take(&mut tensors, "bin_centers", &[NUM_BINS])?
-            .to_vec1::<f32>()
-            .map_err(|e| e.to_string())?;
+        let bin_centers = take(&mut tensors, "bin_centers", &[NUM_BINS])?;
 
-        if !tensors.is_empty() {
-            let mut extra: Vec<&String> = tensors.keys().collect();
-            extra.sort();
+        let extra: Vec<&str> =
+            tensors.st.names().filter(|name| !tensors.taken.contains(*name)).collect();
+        if !extra.is_empty() {
             return Err(format!("artifact has unexpected tensors: {extra:?}"));
         }
 
@@ -219,7 +320,7 @@ impl Net {
             land_l2,
             temporal_type_embed,
             bin_centers,
-            device,
+            scratch: RefCell::new(Scratch::new()),
         })
     }
 
@@ -233,22 +334,30 @@ impl Net {
         penalties: &[f32],
         temporal: &[f32],
     ) -> Result<ForwardOut, String> {
-        self.forward_inner(aug_norm, penalties, temporal).map_err(|e| e.to_string())
-    }
-
-    fn forward_inner(
-        &self,
-        aug_norm: &[f32],
-        penalties: &[f32],
-        temporal: &[f32],
-    ) -> candle_core::Result<ForwardOut> {
         assert_eq!(aug_norm.len(), N_CHANNELS * CELLS);
         assert_eq!(penalties.len(), N_LOGITS);
         assert_eq!(temporal.len(), 2 * TEMPORAL_WINDOW);
 
+        let scratch = &mut *self.scratch.borrow_mut();
+        let Scratch {
+            patched,
+            x,
+            normed,
+            q,
+            k,
+            v,
+            ctx,
+            proj,
+            ff,
+            scores,
+            hist,
+            hidden,
+            tokens,
+            patch_logits,
+        } = scratch;
+
         // Patchify: (39, 21, 21) -> (49, 351), feature order (c, mi, mj) —
         // the reshape/transpose in `HistoryTransformer._forward`.
-        let mut patched = vec![0f32; N_PATCHES * PATCH_DIM];
         for gi in 0..GRID_PATCHES {
             for gj in 0..GRID_PATCHES {
                 let token = gi * GRID_PATCHES + gj;
@@ -263,55 +372,99 @@ impl Net {
                 }
             }
         }
-        let x = Tensor::from_slice(&patched, (N_PATCHES, PATCH_DIM), &self.device)?;
-        let x = self.embedder.forward(&x)?; // (49, 384)
+        // Embed straight into the patch rows (3..52) of the residual stream.
+        self.embedder.forward_into(N_PATCHES, patched, &mut x[3 * EMBED..]);
 
         // Temporal tokens: two independent 512 -> 512 -> 384 MLPs with SiLU,
-        // on history / 50, plus the type embedding. The division happens
-        // here as a true f32 divide (candle's scalar div is a reciprocal
-        // multiply, which is not the same bits).
-        let hist_scaled: Vec<f32> =
-            temporal.iter().map(|v| v * crate::xla_math::RECIP_50).collect();
-        let hist = Tensor::from_slice(&hist_scaled, (2, TEMPORAL_WINDOW), &self.device)?;
-        let army = hist.narrow(0, 0, 1)?;
-        let land = hist.narrow(0, 1, 1)?;
-        let army_tok = self.army_l2.forward(&candle_nn::ops::silu(&self.army_l1.forward(&army)?)?)?;
-        let land_tok = self.land_l2.forward(&candle_nn::ops::silu(&self.land_l1.forward(&land)?)?)?;
-        let temporal_tokens =
-            Tensor::cat(&[&army_tok, &land_tok], 0)?.add(&self.temporal_type_embed)?;
+        // on history / 50, plus the type embedding. The division happens as a
+        // reciprocal multiply because that is what XLA compiles it to
+        // (xla_math::RECIP_50 — the candle path did the same, and for the
+        // same reason: candle's scalar div is also a reciprocal multiply).
+        for (dst, src) in hist.iter_mut().zip(temporal) {
+            *dst = src * crate::xla_math::RECIP_50;
+        }
+        self.army_l1.forward_into(1, &hist[..TEMPORAL_WINDOW], hidden);
+        silu_in_place(hidden);
+        self.army_l2.forward_into(1, hidden, &mut tokens[..EMBED]);
+        self.land_l1.forward_into(1, &hist[TEMPORAL_WINDOW..], hidden);
+        silu_in_place(hidden);
+        self.land_l2.forward_into(1, hidden, &mut tokens[EMBED..]);
+        for (t, e) in tokens.iter_mut().zip(&self.temporal_type_embed) {
+            *t += e;
+        }
 
         // Sequence: [VALUE, TEMPORAL_ARMY, TEMPORAL_LAND, PATCH_0..48] + pos.
-        let mut x = Tensor::cat(&[&self.value_token, &temporal_tokens, &x], 0)?
-            .add(&self.pos_encoding)?; // (52, 384)
-
-        let scale = (HEAD_DIM as f64).sqrt();
-        for block in &self.blocks {
-            let normed = block.norm1.forward(&x)?;
-            let q = block.q.forward(&normed)?.reshape((N_TOKENS, N_HEAD, HEAD_DIM))?;
-            let k = block.k.forward(&normed)?.reshape((N_TOKENS, N_HEAD, HEAD_DIM))?;
-            let v = block.v.forward(&normed)?.reshape((N_TOKENS, N_HEAD, HEAD_DIM))?;
-            let q = q.transpose(0, 1)?.contiguous()?; // (8, 52, 48)
-            let k = k.transpose(0, 1)?.contiguous()?;
-            let v = v.transpose(0, 1)?.contiguous()?;
-            let attn = (q.matmul(&k.transpose(1, 2)?)? / scale)?; // (8, 52, 52)
-            let attn = softmax(&attn, D::Minus1)?;
-            let out = attn.matmul(&v)?; // (8, 52, 48)
-            let out = out.transpose(0, 1)?.reshape((N_TOKENS, EMBED))?;
-            let out = block.out.forward(&out)?;
-            x = x.add(&out)?;
-            let h = block.norm2.forward(&x)?;
-            let h = block.ff2.forward(&candle_nn::ops::silu(&block.ff1.forward(&h)?)?)?;
-            x = x.add(&h)?;
+        x[..EMBED].copy_from_slice(&self.value_token);
+        x[EMBED..3 * EMBED].copy_from_slice(tokens);
+        for (xv, pv) in x.iter_mut().zip(&self.pos_encoding) {
+            *xv += pv;
         }
-        let x = self.norm_out.forward(&x)?; // (52, 384)
+
+        // The candle path divided the score matrix by this f64 scale, which
+        // is an `affine(1/scale, 0)` — a reciprocal multiply folded in f64,
+        // cast to f32. Mirrored exactly.
+        let scale = (HEAD_DIM as f64).sqrt();
+        let inv_scale = (1.0 / scale) as f32;
+        for block in &self.blocks {
+            block.norm1.forward_into(N_TOKENS, x, normed);
+            block.q.forward_into(N_TOKENS, normed, q);
+            block.k.forward_into(N_TOKENS, normed, k);
+            block.v.forward_into(N_TOKENS, normed, v);
+            for h in 0..N_HEAD {
+                let off = h * HEAD_DIM;
+                for i in 0..N_TOKENS {
+                    let qrow: &[f32; HEAD_DIM] = q[i * EMBED + off..].first_chunk().unwrap();
+                    for jt in 0..N_TOKENS {
+                        let krow: &[f32; HEAD_DIM] =
+                            k[jt * EMBED + off..].first_chunk().unwrap();
+                        // Eight parallel accumulator lanes so the reduction
+                        // vectorizes; a single serial chain of 48 FMAs would
+                        // bottleneck on FMA latency.
+                        let mut lanes = [0f32; 8];
+                        for (qc, kc) in qrow.chunks_exact(8).zip(krow.chunks_exact(8)) {
+                            for l in 0..8 {
+                                lanes[l] = qc[l].mul_add(kc[l], lanes[l]);
+                            }
+                        }
+                        let dot: f32 = lanes.iter().sum();
+                        scores[i * N_TOKENS + jt] = dot * inv_scale;
+                    }
+                }
+                for i in 0..N_TOKENS {
+                    softmax_in_place(&mut scores[i * N_TOKENS..(i + 1) * N_TOKENS]);
+                }
+                for i in 0..N_TOKENS {
+                    let mut acc = [0f32; HEAD_DIM];
+                    for jt in 0..N_TOKENS {
+                        let w = scores[i * N_TOKENS + jt];
+                        let vrow: &[f32; HEAD_DIM] =
+                            v[jt * EMBED + off..].first_chunk().unwrap();
+                        for d in 0..HEAD_DIM {
+                            acc[d] = w.mul_add(vrow[d], acc[d]);
+                        }
+                    }
+                    ctx[i * EMBED + off..i * EMBED + off + HEAD_DIM].copy_from_slice(&acc);
+                }
+            }
+            block.out.forward_into(N_TOKENS, ctx, proj);
+            for (xv, pv) in x.iter_mut().zip(proj.iter()) {
+                *xv += pv;
+            }
+            block.norm2.forward_into(N_TOKENS, x, normed);
+            block.ff1.forward_into(N_TOKENS, normed, ff);
+            silu_in_place(ff);
+            block.ff2.forward_into(N_TOKENS, ff, proj);
+            for (xv, pv) in x.iter_mut().zip(proj.iter()) {
+                *xv += pv;
+            }
+        }
+        self.norm_out.forward_into(N_TOKENS, x, normed);
 
         // Value head: 128 bin logits -> softmax -> dot with bin centers.
-        let value_emb = x.narrow(0, 0, 1)?;
-        let value_bins_t = self.value_head.forward(&value_emb)?; // (1, 128)
-        let value_probs = softmax(&value_bins_t, D::Minus1)?
-            .squeeze(0)?
-            .to_vec1::<f32>()?;
-        let value_bins = value_bins_t.squeeze(0)?.to_vec1::<f32>()?;
+        let mut value_bins = vec![0f32; NUM_BINS];
+        self.value_head.forward_into(1, &normed[..EMBED], &mut value_bins);
+        let mut value_probs = value_bins.clone();
+        softmax_in_place(&mut value_probs);
         let value: f32 = value_probs
             .iter()
             .zip(&self.bin_centers)
@@ -320,8 +473,7 @@ impl Net {
 
         // Policy head: per-patch logits, unpatchified to (10, 21, 21), plus
         // the -1e9 mask.
-        let patch_emb = x.narrow(0, 3, N_PATCHES)?;
-        let patch_logits = self.policy_head.forward(&patch_emb)?.flatten_all()?.to_vec1::<f32>()?;
+        self.policy_head.forward_into(N_PATCHES, &normed[3 * EMBED..], patch_logits);
         let mut logits = vec![0f32; N_LOGITS];
         for gi in 0..GRID_PATCHES {
             for gj in 0..GRID_PATCHES {

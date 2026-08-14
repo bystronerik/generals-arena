@@ -4,29 +4,18 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
-# candle first (port-plan §5): the graph is plain GEMMs + LayerNorm + softmax
-# + SiLU, all present in candle-core/candle-nn. R1's tripwire (full-move
-# p99 > 75 ms on one x86 core) swaps this for a bespoke fixed-shape path; the
-# safetensors artifact contract is identical either way.
+# Empty on purpose. The plan's first choice was candle (port-plan §5), and it
+# never lost on latency — what killed it was intake: the 93-crate vendored
+# build is the one thing tournament qualification rejected, twice, and a
+# prebuilt binary was the stopgap. This is R1's bespoke fixed-shape fallback
+# (port-plan §9) taken for that reason instead: src/gemm.rs owns the GEMMs,
+# src/net.rs the graph, src/safetensors.rs + src/json.rs the artifact — so
+# the judge builds one crate from source, the way morpheus-rs always has.
+# The safetensors artifact contract is identical either way.
 [dependencies]
-candle-core = { version = "0.9", default-features = false }
-candle-nn = { version = "0.9", default-features = false }
-safetensors = "0.6"
-memmap2 = "0.9"
-# Rides in transitively with safetensors anyway (port-plan §6 allowed it on
-# exactly that condition — check the lockfile); used only for manifest.json.
-serde_json = "1"
 
 [profile.release]
 opt-level = 3
-# `fat`, and J5.6 tried the alternative and put it back. The intake build peaks
-# at 1,616 MiB against the 2 GB the judge allows (RULES.md §08), and an OOM
-# there leaves no binary, so every evaluation game would fail at `exec`.
-# `lto = "thin"` was the documented fallback for exactly that, but the measured
-# peak did not move — 1,622 MiB, noise — so the whole-graph link is not the
-# high-water mark and thin bought nothing for a changed binary. See P2 in
-# docs/bots/joe-rs/packaging.md; the remaining suspect is dependency
-# compilation under opt-level 3 with one codegen unit.
 lto = "fat"
 codegen-units = 1
 strip = "symbols"

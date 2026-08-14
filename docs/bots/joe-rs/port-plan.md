@@ -1,7 +1,11 @@
 # Joe-rs port plan
 
-Status: **implemented, 2026-08-14 — J0–J4 done, J5 not attempted.** Landed
-knowledge lives in the sibling topic files ([export.md](export.md),
+Status: **implemented, 2026-08-14 — J0–J4 done; J5 in
+[packaging.md](packaging.md).** On 2026-08-15 R1's fallback was taken — for
+intake, not latency: candle's 93-crate vendored build is what tournament
+qualification rejected, so §5's forward pass now runs on the in-house
+`gemm.rs` kernel and the crate has no dependencies (packaging.md §11).
+Landed knowledge lives in the sibling topic files ([export.md](export.md),
 [parity.md](parity.md), [xla-semantics.md](xla-semantics.md),
 [latency.md](latency.md)); this plan stays as the design record.
 

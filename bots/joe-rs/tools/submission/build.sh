@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Submission intake step, copied verbatim into the zip by
+# Submission build step, copied verbatim into the zip by
 # tools/package_submission.py. The judge runs it once at intake, with no
 # network (RULES.md §08), then never again — matches only ever run run.sh.
 #
@@ -9,31 +9,36 @@
 # unguarded where the identical call in `spawn_agent` is guarded) — so a
 # build.sh in the bot directory breaks the repo's own verification gate.
 #
-# **There is no compile step.** joe-rs ships as a statically linked x86_64
-# musl binary, 2 MB, built by scripts/joe_rs_static_build.py and verified in a
-# container with no Rust and no network. Intake is a chmod and a self-test.
-#
-# That deletes, rather than mitigates, every failure this bot was rejected for
-# and could not reproduce: a 93-crate build's peak disk (342 MB), its peak
-# memory (1.6 GB), its wall time (71-131 s), and its dependence on whatever
-# toolchain the sandbox happens to have. The sources stay in the zip for the
-# record; nothing here reads them.
-#
-# To go back to compiling at intake, set `vendor=True` in the spec and restore
-# the cargo invocation from git history (`--release --offline --locked`, run
-# after `cd "$DIR"` so cargo finds .cargo/config.toml and its target-cpu flag).
-set -uo pipefail
+# **The compile is back, and it is one crate.** The 93-crate vendored build is
+# what qualification rejected — twice, cause never diagnosed — and a prebuilt
+# glibc binary was the stopgap (see the git history of this file). The crate
+# now has an empty [dependencies], so intake compiles joe-rs's own sources and
+# nothing else: the same shape as morpheus-rs, which passed the same day joe-rs
+# was rejected. `--offline` proves the no-network claim rather than asserting
+# it; `vendor/` ships empty for the same reason morpheus's does.
+set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-chmod +x "$DIR/bin/joe-rs" 2>/dev/null || true
-echo "[build] $(ls -l "$DIR/bin/joe-rs")"
+# `cd`, not just `--manifest-path`. Cargo discovers `.cargo/config.toml` by
+# walking up from the **working directory**, not from the manifest, and that
+# file is what sets `target-cpu=x86-64-v3`. Building from the wrong cwd
+# produces a baseline x86-64 binary with no FMA instruction — where every
+# `f32::mul_add` in src/gemm.rs becomes a call to libm's `fmaf()`. Measured
+# on morpheus-rs on a one-core x86 container: 277 ms per forward instead of
+# 5.6 ms, a 49x pessimisation that fails silently, builds fine, and would
+# blow the 150 ms deadline on every move of every game.
+cd "$DIR"
+cargo build --release --offline --locked --manifest-path "$DIR/Cargo.toml"
+echo "[build] $(ls -l "$DIR/target/release/joe-rs")"
 
-# Reported, not enforced, and that is a reversal worth stating. A failing
-# selfcheck used to abort intake, which is right when the alternative is a
-# silently degraded bot. But run.sh now self-tests and falls back to a seat
-# that passes every turn, and RULES.md §08 charges one fault out of fifty for a
-# bad reply against a forfeit for an early exit. Losing games beats forfeiting
-# them, so intake proceeds and says why.
-"$DIR/bin/joe-rs" selfcheck || echo "[build] selfcheck FAILED; run.sh will use the fallback seat"
-exit 0
+# Intake is the last moment where failing is cheaper than playing.
+#
+# Everything `selfcheck` looks at — the artifact, the manifest, the FMA the
+# line above depends on — degrades *silently* at match time on purpose: the
+# judge forfeits on an early exit but charges one fault out of fifty for a bad
+# reply, so a seat that cannot start passes every turn instead of dying. That
+# is the right trade during a game and the wrong one here. A rejected
+# submission costs a resubmission; a degraded one costs every rated game it
+# plays, with nothing in a match log to say why.
+"$DIR/target/release/joe-rs" selfcheck

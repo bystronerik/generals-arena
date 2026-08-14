@@ -1,12 +1,16 @@
 # joe-rs build and packaging
 
-**Status: shipped and qualified, 2026-08-14.** `joe-rs-67f0144e08de.zip` passed
-generals.bot qualification. It gets there by **not compiling at intake** — see
-[§9, the rejection](#9-the-rejection-and-what-it-cost-to-answer), which is the
-only section a reader chasing a submission failure needs. J5.0 through J5.6
-landed first and describe the vendored-source bundle that was rejected twice;
-they are kept because the measurements in them are what ruled out five wrong
-answers, not because they describe what ships. This is milestone J5 of the
+**Status: source build at intake again, 2026-08-15.** The crate dropped every
+dependency (port-plan §9 R1: `src/gemm.rs` + in-house safetensors/JSON
+readers), so intake now compiles **one crate** — the same shape as
+morpheus-rs, which qualified while the 93-crate joe-rs build was rejected.
+See [§11](#11-back-to-a-source-build-2026-08-15) for what changed and what
+the prebuilt era cost. The `joe-rs-67f0144e08de.zip` that passed
+qualification on 2026-08-14 did it by **not compiling at intake** — see
+[§9, the rejection](#9-the-rejection-and-what-it-cost-to-answer). J5.0
+through J5.6 landed first and describe the vendored-source bundle that was
+rejected twice; they are kept because the measurements in them are what ruled
+out five wrong answers, not because they describe what ships. This is milestone J5 of the
 [port plan](port-plan.md). Sections below are description now, not plan; where
 a milestone taught something the plan had wrong, the correction is in place and
 labelled.
@@ -949,3 +953,47 @@ silently does not follow. Rebuild it with
 after any change to `src/` or `Cargo.lock`. Its committed sidecar records the
 content hash it was built from, and `package_submission.py` refuses to ship a
 binary whose sidecar disagrees with the tree.
+
+---
+
+## 11. Back to a source build (2026-08-15)
+
+The prebuilt binary of §9 was a stopgap, and the hazard its own section named
+— derived state under `tools/` that the content hash cannot see — plus the
+glibc-floor risk and the 4× musl measurement behind it, all existed only
+because the crate could not be built at intake. The cause was never the
+compile step as such: morpheus-rs compiles at intake and qualified the same
+day joe-rs was rejected. The difference was the 93-crate dependency graph.
+
+So the graph is gone. The port plan's R1 fallback — a bespoke fixed-shape
+forward path — was taken for intake rather than latency: `src/gemm.rs` owns
+the GEMMs (the morpheus-rs kernel, adapted to token-major shapes),
+`src/net.rs` the graph, `src/safetensors.rs` and `src/json.rs` the artifact
+(both ported from morpheus-rs), and `Cargo.toml` has an **empty
+[dependencies]**. The artifact contract is unchanged; the parity harness
+re-measured and re-pinned (`tests/test_parity.py` — one pin moved, the value
+scalar, 2.5e-6 → 5.0e-6 with the kernel's measured 2.682e-6 documented), and
+`mutation_check` kills 9/9 at the new pins. Latency got *better* on the
+target: [latency.md](latency.md), x86 one-core p99 23.7 ms against candle's
+25.4 ms.
+
+What the spec change looked like: `vendor` back to the default `True`
+(an empty `vendor/`, like morpheus's, with `--offline` proving the claim),
+`extra_files` gone, the prebuilt binary and its sidecar deleted,
+`_check_prebuilt_is_current` deleted, `local_smoke` back on (the bundle
+builds and runs on the packaging host again), `build.sh` compiling with
+`--release --offline --locked` and running `selfcheck` under `set -e`, and
+the generated `run.sh` back to the plain §5.4 launcher — the fallback bash
+seat went with the binary it existed to distrust; a from-source build on the
+judge's own toolchain has no glibc floor to fall through.
+
+Measured on the intake-shaped Modal container (one core, from-source build):
+**12.4 s** to build, against 71–131 s for the vendored graph, with none of
+P2's 1.6 GB link peak — the profile that produced it now compiles thirteen
+source files. P1's zip-cap pressure also fell: the archive is the artifact
+plus the sources, no `vendor/`.
+
+**This does not prove the judge accepts it** — §9's elimination stands: the
+fatal ingredient of the old intake build was never identified. What it does
+is remove every ingredient that distinguished joe-rs's intake from
+morpheus-rs's, and morpheus-rs passes. The next submission settles it.

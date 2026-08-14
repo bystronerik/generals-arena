@@ -12,7 +12,7 @@ proof that offline source replacement resolves a real graph.
 
 | verdict | files | vendored | unpacked | zip |
 | --- | ---: | ---: | ---: | ---: |
-| ok | 3961 | 3946 | 86297453 B | 42237838 B |
+| ok | 18 | 0 | 34298559 B | 31841529 B |
 
 ## P2 — the intake build under one core and 2 GB
 
@@ -27,8 +27,8 @@ tripwire should be read against.
 
 | cargo jobs | exit | wall s | peak RSS (largest child) | cgroup peak |
 | --- | ---: | ---: | ---: | ---: |
-| default | 0 | 67.43 | 1317 MiB | — |
-| 1 | 0 | 124.49 | 1622 MiB | — |
+| default | 0 | 6.5 | 516 MiB | — |
+| 1 | 0 | 6.57 | 534 MiB | — |
 
 `cgroup peak` is blank when the sandbox does not expose the counter, which
 gVisor generally does not. The RSS column is the largest single child rather
