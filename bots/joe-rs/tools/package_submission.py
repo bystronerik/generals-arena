@@ -24,6 +24,8 @@ deciding.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import sys
 from pathlib import Path
 
@@ -33,6 +35,14 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from arena.rust_bundle import RustBotSpec, main  # noqa: E402
+
+# The shipped binary and the record of what it was built from. Under `tools/`
+# deliberately: the content-hash walk skips that directory, so a 2 MB binary
+# does not enter the rated closure — and, unlike `target/`, it survives a
+# `cargo clean`. See `_check_prebuilt_is_current` for the staleness guard this
+# placement makes necessary.
+PREBUILT = BOT_DIR / "tools" / "submission" / "joe-rs-x86_64-linux-gnu"
+SIDECAR = PREBUILT.with_suffix(".json")
 
 # The zip's launcher **sets `JOE_RS_ARTIFACT` explicitly**. The exe-relative
 # fallback in `main.rs::artifact_dir` would also resolve in the submission
@@ -44,7 +54,7 @@ from arena.rust_bundle import RustBotSpec, main  # noqa: E402
 # twice, once with this launcher and once with the variable unset.
 RUN_SH_VENDORED = """#!/usr/bin/env bash
 # Submission launcher. No build here: build.sh already ran at intake.
-set -euo pipefail
+set -uo pipefail
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
@@ -53,7 +63,32 @@ export NUMEXPR_NUM_THREADS=1
 export RAYON_NUM_THREADS=1
 DIR="$(cd "$(dirname "$0")" && pwd)"
 export JOE_RS_ARTIFACT="$DIR/artifact"
-exec "$DIR/target/release/joe-rs"
+BIN="$DIR/bin/joe-rs"
+
+# Self-test before committing the seat to the binary. `selfcheck` loads the
+# artifact and decides one frame, so it fails for every reason the binary
+# would fail to play: intake never produced it, the build lost its target
+# features, the artifact is missing. It costs about 150 ms of the 10 s
+# first-move grace.
+if [ -x "$BIN" ] && "$BIN" selfcheck >/dev/null 2>&1; then
+  exec "$BIN"
+fi
+
+# The binary cannot play. RULES.md 08 forfeits the match for a crash or an
+# early exit, and charges one fault out of fifty for a bad reply — so a seat
+# that passes every turn loses games but stays in the tournament, and a
+# launcher that dies here loses everything. It also makes the failure legible:
+# "lost every game" and "crashed in every game" point at different causes.
+echo "[joe-rs] binary unusable; playing the fallback seat" >&2
+read -r _player H _W || exit 0
+while read -r _turn _a _b _c _d; do
+  rows=$((3 * H))
+  while [ "$rows" -gt 0 ]; do
+    read -r _ || exit 0
+    rows=$((rows - 1))
+  done
+  printf '1 0 0 0 0\\n'
+done
 """
 
 # Wire cell types and owners (competition-module/competition/protocol.py,
@@ -131,6 +166,30 @@ SPEC = RustBotSpec(
         "are not, so a judge traceback locates a fault in the stripped file. "
         "Re-package with --no-minify when you need to read one."
     ),
+    # No cargo at intake. The judge used to compile 93 vendored crates, and
+    # every failure hypothesis that survived a day of measurement lived in that
+    # step — its disk (342 MB), its memory (1.6 GB), its wall time (71-131 s
+    # against morpheus-rs's 17 s), and its dependence on whatever toolchain the
+    # sandbox has. A 1.9 MB prebuilt binary removes the step entirely.
+    #
+    # Linked against **glibc 2.31** (Debian bullseye) rather than static musl,
+    # and that is a measurement, not a preference: musl's allocator costs this
+    # network 4x per forward pass — p99 79.5 ms against 19.4 ms, on a 150 ms
+    # budget — because the forward pass allocates hard. An old-glibc build is
+    # the ordinary way to ship a portable Linux binary and runs on any glibc
+    # from 2021 onward. If the judge's runtime is older than that, `run.sh`'s
+    # self-test catches it and plays the fallback seat instead of crashing.
+    vendor=False,
+    extra_files=(("tools/submission/joe-rs-x86_64-linux-gnu", "bin/joe-rs", 0o755),),
+    # An x86_64 Linux binary does not run on the arm64 macOS host that packages
+    # it, so the packager's own smoke cannot execute this bundle. Verified
+    # remotely instead — selfcheck plus a 1,602-turn game in a toolchain-free
+    # x86 container — and skipped loudly here rather than passing vacuously.
+    local_smoke=False,
+    local_smoke_skip_reason=(
+        "bundle ships a prebuilt x86_64 Linux binary, which cannot run on this host; "
+        "verify with scripts/joe_rs_modal_static_build.py"
+    ),
     smoke_input=SMOKE_INPUT,
     # Still on, and now carrying more weight rather than less. The seat no
     # longer exits when it cannot load — it passes every turn, the way morpheus
@@ -159,5 +218,45 @@ SPEC = RustBotSpec(
 )
 
 
+def _check_prebuilt_is_current() -> None:
+    """Refuse to ship a binary built from sources that have since changed.
+
+    The binary lives under `tools/`, which the content-hash walk skips, so it
+    is **derived state outside the rated identity** — edit `src/` and the hash
+    moves while the binary silently does not. That is the same shape as the
+    artifact fan-out that has bitten this repo before, and the judge would
+    never notice: a stale binary plays perfectly well, just as a different
+    program than the one the registry names.
+
+    The sidecar records the content hash the binary was built from. Disagreeing
+    with the tree is fatal, not a warning.
+    """
+    if not PREBUILT.is_file():
+        raise SystemExit(
+            f"missing {PREBUILT.relative_to(BOT_DIR)}\n"
+            f"Build it:  .venv/bin/modal run scripts/joe_rs_static_build.py\n"
+            f"Fetch it:  .venv/bin/modal volume get joe-rs-static joe-rs "
+            f"{PREBUILT} --force"
+        )
+    if not SIDECAR.is_file():
+        raise SystemExit(f"missing {SIDECAR.name}; rebuild the binary to regenerate it")
+
+    from arena.records.fingerprint import bot_content_hash
+
+    recorded = json.loads(SIDECAR.read_text())
+    current = bot_content_hash(BOT_DIR / "run.sh")
+    if recorded.get("content_hash") != current:
+        raise SystemExit(
+            f"the prebuilt binary is stale: built from {recorded.get('content_hash')}, "
+            f"the tree is {current}. Rebuild it before packaging."
+        )
+    digest = hashlib.sha256(PREBUILT.read_bytes()).hexdigest()
+    if recorded.get("sha256") != digest:
+        raise SystemExit(
+            f"{PREBUILT.name} hashes to {digest}, the sidecar says {recorded.get('sha256')}"
+        )
+
+
 if __name__ == "__main__":
+    _check_prebuilt_is_current()
     raise SystemExit(main(SPEC))

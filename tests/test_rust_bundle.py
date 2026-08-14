@@ -117,11 +117,35 @@ def test_the_shipped_launcher_still_does_what_it_did(spec):
     """
     out = strip_line_comments(spec.run_sh)
     assert out.startswith("#!/usr/bin/env bash\n")
-    assert "set -euo pipefail" in out
+    # joe-rs relaxed `-e` on purpose: its launcher inspects a failing command
+    # (`selfcheck`) and falls back instead of dying, and `set -e` would kill
+    # the shell before the fallback could run.
+    assert ("set -euo pipefail" in out) or ("set -uo pipefail" in out)
     for pin in THREAD_PINS:
         assert f"export {pin}=1" in out
-    assert f'exec "$DIR/target/release/{spec.binary}"' in out
+    # Where the binary lives differs: morpheus-rs compiles at intake, joe-rs
+    # ships one. Both must still hand the process over with `exec`.
+    assert f'exec "$BIN"' in out or f'exec "$DIR/target/release/{spec.binary}"' in out
     assert "#" not in out.split("\n", 1)[1]
+
+
+def test_the_joe_launcher_falls_back_instead_of_dying():
+    """
+    The judge forfeits a match for a crash and charges one fault out of fifty
+    for a bad reply (RULES.md §08), so a launcher that cannot start the binary
+    must still speak the protocol. joe-rs self-tests with `selfcheck` and drops
+    to a bash seat that passes every turn — losing the game, keeping the match.
+
+    Asserted after minification because the fallback is the part that only runs
+    when something has already gone wrong: nothing else would notice if the
+    comment stripper ate it.
+    """
+    out = strip_line_comments(JOE.run_sh)
+    assert '"$BIN" selfcheck' in out, "the launcher must test before it commits"
+    assert "printf '1 0 0 0 0" in out, "the fallback seat must still reply"
+    # The fallback consumes exactly the frame it answers: a header line, then
+    # three H-row grids. Getting this wrong desynchronises every later reply.
+    assert "rows=$((3 * H))" in out
 
 
 def test_the_joe_launcher_exports_the_artifact_dir():
@@ -133,7 +157,7 @@ def test_the_joe_launcher_exports_the_artifact_dir():
     """
     out = strip_line_comments(JOE.run_sh)
     assert 'export JOE_RS_ARTIFACT="$DIR/artifact"' in out
-    assert 'exec "$DIR/target/release/joe-rs"' in out
+    assert 'exec "$BIN"' in out
     # The six thread pins plus the artifact directory.
     assert out.count("export ") == 7
 

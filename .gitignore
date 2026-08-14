@@ -66,6 +66,19 @@ bots/joe_base/artifact/*.eqx
 bots/joe-rs/artifact/*.safetensors
 bots/joe-rs/target/
 
+# The prebuilt x86_64 binary the submission ships instead of compiling at
+# intake. Derived: scripts/joe_rs_modal_static_build.py rebuilds it from the
+# committed sources on any checkout. It sits under tools/ so the content-hash
+# walk skips it — the binary must not fork the rating identity, because the
+# sources and Cargo.lock that produced it already do. The committed sidecar
+# .json records which content hash it was built from, and the packager refuses
+# a binary whose sidecar disagrees with the tree.
+bots/joe-rs/tools/submission/joe-rs-x86_64-*
+# ...but not the sidecar. It is the record of which content hash the binary was
+# built from, it is what makes the staleness guard work on a fresh checkout,
+# and it is 500 bytes of JSON.
+!bots/joe-rs/tools/submission/joe-rs-x86_64-*.json
+
 # Curriculum manifests are rebuilt from trajectories; keep the directory.
 training/morpheus/manifests/*
 !training/morpheus/manifests/.gitkeep

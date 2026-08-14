@@ -133,6 +133,22 @@ class RustBotSpec:
     config_members: tuple[str, ...] = ()
     artifact_dir: str = "artifact"
     cargo_config: str = CARGO_CONFIG_VENDORED
+    #: Vendor the dependency graph and ship `.cargo/config.toml`. `False` ships
+    #: a **prebuilt** binary instead through `extra_files`, which deletes the
+    #: judge's compile step and everything that can go wrong inside it — the
+    #: build's disk, memory, wall time, and its dependence on whatever
+    #: toolchain the sandbox happens to have.
+    vendor: bool = True
+    #: `(bot-relative path, arcname, mode)` shipped verbatim. The prebuilt
+    #: binary rides here, at mode 0o755.
+    extra_files: tuple[tuple[str, str, int], ...] = ()
+    #: Run the packager's own smoke test. A bundle carrying a foreign-arch
+    #: binary cannot be smoked on the packaging host — an x86_64 musl
+    #: executable does not run on arm64 macOS — so it is verified remotely
+    #: instead, and the reason is printed rather than the step silently
+    #: passing.
+    local_smoke: bool = True
+    local_smoke_skip_reason: str = ""
     #: Bot-relative, and deliberately **not** beside `run.sh`:
     #: `matchup.py::build_agent` executes any `build.sh` it finds next to a
     #: `run.sh` and then crashes formatting `build.relative_to(REPO_ROOT)` for
@@ -188,6 +204,14 @@ def _provenance(spec: RustBotSpec, minify_stats: dict | None = None) -> bytes:
     }
     for key, path in spec.provenance_fields.items():
         payload[key] = _dotted(manifest, path)
+    # A prebuilt binary is the program itself, so the zip must say which bytes
+    # it carries. Without this, "which build is playing" is answerable only by
+    # rebuilding — and the whole point of shipping a binary is that the judge
+    # never builds.
+    for rel, arcname, _mode in spec.extra_files:
+        path = spec.bot_dir / rel
+        if path.is_file():
+            payload[f"{arcname}_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
     return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode()
 
 
@@ -397,23 +421,32 @@ def _vendor(spec: RustBotSpec, workdir: Path) -> tuple[Path, int]:
 def build_vendored(
     spec: RustBotSpec, out_path: Path, workdir: Path, *, minify: bool
 ) -> tuple[Path, int, dict]:
-    vendor_dir, vendor_files = _vendor(spec, workdir)
+    vendor_dir, vendor_files = _vendor(spec, workdir) if spec.vendor else (None, 0)
     build_sh = spec.build_sh_path.read_text()
     members, minify_stats = _iter_source_files(spec, minify=minify)
 
     with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         _write_entry(zf, "run.sh", _shell(spec.run_sh, minify=minify), mode=0o755)
         _write_entry(zf, "build.sh", _shell(build_sh, minify=minify), mode=0o755)
-        _write_entry(
-            zf, ".cargo/config.toml", _shell(spec.cargo_config, minify=minify), mode=0o644
-        )
+        if spec.vendor:
+            # Only meaningful beside a `vendor/`: the file's whole job is to
+            # point cargo's registry at it.
+            _write_entry(
+                zf, ".cargo/config.toml", _shell(spec.cargo_config, minify=minify), mode=0o644
+            )
         for arcname, data in members:
             _write_entry(zf, arcname, data, mode=0o644)
+        for rel, arcname, mode in spec.extra_files:
+            path = spec.bot_dir / rel
+            if not path.is_file():
+                raise PackageError(f"missing {rel}; the bundle would ship no binary")
+            _write_entry(zf, arcname, path.read_bytes(), mode=mode)
         _write_entry(zf, PROVENANCE_NAME, _provenance(spec, minify_stats), mode=0o644)
-        for path in sorted(vendor_dir.rglob("*")):
-            if path.is_file():
-                arcname = f"vendor/{path.relative_to(vendor_dir)}"
-                _write_entry(zf, arcname, path.read_bytes(), mode=0o644)
+        if vendor_dir is not None:
+            for path in sorted(vendor_dir.rglob("*")):
+                if path.is_file():
+                    arcname = f"vendor/{path.relative_to(vendor_dir)}"
+                    _write_entry(zf, arcname, path.read_bytes(), mode=0o644)
     return out_path, vendor_files, minify_stats
 
 
@@ -550,7 +583,9 @@ def package(
 
     zip_bytes, unpacked_bytes, file_count = check_limits(out_path)
     smoked, note, facts = (False, "skipped", {})
-    if run_smoke:
+    if run_smoke and not spec.local_smoke:
+        note = f"skipped: {spec.local_smoke_skip_reason}"
+    elif run_smoke:
         smoked, note, facts = smoke(spec, out_path)
     note = f"{note}; {vendor_files} vendored file(s)"
     if minify_stats.get("minified"):
@@ -710,7 +745,7 @@ def main(spec: RustBotSpec, argv: list[str] | None = None) -> int:
     }
     # A smoke that ran and did not pass is a failed packaging run rather than a
     # row in a table nobody reads. `--no-smoke` is the caller saying they know.
-    if not args.no_smoke and not built.smoked:
+    if not args.no_smoke and spec.local_smoke and not built.smoked:
         failures.append({"error": f"smoke test did not pass: {built.smoke_note}"})
     if args.gate and built.smoked:
         try:
