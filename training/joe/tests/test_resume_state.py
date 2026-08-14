@@ -1,7 +1,7 @@
 """State-file round trip for resumable training (cheap default suite).
 
 No JAX imports: ``training.joe.state`` is stdlib-only, so these add no
-measurable time to the 15 s budget (AGENTS.md tester).
+measurable time to the 15 s budget (AGENTS.md, "Test suite budget").
 """
 
 from __future__ import annotations

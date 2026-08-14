@@ -9,7 +9,7 @@ before a milestone gate.
 Marked `morpheus`, so it is a gate rather than part of the default suite:
 `pytest -m morpheus bots/morpheus-rs`. M4 through M6 took this from eleven
 kinds to thirty-three and the cost from under a second to 11.4 s, which is
-more than the whole suite budget (AGENTS.md tester §4). It is also thirty-three
+more than the whole suite budget (AGENTS.md, "Test suite budget"). It is also thirty-three
 subprocess round-trips into a release binary that a cold checkout does not
 have — so the default suite was paying eleven seconds for something that
 silently skips wherever the binary is absent.

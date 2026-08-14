@@ -36,6 +36,7 @@ generals-arena/
 Prefer **CPython 3.12**. System Python 3.14 can fail on pygame / engine pins. Use the project venv:
 
 ```bash
+git submodule update --init        # competition-module, client, competition-scraper
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -e competition-module   # local competition matches
@@ -59,7 +60,8 @@ source .venv/bin/activate
 pytest
 ```
 
-Config: [`pytest.ini`](pytest.ini). Core targets: [`docs/research/strategies/test-core-skill.md`](docs/research/strategies/test-core-skill.md).
+Config: [`pytest.ini`](pytest.ini). The suite budget and the core targets are in
+[`AGENTS.md`](AGENTS.md#test-suite-budget).
 
 ## Smoke match
 
@@ -125,17 +127,18 @@ See [`docs/arena/tournament.md`](docs/arena/tournament.md),
 [`docs/arena/ratings.md`](docs/arena/ratings.md), and
 [`docs/arena/bot-version-registry.md`](docs/arena/bot-version-registry.md).
 
-## Leaderboard replays
+## Scraped replays
 
-Download finished competition games from the `generals.bot` leaderboard into
-`competition-replays/` (gitignored, ~0.6 MB per replay):
+Download finished competition games into `competition-replays/` (gitignored):
 
 ```bash
-python scripts/scrape_replays.py erik.bystron
+python scripts/scrape_replays.py erik.bystron   # one leaderboard player
+python scripts/scrape_sprint.py                 # a whole generals.bot sprint
 ```
 
 They are observational data only — never fed into `data/games/` or the rating
-fit. See [`docs/engine/leaderboard-replays.md`](docs/engine/leaderboard-replays.md).
+fit. See [`docs/engine/leaderboard-replays.md`](docs/engine/leaderboard-replays.md)
+and [`docs/engine/sprint-replays.md`](docs/engine/sprint-replays.md).
 
 ## Docs
 

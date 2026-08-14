@@ -4,8 +4,9 @@ Finished **competition-rules** games played by real leaderboard entrants,
 downloaded from the `generals.bot` API by the `competition-scraper` submodule.
 
 They are observational data for analysis and evaluation targets. They are not
-arena matches: they never enter `data/games/`, and no rating is fit from them
-(see [`../arena/ratings.md`](../arena/ratings.md)).
+arena matches: they never enter `data/games/`, `data/ratings/`, or
+`data/remote_games/`, and no rating is fit from them (see
+[`../arena/ratings.md`](../arena/ratings.md)).
 
 ---
 
@@ -17,8 +18,9 @@ python scripts/scrape_replays.py erik.bystron prady --concurrency 8
 ```
 
 The wrapper fixes `--out` to `competition-replays/` and reports on-disk
-inventory after the run. It needs `httpx`. Raw form, if you want the submodule
-CLI directly:
+inventory after the run. It needs `httpx`, and the submodule:
+`git submodule update --init competition-scraper`. Raw form, if you want the
+submodule CLI directly:
 
 ```bash
 python competition-scraper/scrape.py erik.bystron --out competition-replays

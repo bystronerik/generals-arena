@@ -31,7 +31,9 @@ missing. Create a key with secrets access at
 [console.vast.ai/manage-keys](https://console.vast.ai/manage-keys/), then
 `vastai set api-key <key>`.
 
-R2 credentials stay in the gitignored `.env` (or the shell environment):
+R2 credentials stay in the gitignored `.env` (or the shell environment) and
+never appear in a script, a template, or a commit. The token is scoped to the
+one `joe-training` bucket:
 
 | Variable | Required | Purpose |
 | --- | --- | --- |

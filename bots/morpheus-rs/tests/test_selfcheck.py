@@ -17,7 +17,7 @@ because a checker nobody checks is the thing it was written to prevent.
 Marked `morpheus`, so it is a gate rather than part of the default suite:
 `pytest -m morpheus bots/morpheus-rs`. Each case copies the release tree and
 runs the binary, which costs 1.4 s and needs a build the default suite cannot
-assume (AGENTS.md tester §4).
+assume (AGENTS.md, "Test suite budget").
 """
 from __future__ import annotations
 

@@ -13,25 +13,26 @@ Project skills for the Generals Competition research loop. Authority: [`docs/res
 
 ## Loop skills (auto-invoke)
 
-| Step | Skill | Path |
-| --- | --- | --- |
-| 1. Strategy spec | write-strategy-spec | [write-strategy-spec/](write-strategy-spec/) |
-| 1b. Diversity check | check-bot-diversity | [check-bot-diversity/](check-bot-diversity/) |
-| 2. Bot from spec | build-bot-from-spec | [build-bot-from-spec/](build-bot-from-spec/) |
-| 2b. Verify match | run-competition-match | [run-competition-match/](run-competition-match/) |
-| 3. Measurement round | run-measurement-round | [run-measurement-round/](run-measurement-round/) |
-| 4. Parameter revision | tune-bot-parameters | [tune-bot-parameters/](tune-bot-parameters/) |
-| A/B evaluation | evaluate-bot-change | [evaluate-bot-change/](evaluate-bot-change/) |
-| Ratings | update-leaderboard | [update-leaderboard/](update-leaderboard/) |
-| Commits | commit-research-increment | [commit-research-increment/](commit-research-increment/) |
-| Classic harness grid | run-classic-grid | [run-classic-grid/](run-classic-grid/) |
-| Remote human block | run-remote-block | [run-remote-block/](run-remote-block/) |
+| Step | Skill | Model | Path |
+| --- | --- | --- | --- |
+| 1. Strategy spec | write-strategy-spec | Think | [write-strategy-spec/](write-strategy-spec/) |
+| 1b. Diversity check | check-bot-diversity | Think | [check-bot-diversity/](check-bot-diversity/) |
+| 2. Bot from spec | build-bot-from-spec | Composer | [build-bot-from-spec/](build-bot-from-spec/) |
+| 2b. Verify match | run-competition-match | Composer | [run-competition-match/](run-competition-match/) |
+| 3. Measurement round | run-measurement-round | Composer | [run-measurement-round/](run-measurement-round/) |
+| 4. Parameter revision | tune-bot-parameters | Composer | [tune-bot-parameters/](tune-bot-parameters/) |
+| A/B evaluation | evaluate-bot-change | Think + Composer | [evaluate-bot-change/](evaluate-bot-change/) |
+| Ratings | update-leaderboard | Composer | [update-leaderboard/](update-leaderboard/) |
+| Commits | commit-research-increment | Composer | [commit-research-increment/](commit-research-increment/) |
+| Classic harness grid | run-classic-grid | Composer | [run-classic-grid/](run-classic-grid/) |
+| Remote human block | run-remote-block | Composer | [run-remote-block/](run-remote-block/) |
 
 ## Meta (named invocation only)
 
-| Skill | Path |
-| --- | --- |
-| improve-skill-from-failure | [improve-skill-from-failure/](improve-skill-from-failure/) |
+| Skill | Model | Path |
+| --- | --- | --- |
+| structure-audit | Think | [structure-audit/](structure-audit/) |
+| improve-skill-from-failure | Think | [improve-skill-from-failure/](improve-skill-from-failure/) |
 
 ## Deferred
 

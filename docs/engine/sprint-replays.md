@@ -4,8 +4,8 @@ Every game of a published `generals.bot` sprint — a bot-vs-bot tournament run
 by the organizers over archived checkpoints, under **competition rules**.
 
 Like [leaderboard replays](leaderboard-replays.md), these are observational
-data. They are not arena matches: they never enter `data/games/` or
-`data/ratings/`, and no rating is fit from them.
+data. They are not arena matches: they never enter `data/games/`,
+`data/ratings/`, or `data/remote_games/`, and no rating is fit from them.
 
 ---
 
@@ -20,6 +20,8 @@ storage.
 That is why the leaderboard scraper cannot fetch these: it knows one endpoint
 (`/api/leaderboard`) and files by a queried player's `win`/`lose`/`draw`, and a
 sprint row names two checkpoints and a winning *seat*, with no player to query.
+Do not extend the `competition-scraper` submodule for sprints —
+`scripts/scrape_sprint.py` owns this source.
 
 The `sprint-2026-08-08` run, for reference: 15 archived checkpoints, a
 qualifier of every pair over 5 maps (1050 games), then the top 6 replayed at 20
@@ -35,10 +37,12 @@ python scripts/scrape_sprint.py
 python scripts/scrape_sprint.py https://www.generals.bot/assets/sprint-2026-08-08.json
 ```
 
-Needs `httpx`. Runs are incremental and writes are atomic, so an interrupted or
-throttled run resumes by re-running; `--dry-run` prints the plan offline from a
-local copy of the asset, and `--limit N` caps a smoke test. Pacing reuses the
-scraper submodule's rate limiter and shared throttle gate.
+Needs `httpx`, and the `competition-scraper` submodule for its pacing
+primitives (`git submodule update --init competition-scraper`). Runs are
+incremental and writes are atomic, so an interrupted or throttled run resumes by
+re-running; `--dry-run` prints the plan offline from a local copy of the asset,
+and `--limit N` caps a smoke test. Pacing reuses the scraper submodule's rate
+limiter and shared throttle gate.
 
 ## Layout
 

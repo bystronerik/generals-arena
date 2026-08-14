@@ -165,7 +165,7 @@ reconstruction is the action sequence — which A4 shows the loop already holds.
 
 **A11 — The suite has almost no headroom.** *(measured)* 277 tests pass in
 **6.87 s warm** against the 7 s ceiling
-([`AGENTS.md`](../../AGENTS.md) tester §4). Separately *(measured)*:
+([`AGENTS.md`](../../AGENTS.md#test-suite-budget)). Separately *(measured)*:
 `jax` + `generals` import costs 0.25 s, the **first jitted `transition` step
 costs 1.35 s**, and 100 subsequent steps cost 4 ms. No current test jits the
 transition *(measured — grep)*, so any in-suite replay test pays that ~1.6 s
@@ -717,9 +717,9 @@ Small and single-purpose, per AGENTS.md:
 - [`docs/index.md`](../index.md) — one line for the new page.
 - [`AGENTS.md`](../../AGENTS.md) — file-placement table gains the
   `data/trajectories/` row (derived, gitignored).
-- [`docs/research/strategies/test-core-skill.md`](../research/strategies/test-core-skill.md)
-  — core surface table gains the trajectory writer/reducers and the marked
-  replay test.
+- [`AGENTS.md`](../../AGENTS.md#test-suite-budget) — the core-target list gains
+  the trajectory writer/reducers and the marked replay test. (Written at the
+  time against `docs/research/strategies/test-core-skill.md`, since deleted.)
 
 ---
 
@@ -737,8 +737,8 @@ cheap (A11). `@pytest.mark.replay`, excluded from the default run, mandatory
 in the verification gate for recorder-touching commits (§6 T7). The
 raise-the-ceiling alternative was declined.
 
-*Superseded in part on 2026-08-09: the ceiling was raised to 12 s (AGENTS.md
-tester §4). The marker placement stands — it was never the ceiling alone that
+*Superseded in part on 2026-08-09: the ceiling was raised to 12 s (AGENTS.md,
+"Test suite budget"). The marker placement stands — it was never the ceiling alone that
 justified it — but the numbers above are measurements against the old 7 s
 ceiling, kept as written.*
 

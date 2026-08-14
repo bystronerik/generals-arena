@@ -361,7 +361,7 @@ on it.
   12 s budget before this change too; tracked separately, not caused
   here. (Superseded 2026-08-12: that overage was found and fixed. The
   suite now measures 12.4-14.1 s warm against a 15 s budget. See
-  AGENTS.md tester §4 for the two causes.) Modal resume verified the same
+  AGENTS.md, "Test suite budget".) Modal resume verified the same
   day with two short tier-M jobs on
   the run `joe-M-resume-test-20260812` (H100, ~5 min GPU total): job 1
   ran global steps 1-10 with full saves at 5 and 10; job 2, re-launched
