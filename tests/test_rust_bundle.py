@@ -129,23 +129,20 @@ def test_the_shipped_launcher_still_does_what_it_did(spec):
     assert "#" not in out.split("\n", 1)[1]
 
 
-def test_the_joe_launcher_falls_back_instead_of_dying():
+def test_the_joe_launcher_has_no_prebuilt_fallback_seat():
     """
-    The judge forfeits a match for a crash and charges one fault out of fifty
-    for a bad reply (RULES.md §08), so a launcher that cannot start the binary
-    must still speak the protocol. joe-rs self-tests with `selfcheck` and drops
-    to a bash seat that passes every turn — losing the game, keeping the match.
-
-    Asserted after minification because the fallback is the part that only runs
-    when something has already gone wrong: nothing else would notice if the
-    comment stripper ate it.
+    The prebuilt-binary era shipped a launcher that self-tested and dropped to
+    a bash seat passing every turn, because a foreign-built binary could fail
+    to run on the judge's glibc. The 2026-08-15 return to a source build
+    (packaging.md §11) deletes that risk — the binary is built by the judge's
+    own toolchain, and `build.sh` runs `selfcheck` under `set -e` at intake —
+    so the launcher is a plain exec again, like morpheus-rs's. A fallback seat
+    reappearing here would mean the prebuilt path crept back without its
+    sidecar checks.
     """
     out = strip_line_comments(JOE.run_sh)
-    assert '"$BIN" selfcheck' in out, "the launcher must test before it commits"
-    assert "printf '1 0 0 0 0" in out, "the fallback seat must still reply"
-    # The fallback consumes exactly the frame it answers: a header line, then
-    # three H-row grids. Getting this wrong desynchronises every later reply.
-    assert "rows=$((3 * H))" in out
+    assert "printf '1 0 0 0 0" not in out, "the fallback bash seat is gone"
+    assert '"$DIR/bin/joe-rs"' not in out, "no prebuilt binary path"
 
 
 def test_the_joe_launcher_exports_the_artifact_dir():
@@ -157,7 +154,7 @@ def test_the_joe_launcher_exports_the_artifact_dir():
     """
     out = strip_line_comments(JOE.run_sh)
     assert 'export JOE_RS_ARTIFACT="$DIR/artifact"' in out
-    assert 'exec "$BIN"' in out
+    assert 'exec "$DIR/target/release/joe-rs"' in out
     # The six thread pins plus the artifact directory.
     assert out.count("export ") == 7
 
@@ -175,14 +172,12 @@ def test_the_toolchain_pin_never_ships(spec):
     failure. Its absence from every spec field is the whole mechanism, which
     makes it worth an assertion rather than a comment.
 
-    Scope: this is about the *bot's own* pin. joe-rs's zip does contain four
-    `vendor/*/rust-toolchain.toml` files that `cargo vendor` copied out of
-    `proc-macro2`, `quote` and the two `thiserror` majors. They are inert —
-    rustup resolves a toolchain file by walking up from the working directory,
-    and `build.sh` runs from the bundle root, which is above them — and J5.4
-    proves it rather than assuming it: the offline container has only 1.97.1
-    installed and no network, so an honoured `components = ["rust-src"]`
-    request would have failed the build.
+    Scope: this is about the *bot's own* pin. In the 93-crate era joe-rs's
+    zip also contained four `vendor/*/rust-toolchain.toml` files copied in by
+    `cargo vendor`; they were inert (rustup walks *up* from the working
+    directory, and `build.sh` runs from the bundle root, above them), and
+    J5.4 proved it empirically. Both bots now vendor zero crates, so only the
+    bot's own pin is left to keep out.
     """
     pin = "rust-toolchain.toml"
     assert (spec.bot_dir / pin).is_file(), "the pin should exist, just not ship"
