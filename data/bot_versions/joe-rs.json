@@ -10,6 +10,11 @@
       "at": "2026-08-14T10:36:52Z",
       "content_hash": "6d59eaa57e5f",
       "seq": 2
+    },
+    {
+      "at": "2026-08-14T13:47:33Z",
+      "content_hash": "eeec250a08c1",
+      "seq": 3
     }
   ],
   "version": 1,
@@ -172,6 +177,86 @@
       ],
       "first_seen_at": "2026-08-14T10:36:52Z",
       "git_commit": "b58f289042281d9145d67da06dbf5d9a14fdbf73",
+      "git_dirty": false
+    },
+    {
+      "closure_ref": "refs/bot-versions/eeec250a08c1",
+      "closure_tree": "54f0659fd22dc27349565c005e52a38a0e2da5ac",
+      "content_hash": "eeec250a08c1",
+      "files": [
+        {
+          "blob": "a0c89260a153bb9b5aa70bea3b8c9900a0377f6a",
+          "path": "bots/joe-rs/.cargo/config.toml",
+          "sha256": "070c62350674ebb7dc151ff3047ee2f16cfd6bf9a00b934cf537ff5aff53674a"
+        },
+        {
+          "blob": "cad25c45fbabdfcd3533d51c2650fe9cf3f11448",
+          "path": "bots/joe-rs/Cargo.lock",
+          "sha256": "4882c9c9e65d96b2b99b70bf788e7b38bb8a04336d3060b947ab06cbaa9d41d0"
+        },
+        {
+          "blob": "a3d3652a81979660165b8d5804fd71b0a88eb3dc",
+          "path": "bots/joe-rs/Cargo.toml",
+          "sha256": "e352aa04e70466bec09756185692cad868220535a9ac697c104359d458a77962"
+        },
+        {
+          "blob": "b860cb7dcb0c051cc157f63f35a2972c0d05c45d",
+          "path": "bots/joe-rs/artifact/manifest.json",
+          "sha256": "91af5524a5f685a5ddd8b7002462c635875049010663ee99bf331ed5ca929cfc"
+        },
+        {
+          "blob": "70eeba8f3c53247bd9f1a929ec63fd3224568b9f",
+          "path": "bots/joe-rs/artifact/model.safetensors",
+          "sha256": "e9b239f0bb0b166ce3476680711d09a42980fc1f9798f109aaa252c470fb04dc"
+        },
+        {
+          "blob": "f48cf9395d72cac63765d1d162f64523e2c12d6f",
+          "path": "bots/joe-rs/run.sh",
+          "sha256": "1329e8ae373bedcb0746ff959902205885e4d638388458079d50fcb8a1a92bc4"
+        },
+        {
+          "blob": "f827fe55a31954be2c5d9ac6d9bb21655fa38e30",
+          "path": "bots/joe-rs/rust-toolchain.toml",
+          "sha256": "436dd7bc962fef2cd92375e062fb55eacc270c2c73d1adfd693422b8da497aee"
+        },
+        {
+          "blob": "0d6004b650323f20758037ca35fdb9de482b49f1",
+          "path": "bots/joe-rs/src/action.rs",
+          "sha256": "a9951c9eaecffc6489115b1d2b5208dc147856d239eb0aa52764d2b16f1b6e0a"
+        },
+        {
+          "blob": "d9bb8fdf0c5005b35a2b5b6bdc3288b8be52ae59",
+          "path": "bots/joe-rs/src/main.rs",
+          "sha256": "a682fbb409d9e32d978595712ccd7f9ffbfb9deab0d5af265944d57ff83fc21a"
+        },
+        {
+          "blob": "9d66593e8f9196911b79a91b954a577d08806430",
+          "path": "bots/joe-rs/src/net.rs",
+          "sha256": "b9becada16165111a3b27486e2b8eeac6e4301b1b28df03e67280c8c376fa786"
+        },
+        {
+          "blob": "c427adcdbe4bedf77d31b7397ee5d34e5538d371",
+          "path": "bots/joe-rs/src/obs.rs",
+          "sha256": "893aadcf72a15848d83cc95021f2ea6826bff328d2061bfc47a691ecf819e590"
+        },
+        {
+          "blob": "3a70230d8344f67e5437bfc42b02720a63975bae",
+          "path": "bots/joe-rs/src/parity.rs",
+          "sha256": "fb27e46069f51d725b95dd90d4cb1ec395effa48efbf864922fd859c913c5ce1"
+        },
+        {
+          "blob": "671ca774c868f8fce85af05303dc5bb1742a6085",
+          "path": "bots/joe-rs/src/wire.rs",
+          "sha256": "a720abb8e66d87a7f96dd22f20299cd8772a7a2fcbc8542222a000ff295a66b7"
+        },
+        {
+          "blob": "c25fe8589fd610805353e7fdca9c0ede164a2166",
+          "path": "bots/joe-rs/src/xla_math.rs",
+          "sha256": "8a14034b1dfeb0782b000a17183df4baad84b3b321ebfe79fb69772f5e904805"
+        }
+      ],
+      "first_seen_at": "2026-08-14T13:47:33Z",
+      "git_commit": "94610900fbb8f6bc413924daaf4ec47b5a42421b",
       "git_dirty": false
     }
   ]
