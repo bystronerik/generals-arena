@@ -30,12 +30,27 @@ Head-to-head, on matched maps played both ways:
 | 6000 vs 3500 | 102W 17L 1D | 85.7% |
 | 5000 vs 3500 | 96W 19L 5D | 83.5% |
 
-The fit is internally consistent: the three contrasts are transitive
-(+279.9 + 62.7 = +342.6 against a directly measured +342.7), and each
-fitted contrast reproduces its raw head-to-head win-rate (58.5% → +60
-raw vs +62.7 fitted; 83.5% → +281 vs +279.9).
+Each fitted contrast reproduces its raw head-to-head win-rate (58.5% →
++60 raw vs +62.7 fitted; 83.5% → +281 vs +279.9), which is the check that
+carries weight.
+
+> **Correction (2026-08-14, r4).** This paragraph originally also offered
+> the transitivity of the three *fitted* contrasts (+279.9 + 62.7 =
+> +342.6 vs a "directly measured" +342.7) as a consistency check. It is
+> not one. A Bradley-Terry fit gives each entity a single strength, so
+> `Δ(a,c) = Δ(a,b) + Δ(b,c)` is an algebraic identity that holds however
+> the games fell — and the "+342.7" was itself a fitted contrast, not a
+> measurement. Only the raw win rates can test the chain. The verdict
+> above is unaffected; the evidence offered for it was weaker than
+> stated. See [joe-r4-step10000.md](joe-r4-step10000.md).
 
 ## Progress is decelerating
+
+> **Superseded (2026-08-14, r4).** The rate stopped falling: 6000 → 10000
+> came in at ~71 Elo per 1000 iterations, holding the ~66 measured here
+> rather than continuing down. Read this section as "the rate fell from
+> ~200 to ~70 and levelled off", not as evidence for stopping the run.
+> See [joe-r4-step10000.md](joe-r4-step10000.md).
 
 | Interval | Iterations | Elo | Elo per 1k iters |
 | --- | ---: | ---: | ---: |
