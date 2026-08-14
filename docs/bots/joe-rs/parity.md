@@ -96,7 +96,7 @@ pad region (the seen-pad-mountain rule, including its memory after the cell
 is lost), and the enemy-visibility counterpart (pools into `enemy_seen`,
 never becomes a mountain). Compared against the imported JAX oracle turn by
 turn. Codec edge cases (half-move, build, pass decode) are Rust unit tests
-in `src/action.rs`.
+in `src/board/action.rs`.
 
 ## Mutation pass
 

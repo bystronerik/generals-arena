@@ -38,6 +38,7 @@ Small topic files for the Generals Arena research repo.
 - [joe-rs export](bots/joe-rs/export.md) — ema.eqx → safetensors through the deployment template, and the schema the loader enforces
 - [joe-rs parity](bots/joe-rs/parity.md) — corpus, tiers, pinned bounds, wire replay, and the mutation pass that checks the proof
 - [joe-rs XLA semantics](bots/joe-rs/xla-semantics.md) — the reciprocal-multiply rewrite and XLA's log1p with FMA contraction, mirrored bit-for-bit
+- [joe-rs refactor](bots/joe-rs/refactor-plan.md) — the flat module list into io/board/nn subdirectories: the grouping, the pure-move rule, and the blast radius
 - [joe-rs latency](bots/joe-rs/latency.md) — full-path percentiles on one x86 core; why candle stays
 - [joe-rs packaging](bots/joe-rs/packaging.md) — J5 plan: the shared Rust packager, the measured zip budget, and what a submission still needs
 - [joe-rs A/B sanity](research/measurements/joe-rs-ab-sanity.md) — matched arms vs the panel: 100 identical game pairs, verdict `no change`

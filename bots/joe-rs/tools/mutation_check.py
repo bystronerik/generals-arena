@@ -26,7 +26,7 @@ SRC = BOT_DIR / "src"
 MUTATIONS = [
     (
         "history-roll-direction",
-        "obs.rs",
+        "board/obs.rs",
         "next.army_stack[CELLS..HISTORY * CELLS]\n"
         "        .copy_from_slice(&state.army_stack[..(HISTORY - 1) * CELLS]);",
         "next.army_stack[..(HISTORY - 1) * CELLS]\n"
@@ -35,35 +35,35 @@ MUTATIONS = [
     ),
     (
         "seen-accumulation-or",
-        "obs.rs",
+        "board/obs.rs",
         "next.seen[idx] = state.seen[idx] || scratch.visible[idx];",
         "next.seen[idx] = scratch.visible[idx];",
         "seen memory forgets instead of accumulating",
     ),
     (
         "pad-mountain-rule",
-        "obs.rs",
+        "board/obs.rs",
         "state.mountains[idx] || (pad_mask(i, j) && scratch.visible[idx]);",
         "state.mountains[idx];",
         "visible padding never becomes a confirmed mountain",
     ),
     (
         "normalize-divisor",
-        "obs.rs",
+        "board/obs.rs",
         "*v *= RECIP_50;",
         "*v *= RECIP_5;",
         "a divide-by-50 site divides by 5",
     ),
     (
         "timestep-decay-off-by-one",
-        "obs.rs",
+        "board/obs.rs",
         "state.last_enemy_army_seen_timestep[idx] + 1.0;",
         "state.last_enemy_army_seen_timestep[idx] + 2.0;",
         "channel 21's counter counts twice as fast",
     ),
     (
         "qk-proj-swap",
-        "net.rs",
+        "nn/net.rs",
         "q: take_linear(&mut tensors, &format!(\"{p}.attn.q_proj\"), EMBED, EMBED)?,\n"
         "                k: take_linear(&mut tensors, &format!(\"{p}.attn.k_proj\"), EMBED, EMBED)?,",
         "q: take_linear(&mut tensors, &format!(\"{p}.attn.k_proj\"), EMBED, EMBED)?,\n"
@@ -72,21 +72,21 @@ MUTATIONS = [
     ),
     (
         "softmax-scale",
-        "net.rs",
+        "nn/net.rs",
         "let scale = (HEAD_DIM as f64).sqrt();",
         "let scale = HEAD_DIM as f64;",
         "attention scale sqrt(48) becomes 48",
     ),
     (
         "argmax-tie-break",
-        "action.rs",
+        "board/action.rs",
         "if v > best_v {",
         "if v >= best_v {",
         "argmax returns the last maximum instead of the first",
     ),
     (
         "mask-pass-channel",
-        "obs.rs",
+        "board/obs.rs",
         "for v in &mut penalties[8 * CELLS..9 * CELLS] {\n        *v = 0.0;\n    }",
         "",
         "the pass action is masked out",

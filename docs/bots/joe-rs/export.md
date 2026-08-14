@@ -34,7 +34,7 @@ Checks, all refusing to write on failure:
 `bots/joe-rs/artifact/manifest.json` copies joe's manifest (checkpoint
 provenance intact) and adds:
 
-- `tensor_schema: joe-net-v1` — the Rust loader (`src/net.rs`) refuses to
+- `tensor_schema: joe-net-v1` — the Rust loader (`src/nn/net.rs`) refuses to
   start on any schema-tag, name, shape, or dtype mismatch, and on any
   unexpected extra tensor.
 - `safetensors_sha256`, `safetensors_size` — pins the derived file.

@@ -11,14 +11,14 @@
 use std::io::{Read, Write};
 use std::path::PathBuf;
 
-use crate::action::{argmax, decode_action};
-use crate::net::{Net, N_LOGITS, NUM_BINS};
-use crate::obs::{
+use crate::board::action::{argmax, decode_action};
+use crate::board::obs::{
     augment_obs, build_cost_from_raw, compute_build_mask_from_raw, compute_valid_move_mask,
     frame_to_raw, normalize_observations, prepare_action_mask, AugScratch, AugState, CELLS,
     HISTORY, N_ACTION_CHANNELS, N_CHANNELS, N_RAW_CHANNELS, TEMPORAL_WINDOW,
 };
-use crate::wire::Observation;
+use crate::io::wire::Observation;
+use crate::nn::net::{Net, N_LOGITS, NUM_BINS};
 
 /// Sequential integer reader over the whole input stream.
 struct Ints {

@@ -91,7 +91,7 @@ LOGIT_TOL_NOMINAL = 1e-4
 # `mutation_check` after every export; exceeding these is still a finding.
 #
 # 2026-08-15: the forward pass moved off candle onto the in-house kernel
-# (src/gemm.rs — port-plan §9 R1, taken for intake, not latency). Same
+# (src/nn/gemm.rs — port-plan §9 R1, taken for intake, not latency). Same
 # weights, same step-13500 corpus, different GEMM summation order and an FMA
 # per term, so the achieved numbers moved and were re-measured over the full
 # 710 frames: rel logit max 4.726e-6 (was 3.944e-6), rel bin max 8.483e-6

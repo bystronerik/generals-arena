@@ -27,33 +27,49 @@
 //! there is nothing to forfeit. `selfcheck` exists because of this policy —
 //! once a broken artifact plays on instead of dying, intake is the last moment
 //! where failing is cheaper than playing.
+//!
+//! # Layering
+//!
+//! The modules form a DAG and are listed below in dependency order: a module
+//! may name the ones above it and must not name the ones below it.
+//!
+//! ```text
+//! xla_math  io  ->  board  ->  nn  ->  parity   main
+//! ```
+//!
+//! `xla_math` is the floor — the f32 sites where XLA does not compute what
+//! naive Rust computes — and `io` the formats, neither of which knows what a
+//! channel is. `parity` sits above the stack because it is the harness half
+//! of the binary and never plays, and this file above that because it is the
+//! composition root. Nothing enforces the rule but review; a crate split
+//! would, and costs more than it is worth at this size
+//! (docs/bots/joe-rs/refactor-plan.md §1).
+//!
+//! Single-threaded by construction. One dedicated core is a competition
+//! constraint, not a tuning choice, so nothing here may spawn a thread.
 
-mod action;
-mod gemm;
-mod json;
-mod net;
-mod obs;
+mod board;
+mod io;
+mod nn;
 mod parity;
-mod safetensors;
-mod wire;
 mod xla_math;
 
-use std::io::{self, BufWriter, Write};
+use std::io::{self as stdio, BufWriter, Write};
 use std::panic::{self, AssertUnwindSafe};
 use std::path::PathBuf;
 use std::time::Instant;
 
-use action::{argmax, decode_action};
-use net::Net;
-use obs::{
+use crate::board::action::{argmax, decode_action};
+use crate::board::obs::{
     augment_obs, build_cost_from_raw, compute_build_mask_from_raw, compute_valid_move_mask,
     frame_to_raw, normalize_observations, prepare_action_mask, AugScratch, AugState, CELLS,
     N_ACTION_CHANNELS, N_CHANNELS, PAD, TEMPORAL_WINDOW,
 };
-use wire::{
+use crate::io::wire::{
     read_handshake, read_observation, write_action, Action, Observation, PASS, TYPE_FOG,
     TYPE_GENERAL, TYPE_PLAIN,
 };
+use crate::nn::net::Net;
 
 /// Where `model.safetensors` + `manifest.json` live. `run.sh` exports
 /// `JOE_RS_ARTIFACT`; the exe-relative fallback covers running the binary by
@@ -176,9 +192,9 @@ impl Seat {
 }
 
 fn wire_main() -> Result<(), String> {
-    let stdin = io::stdin();
+    let stdin = stdio::stdin();
     let mut reader = stdin.lock();
-    let stdout = io::stdout();
+    let stdout = stdio::stdout();
     let mut writer = BufWriter::new(stdout.lock());
 
     let handshake = match read_handshake(&mut reader).map_err(|e| e.to_string())? {
@@ -262,7 +278,7 @@ fn bench_main() -> Result<(), String> {
     use std::io::Read;
 
     let mut text = String::new();
-    io::stdin().read_to_string(&mut text).map_err(|e| e.to_string())?;
+    stdio::stdin().read_to_string(&mut text).map_err(|e| e.to_string())?;
     let mut reader = std::io::Cursor::new(text.as_bytes());
 
     let handshake = read_handshake(&mut reader)
@@ -275,7 +291,7 @@ fn bench_main() -> Result<(), String> {
     let mut obs = Observation::with_dims(handshake.h, handshake.w);
     let mut line = String::new();
     let mut scratch = Vec::new();
-    let mut sink = io::sink();
+    let mut sink = stdio::sink();
     let mut times_ms: Vec<f64> = Vec::new();
     loop {
         let t0 = Instant::now();
@@ -387,7 +403,7 @@ fn run_selfcheck() -> ! {
     // data/bot_versions/joe-rs.json can be compared without a rebuild.
     match std::fs::read_to_string(dir.join("manifest.json"))
         .map_err(|e| e.to_string())
-        .and_then(|t| crate::json::parse(&t))
+        .and_then(|t| crate::io::json::parse(&t))
     {
         Ok(m) => {
             for key in ["safetensors_sha256", "tensor_schema"] {

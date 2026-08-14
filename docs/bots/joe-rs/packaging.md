@@ -1,7 +1,7 @@
 # joe-rs build and packaging
 
 **Status: source build at intake again, 2026-08-15.** The crate dropped every
-dependency (port-plan §9 R1: `src/gemm.rs` + in-house safetensors/JSON
+dependency (port-plan §9 R1: `src/nn/gemm.rs` + in-house safetensors/JSON
 readers), so intake now compiles **one crate** — the same shape as
 morpheus-rs, which qualified while the 93-crate joe-rs build was rejected.
 See [§11](#11-back-to-a-source-build-2026-08-15) for what changed and what
@@ -60,7 +60,7 @@ EPIPE if the judge closes stdout before stdin, on every game. morpheus-rs
 converts all three into a pass or a clean break
 ([its main.rs:464](../../../bots/morpheus-rs/crates/bot/src/main.rs:464)), and
 joe-rs now does the same
-([main.rs:196-232](../../../bots/joe-rs/src/main.rs:196)). Only a malformed
+([main.rs:212-248](../../../bots/joe-rs/src/main.rs:212)). Only a malformed
 *handshake* still exits non-zero: no game has started, so there is nothing to
 forfeit.
 
@@ -70,7 +70,7 @@ which is what forces the selfcheck decision in §5.3 rather than merely
 permitting it.
 
 **`joe-rs` has three subcommands, not one.** The brief says `parity <surface>`
-only; [`main.rs:257`](../../../bots/joe-rs/src/main.rs:257) dispatches
+only; [`main.rs:487`](../../../bots/joe-rs/src/main.rs:487) dispatches
 `bench` and `parity`, plus the no-argument wire seat. `bench` is what
 [latency.md](latency.md) measures with.
 
@@ -367,7 +367,7 @@ exec "$DIR/target/release/joe-rs"
 ```
 
 The exe-relative fallback in
-[`artifact_dir()`](../../../bots/joe-rs/src/main.rs:43) *would* also resolve in
+[`artifact_dir()`](../../../bots/joe-rs/src/main.rs:77) *would* also resolve in
 the submission layout — `target/release/joe-rs` walks up three parents to the
 bundle root, where `artifact/` sits — but its last resort is a bare relative
 `PathBuf::from("artifact")`, which depends on the judge's cwd, and
@@ -405,7 +405,7 @@ provenance_fields = {
 No key called `weights_sha256`. The note text says in one sentence that the
 `.eqx` digest is the provenance of the conversion and not of anything shipped.
 
-**Artifact verification.** [`net.rs:142`](../../../bots/joe-rs/src/net.rs:142)
+**Artifact verification.** [`net.rs:243`](../../../bots/joe-rs/src/nn/net.rs:243)
 schema-checks the tensor names, shapes, dtypes and the manifest's network block,
 but never hashes the file — so the digest check belongs to the packager, which
 already has one in `_artifact_members`. See P3: `artifact/*.safetensors` is
@@ -966,9 +966,9 @@ compile step as such: morpheus-rs compiles at intake and qualified the same
 day joe-rs was rejected. The difference was the 93-crate dependency graph.
 
 So the graph is gone. The port plan's R1 fallback — a bespoke fixed-shape
-forward path — was taken for intake rather than latency: `src/gemm.rs` owns
+forward path — was taken for intake rather than latency: `src/nn/gemm.rs` owns
 the GEMMs (the morpheus-rs kernel, adapted to token-major shapes),
-`src/net.rs` the graph, `src/safetensors.rs` and `src/json.rs` the artifact
+`src/nn/net.rs` the graph, `src/nn/safetensors.rs` and `src/io/json.rs` the artifact
 (both ported from morpheus-rs), and `Cargo.toml` has an **empty
 [dependencies]**. The artifact contract is unchanged; the parity harness
 re-measured and re-pinned (`tests/test_parity.py` — one pin moved, the value

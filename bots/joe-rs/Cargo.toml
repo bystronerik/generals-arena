@@ -8,8 +8,8 @@ publish = false
 # never lost on latency — what killed it was intake: the 93-crate vendored
 # build is the one thing tournament qualification rejected, twice, and a
 # prebuilt binary was the stopgap. This is R1's bespoke fixed-shape fallback
-# (port-plan §9) taken for that reason instead: src/gemm.rs owns the GEMMs,
-# src/net.rs the graph, src/safetensors.rs + src/json.rs the artifact — so
+# (port-plan §9) taken for that reason instead: src/nn/gemm.rs owns the GEMMs,
+# src/nn/net.rs the graph, src/nn/safetensors.rs + src/io/json.rs the artifact — so
 # the judge builds one crate from source, the way morpheus-rs always has.
 # The safetensors artifact contract is identical either way.
 [dependencies]

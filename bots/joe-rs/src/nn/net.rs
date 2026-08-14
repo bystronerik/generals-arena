@@ -28,10 +28,10 @@ use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use crate::gemm::gemm_bias;
-use crate::json;
-use crate::obs::{CELLS, N_ACTION_CHANNELS, N_CHANNELS, PAD, TEMPORAL_WINDOW};
-use crate::safetensors::SafeTensors;
+use crate::board::obs::{CELLS, N_ACTION_CHANNELS, N_CHANNELS, PAD, TEMPORAL_WINDOW};
+use crate::io::json;
+use crate::nn::gemm::gemm_bias;
+use crate::nn::safetensors::SafeTensors;
 
 pub const TENSOR_SCHEMA: &str = "joe-net-v1";
 pub const EMBED: usize = 384;

@@ -2,7 +2,7 @@
 //! `encode_action` in the Python sibling. Channels 0–3 full move, 4–7 half
 //! move, 8 pass, 9 build; flat index is `channel * 441 + row * 21 + col`.
 
-use crate::obs::{CELLS, PAD};
+use crate::board::obs::{CELLS, PAD};
 
 /// Engine action tuple `[pass_field, row, col, direction, is_half]` where
 /// `pass_field` is 0=move, 1=pass, 2=build.

@@ -9,6 +9,11 @@ Landed knowledge lives in the sibling topic files ([export.md](export.md),
 [parity.md](parity.md), [xla-semantics.md](xla-semantics.md),
 [latency.md](latency.md)); this plan stays as the design record.
 
+§2's layout block is part of that record and is **not** kept current — on
+2026-08-15 the flat module list became `io/`, `board/` and `nn/`
+subdirectories. For the tree as it is now, and for why it is grouped that way,
+see [refactor-plan.md](refactor-plan.md).
+
 Goal: a minimal Rust sibling bot `bots/joe-rs/` that plays the greedy policy
 of the frozen joe network (`bots/joe/artifact/ema.eqx`, manifest at
 `bots/joe/artifact/manifest.json`: `history_transformer`, depth 5, embed 384,

@@ -10,7 +10,7 @@
 //! total; 10 per-cell action channels — 0–3 full move, 4–7 half move,
 //! 8 pass, 9 build.
 
-use crate::wire::{
+use crate::io::wire::{
     Observation, OWNER_ME, OWNER_OPP, TYPE_CASTLE, TYPE_FOG, TYPE_GENERAL, TYPE_MOUNTAIN,
     TYPE_PLAIN, TYPE_STRUCTURE_IN_FOG,
 };

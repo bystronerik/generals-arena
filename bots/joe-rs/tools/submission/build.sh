@@ -24,7 +24,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 # walking up from the **working directory**, not from the manifest, and that
 # file is what sets `target-cpu=x86-64-v3`. Building from the wrong cwd
 # produces a baseline x86-64 binary with no FMA instruction — where every
-# `f32::mul_add` in src/gemm.rs becomes a call to libm's `fmaf()`. Measured
+# `f32::mul_add` in src/nn/gemm.rs becomes a call to libm's `fmaf()`. Measured
 # on morpheus-rs on a one-core x86 container: 277 ms per forward instead of
 # 5.6 ms, a 49x pessimisation that fails silently, builds fine, and would
 # blow the 150 ms deadline on every move of every game.

@@ -13,8 +13,8 @@ qualification rejected, and shipping a prebuilt glibc binary was the answer
 for one submission cycle — at the cost of a cross-compile pipeline, a
 staleness sidecar, glibc-floor risk on the judge's runtime, and a smoke that
 could not run on the packaging host. The crate now has an **empty
-[dependencies]** (the port plan's R1 bespoke path, `src/gemm.rs` +
-`src/net.rs` + in-house safetensors/JSON readers), so intake compiles one
+[dependencies]** (the port plan's R1 bespoke path, `src/nn/gemm.rs` +
+`src/nn/net.rs` + in-house safetensors/JSON readers), so intake compiles one
 crate from source, the way morpheus-rs always has. `vendor/` ships empty and
 `--offline` proves it. The zip drops from ~40 MiB / 3,961 files to the
 artifact plus a dozen sources.
@@ -59,7 +59,7 @@ exec "$DIR/target/release/joe-rs"
 """
 
 # Wire cell types and owners (competition-module/competition/protocol.py,
-# mirrored in src/wire.rs).
+# mirrored in src/io/wire.rs).
 _FOG, _PLAIN, _GENERAL = 0, 1, 4
 _OWNER_NONE, _OWNER_ME = 0, 1
 
