@@ -1,9 +1,12 @@
 # joe-rs build and packaging
 
-**Status: built, 2026-08-14. J5.0 through J5.6 have landed** — J5.6 was
-un-deferred the same day, when the tournament form rejected joe-rs for crashing
-in evaluation rounds and the diagnosis reversed §1's first correction. This is
-milestone J5 of the
+**Status: shipped and qualified, 2026-08-14.** `joe-rs-67f0144e08de.zip` passed
+generals.bot qualification. It gets there by **not compiling at intake** — see
+[§9, the rejection](#9-the-rejection-and-what-it-cost-to-answer), which is the
+only section a reader chasing a submission failure needs. J5.0 through J5.6
+landed first and describe the vendored-source bundle that was rejected twice;
+they are kept because the measurements in them are what ruled out five wrong
+answers, not because they describe what ships. This is milestone J5 of the
 [port plan](port-plan.md). Sections below are description now, not plan; where
 a milestone taught something the plan had wrong, the correction is in place and
 labelled.
@@ -853,3 +856,96 @@ a real build input, and "a comment cannot break a build" is exactly the class of
 claim the gate exists to stop anyone from having to take on trust. A packaging
 run with `--no-smoke` did succeed at the new hash, which proves the manifest
 still parses and the archive still assembles — not that the bot still plays.
+
+---
+
+## 9. The rejection, and what it cost to answer
+
+**2026-08-14.** The tournament form rejected joe-rs with one line: the bot
+crashed in the evaluation rounds. No turn number, no build log, no other
+detail. morpheus-rs passed the same day. Two joe-rs bundles were submitted and
+both were rejected identically — `eeec250a08c1`, and `f8803d1acb2f` after the
+wire-loop fix of J5.6, which is what proves that fix was not the cause.
+
+### What was ruled out, and how
+
+Every hypothesis below was measured on the judge's own toolchain (rustc 1.97.1,
+which the operator confirmed) and its own infrastructure (Modal). Every one came
+back green, which is why the answer was not found by narrowing.
+
+| hypothesis | how it died |
+| --- | --- |
+| the wire-loop `exit(1)` paths (J5.6) | the bundle carrying the fix was rejected identically |
+| SIGILL from `target-cpu=x86-64-v3` | morpheus-rs ships the byte-identical `.cargo/config.toml` and passed |
+| launcher shape, `target/` not surviving intake | the two `run.sh` files are structurally identical |
+| incomplete `cargo vendor` from a macOS host | the same zip builds offline on Linux x86 with the network provably blocked |
+| intake build OOM | builds under a **hard** `memory=(2048, 2048)` cap, default jobs *and* `-j1` |
+| the 512 MB disk limit | peak during the build is 342 MB, and the resting tree is 338 MB |
+| toolchain floor (our graph needs 1.87.0) | the sandbox runs 1.97.1 |
+| instability over a real game on x86 | 1,602/1,602 turns, exit 0, 18 ms a turn |
+| runtime memory | 72 MB peak |
+
+**A measurement error worth not repeating.** J5.4 declared the intake build
+safe under the 2 GB cap while never applying it: Modal's `memory=2048` is a
+*request*, and a hard limit needs the tuple form `memory=(2048, 2048)`. The
+rehearsal that was supposed to test the constraint had not tested it. It does
+now, and the build survives — but the claim was unfounded for a day.
+
+### What shipped instead
+
+The intake build was the one thing joe-rs did that morpheus-rs did not, and the
+only one that could not be observed from outside the judge — 71–131 s, 342 MB
+and 1.6 GB of RSS, against morpheus-rs's 17 s. Rather than keep narrowing, the
+step was deleted:
+
+```
+bin/joe-rs        1.9 MB, prebuilt, glibc 2.31
+artifact/         weights, unchanged
+src/, Cargo.*     for the record; nothing reads them at intake
+build.sh          chmod + selfcheck
+run.sh            selfcheck, then exec — or the fallback seat
+```
+
+32.6 MB in 15 files, against 42.2 MB in 3,961. Intake goes from a compile to a
+`chmod`. The submission rules permit it: a submission is a zip of a directory
+whose only required file is `run.sh`.
+
+**This is elimination, not a diagnosis.** Which part of the intake build was
+fatal is still unknown, and now unknowable — the step is gone. If a future bot
+needs to compile at intake, none of the numbers above say it is safe.
+
+### glibc 2.31, not static musl
+
+Measured, not preferred. Both builds play 1,602 turns correctly; musl costs 4x
+per forward pass, because the forward pass allocates hard and musl's allocator
+is slow. On a 150 ms budget it would have traded a crash for a timeout.
+
+| build | p50 | p99 | max | startup |
+| --- | --- | --- | --- | --- |
+| musl static | 65.2 ms | 79.5 ms | 92.7 ms | 762 ms |
+| glibc 2.31 (bullseye) | 16.0 ms | 19.4 ms | 23.1 ms | 169 ms |
+
+An old-glibc build runs on any newer glibc. A correctness check would have
+passed the musl binary: it was caught only by benchmarking a real game.
+
+### The launcher decides before it commits
+
+`run.sh` runs `selfcheck` and execs the binary only if it passes; otherwise it
+plays a bash seat that passes every turn. RULES.md §08 forfeits the match for a
+crash and charges one fault in fifty for a bad reply, so losing a game beats
+stopping. It also makes the next failure legible — "lost every game" and
+"crashed in every game" have different causes.
+
+### Identity and staleness
+
+The content hash did not move. `build.sh`, the generated `run.sh` and the
+binary are all outside the rated closure, so the qualified bundle is the same
+rated program the J5.6 gate won with at turn 349: **`67f0144e08de`**.
+
+That is also the hazard. The binary is derived state under `tools/`, which the
+content-hash walk skips, so editing `src/` moves the hash while the binary
+silently does not follow. Rebuild it with
+[`scripts/joe_rs_modal_static_build.py`](../../../scripts/joe_rs_modal_static_build.py)
+after any change to `src/` or `Cargo.lock`. Its committed sidecar records the
+content hash it was built from, and `package_submission.py` refuses to ship a
+binary whose sidecar disagrees with the tree.

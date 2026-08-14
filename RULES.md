@@ -127,7 +127,8 @@ The competition uses **fog of war**, like classic generals.io. Each bot sees onl
 - **Fault budget:** late, missing, or malformed reply → pass + one fault. **50 faults** in one game forfeits. Crash or exit forfeits immediately. Invalid but correctly formatted game actions are silent passes and do not add a runner fault.
 - **Hardware:** one dedicated CPU core and a hard 2 GB memory cap per bot. Engine on its own core. No GPU at match time.
 - **Network:** disabled during matches.
-- **Build step:** `build.sh` runs once before games, with no network. Artifacts must live in the zip or the competition environment.
+- **Submission shape:** a zip of a directory. **The only required file is `run.sh`**, which is executed to start the bot. A prebuilt binary in the zip is therefore a valid submission — joe-rs ships one ([joe-rs packaging](docs/bots/joe-rs/packaging.md)).
+- **Build step:** `build.sh` is optional. If present, it is executed before `run.sh`, with no network. Artifacts must live in the zip or the competition environment.
 
 Bot interface and submit docs: [https://www.generals.bot/docs](https://www.generals.bot/docs).
 
