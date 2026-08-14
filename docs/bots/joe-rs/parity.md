@@ -12,7 +12,9 @@ float tolerances cannot see precision bugs*.
 - **Play**: real `--mode competition` matchup games with the deployed
   `bots/joe/run.sh` seat wrapped in `tee`, recording the exact wire text joe
   received (`.in.log`) and replied (`.out.log`). 14 games, mixed opponents
-  and seeds (incl. three joe mirrors); longest natural game 786 turns.
+  and seeds (incl. three joe mirrors); longest natural game 801 turns. All
+  14 are in `DEFAULT_GAMES`; four of them used to be passed by hand as
+  `--game`, so a bare `--play` rebuilt only ten and dropped two joe mirrors.
 - **Capture**: replay each `.in.log` through the *imported* joe functions
   (`frame_to_raw`, `joe_obs.*`, `net._forward`) under `eqx.filter_jit`, dump
   per-turn surfaces to `.npz`. Every recomputed reply is asserted equal to
@@ -22,15 +24,18 @@ float tolerances cannot see precision bugs*.
 oracle's outputs for specific weights, so a joe re-export invalidates them:
 re-run both phases (and `make_smoke_fixture.py`) after
 `convert_artifact.py`, or the drivers compare a new binary against an old
-oracle. The corpus was rebuilt for step 6000 on 2026-08-14.
+oracle. The corpus was rebuilt for step 13500 on 2026-08-14.
 
 `synthetic-long` is the longest corpus game's frames played twice through
-the state machine — at step 6000, macaria-seed1 doubled to **1,572 turns**
-(it was metro-seed8 doubled to 1,320 at step 5000; the source game changes
-because a stronger net ends games sooner, so the rebuild picks whatever the
-longest natural game is). It exercises the counters past natural game
-length and both 512-window rollovers. The state update never reads the
-bot's actions, so any frame stream is a valid state-machine input. Corpus
+the state machine — at step 13500, castle_rush-seed3 doubled to **1,602
+turns** (macaria-seed1 doubled to 1,572 at step 6000; metro-seed8 doubled to
+1,320 at step 5000 — the source game changes with the net, so the rebuild
+picks whatever the longest natural game is). It exercises the counters past
+natural game length and both 512-window rollovers. The state update never
+reads the bot's actions, so any frame stream is a valid state-machine
+input, and there is deliberately no `.out.log` to cross-check against.
+`tools/make_synthetic_long.py` builds it; it used to be a hand-run snippet,
+which is why corpus rebuilds kept losing the fixture. Corpus
 lives under `data/joe/joe-rs-parity/games/` (derived, gitignored); a 40-turn
 13-frame smoke slice is committed under `bots/joe-rs/tests/fixtures/` and
 the drivers fall back to it automatically.

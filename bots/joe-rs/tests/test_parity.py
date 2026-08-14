@@ -51,18 +51,9 @@ LOGIT_TOL_NOMINAL = 1e-4
 # that frame's own largest reference activation, maximised across frames.
 #
 # Why not an absolute pin (which is what this was until 2026-08-14): the
-# absolute error tracks activation magnitude, and a stronger checkpoint has
-# larger activations. Measured across the step-5000 and step-6000 corpora:
-#
-#   corpus       max|bin logit|   max |dbin|   |dbin| / scale
-#   step 5000    35.18            4.387e-5     1.247e-6
-#   step 6000    46.54            5.722e-5     1.230e-6
-#
-# The step-6000 value head is more confident, so it emits ~1.32x larger bin
-# logits and ~1.30x larger absolute error — the same ~10 ULP over a 384-wide
-# reduction, and not a precision regression. An absolute pin therefore fails
-# on every stronger export for a reason that is not a bug, which is the one
-# false alarm the M2 rule cannot afford. The ratio column is the invariant.
+# absolute error tracks activation magnitude, so an absolute pin fails on a
+# checkpoint whose activations grew, for a reason that is not a bug — the one
+# false alarm the M2 rule cannot afford.
 #
 # Why per frame rather than per corpus: normalising by a corpus-wide maximum
 # makes the statistic depend on corpus composition. The committed 13-frame
@@ -70,19 +61,41 @@ LOGIT_TOL_NOMINAL = 1e-4
 # so the same noise read 1.7e-6 against a corpus-max scale and would have
 # failed a bound the full corpus passed.
 #
-# Pinned with ~30% headroom over the worst measured, which keeps the gate
-# ~30x tighter than the nominal absolute contract. Per-frame relative figures
-# (2026-08-14, step 6000): full corpus 731 frames logit 2.331e-6, bin
-# 2.244e-6; smoke slice logit 1.055e-6, bin 2.120e-6. The cross-checkpoint
-# evidence above is the corpus-max ratio, measured on both nets; the
-# per-frame statistic itself is measured on step 6000 only. Exceeding these
-# is still a finding, not a reason to relax silently — `mutation_check`
-# re-confirms this gate kills all 9 planted bugs.
-LOGIT_REL_ACHIEVED = 3.0e-6   # worst measured 2.331e-6
-BIN_REL_ACHIEVED = 3.0e-6     # worst measured 2.244e-6
+# **The 2026-08-14 pins (3.0e-6 / 3.0e-6) were over-fitted to the step-6000
+# corpus.** They were set from the worst frame of one frame population, and a
+# max over frames does not transfer to a different one. When the corpus was
+# rebuilt for step 13500, an A/B on the *identical* 710 frames — same logs,
+# same binary, only the weights swapped — showed the **step-10000** net also
+# exceeding the bin pin, so the gate was already red before the new export:
+#
+#   identical 710 frames     step 10000   step 13500    ratio
+#   rel logit  median         8.505e-7     1.017e-6      1.20x
+#   rel logit  p99            2.239e-6     2.740e-6      1.22x
+#   rel logit  max            2.514e-6     3.944e-6      1.57x
+#   rel bin    median         9.432e-7     1.151e-6      1.22x
+#   rel bin    p99            2.965e-6     4.891e-6      1.65x
+#   rel bin    max            4.993e-6     7.940e-6      1.59x   <- pin was 3.0e-6
+#
+# Read the body, not the max: a uniform ~1.2x shift at unchanged activation
+# scale (logit scale median 17.12 -> 16.91, bin 10.03 -> 9.34) is ordinary
+# float behaviour, while the max wanders ~1.6x because it is a max over 710
+# frames. Absolute error stays well inside the nominal contract above:
+# max |dlogit| 4.387e-5 (step 10000) and 7.057e-5 (step 13500) against 1e-4.
+#
+# So the pins below carry ~2x headroom over the worst measured, sized to the
+# observed per-checkpoint drift of the max rather than to a tighter number
+# that would only have to be raised again. That is a real loosening, so it is
+# only defensible because `mutation_check` re-confirms at these values that
+# the gate still kills all 9 planted bugs — including `qk-proj-swap`, the
+# leaf-misalignment bug this tier exists to catch. Re-measure and re-run
+# `mutation_check` after every export; exceeding these is still a finding.
+LOGIT_REL_ACHIEVED = 8.0e-6   # worst measured 3.944e-6 (step 13500)
+BIN_REL_ACHIEVED = 1.6e-5     # worst measured 7.940e-6 (step 13500)
 # |value| <= 1 by construction (bin_centers span [-1, 1]), so this one is
 # already scale-free and stays absolute. It tracks bin sharpness rather than
-# bin magnitude: 9.537e-7 at step 5000, 2.205e-6 at step 6000.
+# bin magnitude: 9.537e-7 at step 5000, 2.205e-6 at step 6000, and on the
+# identical-frame A/B 1.520e-6 (step 10000) / 1.669e-6 (step 13500) — the one
+# figure that did not drift, so it keeps its original pin.
 VALUE_TOL_ACHIEVED = 2.5e-6
 
 # Tier-3 gate: greedy action equal on >= 99.5% of frames; every divergence

@@ -42,7 +42,15 @@ CORPUS = REPO / "data" / "joe" / "joe-rs-parity"
 PAD = 21
 
 # Mixed opponents, mixed seeds (port-plan §6). The joe mirror is the long
-# game / truncation candidate: two identical nets stall each other.
+# game / truncation candidate: two identical nets stall each other, so the
+# corpus carries three of them.
+#
+# This list is the whole documented corpus (`docs/bots/joe-rs/parity.md`:
+# 14 games). Keep it that way. The last four used to be passed by hand as
+# `--game`, which made the documented re-export sequence — a bare
+# `--play --capture` — rebuild only the first ten and silently drop two of
+# the three joe mirrors. A corpus member that lives in a shell history is
+# not a corpus member.
 DEFAULT_GAMES = [
     ("aegis", 0),
     ("macaria", 1),
@@ -54,6 +62,10 @@ DEFAULT_GAMES = [
     ("blitz", 7),
     ("metro", 8),
     ("joe", 9),
+    ("joe", 10),
+    ("joe", 11),
+    ("garrison", 12),
+    ("metro", 42),
 ]
 
 sys.path.insert(0, str(JOE_DIR))

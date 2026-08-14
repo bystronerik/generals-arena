@@ -59,12 +59,28 @@ playing different networks while the docs claim otherwise.
 .venv/bin/python bots/joe-rs/tools/convert_artifact.py
 export PATH="$HOME/.cargo/bin:$PATH"          # cargo is off the default PATH
 cargo build --release --manifest-path bots/joe-rs/Cargo.toml
-# the parity corpus is keyed to the network — rebuild it, do not reuse
-.venv/bin/python bots/joe-rs/tools/capture_fixtures.py --play --capture
+# the parity corpus is keyed to the network — rebuild it, do not reuse.
+# archive first: capture_fixtures.py writes in place and skips existing
+# .npz, so a partial run silently mixes two checkpoints' oracles.
+mv data/joe/joe-rs-parity/games data/joe/joe-rs-parity/games.step<OLD>
+.venv/bin/python bots/joe-rs/tools/capture_fixtures.py --play
+.venv/bin/python bots/joe-rs/tools/make_synthetic_long.py  # needs the logs
+.venv/bin/python bots/joe-rs/tools/capture_fixtures.py --capture
 .venv/bin/python bots/joe-rs/tools/make_smoke_fixture.py   # committed fixture
 .venv/bin/pytest bots/joe-rs/tests/ -m joe
 .venv/bin/python bots/joe-rs/tools/mutation_check.py
 ```
+
+`--play` and `--capture` are split so `make_synthetic_long.py` can run
+between them: it needs the natural games' `.in.log` files to pick the
+longest, and the capture phase globs `*.in.log`, so it then picks the
+fixture up with no extra flag.
+
+Expect the tier-2 relative pins in `tests/test_parity.py` to need
+re-measuring. They are a max over frames, so they do not transfer between
+corpora — a rebuilt corpus can exceed them with a checkpoint that passed
+before. Re-pin from the printed `[tier2]` line, then re-run
+`mutation_check.py`: 9/9 killed is what makes a looser pin defensible.
 
 The `.npz` surfaces are the JAX oracle's outputs for particular weights, and
 the committed smoke fixture is a slice of them, so both go stale the moment
