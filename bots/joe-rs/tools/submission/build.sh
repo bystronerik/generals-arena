@@ -32,12 +32,14 @@ cd "$DIR"
 cargo build --release --offline --locked --manifest-path "$DIR/Cargo.toml"
 echo "[build] $(ls -l "$DIR/target/release/joe-rs")"
 
-# No `selfcheck` line here, unlike morpheus's build.sh, and the difference is
-# deliberate rather than an omission (packaging.md §5.3). morpheus needs one
-# because its seat degrades to passing every turn when it cannot load — so a
-# broken bundle still answers well-formed actions. joe-rs constructs its seat
-# with `Seat::new(...)?`, so a load failure leaves `main` with `exit(1)` and a
-# broken bundle answers nothing at all, which the packager's own smoke already
-# detects. What stays uncovered is the per-turn error path and a build that
-# lost the target flag; closing those costs a new subcommand in main.rs, which
-# is in the rated closure and would re-identify the bot.
+# Intake is the last moment where failing is cheaper than playing.
+#
+# joe-rs used to exit 1 when it could not load, which made a broken bundle
+# answer nothing and let the packager's own smoke detect it. That was the wrong
+# trade in a game: RULES.md §08 forfeits the match on an early exit but charges
+# one fault out of fifty for a bad reply, so the seat now degrades to passing
+# every turn — and a broken bundle answers well-formed actions, exactly like a
+# healthy one. `selfcheck` is what that costs, and this line is where it is
+# paid: same constructor, same parser, same `act`, plus the AVX2/FMA check that
+# a macOS packaging host cannot make.
+"$DIR/target/release/joe-rs" selfcheck

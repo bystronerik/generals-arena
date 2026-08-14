@@ -443,16 +443,18 @@ def smoke(spec: RustBotSpec, zip_path: Path) -> tuple[bool, str, dict[str, str]]
     the judge will.
 
     **A well-formed reply is not always evidence of a working bot**, and how
-    much it is worth differs per bot. A morpheus seat that cannot load its
-    weights or its knobs passes every turn rather than exiting — the deliberate
-    trade in its `main.rs`, since the judge forfeits on an early exit — so this
-    test once scored a bundle with `artifact/` deleted as two well-formed
-    actions. `selfcheck` is what closes that, and its output is parsed here
-    rather than merely allowed to pass. joe-rs instead propagates a load
-    failure out of `main` and exits 1, so a broken artifact produces *no*
-    replies and is caught by the line count alone; what it adds is
+    much it is worth differs per bot. **Both** seats now pass every turn rather
+    than exiting when they cannot load — the deliberate trade, since the judge
+    forfeits on an early exit — so this test once scored a bundle with
+    `artifact/` deleted as two well-formed actions. `selfcheck` is what closes
+    that, and its output is parsed here rather than merely allowed to pass.
+
+    joe-rs used to be the exception, exiting 1 on a load failure so that a
+    broken artifact produced *no* replies and was caught by the line count
+    alone. That detector was worth less than the forfeits it cost, so it now
+    carries a `selfcheck` too. What it still adds beyond morpheus is
     `smoke_reject_all_pass`, on frames where passing is the wrong answer, so a
-    seat that answers everything with a skip fails here too.
+    seat that answers everything with a skip fails here as well.
     """
     with tempfile.TemporaryDirectory(prefix=f"{spec.bot_id}-smoke-") as tmp:
         root = Path(tmp)

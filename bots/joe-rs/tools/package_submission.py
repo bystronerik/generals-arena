@@ -8,14 +8,19 @@ Milestone J5 of docs/bots/joe-rs/packaging.md. The work is all in
 `arena/rust_bundle.py`, which morpheus-rs shares; this file is the spec that
 says what joe-rs is, and nothing else.
 
-Two things differ from morpheus in ways worth knowing before reading the spec.
-The dependency graph is real — 93 crates, ~3,946 vendored files — and the
+One thing differs from morpheus in a way worth knowing before reading the spec:
+the dependency graph is real — 93 crates, ~3,946 vendored files — and the
 **zip cap is the binding limit at about 80 %**, three quarters of it the
-float32 `model.safetensors`; the file count is not close. And there is no
-`selfcheck` subcommand: joe-rs propagates a load failure out of `main` and
-exits 1, so a bundle that cannot find its artifact answers nothing and the
-smoke's line count catches it. `smoke_reject_all_pass` covers the other half —
-a seat that runs but decides nothing.
+float32 `model.safetensors`; the file count is not close.
+
+The other difference is gone. joe-rs used to propagate a load failure out of
+`main` and exit 1, so a bundle that could not find its artifact answered
+nothing and the smoke's line count caught it. That is a forfeit under RULES.md
+§08, so the seat now degrades to passing every turn the way morpheus always
+has — and a broken bundle now answers two well-formed skips, indistinguishable
+from a healthy one by line count alone. `selfcheck` is what replaces the lost
+detector, and `smoke_reject_all_pass` still covers the seat that runs without
+deciding.
 """
 from __future__ import annotations
 
@@ -127,13 +132,29 @@ SPEC = RustBotSpec(
         "Re-package with --no-minify when you need to read one."
     ),
     smoke_input=SMOKE_INPUT,
+    # Still on, and now carrying more weight rather than less. The seat no
+    # longer exits when it cannot load — it passes every turn, the way morpheus
+    # always has — so the line count alone no longer catches a broken artifact.
+    # This is the half of that detector which lives in the packager;
+    # `selfcheck` below is the other half.
     smoke_expected_lines=2,
     smoke_reject_all_pass=True,
-    # No `selfcheck` subcommand yet — packaging.md §5.3. Adding one moves the
-    # content hash, so it is batched with whatever other source change precedes
-    # a real submission. `None` skips the step and the parse, which makes
-    # turning it on later a spec edit rather than a packager change.
-    selfcheck_argv=None,
+    selfcheck_argv=("selfcheck",),
+    selfcheck_keys=frozenset(
+        {
+            "hardware_fma",
+            "hardware_avx2",
+            "artifact_dir",
+            "safetensors_sha256",
+            "tensor_schema",
+            "checkpoint",
+            "checkpoint_step",
+            "startup_ms",
+            "decide_ms",
+            "decision",
+            "selfcheck",
+        }
+    ),
     gate_opponent_default="joe",
 )
 

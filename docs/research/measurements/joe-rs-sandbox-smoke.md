@@ -12,7 +12,7 @@ proof that offline source replacement resolves a real graph.
 
 | verdict | files | vendored | unpacked | zip |
 | --- | ---: | ---: | ---: | ---: |
-| ok | 3961 | 3946 | 86293389 B | 42183023 B |
+| ok | 3961 | 3946 | 86297453 B | 42237838 B |
 
 ## P2 — the intake build under one core and 2 GB
 
@@ -27,8 +27,8 @@ tripwire should be read against.
 
 | cargo jobs | exit | wall s | peak RSS (largest child) | cgroup peak |
 | --- | ---: | ---: | ---: | ---: |
-| default | 0 | 74.97 | 1288 MiB | — |
-| 1 | 0 | 129.21 | 1616 MiB | — |
+| default | 0 | 67.43 | 1317 MiB | — |
+| 1 | 0 | 124.49 | 1622 MiB | — |
 
 `cgroup peak` is blank when the sandbox does not expose the counter, which
 gVisor generally does not. The RSS column is the largest single child rather
@@ -45,8 +45,8 @@ deciding answers `1 0 0 0 0`.
 
 | path | exit | replies |
 | --- | ---: | --- |
-| generated `run.sh` (exports `JOE_RS_ARTIFACT`) | 0 | `0 10 10 0 0` / `0 10 10 2 0` |
-| binary directly, variable unset, cwd `/` | 0 | `0 10 10 0 0` / `0 10 10 2 0` |
+| generated `run.sh` (exports `JOE_RS_ARTIFACT`) | 0 | `0 10 10 2 0` / `0 10 10 2 0` |
+| binary directly, variable unset, cwd `/` | 0 | `0 10 10 2 0` / `0 10 10 2 0` |
 
 The second row is the exe-relative branch of `main.rs::artifact_dir`, which
 the launcher normally hides. Both paths resolving is why the `export` line

@@ -1,7 +1,9 @@
 # joe-rs build and packaging
 
-**Status: built, 2026-08-14. J5.0 through J5.5 have landed; J5.6 is still
-deferred by choice (§5.3).** This is milestone J5 of the
+**Status: built, 2026-08-14. J5.0 through J5.6 have landed** — J5.6 was
+un-deferred the same day, when the tournament form rejected joe-rs for crashing
+in evaluation rounds and the diagnosis reversed §1's first correction. This is
+milestone J5 of the
 [port plan](port-plan.md). Sections below are description now, not plan; where
 a milestone taught something the plan had wrong, the correction is in place and
 labelled.
@@ -33,18 +35,32 @@ scripts/joe_rs_modal_submission_smoke.py      new
 
 Three corrections, found by reading the code. The code wins.
 
-**joe-rs does not degrade silently at startup.** The brief's central premise —
-"a seat that cannot load its weights passes every turn instead of dying, so a
-well-formed reply is not evidence" — is true of morpheus-rs and **false of
-joe-rs**. [`main.rs:177`](../../../bots/joe-rs/src/main.rs:177) constructs the
-seat with `Seat::new(...)?`, so a load failure propagates out of `wire_main`,
-`main` prints `[joe-rs] fatal:` and calls `exit(1)`. A joe-rs bundle with
-`artifact/` deleted answers **zero** frames, not two well-formed skips. The
-packager's protocol smoke therefore already detects the failure morpheus needed
-`selfcheck` to catch. What stays silent in joe-rs is the *per-turn* path: an
-error or panic inside `act` becomes `PASS`
-([`main.rs:189-203`](../../../bots/joe-rs/src/main.rs:189)). This changes the
-selfcheck decision in §5.3 — it is no longer forced.
+**joe-rs did not degrade silently at startup — and that was the bug.**
+The brief's central premise — "a seat that cannot load its weights passes every
+turn instead of dying, so a well-formed reply is not evidence" — was true of
+morpheus-rs and false of joe-rs, which constructed its seat with
+`Seat::new(...)?` and let a load failure reach `exit(1)`. This section used to
+record that as a joe-rs advantage: a broken bundle answered **zero** frames, so
+the packager's protocol smoke caught what morpheus needed `selfcheck` for.
+
+**Reversed on 2026-08-14, after the tournament form rejected joe-rs for
+crashing in evaluation rounds while morpheus-rs passed.** The advantage was
+being paid for in the wrong currency. RULES.md §08 forfeits the match on a
+crash or an early exit but charges one fault out of fifty for a bad reply, and
+joe-rs had three paths that took the forfeit: `Seat::new`, a `read_observation`
+error, and a `write_action` error — the last of which fires on an ordinary
+EPIPE if the judge closes stdout before stdin, on every game. morpheus-rs
+converts all three into a pass or a clean break
+([its main.rs:464](../../../bots/morpheus-rs/crates/bot/src/main.rs:464)), and
+joe-rs now does the same
+([main.rs:196-232](../../../bots/joe-rs/src/main.rs:196)). Only a malformed
+*handshake* still exits non-zero: no game has started, so there is nothing to
+forfeit.
+
+What stays silent in joe-rs is what has always been silent in morpheus: an
+error or panic inside `act` becomes `PASS`. The startup path now joins it,
+which is what forces the selfcheck decision in §5.3 rather than merely
+permitting it.
 
 **`joe-rs` has three subcommands, not one.** The brief says `parity <surface>`
 only; [`main.rs:257`](../../../bots/joe-rs/src/main.rs:257) dispatches
@@ -277,45 +293,52 @@ macOS run cannot:
    `target-cpu=x86-64-v3` to `x86_64-unknown-linux-gnu`, a target a macOS host
    never selects — so a macOS build exercises none of it, and the wrong-cwd
    failure mode that cost morpheus a 49× pessimisation is invisible there.
-3. **The 2 GB cap at build time.** `lto = "fat"` with `codegen-units = 1` over
-   this graph on one core has an unmeasured peak RSS and an unmeasured wall
-   time. RULES.md §08 sets 2 GB per bot and documents no intake timeout; this is
-   the only place either can be observed. See P2.
+3. **The 2 GB cap at build time.** Linking this graph on one core has an
+   unmeasured peak RSS and an unmeasured wall time. RULES.md §08 sets 2 GB per
+   bot and documents no intake timeout; this is the only place either can be
+   observed. J5.4 measured `lto = "fat"` at 79 % of the cap, and J5.6 took P2's
+   fallback to `lto = "thin"`. See P2.
 4. **A different toolchain installation than the one that vendored.**
 
 All four were proved at J5.4, and the third came with a caveat the plan did not
 anticipate: Modal's `cpu=1` reserves a core rather than capping one, so the run
 carries a second `-j1` build to bound the wall time honestly.
 
-### 5.3 selfcheck — deferred, and the packager compensates
+### 5.3 selfcheck — deferred at J5.5, forced at J5.6
 
-Because of §1, a joe-rs bundle that cannot load its artifact fails the existing
-smoke by producing no output. The residual gaps are narrower than morpheus's:
-a per-turn error becomes a pass, and a lost `x86-64-v3` produces a correct but
-slower bot.
+**The original decision was to ship without one.** Because of §1, a joe-rs
+bundle that could not load its artifact failed the smoke by producing no
+output, so `smoke_reject_all_pass = True` plus a 21×21 frame where a pass is
+the wrong answer covered the rest. The cost of adding a subcommand — a new arm
+in `main.rs`, which is in the rated closure, so a moved content hash and a new
+registry version — was the reason to wait and batch it.
 
-**Decision: no `joe-rs selfcheck` in the first landing.** Instead the spec sets
-`smoke_reject_all_pass = True` and ships a smoke frame on a real 21×21 board
-where a pass is the wrong answer, so the packager fails a bundle whose every
-reply is `1 0 0 0 0`. The sha256 of `model.safetensors` is verified against the
-committed manifest at pack time (§3), which covers the artifact-substitution
-half.
+**Reversed the same day.** The premise it rested on was the `exit(1)` that got
+joe-rs rejected from the tournament (§1), and removing that removes the
+detector with it: a joe-rs bundle with `artifact/` deleted now answers two
+well-formed skips, exactly like morpheus's did. `smoke_reject_all_pass` still
+fails *that* particular bundle, because a skip is the wrong answer on the smoke
+frame — but it cannot distinguish a seat that failed to load from one that
+loaded and chose badly, and it says nothing at all about the judge's machine.
 
-**What that leaves uncovered, stated plainly:** no intake-time refusal. A
-bundle broken in a way that only bites on the judge's machine — a build that
-lost the target flag, a per-turn error path — is rejected by nothing, and
-`build.sh` is a build step rather than a gate. Morpheus's own history says this
-matters: an aborted build once shipped a four-file zip that only `selfcheck`
-caught.
+**What `joe-rs selfcheck` checks**, in the order it prints:
 
-**The cost of adding it, which is why it is deferred:** `selfcheck` is a new
-arm in `main.rs`, which is in the rated closure — so it moves joe-rs's content
-hash, mints a new `data/bot_versions/joe-rs.json` version, and invalidates the
-J4 gate and A/B verdict for the packaged program. The shared module therefore
-treats selfcheck as pure configuration (`selfcheck_argv=None` skips the step and
-the parse), so turning it on later is a spec edit plus a Rust subcommand, not a
-packager change. Milestone J5.6 does exactly that, and it should be batched with
-whatever other source change precedes a real submission so the hash moves once.
+| key | why it is in there |
+| --- | --- |
+| `hardware_fma`, `hardware_avx2` | the wrong-cwd build that cost morpheus a 49× pessimisation. `cfg!(target_feature)`, so it reports the **build**, not the host; `n/a` off x86_64, and a failure only on x86_64 |
+| `artifact_dir`, `safetensors_sha256`, `tensor_schema`, `checkpoint`, `checkpoint_step` | provenance a judge-side log can be compared against `data/bot_versions/joe-rs.json` without a rebuild |
+| `startup_ms`, `decide_ms` | the first-move grace and the 150 ms budget, measured on the judge's own hardware at intake |
+| `decision` | a skip here fails the run: on a general with 40 army and four empty neighbours, a skip is what a bot that failed to start looks like |
+
+It runs the **playing path**, not a reconstruction: same `Seat::new`, same
+warmup, same `read_handshake` / `read_observation`, same `act`. `build.sh` runs
+it and `set -e` aborts intake on a non-zero exit — the one moment where failing
+loudly is cheaper than playing, since a rejected submission costs a
+resubmission and a degraded one costs every rated game it plays.
+
+The shared module needed no change: `selfcheck_argv` and `selfcheck_keys` were
+already pure configuration, so turning it on was a spec edit plus a Rust
+subcommand, exactly as §5.3 predicted.
 
 ### 5.4 Per-bot shape — the joe-rs values
 
@@ -515,6 +538,17 @@ dies with `[joe-rs] fatal: read manifest.json: No such file or directory` and
 exit 1 — so the two successes came from the exe-relative branch and not from an
 accident of the working directory.
 
+**Superseded by J5.6, and the control is the part that broke.** A wire-mode
+seat no longer exits when it cannot load, so the orphaned binary now prints
+`cannot start the seat, passing every turn` and exits **0**, exactly like a
+healthy one — the discriminator this test rested on is gone. Re-run it with
+`selfcheck` instead, which exits 1 on a missing artifact and prints the
+`artifact_dir` it resolved:
+
+```bash
+cd / && env -u JOE_RS_ARTIFACT /tmp/joe-rs-orphan selfcheck
+```
+
 ### J5.4 — Offline build on Linux x86
 
 [`scripts/joe_rs_modal_submission_smoke.py`](../../../scripts/joe_rs_modal_submission_smoke.py),
@@ -572,17 +606,49 @@ The value telemetry in the tail (`+0.55` at turn 131 down to `-0.96` at 139) is
 joe-rs losing that particular game, which the gate does not care about — a
 normal end is the whole criterion.
 
-### J5.6 — `joe-rs selfcheck` — **not done, still deferred**
+### J5.6 — Survive the wire, and `joe-rs selfcheck` — **done, 2026-08-14**
 
-Add the subcommand mirroring morpheus's shape — resolve the artifact
-explicitly, verify `safetensors_sha256`, construct the real `Seat`, decide one
-hand-built frame where a pass is wrong, print `key value` lines, exit non-zero
-on any failure — set `selfcheck_argv=("selfcheck",)` in the spec, and add the
-line to joe-rs's `build.sh`.
+Un-deferred by a rejection: the tournament form refused joe-rs for crashing in
+evaluation rounds, on the same day morpheus-rs passed. The two bots gave the
+judge different answers to the same three events, and §1 records the diagnosis.
+Landed as one change, because all of it moves the content hash and it should
+move once:
 
-*Done when:* the packager's smoke reports `selfcheck ok`; **and** joe-rs is
-re-registered at its new content hash with the §7-of-the-port-plan gate re-run,
-because this milestone re-identifies the bot.
+1. **Three hard exits became passes.** `Seat::new` failing, a
+   `read_observation` error, and a `write_action` error each used to reach
+   `exit(1)`; they now degrade the way morpheus-rs always has. A malformed
+   handshake still exits non-zero — no game had started.
+2. **`joe-rs selfcheck`** (§5.3), because fix 1 removes the detector that
+   justified deferring it, plus the `build.sh` line that runs it.
+3. **`lto = "thin"`**, taking P2's own documented fallback — **tried, measured,
+   reverted.** The x86 rehearsal was re-run on the thin bundle and the `-j1`
+   peak went 1,616 → 1,622 MiB, so the memory hypothesis behind this third
+   change is measured false and P2 stays open. `fat` ships, because thin bought
+   nothing for a binary that every published latency figure was measured
+   without. It is recorded here rather than quietly dropped: "we changed the
+   build to fix the memory and the memory did not change" is the kind of result
+   a later reader needs in order not to repeat it.
+
+*Result:* content hash `eeec250a08c1` → **`f8803d1acb2f`**, registered as seq 4.
+The packager reports `selfcheck ok (fma=n/a (not x86_64), decided
+`0 10 10 2 0` in 11.8 ms)`, and the gate wins at turn 349.
+
+The four wire behaviours were checked by hand against the built binary, since
+none of them is reachable from a healthy match:
+
+| path | before | after |
+| --- | --- | --- |
+| artifact missing, wire mode | 0 replies, exit 1 | 2 passes, exit 0 |
+| corrupt row mid-frame | exit 1 | passes through the desync, resyncs, exit 0 |
+| engine closes stdout mid-game | exit 1 | exit 0 |
+| artifact missing, `selfcheck` | *(did not exist)* | `selfcheck FAILED`, exit 1 |
+
+*Bit-identical play:* the pre-change and post-change gates agree turn for turn
+on seed 0 down to the value telemetry (`+0.9608` at turn 348), which is the
+evidence that thin LTO moved no decision. Rust does not reassociate floats
+across optimization levels, so this is the expected result rather than a lucky
+one — but P2's fallback was written with "re-measure the latency" attached, and
+this is the cheap half of that.
 
 ---
 
@@ -652,12 +718,24 @@ wall time and is the number to watch.
 *Tripwire, revised:* a J5.4 run whose peak RSS exceeds 1,850 MiB, or whose
 `-j1` build exceeds 15 minutes. The old tripwire ("the container OOMs") is too
 late to be useful — an OOM is the failure, not the warning.
-*What moves it:* `lto = "fat"` links the whole graph in one rustc process, so
-peak RSS scales with the graph rather than with the net. A dependency addition
-is the likeliest thing to spend that 431 MiB.
-*Fallback:* `lto = "thin"` — which changes the shipped binary, so the
-[latency](latency.md) figure must be re-measured. There is room: measured p99 is
-25.4 ms against a 50 ms target and a 150 ms limit.
+*What moves it:* **not the LTO mode — measured, J5.6.** The fallback below was
+taken and the peak did not move: `-j1` went from 1,616 MiB under `lto = "fat"`
+to **1,622 MiB** under `lto = "thin"`, which is noise. The whole-graph link was
+never the high-water mark. What is left is dependency compilation under
+`opt-level = 3` + `codegen-units = 1` — the same `[profile.release]` applies to
+all 93 crates, and the generic expansion in `gemm-*` and `candle-core` is the
+likeliest owner. A dependency addition is still the likeliest thing to spend
+the remaining 426 MiB.
+*Fallback, now spent:* `lto = "thin"` was the documented escape and it buys
+nothing here. **P2 stays open at 79 % of the cap**, with its tripwire unchanged.
+*Provenance:* the [sandbox-smoke record](../../research/measurements/joe-rs-sandbox-smoke.md)
+on disk is the **thin** run, bundle `f8803d1acb2f` — the numbers above are read
+off it, and the shipped bundle is `fat`. Re-run it on the shipped bundle before
+quoting it for anything other than this comparison.
+The next lever to try is `codegen-units`, and it needs a measurement before it
+is worth a content hash — attributing the peak to a specific crate (a `-j1`
+build stopped before the final crate, against a complete one) is the cheap
+experiment that would say whether any knob of ours can move it at all.
 
 **P3 — the artifact is gitignored and already stale.** Measured: the registered
 version `joe-rs@0995d03a59c8` in `data/bot_versions/joe-rs.json` differs from

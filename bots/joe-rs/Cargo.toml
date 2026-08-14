@@ -19,6 +19,14 @@ serde_json = "1"
 
 [profile.release]
 opt-level = 3
+# `fat`, and J5.6 tried the alternative and put it back. The intake build peaks
+# at 1,616 MiB against the 2 GB the judge allows (RULES.md §08), and an OOM
+# there leaves no binary, so every evaluation game would fail at `exec`.
+# `lto = "thin"` was the documented fallback for exactly that, but the measured
+# peak did not move — 1,622 MiB, noise — so the whole-graph link is not the
+# high-water mark and thin bought nothing for a changed binary. See P2 in
+# docs/bots/joe-rs/packaging.md; the remaining suspect is dependency
+# compilation under opt-level 3 with one codegen unit.
 lto = "fat"
 codegen-units = 1
 strip = "symbols"
