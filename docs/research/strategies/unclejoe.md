@@ -171,9 +171,10 @@ falls through to the filtered re-rank (§7).
 Measured in U3 ([`../../bots/unclejoe/shadow.md`](../../bots/unclejoe/shadow.md),
 2026-08-16): across four gate matches neither cap ever bound. The kill search
 declined 87 of 88 fires by exhausting its tree, at ~2–3k nodes and ≤26 ms per
-fire. The override fired **once in 2,900 turns**, and on that turn it proved
-the move the network was already playing — the first evidence on H1, and it is
-weak.
+fire. The override fired **once in 2,900 turns** — one turn where the layer,
+not the network, produced the reply — and that game ends the same way with the
+override switched off. So no game moved. It is the first evidence on H1, and it
+is weak.
 
 ## 6. Fog, pessimistically
 

@@ -161,14 +161,22 @@ gate to a search. One override came out of the 90, and no cap tripped in any of
 them. Every match reached a normal end — a general capture, no faults, no
 timeouts — on the same turn as its U2 run, with the same winner.
 
-### The one override agreed with the network
+### The one override changed nothing
 
 Seed 3, turn 846: `override kill depth 1 nodes 18`, a deathtouch touch onto the
-general at (1, 19) from (1, 18). It is the move that won the game — and it is
-also the move joe was already making. Re-running the same seed with
-`UNCLEJOE_OVERRIDE=0` gives a log that is identical line for line, ending on
-turn 847 with the same capture. So the honest reading of U3's four matches is:
-the override fired once in 2,900 turns and changed nothing.
+general at (1, 19) from (1, 18). It is the move that won the game.
+
+"Fired once" counts the turns where the layer produced the reply instead of the
+network — not the turns where the two disagreed. On this evidence they did not
+disagree at all. Re-running the seed with `UNCLEJOE_OVERRIDE=0` gives the same
+847-turn game, the same capture by the same player, and an equal value and
+trigger line on every turn including 846 — so the two runs are the same game up
+to that decision, and the network won on that turn without the override. Which
+action the argmax named is not in the log; that it also captured the general on
+turn 846 follows from the game ending where it did.
+
+So the honest reading of U3's four matches is: the override fired once in 2,900
+turns, and no game moved.
 
 That is a finding rather than a defect, and it is the one H1 was written to be
 falsifiable about ([the spec](../../research/strategies/unclejoe.md) §1): a
