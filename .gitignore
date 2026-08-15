@@ -62,6 +62,15 @@ bots/joe/artifact/*.eqx
 bots/joe-rs/artifact/*.safetensors
 bots/joe-rs/target/
 
+# unclejoe forked joe-rs, and its weights follow the same rule one hop
+# further along: byte-copied from joe-rs's artifact by
+# bots/unclejoe/tools/sync_artifact.py, pinned by the committed manifest.json
+# (safetensors_sha256), re-creatable on any checkout that has joe-rs's. The
+# content hash still covers the .safetensors, so a resync forks the rating
+# identity.
+bots/unclejoe/artifact/*.safetensors
+bots/unclejoe/target/
+
 # The prebuilt x86_64 binary the submission ships instead of compiling at
 # intake. Derived: scripts/joe_rs_modal_static_build.py rebuilds it from the
 # committed sources on any checkout. It sits under tools/ so the content-hash

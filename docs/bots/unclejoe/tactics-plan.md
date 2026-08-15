@@ -1,9 +1,12 @@
 # unclejoe tactics plan
 
 Plan for the tactics layer of `bots/unclejoe/`. Status: **plan only** — no
-code exists yet. Prerequisite: the fork is finished per
-[fork-plan.md](fork-plan.md) (milestone U1: behavior-identical to joe-rs,
-gate passed, wire-replay equality proven).
+tactics code exists yet. The prerequisite is met: the fork is finished per
+[fork-plan.md](fork-plan.md) §7 (milestone U1, 2026-08-15 —
+behavior-identical to joe-rs, gate passed, wire-replay equality proven), and
+the spec is
+[`../../research/strategies/unclejoe.md`](../../research/strategies/unclejoe.md).
+Work starts at U2 (§7).
 
 Concept: keep the ported NN policy (greedy argmax over the joe EMA weights
 in `artifact/`) as the default move source, and add a tactics layer built

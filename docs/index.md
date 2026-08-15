@@ -42,8 +42,9 @@ Small topic files for the Generals Arena research repo.
 - [joe-rs latency](bots/joe-rs/latency.md) — full-path percentiles on one x86 core; why candle stays
 - [joe-rs packaging](bots/joe-rs/packaging.md) — J5 plan: the shared Rust packager, the measured zip budget, and what a submission still needs
 - [joe-rs A/B sanity](research/measurements/joe-rs-ab-sanity.md) — matched arms vs the panel: 100 identical game pairs, verdict `no change`
-- [unclejoe fork plan](bots/unclejoe/fork-plan.md) — planned joe-rs fork: copy strategy, own rating identity, and the U1 equality proof
+- [unclejoe fork plan](bots/unclejoe/fork-plan.md) — the joe-rs fork: copy strategy, own rating identity, and the U1 equality proof (built 2026-08-15)
 - [unclejoe tactics plan](bots/unclejoe/tactics-plan.md) — the layer on top of the fork: board memory, bounded exact search, trigger predicates, measurement
+- [unclejoe strategy spec](research/strategies/unclejoe.md) — the claim, the triggers, the search caps, and what the joe-rs contrast has to show
 - [smoke](bots/smoke.md) — stdio smoke test, not competitive
 - [expand_plus](bots/expand-plus.md) — greedy capture + BFS frontier march
 - [castle_builder](bots/castle-builder.md) — rested-general castle investment

@@ -69,7 +69,20 @@ mv data/joe/joe-rs-parity/games data/joe/joe-rs-parity/games.step<OLD>
 .venv/bin/python bots/joe-rs/tools/make_smoke_fixture.py   # committed fixture
 .venv/bin/pytest bots/joe-rs/tests/ -m joe
 .venv/bin/python bots/joe-rs/tools/mutation_check.py
+# unclejoe is a second derived target: joe -> joe-rs -> unclejoe. It tracks
+# joe-rs's converted artifact, not joe's .eqx, because the joe-rs vs unclejoe
+# contrast has to isolate the tactics layer and that needs identical weights.
+.venv/bin/python bots/unclejoe/tools/sync_artifact.py
+cargo build --release --manifest-path bots/unclejoe/Cargo.toml
 ```
+
+Nothing detects a skipped sync at play time — unclejoe would load the older
+weights, play, and look healthy — so the step belongs here or nowhere.
+`sync_artifact.py` verifies `safetensors_sha256` on both sides and writes the
+weights through a temporary file, which makes a *partial* sync (manifest
+copied, weights not) fail loudly instead of playing. `--check` answers "is
+unclejoe current?" without writing. A sync forks unclejoe's content hash,
+exactly as a re-conversion forks joe-rs's; the registry records it.
 
 `--play` and `--capture` are split so `make_synthetic_long.py` can run
 between them: it needs the natural games' `.in.log` files to pick the

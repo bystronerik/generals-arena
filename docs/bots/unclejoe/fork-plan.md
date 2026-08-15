@@ -2,7 +2,8 @@
 
 Plan for creating `bots/unclejoe/` as a faithful fork of `bots/joe-rs/` (the
 dependency-free Rust port, compiled at intake — not the Python `bots/joe/`).
-Status: **plan only** — no code exists yet.
+Status: **built, U1 proven** (2026-08-15) — see [§7](#7-what-shipped-2026-08-15)
+for the results and the two places the code differs from this plan.
 
 This document covers the fork itself: the copy, the rename, the bot's own
 rating identity, and the proof that the fork is behavior-identical to joe-rs
@@ -21,7 +22,8 @@ the crate stays dependency-free so intake still compiles it from source.
 A spec is required. The repo workflow (AGENTS.md subagent roles) has
 bot-author work "from a spec under `docs/research/strategies/`", and every
 prior bot follows it. Step 1 is therefore
-`docs/research/strategies/unclejoe.md`. Its content is the design in
+[`docs/research/strategies/unclejoe.md`](../../research/strategies/unclejoe.md)
+— written, 2026-08-15. Its content is the design in
 [tactics-plan.md](tactics-plan.md) — concept, trigger definitions, search
 model and caps, latency budget, evaluation plan, and non-goals — because the
 tactics layer is the bot's reason to exist; the fork below is the substrate.
@@ -78,7 +80,8 @@ source paths):
 - **Rust (`cargo test`, zero cost to the Python budget):** the copied
   modules' unit tests come along with the copy and must pass unchanged.
 - **Python (`bots/unclejoe/tests/`, outside the content hash):** one adapted
-  `test_wire_replay.py`: pipe the shared `data/joe/joe-rs-parity/` corpus
+  wire-replay test (`test_unclejoe_wire_replay.py` — §7 says why the basename
+  cannot repeat joe-rs's): pipe the shared `data/joe/joe-rs-parity/` corpus
   logs through `unclejoe` and require reply-for-reply equality with Python
   joe's recordings — proving the copied NN path is untouched. Mark it with a
   new `unclejoe` marker added to `pytest.ini`'s `markers` and to the
@@ -117,3 +120,51 @@ The fork is complete when, in one working tree:
 
 Only then does the tactics work start —
 [tactics-plan.md](tactics-plan.md).
+
+## 7. What shipped (2026-08-15)
+
+All four done criteria met, in one tree, on dev arm64 macOS:
+
+1. `cargo test` — 18 passed, the copied modules' tests unchanged.
+2. Wire replay — 14 games, 7,502 turns, every reply equal to Python joe's
+   recording.
+3. Gate — `unclejoe` vs `joe-rs`, competition mode, seed 0: normal end,
+   general captured on turn 385. No game was stored and no rating was fitted;
+   storing and the contrast belong to
+   [tactics-plan.md](tactics-plan.md) §6.
+4. `bench` over `synthetic-long.in.log` (2,400 turns), same host, back to
+   back: unclejoe p50 22.18 ms / p99 23.49 ms, joe-rs p50 22.35 ms /
+   p99 23.41 ms — equal inside noise, and matching the dev-arm64 row of
+   [latency.md](../joe-rs/latency.md). The x86 proxy re-run belongs to U4.
+
+Two deviations from the plan above, both forced:
+
+- **The test file is `tests/test_unclejoe_wire_replay.py`, not
+  `test_wire_replay.py`.** pytest imports test modules by basename when there
+  is no `__init__.py`, so a second `test_wire_replay.py` collides with
+  joe-rs's and fails collection of the *whole* suite, marker or no marker.
+  The unique basename is the fix that does not edit joe-rs.
+- **`mod nn;` in `main.rs` carries `#[allow(dead_code)]`.** joe-rs's parity
+  harness read `ForwardOut::value_bins`, and the harness stayed behind, so the
+  field is now unused. The allow is scoped to the copied module — anything the
+  fork adds keeps its warning — and it is what lets `nn/` stay byte-identical
+  to joe-rs's.
+
+Also shipped, and implied by the packager rather than listed in §2:
+`tools/submission/build.sh`, adapted from joe-rs's (binary name only). The
+shared packager reads it by path, so a fork without it cannot package.
+
+Closure check: `bot_source_closure` returns 19 files for unclejoe — its own
+sources, `Cargo.*`, `run.sh`, `rust-toolchain.toml`, `.cargo/config.toml`, and
+the two artifact members. Nothing outside the bot directory, as intended.
+
+Fork check: `diff -r bots/joe-rs/src bots/unclejoe/src` reports `main.rs` and
+the dropped `parity.rs`, and nothing else. The weights are byte-identical —
+both manifests pin `safetensors_sha256 919b593ce7c8`. The identities are
+separate, as they must be: `joe-rs@490b968aba4b`, `unclejoe@c1841f68ca4b`.
+Neither bot is registered in `data/bot_versions/` for this milestone; that
+happens at the first rated round.
+
+Packaging works from the adapted spec: `package_submission.py --force` builds
+a 20-file, 31.8 MB zip, smokes the extracted bundle (two well-formed replies,
+one of them a move), and `selfcheck` passes inside it — zero failures.
