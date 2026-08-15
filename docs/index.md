@@ -44,6 +44,7 @@ Small topic files for the Generals Arena research repo.
 - [joe-rs A/B sanity](research/measurements/joe-rs-ab-sanity.md) — matched arms vs the panel: 100 identical game pairs, verdict `no change`
 - [unclejoe fork plan](bots/unclejoe/fork-plan.md) — the joe-rs fork: copy strategy, own rating identity, and the U1 equality proof (built 2026-08-15)
 - [unclejoe tactics plan](bots/unclejoe/tactics-plan.md) — the layer on top of the fork: proof-gated override, castle/refutation filters, afterstate value re-rank, full-budget clock plan
+- [unclejoe shadow measurements](bots/unclejoe/shadow.md) — what the layer would have done while it did nothing: trigger rates (U2), what the proofs proved (U3), and U4's **no-go** on the value re-rank
 - [unclejoe strategy spec](research/strategies/unclejoe.md) — the two claims (provable moments, one-step improvement), triggers, caps, and what the joe-rs contrast has to show
 - [smoke](bots/smoke.md) — stdio smoke test, not competitive
 - [expand_plus](bots/expand-plus.md) — greedy capture + BFS frontier march

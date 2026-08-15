@@ -3,8 +3,12 @@
 What the tactics layer *would* have done, measured while it did nothing. The
 milestones that end in a shadow report write their sections here:
 [tactics-plan.md](tactics-plan.md) §7 — U2 (triggers) below, U3 (what the
-searches behind those triggers proved) after it, U4 (afterstate re-rank)
-later.
+searches behind those triggers proved) after it, U4 (the afterstate re-rank)
+last.
+
+**U4's verdict is a no-go on the re-rank.** Read
+[§ U4](#u4--what-the-afterstate-values-said-2026-08-16) before building on
+it, and do not rate the U4 build: it runs past 150 ms.
 
 ## U2 — trigger fire rates (2026-08-15)
 
@@ -230,3 +234,148 @@ turns, every reply equal to Python joe's recording. With the master switch off
 the layer is not merely quiet — `decide` returns before the triggers run — so
 that test proves the U3 code cannot reach the reply, and the four gate matches
 prove that when it can, it did not.
+
+## U4 — what the afterstate values said (2026-08-16)
+
+Build: `bots/unclejoe/` at the U4 code, same artifact `4f2ab8703559`, same dev
+arm64 macOS host, same four gate seeds and the same corpus prefix. New in this
+milestone: `search/afterstate.rs` renders the position a candidate leaves back
+into a frame, `tactics/filters.rs` masks candidates, and `Seat::act` runs one
+forward per surviving candidate and logs what a live re-rank *would* have
+played. The reply is the argmax on every turn, as U3 left it.
+
+Reproduce a gate row with the gate command in [fork-plan.md](fork-plan.md) §5
+plus `--seed <n>`; reproduce the corpus row with the first 1,140 frames of
+`data/joe/joe-rs-parity/games/synthetic-long.in.log` piped through
+`unclejoe bench`. Read the `tactics rerank` line off stderr. Constants per
+[tactics-plan.md](tactics-plan.md) §4: `TOP_K = 5`,
+`RERANK_RESERVE_MS = 25`, `CASTLE_SURCHARGE_CAP = 8`,
+`CASTLE_LATE_TURN = 650`.
+
+| Game | Turns | Re-ranked | Forwards | Would change | Gap p50 | p90 | p99 | max | Masked (argmax) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| gate seed 0 | 770 | 770 | 3,045 | 379 (49.2%) | 0.0000 | 0.0142 | 0.0446 | 0.0849 | 7 (2) |
+| gate seed 1 | 659 | 659 | 2,588 | 377 (57.2%) | 0.0006 | 0.0217 | 0.1198 | 0.2959 | 35 (6) |
+| gate seed 2 | 624 | 624 | 2,485 | 269 (43.1%) | 0.0000 | 0.0046 | 0.0235 | 0.0690 | 0 (0) |
+| gate seed 3 | 847 | 846 | 3,357 | 386 (45.6%) | 0.0000 | 0.0081 | 0.0328 | 0.3916 | 0 (0) |
+| corpus replay | 1,140 | 1,138 | 4,268 | 559 (49.1%) | 0.0000 | 0.0147 | 0.0796 | 0.3935 | 7 (1) |
+
+4,037 re-ranked turns, 15,743 afterstate forwards. Every gate match reached a
+normal end on the **same turn with the same winner** as its U2 and U3 run,
+which is what a shadow mechanism must produce. Seed 3 re-ranked 846 of 847
+turns: the missing one is turn 846, where the U3 kill proof overrode and the
+turn ended before a slate was built.
+
+### The go/no-go: no-go, and the reason is a unit
+
+The plan's bar is that "live re-rank requires candidate value gaps that stand
+clear of the near-zero mass of the gap distribution". There is a natural unit
+to measure that in, and it decides the question.
+
+joe's value head is a distribution over **128 bins spanning [−1, +1]**
+(`bin_centers` in the artifact), so one bin is **0.0157** wide. A value
+difference below that is not the head preferring one position to another; it
+is the softmax interpolating between two adjacent bins.
+
+| Sample | Turns | Would change | Gap ≥ 1 bin | Gap ≥ 2 bins |
+| --- | --- | --- | --- | --- |
+| gate seed 0 | 770 | 49.2% | 8.6% | 3.0% |
+| gate seed 1 | 659 | 57.2% | 14.3% | 7.3% |
+| gate seed 2 | 624 | 43.1% | 2.7% | 0.6% |
+| gate seed 3 | 846 | 45.6% | 5.1% | 1.4% |
+| corpus replay | 1,138 | 49.1% | 9.6% | 4.2% |
+| **all** | **4,037** | **48.8%** | **8.1%** | **3.3%** |
+
+So the re-rank would take the move away from the network on **half of all
+turns**, and on **83% of those** it would do so on a value difference smaller
+than one bin of the head's own output. The median gap is 0.0000 and the p90 is
+0.005–0.022 — about one bin. Only the p99 tail (0.023–0.12, up to 0.39) is a
+difference the head could actually resolve.
+
+That is the failure the spec named in advance and priced at one milestone
+rather than one round
+([unclejoe.md](../../research/strategies/unclejoe.md) §1: "if the shadow
+re-rank shows candidate value gaps sitting inside the head's noise, the
+re-rank never goes live and the negative is recorded without spending a
+round"). **H2 is not supported.** The re-rank does not go live as designed.
+
+It is a no-go on *this* design, not a proof that the value head is useless
+here. The 8.1% of turns clearing one bin are a different population from the
+48.8%, and a re-rank gated on a **minimum gap** would only ever act on them.
+That is a strategist's revision against this data, and it needs the latency
+finding below before it is worth attempting.
+
+### The loop does not fit the turn, and the reserve is why
+
+`bench` over the corpus prefix, same host, one pass each (ms):
+
+| Build | p50 | p90 | p99 | max |
+| --- | --- | --- | --- | --- |
+| joe-rs | 22.37 | 23.25 | 28.41 | 48.05 |
+| unclejoe, `UNCLEJOE_RERANK=0` | 23.11 | 25.11 | 45.01 | 95.70 |
+| unclejoe, U4 full | 114.84 | 122.97 | **143.26** | **181.49** |
+
+The full build crosses 150 ms. This is a property of the design, not of the
+host: `have_time` refuses to *start* an evaluation with less than
+`RERANK_RESERVE_MS = 25` ms left of the 130 ms internal deadline, but one
+evaluation is a whole forward pass — 22 ms typical here and 48 ms at joe-rs's
+own max. **The reserve is smaller than the thing it reserves for**, so the
+anytime structure bounds where the loop stops starting work and not where it
+stops working. That is the hole in tactics-plan.md §4's "the guarantee is the
+anytime structure, not an estimate".
+
+The second number says the same thing from the other side: the loop reported a
+cutoff on **4,008 of 4,037 turns** and averaged **3.9 forwards** where
+`TOP_K = 5` asks for five. At ~23 ms a forward, five afterstates plus the live
+one is ~138 ms before any rendering — the budget never held five, and the
+anytime cutoff has been silently supplying the missing constant all along.
+
+Two consequences, both for U5:
+
+- The reserve must exceed the **worst** cost of one evaluation, not the
+  typical one — or the loop must measure its own last evaluation and reserve
+  that.
+- `TOP_K = 5` is not a budget that exists. Four is what this host pays for,
+  and the Modal one-core x86-64-v3 proxy is where that number should be
+  chosen, not here.
+
+**Do not run a rated round on the U4 build.** `matchup.py` has no per-move
+time limit, so the four gate matches above say nothing about timing; the judge
+does (RULES.md §08), and this build would take faults. `UNCLEJOE_RERANK=0`
+restores U3's cost.
+
+### The masks are cheap, correct, and almost never load-bearing
+
+Across 4,037 turns the filters removed **49** candidates: 33 crowding, 1
+lateness, 15 refutation. They removed the *argmax* — the only case where a
+mask can change the played move — on **9** turns, 0.22% of them. Three turns
+filtered every candidate and fell back to the argmax, which is the intended
+degradation.
+
+The distribution is lumpy in the way castle play is: seed 1 built 9 castles
+and took 30 of the 33 crowding masks; seeds 2 and 3 built 2 and 0 and took
+none. So the mechanism is real but rare, and a contrast on it alone would need
+far more games than the re-rank would have.
+
+The refutation veto fired 5 times per game in the two games unclejoe lost and
+never in the two it won — the same shape U3 found for `refutes` as an override
+gate, and for the same reason: a refutation needs an enemy stack already
+adjacent to our general, which is a position you reach when you are losing.
+
+One afterstate in seed 2 came back `Wins` — a candidate that takes the enemy
+general with the opponent standing still, which the U3 kill proof had declined
+because the opponent does not have to stand still. It cost no forward and the
+value head never had to rank it.
+
+### What did not change
+
+Wire-replay equality still holds with `UNCLEJOE_TACTICS=0`: 14 games, 7,092
+turns, every reply equal to Python joe's recording. That covers this
+milestone's one mechanical edit to a copied file — `pub` on
+`board::obs::BUILD_BASE_COST` ([tactics-plan.md](tactics-plan.md) §1) — and
+the four gate matches cover the rest: same seeds, same ending turns, same
+winners as U2 and U3.
+
+The Rust suite is 99 tests, all passing — 25 new: 10 on the afterstate
+renderer, 8 on the filters, and 7 on the slate, the score order and the
+anytime guard. The Python suite is untouched at 14.4 s.

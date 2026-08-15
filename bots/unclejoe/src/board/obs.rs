@@ -26,7 +26,11 @@ pub const TEMPORAL_WINDOW: usize = 512;
 pub const N_RAW_CHANNELS: usize = 14;
 
 // Build-cost constants (generals/modifiers/build_castles.py).
-const BUILD_BASE_COST: i32 = 35;
+// `pub` on the base cost is the fork's one mechanical edit to this file
+// (tactics-plan.md §1): `tactics::filters` reads the crowding surcharge off
+// this grid as `cost - BUILD_BASE_COST`, and a second 35 in the crate would be
+// one rule with two spellings. No code path changed.
+pub const BUILD_BASE_COST: i32 = 35;
 const BUILD_PROXIMITY_PENALTY: i32 = 14;
 const BUILD_PROXIMITY_DECAY: i32 = 2;
 const BUILD_RADIUS: i32 = 6;

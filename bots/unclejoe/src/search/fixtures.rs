@@ -1,14 +1,21 @@
 //! Hand-built positions for the search tests.
 //!
-//! The tactics tests build *frames* and let memory derive the rest, because a
-//! trigger's job is to read a frame. A search test wants the opposite: the
-//! board the rules act on, with no fog story attached, so these build a
-//! [`Sim`] directly. The one path that turns a frame into a `Sim` —
-//! [`Sim::from_frame`] — is tested from frames, in `sim.rs`.
+//! Two kinds, because this layer is entered from both ends. A prover wants the
+//! board the rules act on, with no fog story attached, so [`board`] builds a
+//! [`Sim`] directly. The two entry points that read a *frame* —
+//! [`Sim::from_frame`] and [`Afterstate`](super::afterstate::Afterstate) —
+//! want the other kind, so [`wire_frame`] builds an `Observation` and
+//! [`remembering`] gives it a past.
 //!
 //! `search` has its own fixtures rather than borrowing the tactics layer's,
 //! for the reason the layering rule exists: this module sits below `tactics`
 //! and must not name it.
+
+use crate::board::memory::Memory;
+use crate::io::wire::{
+    Observation, OWNER_ME, TYPE_CASTLE, TYPE_FOG, TYPE_MOUNTAIN, TYPE_PLAIN,
+    TYPE_STRUCTURE_IN_FOG,
+};
 
 use super::sim::{Move, Sim, ME, NEUTRAL, OPP};
 
@@ -99,4 +106,70 @@ pub fn board(h: usize, w: usize, place: impl FnOnce(&mut Setup)) -> Sim {
 /// The move from `(row, col)` in `dir`, full-army.
 pub fn step(w: usize, row: usize, col: usize, dir: u8) -> Move {
     Move { from: at(w, row, col), dir, half: false }
+}
+
+/// An all-plain, all-visible, all-neutral frame. A test that wants fog, an
+/// owner or an army writes it in with [`set`].
+pub fn wire_frame(h: usize, w: usize, turn: i32) -> Observation {
+    let mut obs = Observation::with_dims(h, w);
+    obs.turn = turn;
+    obs.type_grid.iter_mut().for_each(|t| *t = TYPE_PLAIN);
+    obs
+}
+
+pub fn set(obs: &mut Observation, row: usize, col: usize, cell_type: i32, owner: i32, army: i32) {
+    let cell = row * obs.w + col;
+    obs.type_grid[cell] = cell_type;
+    obs.owner_grid[cell] = owner;
+    obs.army_grid[cell] = army;
+}
+
+/// Fog the frame the way the engine would.
+///
+/// [`wire_frame`] starts out showing everything, which no frame off the wire
+/// ever does: RULES.md §06 gives a player the 3×3 neighbourhood of every cell
+/// they own and nothing else. A test *about* visibility needs a frame that
+/// obeys the rule it is testing, so this applies it — the engine's
+/// `get_visibility` pool, then its split of the dark cells into plain fog and
+/// unresolved structures.
+pub fn apply_fog(obs: &mut Observation) {
+    let (h, w) = (obs.h, obs.w);
+    let mut lit = vec![false; h * w];
+    for row in 0..h {
+        for col in 0..w {
+            'pool: for dr in -1i32..=1 {
+                for dc in -1i32..=1 {
+                    let (r, c) = (row as i32 + dr, col as i32 + dc);
+                    if r < 0 || c < 0 || r >= h as i32 || c >= w as i32 {
+                        continue;
+                    }
+                    if obs.owner_grid[r as usize * w + c as usize] == OWNER_ME {
+                        lit[row * w + col] = true;
+                        break 'pool;
+                    }
+                }
+            }
+        }
+    }
+    for (cell, lit) in lit.iter().enumerate() {
+        if *lit {
+            continue;
+        }
+        obs.type_grid[cell] = match obs.type_grid[cell] {
+            TYPE_MOUNTAIN | TYPE_CASTLE => TYPE_STRUCTURE_IN_FOG,
+            _ => TYPE_FOG,
+        };
+        obs.owner_grid[cell] = 0;
+        obs.army_grid[cell] = 0;
+    }
+}
+
+/// Memory that has seen these frames in order — a past without a game.
+pub fn remembering(frames: &[&Observation]) -> Memory {
+    let first = frames.first().expect("at least one frame");
+    let mut mem = Memory::new(first.h, first.w);
+    for frame in frames {
+        mem.update(frame);
+    }
+    mem
 }

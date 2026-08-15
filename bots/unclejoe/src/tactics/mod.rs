@@ -1,11 +1,22 @@
 //! The tactics layer — everything unclejoe does that joe-rs does not.
 //!
-//! At milestone U3 the layer can **act**, and only ever on a proof. Every turn
-//! it evaluates the two tactics' trigger predicates against the frame; on a
-//! fire it runs the bounded exact search behind that trigger; and a search
-//! that proves its goal replaces the network's move. Everything else — a
-//! trigger that stays quiet, a search that declines, a cap that trips — leaves
-//! the reply exactly where joe-rs would have left it.
+//! Three mechanisms, strictly layered, and only the first of them can move the
+//! reply today.
+//!
+//! 1. **The proof-gated override** (U3). Every turn the layer evaluates the two
+//!    tactics' trigger predicates against the frame; on a fire it runs the
+//!    bounded exact search behind that trigger; and a search that *proves* its
+//!    goal replaces the network's move. A trigger that stays quiet, a search
+//!    that declines, a cap that trips — each leaves the reply exactly where
+//!    joe-rs would have left it.
+//! 2. **The candidate filters** ([`filters`], U4). Exact arithmetic that
+//!    removes candidates from the policy's shortlist. They never rank.
+//! 3. **The afterstate re-rank** (U4, in shadow). The layer hands `Seat::act`
+//!    the surviving candidates; `Seat::act` values each one's afterstate with
+//!    the network's own value head and reports what a live re-rank *would*
+//!    have played. At this milestone it plays the argmax regardless — the
+//!    numbers go to `docs/bots/unclejoe/shadow.md`, and U5 decides whether the
+//!    loop goes live.
 //!
 //! # Shape
 //!
@@ -13,10 +24,11 @@
 //! result type it returns, the search call that predicate gates, and the tests
 //! for all of it. Everything neither of them owns alone is in [`common`] —
 //! distance in moves, and what a frame states about the army it does not show.
-//! This file is the composition root: it owns the constants, the shared
-//! scratch, the counters, and the order the two tactics run in. A tactic never
-//! calls another tactic, and never reaches into another tactic's file for a
-//! helper; they meet here and in [`common`], and nowhere else.
+//! [`filters`] owns the masks, which belong to no tactic at all. This file is
+//! the composition root: it owns the constants, the shared scratch, the
+//! counters, and the order everything runs in. A tactic never calls another
+//! tactic, and never reaches into another tactic's file for a helper; they
+//! meet here and in [`common`], and nowhere else.
 //!
 //! A tactic's predicate is neither a decision nor a heuristic. It is a cheap,
 //! exact test for "an exact search could have something to prove here", built
@@ -34,22 +46,29 @@
 //! would have been worth more. The defense proof then runs against whatever
 //! clock is left, which on a declined kill is most of it.
 //!
-//! The layer reads a `&Memory` and never writes one. `Seat::act` owns the
-//! memory update, for the same reason it owns `AugState`'s: per-game state
-//! advances every turn regardless of who chooses the move.
+//! # What this layer does not touch
+//!
+//! It reads a `&Memory` and never writes one, and it never names the network.
+//! `Seat::act` owns the memory update for the same reason it owns `AugState`'s
+//! — per-game state advances every turn regardless of who chooses the move —
+//! and it owns the forwards because `nn` sits above this layer and must stay
+//! byte-identical to joe-rs's.
 
 pub mod common;
 pub mod defense;
+pub mod filters;
 pub mod kill;
 
 use std::time::{Duration, Instant};
 
-use crate::board::action::Action5;
+use crate::board::action::{decode_action, Action5};
 use crate::board::memory::Memory;
 use crate::io::wire::{Action, Observation, PASS};
-use crate::search::minimax::{Limits, Report};
+use crate::search::afterstate::Play;
+use crate::search::minimax::{self, Limits, Report};
 use crate::search::sim::{Choice, Config, Fog, Move, Sim};
 use crate::tactics::common::{hidden_army, Reach};
+use crate::tactics::filters::Mask;
 
 // ---- constants ------------------------------------------------------------
 //
@@ -96,23 +115,190 @@ pub const PROOF_NODE_BUDGET: u64 = 300_000;
 /// three plies. Added to the hidden bound so an aged bound is still a bound.
 pub const FOG_GROWTH_MARGIN: i32 = SEARCH_DEPTH;
 
+/// How many of the policy's actions the re-rank looks at. The argmax is the
+/// first of them, which is what makes the loop anytime: cut it off anywhere
+/// and the reply degrades to exactly joe-rs's.
+pub const TOP_K: usize = 5;
+
+/// Start no afterstate evaluation with less than this left of the turn. One
+/// evaluation is a forward pass, and a forward that overruns the deadline is
+/// worth less than no forward at all.
+pub const RERANK_RESERVE_MS: u64 = 25;
+
+/// The most §03 crowding surcharge a build may carry and still be valued.
+/// Eight admits exactly one own structure at three steps or further; anything
+/// closer, or two structures crowding at all, is masked.
+///
+/// **Uncalibrated.** It is a guess about what a castle is worth, not a fact
+/// about the rules, and revising it is strategist work against shadow and
+/// round data (tactics-plan.md §3).
+pub const CASTLE_SURCHARGE_CAP: i32 = 8;
+
+/// The last turn a build is worth its payback. A castle produces one army
+/// every second turn (§04), so a build at price `p` returns what it cost after
+/// `2p` turns; past this the game ends first.
+///
+/// **Uncalibrated**, on the same terms as [`CASTLE_SURCHARGE_CAP`].
+pub const CASTLE_LATE_TURN: i32 = 650;
+
 /// The kill-switches, read once at construction.
 ///
 /// `UNCLEJOE_TACTICS=0` is the master: pure pass-through, byte-identical
-/// behavior to joe-rs, and what the wire-replay test runs under.
+/// behavior to joe-rs, and what the wire-replay test runs under. The other
+/// three take one mechanism away each, so a decomposition arm is a one-line
+/// `run.sh` export (tactics-plan.md §6).
+///
 /// `UNCLEJOE_OVERRIDE=0` keeps the triggers and their reports and takes the
 /// override away — the U2 shadow build, reachable from any later one.
+/// `UNCLEJOE_MASKS=0` and `UNCLEJOE_RERANK=0` take the filters and the
+/// afterstate loop away. At U4 both of those mechanisms are themselves in
+/// shadow, so switching one off removes its *measurement* rather than its
+/// effect: `UNCLEJOE_RERANK=0` is how a U4 build runs at U3's cost.
 #[derive(Debug, Clone, Copy)]
 struct Switches {
     tactics: bool,
     overrides: bool,
+    masks: bool,
+    rerank: bool,
 }
 
 impl Switches {
     fn from_env() -> Self {
         let on = |name: &str| !std::env::var(name).is_ok_and(|value| value == "0");
-        Self { tactics: on("UNCLEJOE_TACTICS"), overrides: on("UNCLEJOE_OVERRIDE") }
+        Self {
+            tactics: on("UNCLEJOE_TACTICS"),
+            overrides: on("UNCLEJOE_OVERRIDE"),
+            masks: on("UNCLEJOE_MASKS"),
+            rerank: on("UNCLEJOE_RERANK"),
+        }
     }
+}
+
+/// What `Seat::act` hands the layer: the network's choice, its logits, and the
+/// two grids the pipeline already computed. Passed in rather than recomputed,
+/// because `penalties` *is* the engine's legality rule and `cost` *is* §03's
+/// price — a second reading of either is a second answer.
+#[derive(Debug, Clone, Copy)]
+pub struct Policy<'a> {
+    pub argmax: Action5,
+    pub logits: &'a [f32],
+    pub penalties: &'a [f32],
+    pub cost: &'a [i32],
+}
+
+/// One action the policy named, with the filters' verdict on it.
+#[derive(Debug, Clone, Copy)]
+pub struct Candidate {
+    pub action: Action5,
+    /// The same action as the forward model takes it.
+    pub play: Play,
+    pub logit: f32,
+    /// Why a filter removed it, or `None` if it survived.
+    pub masked: Option<Mask>,
+}
+
+/// A candidate that stands for nothing — the filler an empty slate slot holds.
+const NOTHING: Candidate = Candidate {
+    action: Action5 { pass_field: 1, row: 0, col: 0, dir: 0, is_half: 0 },
+    play: Play::Pass,
+    logit: f32::NEG_INFINITY,
+    masked: None,
+};
+
+/// Up to [`TOP_K`] candidates, inline and `Copy`.
+///
+/// Small on purpose: the per-turn path allocates nothing, and `Seat::act` can
+/// hold a copy of the slate while it borrows the layer again to report what
+/// the forwards found.
+#[derive(Debug, Clone, Copy)]
+pub struct Slate {
+    items: [Candidate; TOP_K],
+    len: usize,
+}
+
+impl Slate {
+    fn empty() -> Self {
+        Self { items: [NOTHING; TOP_K], len: 0 }
+    }
+
+    fn push(&mut self, candidate: Candidate) {
+        if self.len < TOP_K {
+            self.items[self.len] = candidate;
+            self.len += 1;
+        }
+    }
+}
+
+impl std::ops::Deref for Slate {
+    type Target = [Candidate];
+
+    fn deref(&self) -> &[Candidate] {
+        &self.items[..self.len]
+    }
+}
+
+/// What one turn of the layer decided.
+///
+/// A quarter of a kilobyte, because a [`Slate`] is inline rather than boxed —
+/// which is the trade this type is here to make. It is built once per turn and
+/// lives on the stack; a heap allocation on the per-move path would cost more
+/// than the copy does.
+#[derive(Debug, Clone, Copy)]
+#[allow(clippy::large_enum_variant)]
+pub enum Decision {
+    /// A proof demands this action. The turn is over.
+    Override(Action),
+    /// Nothing was proven, so the network's move stands. These are the
+    /// actions the policy named, in its own order, with the filters' verdicts
+    /// attached — for `Seat::act` to value, because the network lives above
+    /// this layer. Empty when the layer is switched off.
+    Candidates(Slate),
+}
+
+/// What one candidate's afterstate was worth.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Score {
+    /// Not evaluated: a filter removed it, or the clock ran out first.
+    Skipped,
+    /// What the network's own value head put on the position.
+    Value(f32),
+    /// The candidate takes their general while the opponent stands still.
+    /// There is no position left to value and nothing ranks above it.
+    Wins,
+}
+
+impl Score {
+    pub fn value(self) -> Option<f32> {
+        match self {
+            Score::Value(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    /// Is this score strictly better than that one? A win beats every number,
+    /// a number beats an evaluation that never happened, and equal is not
+    /// better — which is what keeps policy order as the tiebreak.
+    fn beats(self, other: Score) -> bool {
+        match (self, other) {
+            (Score::Wins, Score::Wins) => false,
+            (Score::Wins, _) => true,
+            (_, Score::Wins) => false,
+            (Score::Value(a), Score::Value(b)) => a > b,
+            (Score::Value(_), Score::Skipped) => true,
+            _ => false,
+        }
+    }
+}
+
+/// Is there room in the turn to start another afterstate evaluation?
+///
+/// This is the whole of the anytime guarantee. The argmax is candidate #1, so
+/// a loop cut off at any point — here, or before the first evaluation — plays
+/// what joe-rs would have played.
+pub fn have_time(t0: Instant) -> bool {
+    let spent = t0.elapsed().as_millis();
+    let left = i128::from(TURN_DEADLINE_MS) - spent as i128;
+    left >= i128::from(RERANK_RESERVE_MS)
 }
 
 /// The layer's per-game state: the switches, the shared scratch, and the
@@ -148,6 +334,23 @@ pub struct Tactics {
     overrides: u32,
     nodes: u64,
     slowest_proof_ms: f64,
+    // U4, all shadow: what the filters would have removed and what the
+    // afterstate values would have chosen.
+    rerank_turns: u32,
+    rerank_forwards: u32,
+    rerank_cutoffs: u32,
+    rerank_wins: u32,
+    would_change: u32,
+    argmax_masked: u32,
+    masked_crowding: u32,
+    masked_lateness: u32,
+    masked_refuted: u32,
+    all_masked: u32,
+    /// Every turn's `best − argmax` value gap, kept whole rather than
+    /// summarized on the fly: U4's go/no-go is a question about the *shape* of
+    /// this distribution, and a mean cannot answer it. One f32 per turn, so a
+    /// 1,200-turn game costs under 5 KB against a 2 GB cap.
+    gaps: Vec<f32>,
 }
 
 impl Tactics {
@@ -157,6 +360,12 @@ impl Tactics {
             eprintln!("[unclejoe] tactics off: the reply is the network's, every turn");
         } else if !switches.overrides {
             eprintln!("[unclejoe] tactics in shadow: triggers report, nothing overrides");
+        }
+        if switches.tactics {
+            eprintln!(
+                "[unclejoe] re-rank in shadow: masks {} rerank {} (the reply is the argmax either way)",
+                switches.masks, switches.rerank,
+            );
         }
         Self {
             switches,
@@ -182,26 +391,70 @@ impl Tactics {
             overrides: 0,
             nodes: 0,
             slowest_proof_ms: 0.0,
+            rerank_turns: 0,
+            rerank_forwards: 0,
+            rerank_cutoffs: 0,
+            rerank_wins: 0,
+            would_change: 0,
+            argmax_masked: 0,
+            masked_crowding: 0,
+            masked_lateness: 0,
+            masked_refuted: 0,
+            all_masked: 0,
+            gaps: Vec::new(),
+        }
+    }
+
+    /// Is the afterstate loop switched on? `Seat::act` asks before it spends a
+    /// forward, because that is the one part of this milestone with a cost.
+    pub fn reranking(&self) -> bool {
+        self.switches.tactics && self.switches.rerank
+    }
+
+    /// The forward model an afterstate advances on: the board as the frame
+    /// states it, with fog left empty. Never the pessimistic one — that is a
+    /// proof device, and a board carrying the opponent's whole army on every
+    /// dark cell is not a position to ask a value head about.
+    pub fn afterstate_config(&self) -> Config {
+        Config {
+            fog: Fog::VisibleOnly,
+            hidden_bound: 0,
+            deathtouch_turn: DEATHTOUCH_TURN,
+            i_am_p0: self.i_am_p0,
         }
     }
 
     /// One turn of the layer: run both tactics against the frame, and return
-    /// the action a proof demands — or nothing, which is the answer on the
-    /// overwhelming majority of turns.
+    /// the action a proof demands — or, on the overwhelming majority of turns,
+    /// the shortlist the network named with the filters' verdicts on it.
     ///
-    /// `argmax` is what the network chose. It is not a candidate here: the
-    /// defense tactic needs it to ask whether the move about to be played is
-    /// the one that loses.
+    /// `policy.argmax` is what the network chose. It is a candidate *and* an
+    /// argument: the defense tactic needs it to ask whether the move about to
+    /// be played is the one that loses.
     pub fn decide(
+        &mut self,
+        obs: &Observation,
+        mem: &Memory,
+        policy: &Policy,
+        t0: Instant,
+    ) -> Decision {
+        if !self.switches.tactics {
+            return Decision::Candidates(Slate::empty());
+        }
+        if let Some(proven) = self.override_move(obs, mem, policy.argmax, t0) {
+            return Decision::Override(proven);
+        }
+        Decision::Candidates(self.slate(obs, mem, policy))
+    }
+
+    /// The U3 half: a proof, or nothing.
+    fn override_move(
         &mut self,
         obs: &Observation,
         mem: &Memory,
         argmax: Action5,
         t0: Instant,
     ) -> Option<Action> {
-        if !self.switches.tactics {
-            return None;
-        }
         let kill = kill::evaluate(obs, mem, &mut self.reach);
         let defense = defense::evaluate(obs, mem, &mut self.reach);
         self.watch(obs, mem, kill.as_ref(), defense.as_ref());
@@ -209,12 +462,7 @@ impl Tactics {
         if !self.switches.overrides || (kill.is_none() && defense.is_none()) {
             return None;
         }
-        let pessimistic = Config {
-            fog: Fog::Pessimistic,
-            hidden_bound: hidden_army(obs) + FOG_GROWTH_MARGIN,
-            deathtouch_turn: DEATHTOUCH_TURN,
-            i_am_p0: self.i_am_p0,
-        };
+        let pessimistic = self.pessimistic(obs);
         // One board serves both searches: a search leaves it exactly as it
         // found it, because every advance it makes is taken back.
         let mut sim = Sim::from_frame(obs, mem, &pessimistic)?;
@@ -256,6 +504,106 @@ impl Tactics {
             }
         }
         None
+    }
+
+    /// The policy's [`TOP_K`] best **legal** actions, in its own order, with
+    /// every filter's verdict attached.
+    ///
+    /// Legality is `policy.penalties`: the pipeline's own action mask, which
+    /// is the engine's rule and not a second reading of it. The masked entries
+    /// carry `-1e9`, so the first candidate here is the same action
+    /// `argmax(logits)` named — the argmax is always legal, because the pass
+    /// channel always is and no logit comes near a billion.
+    fn slate(&mut self, obs: &Observation, mem: &Memory, policy: &Policy) -> Slate {
+        let mut slate = Slate::empty();
+        let mut taken = [usize::MAX; TOP_K];
+        for rank in 0..TOP_K {
+            let mut best: Option<usize> = None;
+            for idx in 0..policy.logits.len() {
+                if policy.penalties[idx] < 0.0 || taken[..rank].contains(&idx) {
+                    continue;
+                }
+                // Strictly greater, so equal logits fall to the lower index —
+                // the same first-max rule `board::action::argmax` follows.
+                if best.is_none_or(|b| policy.logits[idx] > policy.logits[b]) {
+                    best = Some(idx);
+                }
+            }
+            let Some(idx) = best else {
+                break;
+            };
+            taken[rank] = idx;
+            let action = decode_action(idx);
+            slate.push(Candidate {
+                action,
+                play: as_play(action, obs),
+                logit: policy.logits[idx],
+                masked: self.castle_mask(obs, policy, action),
+            });
+        }
+        self.veto(obs, mem, &mut slate);
+        slate
+    }
+
+    /// The two castle masks, on a build candidate only.
+    fn castle_mask(
+        &self,
+        obs: &Observation,
+        policy: &Policy,
+        action: Action5,
+    ) -> Option<Mask> {
+        if !self.switches.masks || action.pass_field != 2 {
+            return None;
+        }
+        let (row, col) = (action.row as usize, action.col as usize);
+        if row >= obs.h || col >= obs.w {
+            return None;
+        }
+        filters::castle(obs, policy.cost, row * obs.w + col)
+    }
+
+    /// The refutation veto, over the whole slate at once.
+    ///
+    /// Gated on [`filters::refutation_possible`], which is exact: with no
+    /// enemy stack beside our general no candidate can be refuted, and that is
+    /// nearly every turn. When the gate does open, the board is the
+    /// visible-only one — a veto must never remove a candidate that is
+    /// actually safe, so every reply it counts has to be one the opponent
+    /// demonstrably has.
+    fn veto(&mut self, obs: &Observation, mem: &Memory, slate: &mut Slate) {
+        if !self.switches.masks || !filters::refutation_possible(obs, mem) {
+            return;
+        }
+        let Some(general) = mem.own_general else {
+            return;
+        };
+        let config = Config { fog: Fog::VisibleOnly, ..self.pessimistic(obs) };
+        let Some(mut seen) = Sim::from_frame(obs, mem, &config) else {
+            return;
+        };
+        self.set_window(obs, mem, general, DEFENSE_DEPTH + 1);
+        for slot in 0..slate.len {
+            if slate.items[slot].masked.is_some() {
+                continue;
+            }
+            // A build is a pass to this question: it moves no army off the
+            // general and hands the opponent the same board a pass would.
+            let choice = as_choice(slate.items[slot].action, obs);
+            if minimax::refutes(&mut seen, choice, &self.window) {
+                slate.items[slot].masked = Some(Mask::Refuted);
+            }
+        }
+    }
+
+    /// The proof board's configuration: fog as the worst it could be, plus the
+    /// margin an aged bound needs.
+    fn pessimistic(&self, obs: &Observation) -> Config {
+        Config {
+            fog: Fog::Pessimistic,
+            hidden_bound: hidden_army(obs) + FOG_GROWTH_MARGIN,
+            deathtouch_turn: DEATHTOUCH_TURN,
+            i_am_p0: self.i_am_p0,
+        }
     }
 
     /// The caps for one search: its own wall-clock slice, cut short by the
@@ -380,6 +728,105 @@ impl Tactics {
         }
     }
 
+    /// The U4 shadow half: what the filters removed, what the afterstate
+    /// values said, and what a live re-rank would therefore have played.
+    /// Nothing here changed the reply — `Seat::act` plays the argmax at this
+    /// milestone whatever this reports.
+    ///
+    /// `scored` is one entry per slate slot. The argmax's entry is always a
+    /// value when the loop ran at all, because it is the baseline every gap is
+    /// measured against; the rest are values only where a filter let them
+    /// through and the clock allowed it.
+    pub fn report_rerank(
+        &mut self,
+        obs: &Observation,
+        slate: &Slate,
+        scored: &[Score],
+        cutoff: bool,
+    ) {
+        if slate.is_empty() {
+            return;
+        }
+        let mut surviving = 0;
+        for (rank, candidate) in slate.iter().enumerate() {
+            match candidate.masked {
+                Some(Mask::Crowding) => self.masked_crowding += 1,
+                Some(Mask::Lateness) => self.masked_lateness += 1,
+                Some(Mask::Refuted) => self.masked_refuted += 1,
+                None => surviving += 1,
+            }
+            if rank == 0 && candidate.masked.is_some() {
+                self.argmax_masked += 1;
+            }
+        }
+        if surviving == 0 {
+            // Every candidate filtered means the filters are moot: U5 plays
+            // the argmax, which is what U4 plays anyway.
+            self.all_masked += 1;
+        }
+        let forwards = scored.iter().filter(|s| s.value().is_some()).count() as u32;
+        self.rerank_forwards += forwards;
+        self.rerank_wins += scored.iter().filter(|s| **s == Score::Wins).count() as u32;
+        self.rerank_cutoffs += u32::from(cutoff);
+        if forwards == 0 && !scored.contains(&Score::Wins) {
+            return;
+        }
+        self.rerank_turns += 1;
+
+        // What a live loop would play: the best-scored survivor, falling back
+        // to policy order among survivors the clock never reached, and to the
+        // argmax when the filters left nothing.
+        let mut pick: Option<usize> = None;
+        for rank in 0..slate.len() {
+            if slate[rank].masked.is_some() {
+                continue;
+            }
+            match pick {
+                None => pick = Some(rank),
+                Some(best) if scored[rank].beats(scored[best]) => pick = Some(rank),
+                Some(_) => {}
+            }
+        }
+        let changed = pick.is_some_and(|rank| rank != 0);
+        self.would_change += u32::from(changed);
+
+        let gap = match (pick.map(|rank| scored[rank]), scored[0]) {
+            (Some(Score::Value(best)), Score::Value(argmax)) => Some(best - argmax),
+            _ => None,
+        };
+        if let Some(gap) = gap {
+            self.gaps.push(gap);
+        }
+
+        let values: Vec<String> = slate
+            .iter()
+            .zip(scored)
+            .map(|(candidate, score)| match (score, candidate.masked) {
+                (Score::Value(v), _) => format!("{v:+.4}"),
+                (Score::Wins, _) => "win".to_string(),
+                (Score::Skipped, Some(mask)) => mask.name().to_string(),
+                (Score::Skipped, None) => "-".to_string(),
+            })
+            .collect();
+        // The logit margin says *what kind* of change this would be: a rival
+        // the policy nearly named anyway, or one it ranked far below the
+        // argmax. U5's go/no-go cares about the difference — overruling a
+        // near-tie is a different bet from overruling a confident policy.
+        let margin = pick.map(|rank| slate[rank].logit - slate[0].logit);
+        eprintln!(
+            "[unclejoe] turn {} rerank k {} forwards {} pick {} change {} gap {} \
+             logit_margin {} values {}",
+            obs.turn,
+            slate.len(),
+            forwards,
+            pick.map_or_else(|| "argmax".to_string(), |rank| rank.to_string()),
+            changed,
+            gap.map_or_else(|| "n/a".to_string(), |g| format!("{g:+.4}")),
+            margin.map_or_else(|| "n/a".to_string(), |m| format!("{m:+.3}")),
+            values.join(" "),
+        );
+    }
+
     /// One line per game, at EOF: the fire rates U2 exists to measure, and
     /// what U3's searches did with them. A layer that fires often and proves
     /// nothing and a layer that never fires are both failures, and they look
@@ -426,6 +873,47 @@ impl Tactics {
             self.nodes,
             self.slowest_proof_ms,
         );
+        self.log_rerank_summary();
+    }
+
+    /// The U4 line: the shape of the value-gap distribution, which is what the
+    /// go/no-go in tactics-plan.md §7 turns on. A re-rank worth switching on
+    /// needs gaps that stand clear of the near-zero mass — so the quantiles
+    /// are reported, not the mean, which a pile of zeros would hide behind.
+    fn log_rerank_summary(&self) {
+        if self.turns == 0 {
+            return;
+        }
+        let pct = |count: u32| 100.0 * f64::from(count) / f64::from(self.turns);
+        let mut gaps = self.gaps.clone();
+        gaps.sort_by(|a, b| a.partial_cmp(b).expect("a value gap is never NaN"));
+        let quantile = |q: f64| {
+            gaps.first().map_or(f64::NAN, |_| {
+                f64::from(gaps[((gaps.len() as f64 - 1.0) * q) as usize])
+            })
+        };
+        eprintln!(
+            "[unclejoe] tactics rerank: turns {} ({:.1}%) forwards {} cutoffs {} wins {} \
+             would_change {} ({:.1}%) argmax_masked {} all_masked {} \
+             masked crowding {} late {} refuted {} \
+             gap p50 {:.4} p90 {:.4} p99 {:.4} max {:.4}",
+            self.rerank_turns,
+            pct(self.rerank_turns),
+            self.rerank_forwards,
+            self.rerank_cutoffs,
+            self.rerank_wins,
+            self.would_change,
+            pct(self.would_change),
+            self.argmax_masked,
+            self.all_masked,
+            self.masked_crowding,
+            self.masked_lateness,
+            self.masked_refuted,
+            quantile(0.50),
+            quantile(0.90),
+            quantile(0.99),
+            quantile(1.0),
+        );
     }
 }
 
@@ -442,6 +930,23 @@ fn as_choice(action: Action5, obs: &Observation) -> Choice {
         return None;
     }
     Some(Move { from: row * obs.w + col, dir: action.dir as u8, half: action.is_half == 1 })
+}
+
+/// The network's action as the **afterstate** takes it, which is the same
+/// mapping with one difference: a build is a build here, not a pass. The proof
+/// searches may treat it as a turn spent elsewhere; a position cannot, because
+/// the price comes off a real cell and the castle starts producing (§03).
+fn as_play(action: Action5, obs: &Observation) -> Play {
+    let (row, col) = (action.row as usize, action.col as usize);
+    if row >= obs.h || col >= obs.w {
+        return Play::Pass;
+    }
+    let cell = row * obs.w + col;
+    match action.pass_field {
+        0 => Play::Act(Move { from: cell, dir: action.dir as u8, half: action.is_half == 1 }),
+        2 => Play::Build(cell),
+        _ => Play::Pass,
+    }
 }
 
 /// And back to the wire.
@@ -461,6 +966,176 @@ fn as_action(play: Choice, w: usize) -> Action {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::board::action::encode_action;
+    use crate::board::obs::{
+        build_cost_from_raw, frame_to_raw, prepare_action_mask, CELLS, N_ACTION_CHANNELS,
+    };
+    use crate::io::wire::{OWNER_ME, OWNER_OPP, TYPE_GENERAL, TYPE_PLAIN};
+    use crate::tactics::common::fixtures::{at, frame, put, remembering, total_armies};
+    use std::time::Duration;
+
+    /// The pipeline's own masks and prices for a frame, exactly as `Seat::act`
+    /// computes them: a slate test that fabricated its own legality would be
+    /// testing the fabrication.
+    fn pipeline(obs: &Observation) -> (Vec<f32>, Vec<i32>) {
+        let (mut raw, mut cost) = (Vec::new(), Vec::new());
+        let (mut move_mask, mut build_mask) = (Vec::new(), Vec::new());
+        frame_to_raw(obs, &mut raw);
+        build_cost_from_raw(&raw, obs.h, obs.w, &mut cost);
+        crate::board::obs::compute_valid_move_mask(&raw, obs.h, obs.w, &mut move_mask);
+        crate::board::obs::compute_build_mask_from_raw(
+            &raw,
+            obs.h,
+            obs.w,
+            &cost,
+            &mut build_mask,
+        );
+        let mut penalties = vec![0.0; N_ACTION_CHANNELS * CELLS];
+        prepare_action_mask(&move_mask, &build_mask, obs.h, obs.w, &mut penalties);
+        (penalties, cost)
+    }
+
+    /// Logits that name these actions in this order, best first, and leave
+    /// everything else far behind.
+    fn logits_favouring(order: &[Action5]) -> Vec<f32> {
+        let mut logits = vec![-100.0; N_ACTION_CHANNELS * CELLS];
+        for (rank, action) in order.iter().enumerate() {
+            logits[encode_action(*action)] = 10.0 - rank as f32;
+        }
+        logits
+    }
+
+    fn slate_for(obs: &Observation, order: &[Action5]) -> Slate {
+        let (penalties, cost) = pipeline(obs);
+        let logits = logits_favouring(order);
+        let policy = Policy { argmax: order[0], logits: &logits, penalties: &penalties, cost: &cost };
+        let mut tactics = Tactics::new(true);
+        tactics.slate(obs, &remembering(&[obs]), &policy)
+    }
+
+    fn move_action(row: i32, col: i32, dir: i32) -> Action5 {
+        Action5 { pass_field: 0, row, col, dir, is_half: 0 }
+    }
+
+    fn build_action(row: i32, col: i32) -> Action5 {
+        Action5 { pass_field: 2, row, col, dir: 0, is_half: 0 }
+    }
+
+    /// The slate is the policy's own order, and its first entry is the argmax
+    /// — which is what makes the re-rank loop anytime.
+    #[test]
+    fn the_slate_is_the_policy_order_and_the_argmax_leads_it() {
+        let mut obs = frame(100);
+        put(&mut obs, 4, 4, TYPE_GENERAL, OWNER_ME, 20);
+        total_armies(&mut obs);
+        let wanted = [move_action(4, 4, 1), move_action(4, 4, 3), move_action(4, 4, 0)];
+        let slate = slate_for(&obs, &wanted);
+
+        assert_eq!(slate.len(), TOP_K);
+        for (candidate, want) in slate.iter().zip(&wanted) {
+            assert_eq!(candidate.action, *want);
+        }
+        assert_eq!(slate[0].play, Play::Act(Move { from: at(4, 4), dir: 1, half: false }));
+    }
+
+    /// An action the pipeline masked never reaches the slate. Here our general
+    /// holds one army, so §02 says it cannot move at all and the only legal
+    /// action on the board is the pass.
+    #[test]
+    fn an_illegal_action_is_not_a_candidate() {
+        let mut obs = frame(100);
+        put(&mut obs, 4, 4, TYPE_GENERAL, OWNER_ME, 1);
+        total_armies(&mut obs);
+        let slate = slate_for(&obs, &[move_action(4, 4, 1), Action5 {
+            pass_field: 1,
+            row: 0,
+            col: 0,
+            dir: 0,
+            is_half: 0,
+        }]);
+        assert!(slate.iter().all(|c| c.action.pass_field == 1), "{slate:?}");
+        assert_eq!(slate[0].play, Play::Pass);
+    }
+
+    /// A build candidate reaches the afterstate as a build, and the castle
+    /// masks are the only thing that judges it.
+    #[test]
+    fn a_crowded_build_is_masked_and_a_clear_one_is_not() {
+        let mut obs = frame(100);
+        put(&mut obs, 4, 4, TYPE_GENERAL, OWNER_ME, 20);
+        // Two cells rich enough to build on: one beside the general, one clear
+        // across the board.
+        put(&mut obs, 4, 5, TYPE_PLAIN, OWNER_ME, 80);
+        put(&mut obs, 0, 0, TYPE_PLAIN, OWNER_ME, 80);
+        total_armies(&mut obs);
+
+        let slate = slate_for(&obs, &[build_action(4, 5), build_action(0, 0)]);
+        assert_eq!(slate[0].play, Play::Build(at(4, 5)));
+        assert_eq!(slate[0].masked, Some(Mask::Crowding), "adjacent to our general");
+        assert_eq!(slate[1].play, Play::Build(at(0, 0)));
+        assert_eq!(slate[1].masked, None, "eight steps out, no surcharge");
+    }
+
+    /// The veto reads the board *after* our own candidate, which is the whole
+    /// point of it: one frame, one enemy stack, and two of our moves that the
+    /// same stack answers differently.
+    ///
+    /// Their 12 beside a garrison of 3 takes it — unless our 14 reinforces
+    /// first. Note what the general itself cannot do about this: a move out of
+    /// the general's own cell is the *destination* of their attack, so §02
+    /// makes their attack a chase and resolves it first, against the garrison
+    /// as it stands. Only a third tile can answer.
+    #[test]
+    fn the_veto_removes_the_move_that_hands_over_the_general() {
+        let mut obs = frame(100);
+        put(&mut obs, 4, 4, TYPE_GENERAL, OWNER_ME, 3);
+        put(&mut obs, 4, 5, TYPE_PLAIN, OWNER_OPP, 12);
+        put(&mut obs, 3, 4, TYPE_PLAIN, OWNER_ME, 14);
+        total_armies(&mut obs);
+
+        let away = move_action(3, 4, 0); // our 14 walks away from the general
+        let hold = move_action(3, 4, 1); // our 14 lands on it instead
+        let slate = slate_for(&obs, &[away, hold]);
+        assert_eq!(slate[0].action, away);
+        assert_eq!(slate[0].masked, Some(Mask::Refuted));
+        assert_eq!(slate[1].action, hold);
+        assert_eq!(slate[1].masked, None);
+    }
+
+    /// A quiet frame costs the veto nothing: no enemy stack stands beside the
+    /// general, so nothing is refutable and no search runs.
+    #[test]
+    fn the_veto_stays_out_of_a_quiet_turn() {
+        let mut obs = frame(100);
+        put(&mut obs, 4, 4, TYPE_GENERAL, OWNER_ME, 12);
+        put(&mut obs, 0, 8, TYPE_PLAIN, OWNER_OPP, 200);
+        total_armies(&mut obs);
+        let slate = slate_for(&obs, &[move_action(4, 4, 2)]);
+        assert!(slate.iter().all(|c| c.masked.is_none()));
+    }
+
+    /// A win beats every number, a number beats an evaluation that never
+    /// happened, and equal is not better — so ties fall to policy order.
+    #[test]
+    fn a_score_ranks_a_win_above_a_number_above_nothing() {
+        assert!(Score::Wins.beats(Score::Value(9.0)));
+        assert!(!Score::Value(9.0).beats(Score::Wins));
+        assert!(!Score::Wins.beats(Score::Wins));
+        assert!(Score::Value(0.2).beats(Score::Value(0.1)));
+        assert!(!Score::Value(0.1).beats(Score::Value(0.1)));
+        assert!(Score::Value(-9.0).beats(Score::Skipped));
+        assert!(!Score::Skipped.beats(Score::Skipped));
+    }
+
+    /// The anytime guard: a turn that has already spent its budget starts no
+    /// evaluation, so the reply degrades to the argmax the network named.
+    #[test]
+    fn a_spent_turn_starts_no_evaluation() {
+        assert!(have_time(Instant::now()));
+        let reserve = TURN_DEADLINE_MS - RERANK_RESERVE_MS;
+        assert!(!have_time(Instant::now() - Duration::from_millis(reserve + 5)));
+        assert!(!have_time(Instant::now() - Duration::from_secs(10)));
+    }
 
     fn five(action: Action) -> Action5 {
         Action5 {

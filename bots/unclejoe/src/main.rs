@@ -22,6 +22,14 @@
 //! capture, or the answer to a threat the network's move demonstrably loses
 //! to. A decline, a cap, or `UNCLEJOE_TACTICS=0` leaves joe-rs's reply.
 //!
+//! Milestone U4 adds the other half of the turn and **plays none of it**:
+//! after a declined search, the layer hands back the policy's shortlist with
+//! its filters' verdicts, and [`Seat::shadow_rerank`] values each surviving
+//! candidate's one-ply afterstate with the network's own value head. Every
+//! number it produces goes to stderr; the reply is the argmax regardless. The
+//! shadow report says what those numbers were and why the loop did not go
+//! live: `docs/bots/unclejoe/shadow.md`.
+//!
 //! The parity harness stays behind in joe-rs and is not forked. It proves the
 //! ported surfaces against a JAX oracle keyed to these weights, and the code it
 //! proves is byte-identical here, so a second copy would double the re-export
@@ -107,7 +115,8 @@ use crate::io::wire::{
     TYPE_GENERAL, TYPE_PLAIN,
 };
 use crate::nn::net::Net;
-use crate::tactics::Tactics;
+use crate::search::afterstate::{Advance, Afterstate};
+use crate::tactics::{Decision, Policy, Score, Slate, Tactics, TOP_K};
 
 /// Where `model.safetensors` + `manifest.json` live. `run.sh` exports
 /// `UNCLEJOE_ARTIFACT`; the exe-relative fallback covers running the binary by
@@ -148,6 +157,10 @@ struct Seat {
     /// on the same schedule.
     memory: Memory,
     tactics: Tactics,
+    /// The afterstate machine: a candidate in, the network input for the
+    /// position it leaves out. Its buffers are allocated here, once, for the
+    /// same reason every other buffer in this struct is.
+    afterstate: Afterstate,
 }
 
 impl Seat {
@@ -178,6 +191,7 @@ impl Seat {
             temporal: vec![0.0; 2 * TEMPORAL_WINDOW],
             memory: Memory::new(h, w),
             tactics: Tactics::new(player_id == 0),
+            afterstate: Afterstate::new(h, w),
         };
 
         // Warmup: one forward on zeros primes the allocator and page cache.
@@ -233,13 +247,25 @@ impl Seat {
         let a = decode_action(argmax(&fwd.logits));
         // Free eval telemetry (port-plan §5): v1 play ignores the value.
         eprintln!("[unclejoe] turn {} value {:+.4}", obs.turn, fwd.value);
-        // Tactics steps 3 and 4: the triggers look at the same frame, and a
-        // search behind one of them may prove a move. It only ever replaces
-        // the argmax on a proof — a decline, a cap, or a switch set to zero
-        // all leave the network's move exactly as it was.
-        if let Some(proven) = self.tactics.decide(obs, &self.memory, a, t0) {
-            return Ok(proven);
-        }
+        // Tactics step 3: the triggers look at the same frame, and a search
+        // behind one of them may prove a move. It only ever replaces the
+        // argmax on a proof — a decline, a cap, or a switch set to zero all
+        // leave the network's move exactly as it was. A decline comes back
+        // with the policy's shortlist instead, filtered.
+        let slate = {
+            let policy = Policy {
+                argmax: a,
+                logits: &fwd.logits,
+                penalties: &self.penalties,
+                cost: &self.cost,
+            };
+            match self.tactics.decide(obs, &self.memory, &policy, t0) {
+                Decision::Override(proven) => return Ok(proven),
+                Decision::Candidates(slate) => slate,
+            }
+        };
+        // Tactics step 4, in shadow (milestone U4).
+        self.shadow_rerank(obs, &slate, t0);
         if a.pass_field == 1 {
             // The pass channel's argmax cell can sit in the pad region; the
             // engine ignores row/col on a pass, but keep the reply in bounds.
@@ -252,6 +278,66 @@ impl Seat {
             dir: a.dir as u8,
             split: a.is_half as u8,
         })
+    }
+
+    /// One-step policy improvement, measured rather than played (U4).
+    ///
+    /// For each candidate the layer left standing: advance it one ply with the
+    /// opponent passing, render the position back into a frame, run **one
+    /// forward**, and keep what the network's own value head said. No
+    /// hand-written evaluation ranks anything — the numbers being compared
+    /// come out of the same head that scores the live position.
+    ///
+    /// This lives here rather than in `tactics` because it is the only place
+    /// that may name `nn`: the network sits above the tactics layer precisely
+    /// so that layer cannot reach into it.
+    ///
+    /// At this milestone the reply is the argmax whatever the values say. The
+    /// loop is anytime all the same — [`tactics::have_time`] is checked before
+    /// every evaluation — because U5 switches it on as it stands, and a
+    /// measurement taken without the deadline would be a measurement of a
+    /// different loop.
+    fn shadow_rerank(&mut self, obs: &Observation, slate: &Slate, t0: Instant) {
+        let Self { net, afterstate, state, tactics, memory, cost, .. } = self;
+        let mut scored = [Score::Skipped; TOP_K];
+        let mut cutoff = false;
+        if tactics.reranking()
+            && !slate.is_empty()
+            && afterstate.reset(obs, memory, cost, &tactics.afterstate_config())
+        {
+            for (rank, candidate) in slate.iter().enumerate() {
+                // The argmax is the baseline every gap is measured against, so
+                // it is valued even when a mask took it — that is the one
+                // number this milestone cannot do without. Every other
+                // candidate is valued only if it survived.
+                if rank > 0 && candidate.masked.is_some() {
+                    continue;
+                }
+                if !tactics::have_time(t0) {
+                    cutoff = true;
+                    break;
+                }
+                scored[rank] = match afterstate.advance(candidate.play, state) {
+                    Advance::Wins => Score::Wins,
+                    Advance::Ready => {
+                        match net.forward(&afterstate.aug, &afterstate.penalties, &afterstate.temporal)
+                        {
+                            Ok(out) => Score::Value(out.value),
+                            // Unreachable: the forward only rejects a wrongly
+                            // shaped input, and these buffers are its shape by
+                            // construction. A shadow measurement is still not
+                            // worth a lost game, so it degrades to silence.
+                            Err(e) => {
+                                eprintln!("[unclejoe] turn {} afterstate forward: {e}", obs.turn);
+                                Score::Skipped
+                            }
+                        }
+                    }
+                };
+                afterstate.undo();
+            }
+        }
+        tactics.report_rerank(obs, slate, &scored, cutoff);
     }
 }
 

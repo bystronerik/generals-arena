@@ -38,6 +38,17 @@ earlier and cheaper: if the shadow re-rank (milestone U4) shows candidate
 value gaps sitting inside the head's noise, the re-rank never goes live and
 the negative is recorded without spending a round.
 
+**H2 took that exit** (U4, 2026-08-16). The shadow re-rank would have moved
+the reply on 48.8% of 4,037 turns, and on 83% of those the value gap was
+smaller than **one bin of the value head** — 128 bins over [−1, +1], so
+0.0157 wide. A difference the head cannot represent is not a preference.
+H2 is **not supported as specified** and the re-rank does not go live; the
+numbers and the conditional revision it argues for (a minimum-gap threshold,
+which would act on the 8.1% of turns that clear one bin) are in
+[`../../bots/unclejoe/shadow.md`](../../bots/unclejoe/shadow.md) §U4. No
+round was spent, which is what this hypothesis was written to make possible.
+H1 is untouched by that finding and still needs §9's contrast.
+
 ## 2. Why a fork, not a flag
 
 unclejoe is a copy of joe-rs's crate, weights included by byte copy. joe-rs is

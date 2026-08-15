@@ -117,10 +117,12 @@ pub struct Config {
 }
 
 /// One undo frame: where the journal stood before a tick, plus the scalars
-/// that tick could change.
+/// that tick could change. `structures` is there for the one action that
+/// lengthens that list — a build ([`Sim::push_build`]).
 #[derive(Debug, Clone, Copy)]
 struct Frame {
     journal: usize,
+    structures: usize,
     turn: i32,
     outcome: Outcome,
     winner: Option<u8>,
@@ -284,13 +286,37 @@ impl Sim {
 
     /// Advance one tick with both players' actions, recording an undo frame.
     pub fn push(&mut self, mine: Choice, theirs: Choice) {
-        self.frames.push(Frame {
-            journal: self.journal.len(),
-            turn: self.turn,
-            outcome: self.outcome,
-            winner: self.winner,
-        });
+        self.begin_frame();
         self.resolve(mine, theirs);
+    }
+
+    /// Advance one tick where **our** action is a castle build (RULES.md §03).
+    ///
+    /// Transcribed from `build_castles.apply_build_actions`, which runs before
+    /// the base step: the price comes off the cell, the cell joins the
+    /// structures, and the tick then runs with both actions rewritten to
+    /// passes. So a build is a pass that also spends army — and the new castle
+    /// is a structure *before* growth, which is why it produces on the same
+    /// tick when that tick is even.
+    ///
+    /// The engine's validity test is `owns & plain & affords`, and an invalid
+    /// build is consumed as a pass. Both are here, so a caller cannot spend
+    /// army the position does not have — and the return says which happened,
+    /// because a caller that renders the result must not draw a castle the
+    /// tick did not build.
+    pub fn push_build(&mut self, cell: usize, price: i32) -> bool {
+        self.begin_frame();
+        // `structures` holds exactly the generals and castles this board knows
+        // about, which is the engine's `~generals & ~castles` test.
+        let plain = !self.structures.contains(&cell);
+        let built = self.owner[cell] == ME && plain && self.army[cell] >= price;
+        if built {
+            self.record(cell);
+            self.army[cell] -= price;
+            self.structures.push(cell);
+        }
+        self.resolve(None, None);
+        built
     }
 
     /// Take the last tick back, exactly.
@@ -301,9 +327,22 @@ impl Sim {
             self.owner[cell] = owner;
             self.army[cell] = army;
         }
+        self.structures.truncate(frame.structures);
         self.turn = frame.turn;
         self.outcome = frame.outcome;
         self.winner = frame.winner;
+    }
+
+    /// Open an undo frame. Every advance goes through here, because `record`
+    /// journals nothing until one is open.
+    fn begin_frame(&mut self) {
+        self.frames.push(Frame {
+            journal: self.journal.len(),
+            structures: self.structures.len(),
+            turn: self.turn,
+            outcome: self.outcome,
+            winner: self.winner,
+        });
     }
 
     /// One tick: builds are already passes here, then the two moves in the
@@ -515,28 +554,7 @@ impl Sim {
 mod tests {
     use super::*;
     use crate::io::wire::{TYPE_PLAIN, TYPE_STRUCTURE_IN_FOG};
-    use crate::search::fixtures::{at, board, Setup};
-
-    /// An all-plain, all-visible, all-neutral frame.
-    fn wire_frame(h: usize, w: usize, turn: i32) -> Observation {
-        let mut obs = Observation::with_dims(h, w);
-        obs.turn = turn;
-        obs.type_grid.iter_mut().for_each(|t| *t = TYPE_PLAIN);
-        obs
-    }
-
-    fn set(obs: &mut Observation, row: usize, col: usize, cell_type: i32, owner: i32, army: i32) {
-        let cell = row * obs.w + col;
-        obs.type_grid[cell] = cell_type;
-        obs.owner_grid[cell] = owner;
-        obs.army_grid[cell] = army;
-    }
-
-    fn remembering(obs: &Observation) -> Memory {
-        let mut mem = Memory::new(obs.h, obs.w);
-        mem.update(obs);
-        mem
-    }
+    use crate::search::fixtures::{at, board, remembering, set, wire_frame, Setup};
 
     const CFG: Config =
         Config { fog: Fog::Pessimistic, hidden_bound: 17, deathtouch_turn: 800, i_am_p0: true };
@@ -553,7 +571,7 @@ mod tests {
         set(&mut obs, 0, 1, TYPE_STRUCTURE_IN_FOG, 0, 0);
         set(&mut obs, 1, 1, TYPE_MOUNTAIN, 0, 0);
         set(&mut obs, 2, 2, TYPE_PLAIN, OWNER_OPP, 4);
-        let mem = remembering(&obs);
+        let mem = remembering(&[&obs]);
 
         let sim = Sim::from_frame(&obs, &mem, &CFG).expect("our general is on the frame");
         assert_eq!(sim.own_general, at(w, 3, 3));
@@ -578,7 +596,7 @@ mod tests {
         let mut seen = wire_frame(h, w, 40);
         set(&mut seen, 3, 3, TYPE_GENERAL, OWNER_ME, 9);
         set(&mut seen, 0, 0, TYPE_GENERAL, OWNER_OPP, 12);
-        let mut mem = remembering(&seen);
+        let mut mem = remembering(&[&seen]);
 
         let mut hidden = wire_frame(h, w, 41);
         set(&mut hidden, 3, 3, TYPE_GENERAL, OWNER_ME, 9);
@@ -597,7 +615,7 @@ mod tests {
     #[test]
     fn without_our_general_there_is_no_model() {
         let obs = wire_frame(4, 4, 0);
-        assert!(Sim::from_frame(&obs, &remembering(&obs), &CFG).is_none());
+        assert!(Sim::from_frame(&obs, &remembering(&[&obs]), &CFG).is_none());
     }
 
     /// A full move from a cell with `army` sends `army - 1`; the source keeps

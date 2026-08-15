@@ -1,12 +1,18 @@
 # unclejoe tactics plan
 
-Plan for the tactics layer of `bots/unclejoe/`. Status: **plan only** — no
-tactics code exists yet. The prerequisite is met: the fork is finished per
-[fork-plan.md](fork-plan.md) §7 (milestone U1, 2026-08-15 —
-behavior-identical to joe-rs, gate passed, wire-replay equality proven), and
-the spec is
+Plan for the tactics layer of `bots/unclejoe/`. Status: **U2, U3 and U4 are
+built** (§7 records what each one shipped and what it changed about this
+plan); U5 is next, and U4's go/no-go changed its shape. The prerequisite was
+the fork, finished per [fork-plan.md](fork-plan.md) §7 (milestone U1,
+2026-08-15 — behavior-identical to joe-rs, gate passed, wire-replay equality
+proven), and the spec is
 [`../../research/strategies/unclejoe.md`](../../research/strategies/unclejoe.md).
-Work starts at U2 (§7).
+Measurements live in [shadow.md](shadow.md).
+
+**The build in the tree today must not be rated.** U4 wired the afterstate
+re-rank in shadow, and the forwards it spends put p99 at 143 ms and max at
+181 ms against RULES.md §08's 150 (§7, U4). `UNCLEJOE_RERANK=0` restores U3's
+cost.
 
 Revised 2026-08-15 after a design review. The goal changed: **spend the whole
 150 ms turn budget** (RULES.md §08), not finish the move early. The
@@ -128,6 +134,13 @@ Mechanical edits made so far:
 
 - `board/mod.rs` (U2) — `pub mod memory;` and one sentence of module doc
   naming it. No code path changed.
+- `board/obs.rs` (U4) — `pub` on `BUILD_BASE_COST`, so `tactics/filters.rs`
+  can read the §03 crowding surcharge as `cost − BUILD_BASE_COST` off the
+  pipeline's own grid rather than spelling 35 a second time. No code path
+  changed. The `AugState` clone the first revision expected turned out to be
+  unnecessary — `augment_obs` takes the live state by shared reference and
+  writes a caller-supplied scratch, so the afterstate hands it its own and the
+  type system already proves the live one is untouched.
 
 ## 2. Per-turn flow in `Seat::act`
 
@@ -214,6 +227,19 @@ revision. They ship behind `UNCLEJOE_MASKS`, U4 counts them in shadow
 before they go live, and revisions to the constants are strategist work
 against shadow and round data.
 
+U4 counted them: over 4,037 turns the three filters removed **49** candidates
+(33 crowding, 1 lateness, 15 refutation) and removed the *argmax* — the only
+case where a mask can change the played move — on **9**. The mechanism is
+correct and almost never load-bearing, and the rate is lumpy: one gate seed
+built nine castles and took 30 of the 33 crowding masks while two others built
+two and none and took zero ([shadow.md](shadow.md) §U4).
+
+The refutation veto also acquired an exact gate in U4, which is why it costs
+nothing on a quiet turn: `refutes` is depth one and the only reply that takes
+a general is a move onto it, so a refutation needs an enemy cell orthogonally
+adjacent to ours holding an army that can move. Our own candidate cannot
+create one. A four-cell check therefore decides whether the veto runs at all.
+
 ## 4. Latency
 
 The budget is spent, not avoided: the design target is a turn that rides
@@ -256,6 +282,19 @@ makes U5's bench mandatory rather than confirmatory: `unclejoe bench` over
 the synthetic-long log, locally and on the Modal proxy, reporting p99
 **and max** against 150; plus a Rust test that an artificially tiny
 deadline degrades the loop to the argmax.
+
+**U4 measured this table and two of its rows are wrong** ([shadow.md](shadow.md)
+§U4). `RERANK_RESERVE_MS = 25` is smaller than the thing it reserves for: one
+evaluation is a whole forward, 22 ms typical and 48 ms at joe-rs's own max on
+the dev host. So the anytime structure bounds where the loop stops *starting*
+work and not where it stops working, and the guarantee above has a hole
+exactly that wide — measured at p99 143 ms, max 181 ms. `TOP_K = 5` is the
+second: five afterstates plus the live forward is ~138 ms before any
+rendering, so the loop cut off on 4,008 of 4,037 turns and averaged 3.9
+forwards. The arithmetic below counted the spare clock correctly and then
+spent it as though the reserve were free. A reserve must exceed the **worst**
+cost of one evaluation, or the loop must reserve what its own last evaluation
+took; and `TOP_K` should be chosen on the Modal proxy, not here.
 
 ## 5. Tests
 
@@ -410,12 +449,55 @@ deadline degrades the loop to the argmax.
   of the near-zero mass of the gap distribution. A no-go ships U3 + masks
   only and leaves the budget unspent — an acceptable outcome, not a failed
   milestone.
+  **Shipped 2026-08-16, and the go/no-go came back NO-GO.** 99 unit tests,
+  all passing — 25 new. Four gate matches and the corpus replay measured in
+  [shadow.md](shadow.md): 4,037 re-ranked turns, 15,743 afterstate forwards,
+  every match ending on the same turn with the same winner as U2 and U3, and
+  wire-replay equality still holding over 14 games and 7,092 turns. Five
+  things U5 inherits, and the first two are why this milestone did not
+  become U5:
+  - **The value gaps sit inside the head's own resolution.** The re-rank
+    would move the reply on 48.8% of turns, and on 83% of those the gap is
+    under **one bin** of the value head — which is 128 bins over [−1, +1],
+    so 0.0157 wide. Only 8.1% of turns clear one bin and 3.3% clear two. A
+    difference the head cannot represent is not a preference, so H2 is not
+    supported as specified. The live re-rank does not ship. A **minimum-gap
+    threshold** would act on the 8% instead of the 49%, and that is the
+    strategist revision this data argues for.
+  - **`RERANK_RESERVE_MS = 25` is smaller than one evaluation.** An
+    evaluation is a whole forward — 22 ms typical, 48 ms at joe-rs's own max
+    on the dev host — so the anytime structure bounds where the loop stops
+    *starting* work, not where it stops working. Measured: p99 143 ms, max
+    181 ms, over the 150 ms limit. §4's "the guarantee is the anytime
+    structure, not an estimate" has that hole in it. The U4 build must not
+    be rated; `UNCLEJOE_RERANK=0` restores U3's cost.
+  - **`TOP_K = 5` is not a budget that exists.** The loop cut off on 4,008
+    of 4,037 turns and averaged 3.9 forwards. Five afterstates plus the live
+    forward is ~138 ms before any rendering. Four is what the dev host pays
+    for; the Modal proxy is where the number should be chosen.
+  - **The masks are real but rare.** 49 candidates removed over 4,037 turns,
+    and the argmax on 9 of them. A mask-only contrast needs far more games
+    than the plan's ~1150/arm to resolve, which changes what a decomposition
+    arm on `UNCLEJOE_MASKS` can be expected to show (§6).
+  - **The opponent's totals are carried, not recomputed.** Most of their army
+    is in fog, so the rendered afterstate frame carries the base frame's
+    `opp_land` / `opp_army` and applies only the deltas it can see. The
+    residue — production from enemy castles under fog — is *the same for
+    every candidate on a turn*, and a re-rank compares candidates within one
+    turn, so it cancels. `search/afterstate.rs` states the argument where the
+    approximation is made.
 - **U5 — re-rank live + latency proof.** The anytime loop live behind
   `UNCLEJOE_RERANK` / `UNCLEJOE_MASKS`; `bench` on synthetic-long, locally
   and on the Modal proxy; the tiny-deadline degradation test. Done when:
   p99 and max are recorded in `docs/bots/unclejoe/latency.md` under 150 ms
   with the §4 constants quoted, and wire-replay equality still holds with
-  tactics off.
+  tactics off. **U4's no-go changes this milestone's shape**: the re-rank
+  does not go live as designed, so U5 is either (a) masks-only, with the
+  re-rank compiled but switched off, or (b) a revised re-rank — minimum-gap
+  threshold, a reserve that covers a whole forward, and a `TOP_K` chosen on
+  the proxy — which is a new spec and a new U4-shaped measurement before it
+  is a U5. Either way the latency numbers are still mandatory, because the
+  U4 build as measured does not hold 150 ms.
 - **U6 — measurement.** §6's round, the mandatory replication round, then
   decomposition if the headline is flat; verdict quoted per the decision
   rule; `update-leaderboard`.
