@@ -12,6 +12,10 @@ reply encode to a sink — and reports per-turn percentiles. The input is
 it was 1,320 turns at step 5000 — the file is rebuilt from whatever the
 longest corpus game is, see [parity.md](parity.md)).
 
+`joe-rs bench --stages` replays the same log and reports the same total, split
+per stage — the table on stderr, one JSON object on stdout. The plain form
+prints exactly what it printed before, so every number below stays comparable.
+
 `scripts/joe_rs_modal_bench.py` runs it on a Modal 1-core x86 container
 (cargo 1.97.1, `target-cpu=x86-64-v3` from the crate's `.cargo/config.toml`),
 mirroring the Phase 2 method. Modal is a proxy, not the target — fleet
@@ -27,6 +31,46 @@ generations differ between runs.
 Raw record: `docs/research/measurements/joe-rs-latency-modal.json`.
 The container built the crate from source in 12.4 s — the same build a
 sandbox intake would run, against 71–131 s for the old 93-crate graph.
+
+## Where the move goes (2026-08-16)
+
+`joe-rs bench --stages` replays the same log and splits the move. The forward
+is not most of it; it is essentially all of it. Modal x86, one core, 2,280
+turns of `synthetic-long.in.log` at step 23500 — the raw record is
+`docs/research/measurements/joe-net-n0-latency-modal.json`.
+
+| stage | mean ms | p50 | p99 | share of mean |
+| --- | ---: | ---: | ---: | ---: |
+| parse | 0.012 | 0.010 | 0.027 | 0.06% |
+| raw + cost | 0.010 | 0.009 | 0.026 | 0.05% |
+| mask | 0.008 | 0.007 | 0.019 | 0.04% |
+| `augment_obs` | 0.045 | 0.042 | 0.087 | 0.21% |
+| normalize | 0.004 | 0.003 | 0.007 | 0.02% |
+| **forward** | **20.879** | **20.811** | **23.010** | **98.2%** |
+| decode + reply | 0.003 | 0.003 | 0.004 | 0.01% |
+| value on stderr | 0.291 | 0.274 | 0.514 | 1.37% |
+| total | 21.251 | 21.197 | 23.444 | — |
+
+Each stage is sorted on its own, so the p99 column does not sum: the turn with
+the slow forward is rarely the turn with the slow parse. Only the mean column
+adds up.
+
+Two readings worth keeping.
+
+**The whole observation pipeline is 0.067 ms.** Parse, raw, cost, `augment_obs`
+and normalize together are a third of a percent of the move. Anything that
+proposed to save time by not rebuilding the observation would be optimizing
+0.3% of a move.
+
+**The free-eval telemetry costs four times what `augment_obs` costs.** One
+unbuffered `eprintln!` per turn is 0.274 ms p50 — larger than every real
+computation outside the forward, put together. It is 1.4% of the move against a
+150 ms limit, so it is recorded rather than removed: taking it out would fork
+the content hash for a number that does not matter yet.
+
+The same split on dev arm64 puts the forward at 22.66 ms p50 of a 22.73 ms
+move (99.7%) and `augment_obs` at 0.015 ms — the shape is the same and the obs
+pipeline is, if anything, cheaper relative to the forward.
 
 ## Verdict
 

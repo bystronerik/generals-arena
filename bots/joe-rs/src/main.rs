@@ -90,6 +90,94 @@ pub(crate) fn artifact_dir() -> PathBuf {
     PathBuf::from("artifact")
 }
 
+// ------------------------------------------------------- the stage breakdown
+
+/// The stages `bench --stages` splits the per-move path into, in run order.
+///
+/// The split exists for the joe-net port
+/// (`docs/bots/morpheus-rs/joe-net-plan.md` N0.1), which has to know three
+/// things the whole-move figure in `docs/bots/joe-rs/latency.md` cannot answer:
+/// what the forward alone costs, what `augment_obs` alone costs, and what the
+/// mask work costs — because that port keeps the first two per network call and
+/// drops the third.
+///
+/// `normalize` carries the `mem::swap` and the two 512-wide ring-buffer copies
+/// as well as `normalize_observations`; `parse` and part of `decode` are timed
+/// by the harness rather than by `act_staged`, because they sit outside it.
+const STAGE_NAMES: [&str; 8] = [
+    "parse",
+    "raw",
+    "mask",
+    "augment",
+    "normalize",
+    "forward",
+    "decode",
+    "stderr",
+];
+const S_PARSE: usize = 0;
+const S_RAW: usize = 1;
+const S_MASK: usize = 2;
+const S_AUGMENT: usize = 3;
+const S_NORMALIZE: usize = 4;
+const S_FORWARD: usize = 5;
+const S_DECODE: usize = 6;
+const S_STDERR: usize = 7;
+
+/// Where `act_staged` reports a stage boundary.
+trait StageClock {
+    /// Charge the time since the last mark to `stage`. Accumulates, so one
+    /// stage may occupy more than one span of the order.
+    fn mark(&mut self, stage: usize);
+}
+
+/// The wire path's clock: no clock at all. Monomorphization deletes the marks.
+struct NoStages;
+
+impl StageClock for NoStages {
+    #[inline(always)]
+    fn mark(&mut self, _stage: usize) {}
+}
+
+/// `bench --stages`'s clock: one turn's accumulators, plus the running sample.
+///
+/// Eight `Instant::now()` calls per turn cost around 200 ns against a ~21 ms
+/// move, which is nothing at the whole-move scale but is a real fraction of
+/// `decode` and `stderr` — read those two as upper bounds.
+struct StageTimes {
+    last: Instant,
+    turn_ms: [f64; STAGE_NAMES.len()],
+    samples: Vec<[f64; STAGE_NAMES.len()]>,
+}
+
+impl StageTimes {
+    fn new() -> Self {
+        Self {
+            last: Instant::now(),
+            turn_ms: [0.0; STAGE_NAMES.len()],
+            samples: Vec::new(),
+        }
+    }
+
+    /// Start a turn: zero the accumulators and reset the reference instant.
+    fn begin_turn(&mut self) {
+        self.turn_ms = [0.0; STAGE_NAMES.len()];
+        self.last = Instant::now();
+    }
+
+    fn end_turn(&mut self) {
+        self.samples.push(self.turn_ms);
+    }
+}
+
+impl StageClock for StageTimes {
+    #[inline]
+    fn mark(&mut self, stage: usize) {
+        let now = Instant::now();
+        self.turn_ms[stage] += now.duration_since(self.last).as_secs_f64() * 1e3;
+        self.last = now;
+    }
+}
+
 /// The playing seat: network plus the per-game state and preallocated
 /// buffers. Load and warmup happen in `new`, inside the first-move grace.
 struct Seat {
@@ -147,10 +235,27 @@ impl Seat {
     /// The full per-move path. Mirrors `agent.py::step` + the pass clamp in
     /// `agent.py::act`.
     fn act(&mut self, obs: &Observation) -> Result<Action, String> {
+        self.act_staged(obs, &mut NoStages)
+    }
+
+    /// `act`, with the stage boundaries `bench --stages` measures.
+    ///
+    /// The wire path calls it through `act` with [`NoStages`], whose `mark` is
+    /// an empty inlined method, so the marks cost nothing where they are not
+    /// wanted and the measured path stays the played path. Two code paths would
+    /// drift, and a drifted stage split is a measurement that describes a
+    /// program nobody runs.
+    fn act_staged<C: StageClock>(
+        &mut self,
+        obs: &Observation,
+        clock: &mut C,
+    ) -> Result<Action, String> {
         frame_to_raw(obs, &mut self.raw);
         build_cost_from_raw(&self.raw, self.h, self.w, &mut self.cost);
+        clock.mark(S_RAW);
         compute_valid_move_mask(&self.raw, self.h, self.w, &mut self.move_mask);
         compute_build_mask_from_raw(&self.raw, self.h, self.w, &self.cost, &mut self.build_mask);
+        clock.mark(S_MASK);
         augment_obs(
             &self.raw,
             self.h,
@@ -161,10 +266,12 @@ impl Seat {
             &mut self.scratch,
             &mut self.aug,
         );
+        clock.mark(S_AUGMENT);
         std::mem::swap(&mut self.state, &mut self.next_state);
         self.temporal[..TEMPORAL_WINDOW].copy_from_slice(&self.state.opponent_army_history);
         self.temporal[TEMPORAL_WINDOW..].copy_from_slice(&self.state.opponent_land_history);
         normalize_observations(&mut self.aug);
+        clock.mark(S_NORMALIZE);
         prepare_action_mask(
             &self.move_mask,
             &self.build_mask,
@@ -172,10 +279,18 @@ impl Seat {
             self.w,
             &mut self.penalties,
         );
+        // The second half of joe's mask work, and the reason `mark` accumulates
+        // rather than assigns: one stage, two places in the order.
+        clock.mark(S_MASK);
         let fwd = self.net.forward(&self.aug, &self.penalties, &self.temporal)?;
+        clock.mark(S_FORWARD);
         let a = decode_action(argmax(&fwd.logits));
+        clock.mark(S_DECODE);
         // Free eval telemetry (port-plan §5): v1 play ignores the value.
+        // Timed on its own because it is an unbuffered write per turn, and it
+        // is this bot's habit rather than anything the net or the port needs.
         eprintln!("[joe-rs] turn {} value {:+.4}", obs.turn, fwd.value);
+        clock.mark(S_STDERR);
         if a.pass_field == 1 {
             // The pass channel's argmax cell can sit in the pad region; the
             // engine ignores row/col on a pass, but keep the reply in bounds.
@@ -274,7 +389,13 @@ fn wire_main() -> Result<(), String> {
 /// per-move path — frame parse, obs pipeline, forward pass, reply encode —
 /// and report per-turn latency percentiles (port-plan §5's budget check;
 /// the reply goes to a sink instead of the engine).
-fn bench_main() -> Result<(), String> {
+///
+/// `joe-rs bench --stages` replays the same log and reports the same total,
+/// split per [`STAGE_NAMES`]: the table goes to stderr for reading, one JSON
+/// object to stdout for recording. The plain form still prints exactly what it
+/// printed before, so the numbers in `docs/bots/joe-rs/latency.md` stay
+/// comparable to anything measured after this.
+fn bench_main(stages: bool) -> Result<(), String> {
     use std::io::Read;
 
     let mut text = String::new();
@@ -293,15 +414,28 @@ fn bench_main() -> Result<(), String> {
     let mut scratch = Vec::new();
     let mut sink = stdio::sink();
     let mut times_ms: Vec<f64> = Vec::new();
+    let mut clock = StageTimes::new();
     loop {
         let t0 = Instant::now();
+        clock.begin_turn();
         match read_observation(&mut reader, &mut obs, &mut line, &mut scratch) {
             Ok(true) => {}
             Ok(false) => break,
             Err(e) => return Err(e.to_string()),
         }
-        let action = seat.act(&obs)?;
+        let action = if stages {
+            clock.mark(S_PARSE);
+            seat.act_staged(&obs, &mut clock)?
+        } else {
+            seat.act(&obs)?
+        };
         write_action(&mut sink, action).map_err(|e| e.to_string())?;
+        if stages {
+            // The reply encode joins `decode`: both turn the network's answer
+            // into bytes, and neither is separately actionable.
+            clock.mark(S_DECODE);
+            clock.end_turn();
+        }
         times_ms.push(t0.elapsed().as_secs_f64() * 1e3);
     }
 
@@ -315,7 +449,76 @@ fn bench_main() -> Result<(), String> {
         pct(0.99),
         pct(1.0),
     );
+    if stages {
+        report_stages(&clock.samples, &times_ms, startup_ms);
+    }
     Ok(())
+}
+
+/// Per-stage percentiles: a table on stderr, one JSON object on stdout.
+///
+/// Each stage is sorted on its own, so the columns do not sum down the p99
+/// row — the turn with the slow forward is rarely the turn with the slow
+/// parse. Only the `mean` column adds up, and it is the one to add up.
+fn report_stages(samples: &[[f64; STAGE_NAMES.len()]], total_ms: &[f64], startup_ms: f64) {
+    if samples.is_empty() {
+        eprintln!("[joe-rs] no staged turns to report");
+        return;
+    }
+    let n = samples.len();
+    let pct = |sorted: &[f64], p: f64| sorted[((n as f64 - 1.0) * p) as usize];
+
+    let mut rows: Vec<(&str, f64, [f64; 4])> = Vec::with_capacity(STAGE_NAMES.len() + 1);
+    for (at, name) in STAGE_NAMES.iter().enumerate() {
+        let mut column: Vec<f64> = samples.iter().map(|turn| turn[at]).collect();
+        let mean = column.iter().sum::<f64>() / n as f64;
+        column.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let quantiles = [
+            pct(&column, 0.50),
+            pct(&column, 0.90),
+            pct(&column, 0.99),
+            pct(&column, 1.0),
+        ];
+        rows.push((name, mean, quantiles));
+    }
+    // `total` is the harness's own per-turn timing, not the sum of the stages,
+    // so the gap between it and the column of means is the unaccounted time.
+    let total_mean = total_ms.iter().sum::<f64>() / n as f64;
+    rows.push((
+        "total",
+        total_mean,
+        [
+            pct(total_ms, 0.50),
+            pct(total_ms, 0.90),
+            pct(total_ms, 0.99),
+            pct(total_ms, 1.0),
+        ],
+    ));
+
+    eprintln!("[joe-rs] stages over {n} turns, startup {startup_ms:.1} ms");
+    eprintln!(
+        "[joe-rs] {:<10} {:>9} {:>9} {:>9} {:>9} {:>9}",
+        "stage", "mean", "p50", "p90", "p99", "max"
+    );
+    for (name, mean, q) in &rows {
+        eprintln!(
+            "[joe-rs] {name:<10} {mean:>9.3} {:>9.3} {:>9.3} {:>9.3} {:>9.3}",
+            q[0], q[1], q[2], q[3]
+        );
+    }
+
+    let mut json = format!("{{\"turns\":{n},\"startup_ms\":{startup_ms:.3},\"stages\":{{");
+    for (i, (name, mean, q)) in rows.iter().enumerate() {
+        if i > 0 {
+            json.push(',');
+        }
+        json.push_str(&format!(
+            "\"{name}\":{{\"mean\":{mean:.4},\"p50\":{:.4},\"p90\":{:.4},\"p99\":{:.4},\"max\":{:.4}}}",
+            q[0], q[1], q[2], q[3]
+        ));
+    }
+    json.push_str("}}");
+    println!("{json}");
 }
 
 /// One handshake and one frame where passing is the wrong answer: our general
@@ -484,12 +687,53 @@ fn run_selfcheck() -> ! {
     std::process::exit(if failures.is_empty() { 0 } else { 1 });
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Spin until the monotonic clock has visibly moved.
+    ///
+    /// Not a sleep: the assertions below are about whether two marks land in
+    /// separate accumulators, and a platform whose `Instant` resolution makes
+    /// two adjacent marks read zero would pass the test by accident.
+    fn spin(ms: f64) {
+        let t0 = Instant::now();
+        while t0.elapsed().as_secs_f64() * 1e3 < ms {
+            std::hint::spin_loop();
+        }
+    }
+
+    /// `mask` is charged from two places in the order, and every stage number
+    /// N0 reads is wrong if the second charge overwrites the first.
+    #[test]
+    fn a_stage_charged_twice_in_one_turn_accumulates() {
+        let mut clock = StageTimes::new();
+        clock.begin_turn();
+        spin(1.0);
+        clock.mark(S_MASK);
+        let first = clock.turn_ms[S_MASK];
+        assert!(first >= 1.0);
+        spin(1.0);
+        clock.mark(S_FORWARD);
+        spin(1.0);
+        clock.mark(S_MASK);
+        assert!(clock.turn_ms[S_MASK] >= first + 1.0);
+        assert!(clock.turn_ms[S_FORWARD] >= 1.0);
+        clock.end_turn();
+
+        // And a new turn starts from zero, or every sample is cumulative.
+        clock.begin_turn();
+        assert_eq!(clock.turn_ms[S_MASK], 0.0);
+        assert_eq!(clock.samples.len(), 1);
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let result = match args.get(1).map(String::as_str) {
         None => wire_main(),
         Some("selfcheck") => run_selfcheck(),
-        Some("bench") => bench_main(),
+        Some("bench") => bench_main(args.get(2).map(String::as_str) == Some("--stages")),
         Some("parity") => match args.get(2) {
             Some(surface) => parity::run(surface),
             None => Err("usage: joe-rs parity <surface>".into()),
