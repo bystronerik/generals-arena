@@ -27,7 +27,7 @@ use morpheus_core::search::evaluator::{NetworkEvaluator, ShapedUniformEvaluator}
 use morpheus_core::nn::inference::Session;
 use morpheus_core::nn::network::Heads;
 use morpheus_core::support::rng::{SharedRng, SmallRng};
-use morpheus_core::runtime::{MonotonicClock, RuntimeController};
+use morpheus_core::runtime::{Clock, FakeClock, MonotonicClock, RuntimeController};
 use morpheus_core::search::SearchEvaluator;
 use morpheus_core::io::wire::{
     read_handshake, read_observation, write_action, Action, Observation, PASS,
@@ -87,22 +87,43 @@ impl Seat {
         };
 
         let rng = SharedRng::new(Box::new(SmallRng::seed_from_u64(0)));
+        // A charged clock is only meaningful with forecasts to charge, and a
+        // spike must be impossible to run by accident: both come from
+        // `deployment.json`, both are absent from every rated file, and both
+        // are announced on stderr when present.
+        let spiking = deployment.fixed_forecasts_ms.is_some();
+        let charged = spiking && deployment.charge_fixed_forecasts;
+        let clock: Box<dyn Clock> = if charged {
+            Box::new(FakeClock::default())
+        } else {
+            Box::new(MonotonicClock::default())
+        };
         let mut controller = RuntimeController::new(
             player_id,
             h,
             w,
             deployment.to_runtime_config(),
-            Box::new(MonotonicClock::default()),
+            clock,
             rng,
         );
         controller.use_policy_proposal = deployment.use_policy_proposal;
+        if let Some(fixed) = deployment.fixed_forecasts_ms.clone() {
+            eprintln!(
+                "[morpheus-rs] SPIKE: forecasting {fixed:?} instead of measuring, \
+                 charged={charged}. This is not a playing configuration and its \
+                 move_ms is virtual time."
+            );
+            controller.fixed_forecasts_ms = Some(fixed);
+            controller.charge_fixed_forecasts = charged;
+        }
         let total_ms = begin.elapsed().as_secs_f64() * 1e3;
         check_single_threaded()?;
         let config_json = format!(
             "{{\"n_particles\":{},\"target_simulations\":{},\"min_simulations\":{},\
              \"pending_leaf_batch\":{},\"search_depth\":{},\"max_proposal_batch\":{},\
              \"widen_freeze_below\":{},\"max_forward_equivalents\":{},\
-             \"normal_deadline_ms\":{},\"reserve_ms\":{},\"admission_guard_ms\":{}}}",
+             \"normal_deadline_ms\":{},\"reserve_ms\":{},\"admission_guard_ms\":{},\
+             \"spike\":{},\"charged\":{}}}",
             deployment.n_particles,
             deployment.target_simulations,
             deployment.min_simulations,
@@ -114,6 +135,8 @@ impl Seat {
             deployment.normal_deadline_ms,
             deployment.reserve_ms,
             deployment.admission_guard_ms,
+            spiking,
+            charged,
         );
         Ok(Self {
             controller,

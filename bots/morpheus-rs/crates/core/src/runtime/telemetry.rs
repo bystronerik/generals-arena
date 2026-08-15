@@ -25,7 +25,7 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::runtime::{TurnMetrics, COST_COMPONENTS};
+use crate::runtime::{TurnMetrics, COST_COMPONENTS, FORWARD_CONSUMERS};
 
 pub const TRACE_ENV: &str = "MORPHEUS_RS_TRACE";
 
@@ -122,6 +122,19 @@ impl Trace {
                 line.push(',');
             }
             let _ = write!(line, "\"{name}\":{}", m.component_calls[i]);
+        }
+        line.push('}');
+        // Which consumer spent the forwards, not just how many there were.
+        // `forward_equivalents` is one number for four callers, and the joe-net
+        // port's N0 has to know how the budget divides before it can say what
+        // survives a forward that costs four times as much
+        // (docs/bots/morpheus-rs/joe-net-plan.md N0.2).
+        line.push_str(",\"forward_by_consumer\":{");
+        for (i, name) in FORWARD_CONSUMERS.iter().enumerate() {
+            if i > 0 {
+                line.push(',');
+            }
+            let _ = write!(line, "\"{name}\":{}", m.forward_by_consumer[i]);
         }
         line.push('}');
         line.push_str(",\"components\":{");

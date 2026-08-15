@@ -34,7 +34,8 @@ Three properties are copied from the arena's path rather than invented:
   reducer reads both bots and a ratio between them is a ratio of the same
   quantity. Two additions ride along, ignorable by anything that does not know
   them: `components` (the per-component milliseconds `deployment.json`'s
-  `offline_p99_ms` is fitted from) and, on the first line only, `load_ms`,
+  `offline_p99_ms` is fitted from), `calls` (how many times each of the ten
+  ran), `forward_by_consumer`, and, on the first line only, `load_ms`,
   `warmup_ms` and `init_ms`.
 - **`t` is the turn index, not `obs.turn`.** The observation is numbered before
   the step, so using it would offset every trace by one against the engine
@@ -58,6 +59,15 @@ total-versus-total ratio charges it for the extra work it managed to fit.
 carries — `selection`, `leaf_batch`, `enemy_prior_batch` — and the difference
 is not cosmetic: `enemy_prior_batch` reads 0.9× per turn and 1.6× per call.
 
+`forward_equivalents` counts forwards; `forward_by_consumer` says who spent
+them, across the four names in `runtime/config.rs`'s `FORWARD_CONSUMERS` —
+`belief_proposal`, `root`, `enemy_prior`, `leaf_batch`. The controller has
+tracked the breakdown since the port and only the total was ever written out.
+It matters whenever a change removes a consumer rather than making one faster:
+[N0](../../research/measurements/joe-net-n0.md) needed to know that around a
+quarter of the shipped bot's forwards go to enemy priors before it could say
+what a four-times-slower network leaves for the search.
+
 The trap is the other direction. M0's aggregation walks the Python's
 `component_ms` **dict**, which only holds a key for a component that was
 actually timed, so its p99 for anything that does not run every turn is taken
@@ -67,6 +77,39 @@ first-move cost in both bots, and against 10,974 zeros its p99 is 0 while
 against its own 20 values it is 0.13 ms. The M6 report filters to non-zero
 turns for that reason; a future reducer should do the same or emit a call count
 for all ten components.
+
+## Asking what the controller would do at costs it cannot produce
+
+`deployment.json` has two more keys, both absent from every rated file:
+
+| key | effect |
+| --- | --- |
+| `fixed_forecasts_ms` | per-component forecasts that override the estimators |
+| `charge_fixed_forecasts` | advance a virtual clock by the forecast instead of timing the real work |
+
+Together they run the **real** admission controller — the real `can_admit`, the
+real widening freeze, the real degrade bands — over injected component costs.
+`RuntimeController` has carried both fields since the port and only its tests
+could reach them; the parse makes the shipped binary answer the question, which
+is the difference between measuring the controller and modelling it.
+
+Three things to know before reading a spike's numbers:
+
+- **`move_ms` is virtual.** Under a charged clock it is the sum of the
+  forecasts, not wall time. Nothing in a spike's trace bounds what the process
+  actually spent.
+- **A component forecast at `0.0` is modelled as deleted, not as free.** It
+  always admits and never advances the clock. The work still happens, so the
+  tree it builds is the one the real component builds — which is the right
+  model for "this consumer goes away" and the wrong one for "this consumer got
+  faster".
+- **It announces itself on stderr, and the trace's first-line `config` carries
+  `spike` and `charged`.** A bot playing forecast costs instead of measured ones
+  is a different bot, and it must never be one that looks the same.
+
+Used by [N0](../../research/measurements/joe-net-n0.md), which had to know how
+many simulations survive a 21 ms forward before porting a line of the network
+that costs it.
 
 ## The thread-count invariant
 

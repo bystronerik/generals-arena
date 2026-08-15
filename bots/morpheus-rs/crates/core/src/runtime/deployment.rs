@@ -65,6 +65,25 @@ pub struct DeploymentConfig {
     /// paired over 100 games/arm) and skipping its forward returns ~13 ms/turn.
     pub use_policy_proposal: bool,
     pub qualification_host: String,
+    /// Per-component forecasts that override the estimators, for a spike that
+    /// asks what the controller does at costs the binary cannot yet produce.
+    ///
+    /// `RuntimeController` has carried `fixed_forecasts_ms` and
+    /// `charge_fixed_forecasts` since the port; only the tests could reach
+    /// them. The joe-net port's N0 needs the *shipped* binary to answer "how
+    /// many simulations survive a 21 ms forward" before a line of that net is
+    /// ported (docs/bots/morpheus-rs/joe-net-plan.md §5.4), and the honest way
+    /// to ask is to run the real controller rather than to model it.
+    ///
+    /// `None` — which is every rated game, because a rated `deployment.json`
+    /// does not carry the key — leaves both fields at the values `new` sets and
+    /// changes nothing. A file that *does* carry it makes the seat say so on
+    /// stderr at startup: a bot playing forecast costs instead of measured ones
+    /// is a different bot, and it must never be one that looks the same.
+    pub fixed_forecasts_ms: Option<Vec<(String, f64)>>,
+    /// Charge the injected forecast to a virtual clock instead of timing the
+    /// real work. Requires `fixed_forecasts_ms`; ignored without it.
+    pub charge_fixed_forecasts: bool,
 }
 
 impl Default for DeploymentConfig {
@@ -100,6 +119,8 @@ impl Default for DeploymentConfig {
             warmup_batch_shapes: vec![1, 4, 16],
             use_policy_proposal: false,
             qualification_host: String::new(),
+            fixed_forecasts_ms: None,
+            charge_fixed_forecasts: false,
         }
     }
 }
@@ -181,6 +202,44 @@ impl DeploymentConfig {
                 .iter()
                 .filter_map(|(k, v)| v.as_f64().map(|value| (k.clone(), value)))
                 .collect();
+        }
+        if let Some(Json::Object(map)) = data.get("fixed_forecasts_ms") {
+            let fixed: Vec<(String, f64)> = map
+                .iter()
+                .filter_map(|(k, v)| v.as_f64().map(|value| (k.clone(), value)))
+                .collect();
+            // Unknown keys are ignored everywhere else in this file, because
+            // the file carries provenance notes. Here they are refused: a
+            // misspelt component silently forecasts nothing, and the spike's
+            // whole result is which components were forecast at what.
+            let mut unknown: Vec<&str> = fixed
+                .iter()
+                .map(|(key, _)| key.as_str())
+                .filter(|key| !COST_COMPONENTS.contains(key))
+                .collect();
+            unknown.sort_unstable();
+            if !unknown.is_empty() {
+                return Err(format!(
+                    "fixed_forecasts_ms names unknown components: {unknown:?}"
+                ));
+            }
+            let mut bad: Vec<&str> = fixed
+                .iter()
+                .filter(|(_, value)| !value.is_finite() || *value < 0.0)
+                .map(|(key, _)| key.as_str())
+                .collect();
+            bad.sort_unstable();
+            if !bad.is_empty() {
+                return Err(format!(
+                    "fixed_forecasts_ms must be finite and >= 0: {bad:?}"
+                ));
+            }
+            if !fixed.is_empty() {
+                cfg.fixed_forecasts_ms = Some(fixed);
+            }
+        }
+        if let Some(Json::Bool(flag)) = data.get("charge_fixed_forecasts") {
+            cfg.charge_fixed_forecasts = *flag;
         }
         if let Some(kind) = data.get("evaluator").and_then(Json::as_str) {
             cfg.evaluator = match kind {
@@ -437,6 +496,33 @@ mod tests {
         let text = config_text("\"shaping_lambda_post_contact\": 1.5");
         let err = DeploymentConfig::from_json(&parse(&text).unwrap()).unwrap_err();
         assert!(err.contains("shaping_lambda_post_contact"), "{err}");
+    }
+
+    #[test]
+    fn a_file_without_fixed_forecasts_leaves_the_spike_off() {
+        let cfg = DeploymentConfig::from_json(&parse(&config_text("")).unwrap()).unwrap();
+        assert!(cfg.fixed_forecasts_ms.is_none());
+        assert!(!cfg.charge_fixed_forecasts);
+    }
+
+    #[test]
+    fn fixed_forecasts_parse_and_a_misspelt_component_is_refused_by_name() {
+        let text = config_text(
+            "\"fixed_forecasts_ms\": {\"leaf_batch\": 23.0}, \
+             \"charge_fixed_forecasts\": true",
+        );
+        let cfg = DeploymentConfig::from_json(&parse(&text).unwrap()).unwrap();
+        assert_eq!(
+            cfg.fixed_forecasts_ms.as_deref(),
+            Some(&[("leaf_batch".to_string(), 23.0)][..])
+        );
+        assert!(cfg.charge_fixed_forecasts);
+
+        // Ignoring this one the way unknown top-level keys are ignored would
+        // forecast nothing and report a spike that never happened.
+        let text = config_text("\"fixed_forecasts_ms\": {\"leaf_batches\": 23.0}");
+        let err = DeploymentConfig::from_json(&parse(&text).unwrap()).unwrap_err();
+        assert!(err.contains("leaf_batches"), "{err}");
     }
 
     #[test]
