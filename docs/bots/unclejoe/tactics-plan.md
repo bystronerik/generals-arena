@@ -11,9 +11,10 @@ Measurements live in [shadow.md](shadow.md).
 
 U4's re-rank runs in shadow: it spends the turn's spare clock on afterstate
 forwards, logs what a live loop would have chosen, and plays the network's
-argmax anyway. It rides the deadline by design — p99 112 ms, max 131 ms on the
-dev host against RULES.md §08's 150 — so U5's proxy measurement is mandatory
-before any rated round. `UNCLEJOE_RERANK=0` restores U3's cost.
+argmax anyway. It rides the deadline by design — p99 100–114 ms, max 121–147 ms
+over three passes on the dev host against RULES.md §08's 150 — so U5's proxy
+measurement is mandatory before any rated round. `UNCLEJOE_RERANK=0` restores
+U3's cost.
 
 Revised 2026-08-15 after a design review. The goal changed: **spend the whole
 150 ms turn budget** (RULES.md §08), not finish the move early. The
@@ -165,10 +166,14 @@ jitter and reply emit.
    the forward, record the value. Stop starting evaluations when the
    remaining clock is under the reserve — which is what the slowest
    evaluation so far this game cost, never below
-   `RERANK_RESERVE_FLOOR_MS = 25`. Play the best-valued
-   surviving candidate; with none evaluated yet (cutoff before the first
-   forward), play the first surviving candidate in policy order; if every
-   candidate is filtered, the filters are moot — play the argmax.
+   `RERANK_RESERVE_FLOOR_MS = 25`. Then the pick: the **default** is the
+   argmax, or the first surviving candidate in policy order when a filter
+   removed the argmax; the best-valued survivor takes the turn off the default
+   **only if it beats it by `RERANK_MIN_GAP`** — one bin of the value head,
+   below which the two positions are a tie and a tie belongs to the policy. A
+   default the clock never evaluated is never overruled, because a gap needs a
+   baseline. If every candidate is filtered, the filters are moot — play the
+   argmax.
 5. Emit.
 
 The loop is anytime by construction: the argmax is candidate #1, so an
@@ -259,6 +264,7 @@ guarantee is the anytime structure, not an estimate.
 | `FOG_GROWTH_MARGIN` | 3 | added to the hidden bound so an aged bound is still a bound (U3, §7) |
 | `TOP_K` | 4 | candidates read from the policy (argmax is #1) |
 | `RERANK_RESERVE_FLOOR_MS` | 25 | floor under the *measured* re-rank reserve |
+| `RERANK_MIN_GAP` | 2/127 | value gap a rival must clear to take the turn |
 | `CASTLE_SURCHARGE_CAP` | 8 | §3 |
 | `CASTLE_LATE_TURN` | 650 | §3 |
 
@@ -466,42 +472,57 @@ of the game, and this host stalls where the Modal proxy does not (joe-rs max
   of the near-zero mass of the gap distribution. A no-go ships U3 + masks
   only and leaves the budget unspent — an acceptable outcome, not a failed
   milestone.
-  **Shipped 2026-08-16, and the go/no-go came back NO-GO.** 99 unit tests,
-  all passing — 25 new. Four gate matches and the corpus replay measured in
-  [shadow.md](shadow.md): 4,037 re-ranked turns, 15,743 afterstate forwards,
-  every match ending on the same turn with the same winner as U2 and U3, and
-  wire-replay equality still holding over 14 games and 7,092 turns. Five
-  things U5 inherits, and the first two are why this milestone did not
-  become U5:
-  - **The value gaps sit inside the head's own resolution.** The re-rank
-    would move the reply on 48.8% of turns, and on 83% of those the gap is
-    under **one bin** of the value head — which is 128 bins over [−1, +1],
-    so 0.0157 wide. Only 8.1% of turns clear one bin and 3.3% clear two. A
-    difference the head cannot represent is not a preference, so H2 is not
-    supported as specified. The live re-rank does not ship. A **minimum-gap
-    threshold** would act on the 8% instead of the 49%, and that is the
-    strategist revision this data argues for.
-  - **The reserve and `TOP_K` were both wrong, and were fixed inside the
-    milestone.** `RERANK_RESERVE_MS = 25` was smaller than one evaluation —
-    a whole forward, 22 ms typical and 48 ms at worst — so the loop started
-    work it could not finish: p99 143 ms, max 181 ms, over the limit. The
-    reserve is now **measured**, not declared (§4), and `TOP_K` is 4. After
-    the fix: **p99 112 ms, max 131 ms**, inside the 130 ms internal deadline
-    on the same host and the same corpus. Every other number below was
-    re-measured against the fixed build.
-  - **The reserve ratchets and never decays.** One stalled evaluation pins
-    it for the rest of the game — 40 to 55 ms across the five runs, against
-    a ~23 ms typical evaluation — which costs a candidate per turn on a
-    noisy host and is why 4,039 turns averaged 3.4 forwards rather than 4.
-    That is the conservative direction and it is deliberate: a reserve set
-    to the typical cost is exactly the bug this milestone fixed. Whether a
-    decaying bound buys back the candidate without giving back the
-    guarantee is a U5 question, and it should be asked on the Modal proxy,
-    where the stalls are smaller.
-  - **The masks are real but rare.** 49 candidates removed over 4,037 turns,
+  **Shipped 2026-08-16. The go/no-go is NO on the design as written and YES
+  on a gated version of it**, which is now what the code carries. 106 unit
+  tests, all passing — 32 new. Four gate matches and the corpus replay
+  measured in [shadow.md](shadow.md), every match ending on the same turn
+  with the same winner as U2 and U3, and wire-replay equality still holding
+  over 14 games and 7,092 turns. Three of the milestone's constants were
+  wrong and were fixed inside it; the rest is what U5 inherits.
+  - **The value gaps sit below the head's training scale, so the re-rank
+    needed a threshold.** Playing the best value would move the reply on
+    48.8% of turns, and on 83% of those the gap is under **one bin** of the
+    value head — 128 bins over [−1, +1], so 0.0157 wide. The head's output
+    is a continuous expectation, so such a difference is representable; what
+    it is not is evidence, because bin width is the scale the head was
+    trained to separate outcomes at. H2 **as specified is not supported**.
+    The layer now carries `RERANK_MIN_GAP = 2/127` (§2, §4): a rival takes
+    the turn only by clearing one bin. Re-measured, that refuses **84%** of
+    the value head's preferences — 42.0% of turns preferred a rival, 6.6%
+    cleared the gap — and what survives is a mechanism acting on one turn in
+    fifteen with a tail running to 2–25 bins. **Conditional go.** The shadow
+    data says the head *distinguishes* those positions, not that it
+    distinguishes them correctly; only a round says that, which is U6's job
+    and belongs in a `UNCLEJOE_RERANK` arm rather than the headline
+    contrast.
+  - **The reserve and `TOP_K` were both wrong.** `RERANK_RESERVE_MS = 25`
+    was smaller than one evaluation — a whole forward, 22 ms typical and
+    48 ms at worst — so the loop started work it could not finish: p99
+    143 ms, max 181 ms, over the limit. The reserve is now **measured**, not
+    declared (§4), and `TOP_K` is 4. After the fix, three interleaved passes
+    give p99 100–114 ms and max 121–147 ms, all inside 150. The 26 ms spread
+    in that max column is the dev host's own jitter — joe-rs alone swings 44
+    to 50 ms on a 22 ms median in the same window — which eats most of the
+    20 ms of slack §4 set aside. The proxy is where the headroom is real.
+  - **The reserve ratchets and never decays, and that now costs firing
+    rate.** One stalled evaluation pins it for the rest of the game — 46 to
+    77 ms across the runs, against a ~23 ms typical evaluation — so the loop
+    averages 2.9 forwards rather than 4. Fewer candidates evaluated is fewer
+    chances for one to clear a bin, which is why the gated change rate runs
+    2.4% to 12.1% across five games. **The mechanism's firing rate is a
+    property of the host as much as of the position.** Whether a decaying
+    bound buys the candidates back without giving back the guarantee is a U5
+    question, and it should be asked on the Modal proxy.
+  - **The masks are real but rare.** 37 candidates removed over 4,037 turns,
     and the argmax on 9 of them. A mask-only contrast needs far more games
     than the plan's ~1150/arm to resolve, which changes what a decomposition
     arm on `UNCLEJOE_MASKS` can be expected to show (§6).
+  - **`RERANK_MIN_GAP` is a fact about the artifact, spelled out in the
+    tactics layer.** `tactics` sits below `nn` and must not name it, so the
+    bin count is written as a number with its derivation — the same way
+    `DEATHTOUCH_TURN` spells out a fact about the engine. A joe re-export
+    with a different bin count makes it stale silently, so the artifact's
+    bin count belongs on the re-export checklist beside the weights.
   - **The opponent's totals are carried, not recomputed.** Most of their army
     is in fog, so the rendered afterstate frame carries the base frame's
     `opp_land` / `opp_army` and applies only the deltas it can see. The
@@ -514,13 +535,14 @@ of the game, and this host stalls where the Modal proxy does not (joe-rs max
   and on the Modal proxy; the tiny-deadline degradation test. Done when:
   p99 and max are recorded in `docs/bots/unclejoe/latency.md` under 150 ms
   with the §4 constants quoted, and wire-replay equality still holds with
-  tactics off. **U4's no-go changes this milestone's shape**: the re-rank
-  does not go live as designed, so U5 is either (a) masks-only, with the
-  re-rank compiled but switched off, or (b) a revised re-rank — minimum-gap
-  threshold, a reserve that covers a whole forward, and a `TOP_K` chosen on
-  the proxy — which is a new spec and a new U4-shaped measurement before it
-  is a U5. Either way the latency numbers are still mandatory, because the
-  U4 build as measured does not hold 150 ms.
+  tactics off. **U4 did most of this milestone's design work.** The revised
+  re-rank — minimum-gap threshold, a measured reserve, `TOP_K = 4` — is
+  built, shadow-measured and shipped, so what is left for U5 is the part
+  only the proxy can answer: the latency numbers, the tiny-deadline
+  degradation test, and the two questions the dev host cannot settle —
+  whether `TOP_K = 4` is reached there, and whether a decaying reserve buys
+  back the candidates the ratchet costs without giving back the guarantee.
+  Flipping `UNCLEJOE_RERANK` to live is a one-line change once those land.
 - **U6 — measurement.** §6's round, the mandatory replication round, then
   decomposition if the headline is flat; verdict quoted per the decision
   rule; `update-leaderboard`.

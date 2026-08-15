@@ -6,9 +6,11 @@ milestones that end in a shadow report write their sections here:
 searches behind those triggers proved) after it, U4 (the afterstate re-rank)
 last.
 
-**U4's verdict is a no-go on the re-rank.** Read
-[§ U4](#u4--what-the-afterstate-values-said-2026-08-16) before building on
-it, and do not rate the U4 build: it runs past 150 ms.
+**U4's verdict: no on the re-rank as specified, yes on the gated one.** Playing
+the best afterstate value would overrule the policy on nearly half of all
+turns, almost always on a difference below the value head's own training
+scale. With a one-bin minimum gap it acts on one turn in fifteen instead. Read
+[§ U4](#u4--what-the-afterstate-values-said-2026-08-16) before building on it.
 
 ## U2 — trigger fire rates (2026-08-15)
 
@@ -249,42 +251,45 @@ plus `--seed <n>`; reproduce the corpus row with the first 1,140 frames of
 `data/joe/joe-rs-parity/games/synthetic-long.in.log` piped through
 `unclejoe bench`. Read the `tactics rerank` line off stderr. Constants per
 [tactics-plan.md](tactics-plan.md) §4: `TOP_K = 4`,
-`RERANK_RESERVE_FLOOR_MS = 25`, `CASTLE_SURCHARGE_CAP = 8`,
-`CASTLE_LATE_TURN = 650`.
+`RERANK_RESERVE_FLOOR_MS = 25`, `RERANK_MIN_GAP = 2/127`,
+`CASTLE_SURCHARGE_CAP = 8`, `CASTLE_LATE_TURN = 650`.
 
-The milestone shipped its constants twice. The first pass ran `TOP_K = 5`
-against a **fixed** 25 ms reserve and overran the turn limit; the reserve is
-now measured and `TOP_K` is 4. Everything below is the second pass, and
-[§ The reserve was a guess](#the-reserve-was-a-guess-and-the-guess-was-wrong)
-records what the first one found, because it is the reason the constants
-changed.
+**The milestone measured its own constants wrong twice and fixed both.** The
+first build ran `TOP_K = 5` against a *fixed* 25 ms reserve and overran the
+turn limit; the reserve is now measured and `TOP_K` is 4
+([§ The reserve was a guess](#the-reserve-was-a-guess-and-the-guess-was-wrong)).
+The second had no minimum gap and would have overruled the policy on half of
+all turns; it now has one
+([§ The threshold](#the-threshold-and-what-it-changes)). Numbers below say
+which build they came from, because the intermediate ones are the evidence for
+the constants that replaced them.
 
-| Game | Turns | Re-ranked | Forwards/turn | Would change | Gap p50 | p90 | p99 | max | Masked (argmax) |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| gate seed 0 | 770 | 770 | 3.96 | 381 (49.5%) | 0.0000 | 0.0142 | 0.0446 | 0.0849 | 6 (2) |
-| gate seed 1 | 659 | 659 | 3.90 | 375 (56.9%) | 0.0006 | 0.0195 | 0.1198 | 0.2959 | 25 (6) |
-| gate seed 2 | 624 | 624 | 3.45 | 258 (41.3%) | 0.0000 | 0.0045 | 0.0235 | 0.0690 | 0 (0) |
-| gate seed 3 | 847 | 846 | 2.96 | 357 (42.2%) | 0.0000 | 0.0071 | 0.0328 | 0.2157 | 0 (0) |
-| corpus replay | 1,140 | 1,140 | 3.06 | 520 (45.6%) | 0.0000 | 0.0142 | 0.0784 | 0.3935 | 6 (1) |
+Across all three builds: every gate match reached a normal end on the **same
+turn with the same winner** as its U2 and U3 run, which is what a shadow
+mechanism must produce. Seed 3 re-ranks 846 of its 847 turns — the missing one
+is turn 846, where the U3 kill proof overrode and the turn ended before a slate
+was built.
 
-4,039 re-ranked turns, 13,770 afterstate forwards. Every gate match reached a
-normal end on the **same turn with the same winner** as its U2 and U3 run,
-which is what a shadow mechanism must produce. Seed 3 re-ranked 846 of 847
-turns: the missing one is turn 846, where the U3 kill proof overrode and the
-turn ended before a slate was built.
-
-### The go/no-go: no-go, and the reason is a unit
+### The go/no-go: no on the design as written, yes on the gated one
 
 The plan's bar is that "live re-rank requires candidate value gaps that stand
 clear of the near-zero mass of the gap distribution". There is a natural unit
 to measure that in, and it decides the question.
 
 joe's value head is a distribution over **128 bins spanning [−1, +1]**
-(`bin_centers` in the artifact), so one bin is **0.0157** wide. A value
-difference below that is not the head preferring one position to another; it
-is the softmax interpolating between two adjacent bins.
+(`bin_centers` in the artifact), so one bin is **0.0157** wide. The head's
+output is a continuous expectation over that softmax, so a smaller difference
+is representable — what it is not is *evidence*. The head was trained against
+a 128-bin target, so bin width is the scale at which it learned to separate
+one outcome from another, and a gap an order of magnitude below that is the
+softmax leaning between two adjacent bins rather than a preference between two
+positions.
 
-| Sample | Turns | Would change | Gap ≥ 1 bin | Gap ≥ 2 bins |
+Measured against that unit, the re-rank **as originally specified** — play the
+best value, no threshold — fails. From the second build, `TOP_K = 4` with the
+measured reserve:
+
+| Sample | Turns | Rival preferred | Gap ≥ 1 bin | Gap ≥ 2 bins |
 | --- | --- | --- | --- | --- |
 | gate seed 0 | 770 | 49.5% | 8.6% | 3.0% |
 | gate seed 1 | 659 | 56.9% | 13.7% | 7.0% |
@@ -293,25 +298,50 @@ is the softmax interpolating between two adjacent bins.
 | corpus replay | 1,140 | 45.6% | 8.9% | 3.7% |
 | **all** | **4,039** | **46.8%** | **7.8%** | **3.1%** |
 
-So the re-rank would take the move away from the network on **nearly half of
-all turns**, and on **83% of those** it would do so on a value difference
-smaller than one bin of the head's own output. The median gap is 0.0000 and
-the p90 is 0.005–0.020 — about one bin. Only the p99 tail (0.024–0.12, up to
-0.39) is a difference the head could actually resolve.
+It would take the move away from the network on nearly half of all turns, and
+on **83% of those** on a difference below the head's own training scale. H2 as
+written is **not supported**.
 
-That is the failure the spec named in advance and priced at one milestone
-rather than one round
-([unclejoe.md](../../research/strategies/unclejoe.md) §1: "if the shadow
-re-rank shows candidate value gaps sitting inside the head's noise, the
-re-rank never goes live and the negative is recorded without spending a
-round"). **H2 is not supported.** The re-rank does not go live as designed.
+### The threshold, and what it changes
 
-It is a no-go on *this* design, not a proof that the value head is useless
-here. The 7.8% of turns clearing one bin are a different population from the
-46.8%, and a re-rank gated on a **minimum gap** would only ever act on them.
-That is the strategist revision this data argues for, and it is cheap to
-try: the machinery is built, the switch exists, and the threshold is one
-constant.
+So the layer now carries one: `RERANK_MIN_GAP = 2/127`, one bin, and a rival
+takes the turn off the policy only by clearing it. Everything short of that is
+a tie, and a tie belongs to the policy — which is right far more often than a
+value comparison at this scale. Re-measured with the threshold live:
+
+| Game | Turns | Forwards/turn | Rival preferred | Gated change | Gap p50 | p90 | p99 | max |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| gate seed 0 | 770 | 2.93 | 312 (40.5%) | 47 (6.1%) | 0.0000 | 0.0110 | 0.0340 | 0.0849 |
+| gate seed 1 | 659 | 3.00 | 337 (51.1%) | 80 (12.1%) | 0.0001 | 0.0187 | 0.1088 | 0.2959 |
+| gate seed 2 | 624 | 3.14 | 251 (40.2%) | 15 (2.4%) | 0.0000 | 0.0045 | 0.0235 | 0.0690 |
+| gate seed 3 | 846 | 2.95 | 358 (42.3%) | 40 (4.7%) | 0.0000 | 0.0072 | 0.0328 | 0.2157 |
+| corpus replay | 1,138 | 2.53 | 436 (38.3%) | 83 (7.3%) | 0.0000 | 0.0122 | 0.0677 | 0.3935 |
+| **all** | **4,037** | **2.87** | **1,694 (42.0%)** | **265 (6.6%)** | | | | |
+
+The threshold refuses **84%** of the value head's preferences. What survives is
+a mechanism that acts on one turn in fifteen, each time on a gap the head's
+training scale supports, with a tail running to 2–25 bins. The gap column is
+deliberately still the *ungated* one — best rival against the argmax, recorded
+whether or not it cleared — so the distribution the threshold is drawn from
+keeps being measured now that the threshold exists.
+
+Three repeat runs of the corpus give 45.4%, 45.4%, 45.8% preferred and 8.8%,
+8.9%, 8.9% gated: the behaviour is reproducible even where the timing is not.
+
+**The verdict is a conditional go.** The gated re-rank clears the plan's bar —
+there is mass standing clear of the near-zero pile, and the mechanism now only
+touches it. What the shadow data cannot say is whether it *helps*: a gap of one
+bin means the head distinguishes those two positions, not that it distinguishes
+them correctly. That is a rating question and it belongs to U6, as an arm
+behind `UNCLEJOE_RERANK` rather than as part of the headline contrast.
+
+One coupling to carry forward: **the reserve caps how often the threshold can
+act.** It ratchets on host jitter (below), and a run that settles at 77 ms
+evaluates 2.5 candidates per turn where one settling at 46 ms evaluates 3.1.
+Fewer candidates evaluated is fewer chances for one to clear a bin — 6.1% to
+12.1% across the five runs. The mechanism's firing rate is therefore a property
+of the host as much as of the position, which is an argument for measuring it
+on the proxy before U6 sizes anything.
 
 ### The reserve was a guess, and the guess was wrong
 
@@ -330,34 +360,48 @@ measurement is normally above. This is what makes the bound
 host-independent — a slower machine measures a bigger reserve and runs fewer
 candidates, which is a degradation of an anytime loop and not a fault.
 
-`bench` over the corpus prefix, same host, one pass each (ms):
+`bench` over the corpus prefix, three interleaved passes on the same host
+(ms). Interleaved because this host's tail moves more between two runs of the
+*same* binary than between two binaries, and a single draw would report that
+jitter as a result:
 
-| Build | p50 | p90 | p99 | max |
-| --- | --- | --- | --- | --- |
-| joe-rs | 22.26 | 22.48 | 23.55 | 26.34 |
-| unclejoe, `UNCLEJOE_RERANK=0` | 22.53 | 24.09 | 28.92 | 47.57 |
-| unclejoe, U4 **first** pass (fixed 25 ms reserve, `TOP_K = 5`) | 114.84 | 122.97 | 143.26 | 181.49 |
-| unclejoe, U4 **shipped** (measured reserve, `TOP_K = 4`) | 88.77 | 102.96 | 112.49 | **130.91** |
+| Pair | joe-rs p99 / max | `UNCLEJOE_RERANK=0` p99 / max | re-rank live p99 / max |
+| --- | --- | --- | --- |
+| 1 | 25.02 / 50.49 | 41.70 / 57.73 | 100.53 / 143.34 |
+| 2 | 28.09 / 44.75 | 25.38 / 45.36 | 111.03 / 146.50 |
+| 3 | 24.86 / 44.12 | 24.55 / 29.00 | 113.67 / 120.89 |
 
-The max lands on 130.91 ms against an internal deadline of 130, which is the
-structure doing exactly what it claims: the loop never starts work past the
-deadline minus a reserve that covers it, so the turn ends at the deadline plus
-one reply emit, and the 20 ms of slack to 150 is still slack.
+For comparison, the **first** U4 build — fixed 25 ms reserve, `TOP_K = 5` —
+measured p99 143.26, max 181.49 on the same corpus.
 
-`TOP_K` changed for the same reason. Five afterstates plus the live forward is
-~138 ms before any rendering, so the first pass cut itself off on 4,008 of
-4,037 turns and averaged 3.9 — the anytime cutoff was quietly supplying the
-real constant. Four is written down instead.
+Every pass is inside 150 ms, and the p50 sits at 89 ms in all three: the loop
+ends where the internal deadline says it should. The 121–147 ms spread in the
+max column is this host's own jitter, not the mechanism — joe-rs alone swings
+44 to 50 ms on a 22 ms median in the same window, so roughly 25 ms of tail
+belongs to the machine and rides on top of whatever the bot does. That eats
+most of the 20 ms of slack the plan set aside between the 130 ms internal
+deadline and the judge's 150.
 
-Four is still not always reached: the five runs average **3.4** forwards, and
-the reserve settled between 40 and 55 ms where a typical evaluation costs ~23.
-That is the reserve ratcheting on host jitter — it keeps the worst evaluation
-ever seen and never decays, so one stall pins it for the rest of the game.
+Which is why the proxy measurement is not a formality. On the Modal one-core
+x86-64-v3 proxy joe-rs measures p99 23.7 / max 34.5 — about 11 ms of tail
+against this host's 25 — so the same loop should land with the slack intact
+there. U5 has to show that rather than assume it.
+
+`TOP_K` changed for the same reason the reserve did. Five afterstates plus the
+live forward is ~138 ms before any rendering, so the first pass cut itself off
+on 4,008 of 4,037 turns and averaged 3.9 — the anytime cutoff was quietly
+supplying the real constant. Four is written down instead.
+
+Four is still not always reached: these runs average **2.9** forwards, and the
+reserve settled between 46 and 77 ms where a typical evaluation costs ~23. That
+is the reserve ratcheting on host jitter — it keeps the worst evaluation ever
+seen and never decays, so one stall pins it for the rest of the game.
 Deliberately so, in the conservative direction; a reserve set to the typical
-cost is precisely the bug this section is about. Whether a decaying bound buys
-the fourth candidate back without giving back the guarantee is a U5 question,
-and it belongs on the Modal one-core x86-64-v3 proxy, where joe-rs's own tail
-is 34.5 ms rather than this host's 26–48.
+cost is precisely the bug this section is about. But it has a behavioural
+price, noted above: fewer evaluations means fewer chances for a rival to clear
+the threshold. Whether a decaying bound buys the candidates back without giving
+back the guarantee is a U5 question, and it belongs on the proxy, where the
+stalls are smaller.
 
 **The gate matches still say nothing about timing.** `matchup.py` has no
 per-move time limit; the judge does (RULES.md §08). The bench above is the
@@ -365,11 +409,12 @@ evidence, and U5's proxy run is what a rated round waits on.
 
 ### The masks are cheap, correct, and almost never load-bearing
 
-Across 4,039 turns the filters removed **37** candidates: 24 crowding, 1
+Across 4,037 turns the filters removed **37** candidates: 24 crowding, 1
 lateness, 12 refutation. They removed the *argmax* — the only case where a
 mask can change the played move — on **9** turns, 0.22% of them. Three turns
 filtered every candidate and fell back to the argmax, which is the intended
-degradation.
+degradation. The counts are identical across all three builds, as they must
+be: a filter reads the frame, and the frames did not change.
 
 The distribution is lumpy in the way castle play is: seed 1 built 9 castles
 and took 21 of the 24 crowding masks; seeds 2 and 3 built 2 and 0 and took
@@ -395,6 +440,7 @@ milestone's one mechanical edit to a copied file — `pub` on
 the four gate matches cover the rest: same seeds, same ending turns, same
 winners as U2 and U3.
 
-The Rust suite is 101 tests, all passing — 27 new: 10 on the afterstate
-renderer, 8 on the filters, and 9 on the slate, the score order, the anytime
-guard and the measured reserve. The Python suite is untouched at 13.6 s.
+The Rust suite is 106 tests, all passing — 32 new: 10 on the afterstate
+renderer, 8 on the filters, and 14 on the slate, the score order, the anytime
+guard, the measured reserve and the minimum-gap threshold. The Python suite is
+untouched at 15.2 s.

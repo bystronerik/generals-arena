@@ -38,16 +38,28 @@ earlier and cheaper: if the shadow re-rank (milestone U4) shows candidate
 value gaps sitting inside the head's noise, the re-rank never goes live and
 the negative is recorded without spending a round.
 
-**H2 took that exit** (U4, 2026-08-16). The shadow re-rank would have moved
-the reply on 48.8% of 4,037 turns, and on 83% of those the value gap was
-smaller than **one bin of the value head** — 128 bins over [−1, +1], so
-0.0157 wide. A difference the head cannot represent is not a preference.
-H2 is **not supported as specified** and the re-rank does not go live; the
-numbers and the conditional revision it argues for (a minimum-gap threshold,
-which would act on the 8.1% of turns that clear one bin) are in
-[`../../bots/unclejoe/shadow.md`](../../bots/unclejoe/shadow.md) §U4. No
-round was spent, which is what this hypothesis was written to make possible.
-H1 is untouched by that finding and still needs §9's contrast.
+**H2 took that exit, and came back narrowed** (U4, 2026-08-16). Playing the
+best afterstate value would have moved the reply on 48.8% of 4,037 turns, and
+on 83% of those the value gap was smaller than **one bin of the value head** —
+128 bins over [−1, +1], so 0.0157 wide. The head's output is a continuous
+expectation, so a smaller difference is representable; what it is not is
+evidence, because bin width is the scale the head was trained to separate
+outcomes at. **H2 as written is not supported.**
+
+What the same data argued for is a minimum gap, and the layer now carries one:
+a rival takes the turn only by clearing a bin. That refuses 84% of the value
+head's preferences and leaves a mechanism acting on 6.6% of turns. So the claim
+under test is no longer "the value head ranks the policy's top-k better than
+the policy does" but the narrower **"where the value head separates two
+candidates by a margin it was trained to resolve, it is right"** — which the
+shadow data cannot answer, because a gap says the head distinguishes those
+positions and not that it distinguishes them correctly. That is a rated arm
+behind `UNCLEJOE_RERANK`, sized by §9, and it is U6's.
+
+Numbers in [`../../bots/unclejoe/shadow.md`](../../bots/unclejoe/shadow.md)
+§U4. No round was spent on the version that failed, which is what this
+hypothesis was written to make possible. H1 is untouched by the finding and
+still needs §9's contrast.
 
 ## 2. Why a fork, not a flag
 
@@ -239,12 +251,17 @@ going live.
 surviving top-k candidate (`k = 4` — U4 measured that five does not fit the
 turn) in policy order: advance it one ply through the exact forward model with
 the opponent passing, render the resulting position as an observation, run the
-forward, read the value head. Play the best value. Stop starting evaluations
-when the clock reserve is reached — the argmax is evaluated first, so a cutoff
-at any point degrades to the old bot. The reserve is **measured, not
-declared**: it is what the slowest evaluation this game cost, seeded by the
-warmup forward, because a fixed reserve is a claim about a host this code has
-never run on.
+forward, read the value head. Play the best value **that beats the policy's own
+move by a minimum gap** — one bin of the value head, `2/127`, below which the
+two positions are a tie and the tie belongs to the policy. U4 measured why the
+gap is not optional: without it the mechanism overrules the policy on half of
+all turns, almost always on a difference below the head's training scale.
+
+Stop starting evaluations when the clock reserve is reached — the argmax is
+evaluated first, so a cutoff at any point degrades to the old bot. The reserve
+is **measured, not declared**: it is what the slowest evaluation this game
+cost, seeded by the warmup forward, because a fixed reserve is a claim about a
+host this code has never run on.
 
 Known approximations, named rather than hidden:
 

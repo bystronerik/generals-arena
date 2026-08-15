@@ -141,6 +141,30 @@ pub const TOP_K: usize = 4;
 /// cheap.
 pub const RERANK_RESERVE_FLOOR_MS: u64 = 25;
 
+/// How far a rival's afterstate value must exceed the argmax's before it may
+/// take the move. Below this the two positions are a tie and the policy keeps
+/// the turn.
+///
+/// **One bin of the value head**, which is a distribution over 128 bins
+/// spanning [−1, +1] (`bin_centers` in the artifact) — so `2/127`. The head's
+/// output is a continuous expectation over that softmax, so a smaller
+/// difference is representable; what it is not is *evidence*. The head was
+/// trained against a 128-bin target, so bin width is the scale at which it
+/// learned to separate one outcome from another, and a gap an order of
+/// magnitude below that is the softmax leaning between two adjacent bins
+/// rather than a preference between two positions.
+///
+/// U4 measured why this is needed: without it the re-rank overrules the
+/// policy on 46.8% of turns and 83% of those ride a sub-bin gap
+/// (`docs/bots/unclejoe/shadow.md` §U4).
+///
+/// Written as a number rather than imported: `tactics` sits below `nn` in the
+/// layering and must not name it, exactly as `DEATHTOUCH_TURN` spells out a
+/// fact about the engine. The cost is that a joe re-export with a different
+/// bin count makes this stale silently — the artifact's bin count belongs on
+/// the re-export checklist beside the weights.
+pub const RERANK_MIN_GAP: f32 = 2.0 / 127.0;
+
 /// The most §03 crowding surcharge a build may carry and still be valued.
 /// Eight admits exactly one own structure at three steps or further; anything
 /// closer, or two structures crowding at all, is masked.
@@ -304,6 +328,62 @@ impl Score {
             _ => false,
         }
     }
+
+    /// Is this score better than that one by enough to overrule the policy?
+    ///
+    /// A win is never marginal: a candidate that captures the general inside
+    /// the model does not have to clear a threshold about value resolution.
+    /// Everything else needs [`RERANK_MIN_GAP`] between two real numbers — an
+    /// evaluation that never happened is not a baseline a gap can be measured
+    /// against, so it declines rather than guesses.
+    fn clears(self, baseline: Score) -> bool {
+        match (self, baseline) {
+            (Score::Wins, Score::Wins) => false,
+            (Score::Wins, _) => true,
+            (Score::Value(a), Score::Value(b)) => a - b >= RERANK_MIN_GAP,
+            _ => false,
+        }
+    }
+}
+
+/// The action a live re-rank would play, as a slate index.
+///
+/// Three rules, in order. A filtered candidate is never played. The **default**
+/// is the argmax — the policy's own move — unless a filter removed it, in which
+/// case it is the first survivor in policy order. And a rival takes the turn
+/// off the default only when it beats it by [`RERANK_MIN_GAP`]; short of that
+/// the two positions are a tie, and a tie belongs to the policy, which is right
+/// far more often than a value comparison at this scale.
+///
+/// `None` when every candidate was filtered. The caller plays the argmax:
+/// filters that remove everything have removed nothing.
+fn live_pick(slate: &Slate, scored: &[Score]) -> Option<usize> {
+    let default = (0..slate.len()).find(|rank| slate[*rank].masked.is_none())?;
+    let mut best = default;
+    for rank in default + 1..slate.len() {
+        if slate[rank].masked.is_none() && scored[rank].beats(scored[best]) {
+            best = rank;
+        }
+    }
+    Some(if best != default && scored[best].clears(scored[default]) {
+        best
+    } else {
+        default
+    })
+}
+
+/// The best-scored survivor, with no threshold applied — what [`live_pick`]
+/// would have returned before [`RERANK_MIN_GAP`] existed. Kept so the shadow
+/// report can say what the threshold cost and what it saved.
+fn best_survivor(slate: &Slate, scored: &[Score]) -> Option<usize> {
+    let first = (0..slate.len()).find(|rank| slate[*rank].masked.is_none())?;
+    let mut best = first;
+    for rank in first + 1..slate.len() {
+        if slate[rank].masked.is_none() && scored[rank].beats(scored[best]) {
+            best = rank;
+        }
+    }
+    Some(best)
 }
 
 
@@ -347,6 +427,10 @@ pub struct Tactics {
     rerank_cutoffs: u32,
     rerank_wins: u32,
     would_change: u32,
+    /// Turns where a rival out-scored the argmax at all, before the threshold.
+    /// The difference between this and `would_change` is what
+    /// [`RERANK_MIN_GAP`] refuses.
+    rivals_preferred: u32,
     argmax_masked: u32,
     masked_crowding: u32,
     masked_lateness: u32,
@@ -405,6 +489,7 @@ impl Tactics {
             rerank_cutoffs: 0,
             rerank_wins: 0,
             would_change: 0,
+            rivals_preferred: 0,
             argmax_masked: 0,
             masked_crowding: 0,
             masked_lateness: 0,
@@ -824,24 +909,20 @@ impl Tactics {
         }
         self.rerank_turns += 1;
 
-        // What a live loop would play: the best-scored survivor, falling back
-        // to policy order among survivors the clock never reached, and to the
-        // argmax when the filters left nothing.
-        let mut pick: Option<usize> = None;
-        for rank in 0..slate.len() {
-            if slate[rank].masked.is_some() {
-                continue;
-            }
-            match pick {
-                None => pick = Some(rank),
-                Some(best) if scored[rank].beats(scored[best]) => pick = Some(rank),
-                Some(_) => {}
-            }
-        }
+        // What a live loop would play, and what it would have played without
+        // the threshold. Both, because the second is the measurement U4 was
+        // built to take and the first is the mechanism that measurement
+        // argued for; reporting only one of them hides the threshold's effect.
+        let pick = live_pick(slate, scored);
+        let preferred = best_survivor(slate, scored);
         let changed = pick.is_some_and(|rank| rank != 0);
         self.would_change += u32::from(changed);
+        self.rivals_preferred += u32::from(preferred.is_some_and(|rank| rank != 0));
 
-        let gap = match (pick.map(|rank| scored[rank]), scored[0]) {
+        // The gap stays the *ungated* one — best rival against the argmax —
+        // so the distribution the threshold is drawn from keeps being
+        // measured after the threshold exists.
+        let gap = match (preferred.map(|rank| scored[rank]), scored[0]) {
             (Some(Score::Value(best)), Score::Value(argmax)) => Some(best - argmax),
             _ => None,
         };
@@ -865,12 +946,13 @@ impl Tactics {
         // near-tie is a different bet from overruling a confident policy.
         let margin = pick.map(|rank| slate[rank].logit - slate[0].logit);
         eprintln!(
-            "[unclejoe] turn {} rerank k {} forwards {} pick {} change {} gap {} \
-             logit_margin {} values {}",
+            "[unclejoe] turn {} rerank k {} forwards {} pick {} preferred {} change {} \
+             gap {} logit_margin {} values {}",
             obs.turn,
             slate.len(),
             forwards,
             pick.map_or_else(|| "argmax".to_string(), |rank| rank.to_string()),
+            preferred.map_or_else(|| "argmax".to_string(), |rank| rank.to_string()),
             changed,
             gap.map_or_else(|| "n/a".to_string(), |g| format!("{g:+.4}")),
             margin.map_or_else(|| "n/a".to_string(), |m| format!("{m:+.3}")),
@@ -946,7 +1028,8 @@ impl Tactics {
         eprintln!(
             "[unclejoe] tactics rerank: turns {} ({:.1}%) forwards {} cutoffs {} wins {} \
              slowest_eval_ms {:.1} reserve_ms {} \
-             would_change {} ({:.1}%) argmax_masked {} all_masked {} \
+             min_gap {:.4} rivals_preferred {} ({:.1}%) would_change {} ({:.1}%) \
+             argmax_masked {} all_masked {} \
              masked crowding {} late {} refuted {} \
              gap p50 {:.4} p90 {:.4} p99 {:.4} max {:.4}",
             self.rerank_turns,
@@ -956,6 +1039,9 @@ impl Tactics {
             self.rerank_wins,
             self.slowest_eval_ms,
             self.reserve_ms(),
+            RERANK_MIN_GAP,
+            self.rivals_preferred,
+            pct(self.rivals_preferred),
             self.would_change,
             pct(self.would_change),
             self.argmax_masked,
@@ -1166,6 +1252,97 @@ mod tests {
         total_armies(&mut obs);
         let slate = slate_for(&obs, &[move_action(4, 4, 2)]);
         assert!(slate.iter().all(|c| c.masked.is_none()));
+    }
+
+    /// A slate of `n` candidates, the first `masked` of them filtered out.
+    fn slate_of(scores: &[Score], masked: &[usize]) -> (Slate, Vec<Score>) {
+        let mut slate = Slate::empty();
+        for (rank, _) in scores.iter().enumerate() {
+            let mut candidate = NOTHING;
+            candidate.logit = -(rank as f32);
+            candidate.masked = masked.contains(&rank).then_some(Mask::Refuted);
+            slate.push(candidate);
+        }
+        let mut padded = scores.to_vec();
+        padded.resize(TOP_K, Score::Skipped);
+        (slate, padded)
+    }
+
+    /// The threshold's whole job: a rival that wins by less than one bin of
+    /// the value head does not take the turn off the policy, and one that
+    /// wins by more does.
+    #[test]
+    fn a_rival_needs_a_whole_bin_to_take_the_turn() {
+        let under = RERANK_MIN_GAP * 0.9;
+        let (slate, scored) = slate_of(&[Score::Value(0.0), Score::Value(under)], &[]);
+        assert_eq!(live_pick(&slate, &scored), Some(0), "a sub-bin gap is a tie");
+        assert_eq!(best_survivor(&slate, &scored), Some(1), "and it is still measured");
+
+        let (slate, scored) =
+            slate_of(&[Score::Value(0.0), Score::Value(RERANK_MIN_GAP)], &[]);
+        assert_eq!(live_pick(&slate, &scored), Some(1), "exactly one bin clears");
+
+        // A rival that is merely worse never had a claim either way.
+        let (slate, scored) = slate_of(&[Score::Value(0.0), Score::Value(-0.5)], &[]);
+        assert_eq!(live_pick(&slate, &scored), Some(0));
+    }
+
+    /// The gap is measured against the argmax, not against the runner-up: two
+    /// rivals that each edge past the one below them do not add up to a claim
+    /// on the turn.
+    #[test]
+    fn the_gap_is_measured_against_the_policys_own_move() {
+        let step = RERANK_MIN_GAP * 0.6;
+        let (slate, scored) =
+            slate_of(&[Score::Value(0.0), Score::Value(step), Score::Value(2.0 * step)], &[]);
+        // The best rival is 1.2 bins clear of the argmax, so it takes the turn.
+        assert_eq!(live_pick(&slate, &scored), Some(2));
+
+        // Halve the steps and the same shape no longer clears.
+        let (slate, scored) = slate_of(
+            &[Score::Value(0.0), Score::Value(step / 2.0), Score::Value(step)],
+            &[],
+        );
+        assert_eq!(live_pick(&slate, &scored), Some(0));
+    }
+
+    /// A capture is not a marginal preference. A candidate that takes their
+    /// general inside the model has no value to compare and needs none.
+    #[test]
+    fn a_winning_candidate_ignores_the_threshold() {
+        let (slate, scored) = slate_of(&[Score::Value(0.99), Score::Wins], &[]);
+        assert_eq!(live_pick(&slate, &scored), Some(1));
+    }
+
+    /// A masked argmax promotes the next survivor to default, and the
+    /// threshold protects *that* — it is still the policy's highest-ranked
+    /// allowed move, and overruling it on a sub-bin difference would be the
+    /// same mistake the threshold exists to prevent.
+    #[test]
+    fn a_masked_argmax_promotes_the_next_survivor_to_default() {
+        let under = RERANK_MIN_GAP * 0.1;
+        let (slate, scored) =
+            slate_of(&[Score::Value(0.5), Score::Value(0.0), Score::Value(under)], &[0]);
+        assert_eq!(live_pick(&slate, &scored), Some(1), "the mask removed rank 0 outright");
+
+        // The removed argmax's own value never re-enters the comparison, high
+        // as it is: a filtered candidate is not played.
+        let (slate, scored) =
+            slate_of(&[Score::Value(0.5), Score::Value(0.0), Score::Value(RERANK_MIN_GAP)], &[0]);
+        assert_eq!(live_pick(&slate, &scored), Some(2), "measured from the new default");
+
+        // And with every candidate filtered the layer has no opinion at all.
+        let (slate, scored) = slate_of(&[Score::Value(0.0), Score::Value(9.0)], &[0, 1]);
+        assert_eq!(live_pick(&slate, &scored), None);
+    }
+
+    /// Without a baseline there is no gap, so the cutoff keeps the default
+    /// rather than guessing that an unevaluated position was worse.
+    #[test]
+    fn an_unevaluated_baseline_never_gets_overruled() {
+        let (slate, scored) = slate_of(&[Score::Skipped, Score::Value(9.0)], &[]);
+        assert_eq!(live_pick(&slate, &scored), Some(0));
+        assert_eq!(best_survivor(&slate, &scored), Some(1), "the preference is still recorded");
     }
 
     /// A win beats every number, a number beats an evaluation that never
