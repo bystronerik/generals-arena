@@ -1,0 +1,1072 @@
+{
+  "forward_ms": 23.01,
+  "arms": {
+    "baseline": {
+      "directory": "data/morpheus/morpheus-rs/joe-net-n0/baseline/n8-s16-b4-d8",
+      "config": {
+        "n_particles": 8,
+        "target_simulations": 16,
+        "pending_leaf_batch": 4,
+        "search_depth": 8
+      },
+      "extra": {},
+      "host": {
+        "platform": "macOS-26.5.2-arm64-arm-64bit",
+        "machine": "arm64",
+        "cpu": "Apple M3 Pro"
+      },
+      "measured_at": "2026-08-15T18:07:21+00:00",
+      "games": 20,
+      "normal_turns": 9577,
+      "move_ms": {
+        "n": 9577,
+        "p50": 102.0,
+        "p99": 134.0,
+        "max": 154.0,
+        "mean": 103.3858
+      },
+      "completed_simulations": {
+        "n": 9577,
+        "p50": 16.0,
+        "p99": 16.0,
+        "max": 16.0,
+        "mean": 15.8398
+      },
+      "completed_simulations_hist": {
+        "4": 2,
+        "8": 31,
+        "12": 310,
+        "13": 4,
+        "14": 3,
+        "15": 4,
+        "16": 9223
+      },
+      "tree_size": {
+        "n": 9577,
+        "p50": 14.0,
+        "p99": 113.0,
+        "max": 274.0,
+        "mean": 17.933
+      },
+      "fallback_level": {
+        "policy": 4931,
+        "average": 4646
+      },
+      "forward_equivalents": {
+        "n": 9577,
+        "p50": 23.0,
+        "p99": 30.0,
+        "max": 33.0,
+        "mean": 23.5034
+      },
+      "forward_by_consumer_mean": {
+        "belief_proposal": 0.0,
+        "root": 1.0,
+        "enemy_prior": 6.659,
+        "leaf_batch": 15.844
+      },
+      "forward_by_consumer_total": {
+        "belief_proposal": 0,
+        "root": 9577,
+        "enemy_prior": 63778,
+        "leaf_batch": 151737
+      },
+      "per_turn_p99_ms": {
+        "backup": 2.6218,
+        "belief_proposal": 0.5427,
+        "enemy_prior_batch": 59.9485,
+        "hashing": 0.0001,
+        "leaf_batch": 71.8222,
+        "particle_transitions": 28.9222,
+        "reply": 0.0,
+        "root_inference": 4.9905,
+        "selection": 4.0676
+      },
+      "per_call_p99_ms": {
+        "backup": 0.1939,
+        "belief_proposal": 0.5427,
+        "enemy_prior_batch": 12.6643,
+        "hashing": 0.0001,
+        "leaf_batch": 18.6788,
+        "particle_transitions": 28.9222,
+        "reply": 0.0,
+        "root_inference": 4.9905,
+        "selection": 0.1501
+      },
+      "per_call_quantiles_ms": {
+        "backup": {
+          "p10": 0.0354,
+          "p50": 0.0566,
+          "p90": 0.0952,
+          "p99": 0.1939
+        },
+        "belief_proposal": {
+          "p10": 0.37,
+          "p50": 0.4183,
+          "p90": 0.4722,
+          "p99": 0.5427
+        },
+        "enemy_prior_batch": {
+          "p10": 4.7212,
+          "p50": 6.6757,
+          "p90": 9.4479,
+          "p99": 12.6643
+        },
+        "hashing": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0001
+        },
+        "leaf_batch": {
+          "p10": 16.1488,
+          "p50": 16.3294,
+          "p90": 16.8894,
+          "p99": 18.6788
+        },
+        "particle_transitions": {
+          "p10": 0.0277,
+          "p50": 0.0586,
+          "p90": 6.5518,
+          "p99": 28.9222
+        },
+        "reply": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "root_inference": {
+          "p10": 4.2002,
+          "p50": 4.3102,
+          "p90": 4.5041,
+          "p99": 4.9905
+        },
+        "selection": {
+          "p10": 0.0916,
+          "p50": 0.107,
+          "p90": 0.1218,
+          "p99": 0.1501
+        }
+      },
+      "calls_mean": {
+        "backup": 15.84,
+        "belief_proposal": 1.0,
+        "enemy_prior_batch": 4.083,
+        "hashing": 1.0,
+        "leaf_batch": 3.961,
+        "particle_transitions": 1.0,
+        "reply": 1.0,
+        "root_inference": 1.0,
+        "selection": 25.253
+      }
+    },
+    "p99-b4": {
+      "directory": "data/morpheus/morpheus-rs/joe-net-n0/spike/n8-s16-b4-d8",
+      "config": {
+        "n_particles": 8,
+        "target_simulations": 16,
+        "pending_leaf_batch": 4,
+        "search_depth": 8
+      },
+      "extra": {
+        "fixed_forecasts_ms": {
+          "backup": 0.1939,
+          "belief_proposal": 0.5427,
+          "enemy_prior_batch": 0.0,
+          "hashing": 0.0001,
+          "leaf_batch": 92.04,
+          "particle_transitions": 28.9222,
+          "reply": 0.0,
+          "root_inference": 23.01,
+          "selection": 0.1501,
+          "belief_tensor": 0.0
+        },
+        "charge_fixed_forecasts": true,
+        "pending_leaf_batch": 4
+      },
+      "host": {
+        "platform": "macOS-26.5.2-arm64-arm-64bit",
+        "machine": "arm64",
+        "cpu": "Apple M3 Pro"
+      },
+      "measured_at": "2026-08-15T18:10:34+00:00",
+      "games": 20,
+      "normal_turns": 8166,
+      "move_ms": {
+        "n": 8166,
+        "p50": 52.0,
+        "p99": 52.0,
+        "max": 52.0,
+        "mean": 52.0
+      },
+      "completed_simulations": {
+        "n": 8166,
+        "p50": 0.0,
+        "p99": 0.0,
+        "max": 0.0,
+        "mean": 0.0
+      },
+      "completed_simulations_hist": {
+        "0": 8166
+      },
+      "tree_size": {
+        "n": 8166,
+        "p50": 1.0,
+        "p99": 1.0,
+        "max": 8.0,
+        "mean": 1.04
+      },
+      "fallback_level": {
+        "policy": 8166
+      },
+      "forward_equivalents": {
+        "n": 8166,
+        "p50": 1.0,
+        "p99": 1.0,
+        "max": 1.0,
+        "mean": 1.0
+      },
+      "forward_by_consumer_mean": {
+        "belief_proposal": 0.0,
+        "root": 1.0,
+        "enemy_prior": 0.0,
+        "leaf_batch": 0.0
+      },
+      "forward_by_consumer_total": {
+        "belief_proposal": 0,
+        "root": 8166,
+        "enemy_prior": 0,
+        "leaf_batch": 0
+      },
+      "per_turn_p99_ms": {
+        "belief_proposal": 0.5427,
+        "hashing": 0.0001,
+        "particle_transitions": 28.9222,
+        "root_inference": 23.01
+      },
+      "per_call_p99_ms": {
+        "belief_proposal": 0.5427,
+        "hashing": 0.0001,
+        "particle_transitions": 28.9222,
+        "reply": 0.0,
+        "root_inference": 23.01
+      },
+      "per_call_quantiles_ms": {
+        "belief_proposal": {
+          "p10": 0.5427,
+          "p50": 0.5427,
+          "p90": 0.5427,
+          "p99": 0.5427
+        },
+        "hashing": {
+          "p10": 0.0001,
+          "p50": 0.0001,
+          "p90": 0.0001,
+          "p99": 0.0001
+        },
+        "particle_transitions": {
+          "p10": 28.9222,
+          "p50": 28.9222,
+          "p90": 28.9222,
+          "p99": 28.9222
+        },
+        "reply": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "root_inference": {
+          "p10": 23.01,
+          "p50": 23.01,
+          "p90": 23.01,
+          "p99": 23.01
+        }
+      },
+      "calls_mean": {
+        "belief_proposal": 1.0,
+        "hashing": 1.0,
+        "particle_transitions": 1.0,
+        "reply": 1.0,
+        "root_inference": 1.0
+      }
+    },
+    "p99-b1": {
+      "directory": "data/morpheus/morpheus-rs/joe-net-n0/spike/n8-s16-b1-d8",
+      "config": {
+        "n_particles": 8,
+        "target_simulations": 16,
+        "pending_leaf_batch": 1,
+        "search_depth": 8
+      },
+      "extra": {
+        "fixed_forecasts_ms": {
+          "backup": 0.1939,
+          "belief_proposal": 0.5427,
+          "enemy_prior_batch": 0.0,
+          "hashing": 0.0001,
+          "leaf_batch": 23.01,
+          "particle_transitions": 28.9222,
+          "reply": 0.0,
+          "root_inference": 23.01,
+          "selection": 0.1501,
+          "belief_tensor": 0.0
+        },
+        "charge_fixed_forecasts": true,
+        "pending_leaf_batch": 1
+      },
+      "host": {
+        "platform": "macOS-26.5.2-arm64-arm-64bit",
+        "machine": "arm64",
+        "cpu": "Apple M3 Pro"
+      },
+      "measured_at": "2026-08-15T18:16:37+00:00",
+      "games": 20,
+      "normal_turns": 9590,
+      "move_ms": {
+        "n": 9590,
+        "p50": 123.0,
+        "p99": 123.0,
+        "max": 125.0,
+        "mean": 123.0035
+      },
+      "completed_simulations": {
+        "n": 9590,
+        "p50": 3.0,
+        "p99": 3.0,
+        "max": 3.0,
+        "mean": 3.0
+      },
+      "completed_simulations_hist": {
+        "3": 9590
+      },
+      "tree_size": {
+        "n": 9590,
+        "p50": 4.0,
+        "p99": 26.0,
+        "max": 62.0,
+        "mean": 4.7923
+      },
+      "fallback_level": {
+        "average": 5201,
+        "policy": 4389
+      },
+      "forward_equivalents": {
+        "n": 9590,
+        "p50": 6.0,
+        "p99": 9.0,
+        "max": 19.0,
+        "mean": 6.5098
+      },
+      "forward_by_consumer_mean": {
+        "belief_proposal": 0.0,
+        "root": 1.0,
+        "enemy_prior": 2.51,
+        "leaf_batch": 3.0
+      },
+      "forward_by_consumer_total": {
+        "belief_proposal": 0,
+        "root": 9590,
+        "enemy_prior": 24069,
+        "leaf_batch": 28770
+      },
+      "per_turn_p99_ms": {
+        "backup": 0.5817,
+        "belief_proposal": 0.5427,
+        "hashing": 0.0001,
+        "leaf_batch": 69.03,
+        "particle_transitions": 28.9222,
+        "root_inference": 23.01,
+        "selection": 1.2008
+      },
+      "per_call_p99_ms": {
+        "backup": 0.1939,
+        "belief_proposal": 0.5427,
+        "enemy_prior_batch": 0.0,
+        "hashing": 0.0001,
+        "leaf_batch": 23.01,
+        "particle_transitions": 28.9222,
+        "reply": 0.0,
+        "root_inference": 23.01,
+        "selection": 0.1501
+      },
+      "per_call_quantiles_ms": {
+        "backup": {
+          "p10": 0.1939,
+          "p50": 0.1939,
+          "p90": 0.1939,
+          "p99": 0.1939
+        },
+        "belief_proposal": {
+          "p10": 0.5427,
+          "p50": 0.5427,
+          "p90": 0.5427,
+          "p99": 0.5427
+        },
+        "enemy_prior_batch": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "hashing": {
+          "p10": 0.0001,
+          "p50": 0.0001,
+          "p90": 0.0001,
+          "p99": 0.0001
+        },
+        "leaf_batch": {
+          "p10": 23.01,
+          "p50": 23.01,
+          "p90": 23.01,
+          "p99": 23.01
+        },
+        "particle_transitions": {
+          "p10": 28.9222,
+          "p50": 28.9222,
+          "p90": 28.9222,
+          "p99": 28.9222
+        },
+        "reply": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "root_inference": {
+          "p10": 23.01,
+          "p50": 23.01,
+          "p90": 23.01,
+          "p99": 23.01
+        },
+        "selection": {
+          "p10": 0.1501,
+          "p50": 0.1501,
+          "p90": 0.1501,
+          "p99": 0.1501
+        }
+      },
+      "calls_mean": {
+        "backup": 3.0,
+        "belief_proposal": 1.0,
+        "enemy_prior_batch": 2.513,
+        "hashing": 1.0,
+        "leaf_batch": 3.0,
+        "particle_transitions": 1.0,
+        "reply": 1.0,
+        "root_inference": 1.0,
+        "selection": 5.51
+      }
+    },
+    "p50-b4": {
+      "directory": "data/morpheus/morpheus-rs/joe-net-n0/spike-p50/n8-s16-b4-d8",
+      "config": {
+        "n_particles": 8,
+        "target_simulations": 16,
+        "pending_leaf_batch": 4,
+        "search_depth": 8
+      },
+      "extra": {
+        "fixed_forecasts_ms": {
+          "backup": 0.0566,
+          "belief_proposal": 0.4183,
+          "enemy_prior_batch": 0.0,
+          "hashing": 0.0,
+          "leaf_batch": 92.04,
+          "particle_transitions": 0.0586,
+          "reply": 0.0,
+          "root_inference": 23.01,
+          "selection": 0.107,
+          "belief_tensor": 0.0
+        },
+        "charge_fixed_forecasts": true,
+        "pending_leaf_batch": 4
+      },
+      "host": {
+        "platform": "macOS-26.5.2-arm64-arm-64bit",
+        "machine": "arm64",
+        "cpu": "Apple M3 Pro"
+      },
+      "measured_at": "2026-08-15T18:34:33+00:00",
+      "games": 20,
+      "normal_turns": 10197,
+      "move_ms": {
+        "n": 10197,
+        "p50": 117.0,
+        "p99": 117.0,
+        "max": 117.0,
+        "mean": 116.9987
+      },
+      "completed_simulations": {
+        "n": 10197,
+        "p50": 4.0,
+        "p99": 4.0,
+        "max": 4.0,
+        "mean": 4.0
+      },
+      "completed_simulations_hist": {
+        "4": 10197
+      },
+      "tree_size": {
+        "n": 10197,
+        "p50": 3.0,
+        "p99": 13.0,
+        "max": 30.0,
+        "mean": 3.5892
+      },
+      "fallback_level": {
+        "average": 5297,
+        "policy": 4900
+      },
+      "forward_equivalents": {
+        "n": 10197,
+        "p50": 7.0,
+        "p99": 9.0,
+        "max": 16.0,
+        "mean": 7.1937
+      },
+      "forward_by_consumer_mean": {
+        "belief_proposal": 0.0,
+        "root": 1.0,
+        "enemy_prior": 2.194,
+        "leaf_batch": 4.0
+      },
+      "forward_by_consumer_total": {
+        "belief_proposal": 0,
+        "root": 10197,
+        "enemy_prior": 22369,
+        "leaf_batch": 40788
+      },
+      "per_turn_p99_ms": {
+        "backup": 0.2264,
+        "belief_proposal": 0.4183,
+        "leaf_batch": 92.04,
+        "particle_transitions": 0.0586,
+        "root_inference": 23.01,
+        "selection": 0.856
+      },
+      "per_call_p99_ms": {
+        "backup": 0.0566,
+        "belief_proposal": 0.4183,
+        "enemy_prior_batch": 0.0,
+        "hashing": 0.0,
+        "leaf_batch": 92.04,
+        "particle_transitions": 0.0586,
+        "reply": 0.0,
+        "root_inference": 23.01,
+        "selection": 0.107
+      },
+      "per_call_quantiles_ms": {
+        "backup": {
+          "p10": 0.0566,
+          "p50": 0.0566,
+          "p90": 0.0566,
+          "p99": 0.0566
+        },
+        "belief_proposal": {
+          "p10": 0.4183,
+          "p50": 0.4183,
+          "p90": 0.4183,
+          "p99": 0.4183
+        },
+        "enemy_prior_batch": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "hashing": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "leaf_batch": {
+          "p10": 92.04,
+          "p50": 92.04,
+          "p90": 92.04,
+          "p99": 92.04
+        },
+        "particle_transitions": {
+          "p10": 0.0586,
+          "p50": 0.0586,
+          "p90": 0.0586,
+          "p99": 0.0586
+        },
+        "reply": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "root_inference": {
+          "p10": 23.01,
+          "p50": 23.01,
+          "p90": 23.01,
+          "p99": 23.01
+        },
+        "selection": {
+          "p10": 0.107,
+          "p50": 0.107,
+          "p90": 0.107,
+          "p99": 0.107
+        }
+      },
+      "calls_mean": {
+        "backup": 4.0,
+        "belief_proposal": 1.0,
+        "enemy_prior_batch": 1.015,
+        "hashing": 1.0,
+        "leaf_batch": 1.0,
+        "particle_transitions": 1.0,
+        "reply": 1.0,
+        "root_inference": 1.0,
+        "selection": 8.01
+      }
+    },
+    "p50-b1": {
+      "directory": "data/morpheus/morpheus-rs/joe-net-n0/spike-p50/n8-s16-b1-d8",
+      "config": {
+        "n_particles": 8,
+        "target_simulations": 16,
+        "pending_leaf_batch": 1,
+        "search_depth": 8
+      },
+      "extra": {
+        "fixed_forecasts_ms": {
+          "backup": 0.0566,
+          "belief_proposal": 0.4183,
+          "enemy_prior_batch": 0.0,
+          "hashing": 0.0,
+          "leaf_batch": 23.01,
+          "particle_transitions": 0.0586,
+          "reply": 0.0,
+          "root_inference": 23.01,
+          "selection": 0.107,
+          "belief_tensor": 0.0
+        },
+        "charge_fixed_forecasts": true,
+        "pending_leaf_batch": 1
+      },
+      "host": {
+        "platform": "macOS-26.5.2-arm64-arm-64bit",
+        "machine": "arm64",
+        "cpu": "Apple M3 Pro"
+      },
+      "measured_at": "2026-08-15T18:27:45+00:00",
+      "games": 20,
+      "normal_turns": 9770,
+      "move_ms": {
+        "n": 9770,
+        "p50": 140.0,
+        "p99": 140.0,
+        "max": 140.0,
+        "mean": 139.3379
+      },
+      "completed_simulations": {
+        "n": 9770,
+        "p50": 5.0,
+        "p99": 5.0,
+        "max": 5.0,
+        "mean": 4.973
+      },
+      "completed_simulations_hist": {
+        "4": 264,
+        "5": 9506
+      },
+      "tree_size": {
+        "n": 9770,
+        "p50": 6.0,
+        "p99": 36.0,
+        "max": 91.0,
+        "mean": 7.2869
+      },
+      "fallback_level": {
+        "average": 5241,
+        "policy": 4529
+      },
+      "forward_equivalents": {
+        "n": 9770,
+        "p50": 9.0,
+        "p99": 13.0,
+        "max": 22.0,
+        "mean": 9.495
+      },
+      "forward_by_consumer_mean": {
+        "belief_proposal": 0.0,
+        "root": 1.0,
+        "enemy_prior": 3.522,
+        "leaf_batch": 4.973
+      },
+      "forward_by_consumer_total": {
+        "belief_proposal": 0,
+        "root": 9770,
+        "enemy_prior": 34410,
+        "leaf_batch": 48586
+      },
+      "per_turn_p99_ms": {
+        "backup": 0.283,
+        "belief_proposal": 0.4183,
+        "leaf_batch": 115.05,
+        "particle_transitions": 0.0586,
+        "root_inference": 23.01,
+        "selection": 1.284
+      },
+      "per_call_p99_ms": {
+        "backup": 0.0566,
+        "belief_proposal": 0.4183,
+        "enemy_prior_batch": 0.0,
+        "hashing": 0.0,
+        "leaf_batch": 23.01,
+        "particle_transitions": 0.0586,
+        "reply": 0.0,
+        "root_inference": 23.01,
+        "selection": 0.107
+      },
+      "per_call_quantiles_ms": {
+        "backup": {
+          "p10": 0.0566,
+          "p50": 0.0566,
+          "p90": 0.0566,
+          "p99": 0.0566
+        },
+        "belief_proposal": {
+          "p10": 0.4183,
+          "p50": 0.4183,
+          "p90": 0.4183,
+          "p99": 0.4183
+        },
+        "enemy_prior_batch": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "hashing": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "leaf_batch": {
+          "p10": 23.01,
+          "p50": 23.01,
+          "p90": 23.01,
+          "p99": 23.01
+        },
+        "particle_transitions": {
+          "p10": 0.0586,
+          "p50": 0.0586,
+          "p90": 0.0586,
+          "p99": 0.0586
+        },
+        "reply": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "root_inference": {
+          "p10": 23.01,
+          "p50": 23.01,
+          "p90": 23.01,
+          "p99": 23.01
+        },
+        "selection": {
+          "p10": 0.107,
+          "p50": 0.107,
+          "p90": 0.107,
+          "p99": 0.107
+        }
+      },
+      "calls_mean": {
+        "backup": 4.973,
+        "belief_proposal": 1.0,
+        "enemy_prior_batch": 3.524,
+        "hashing": 1.0,
+        "leaf_batch": 4.973,
+        "particle_transitions": 1.0,
+        "reply": 1.0,
+        "root_inference": 1.0,
+        "selection": 8.518
+      }
+    },
+    "p50-b1-F50": {
+      "directory": "data/morpheus/morpheus-rs/joe-net-n0/spike-p50-f50/n8-s16-b1-d8",
+      "config": {
+        "n_particles": 8,
+        "target_simulations": 16,
+        "pending_leaf_batch": 1,
+        "search_depth": 8
+      },
+      "extra": {
+        "fixed_forecasts_ms": {
+          "backup": 0.0566,
+          "belief_proposal": 0.4183,
+          "enemy_prior_batch": 0.0,
+          "hashing": 0.0,
+          "leaf_batch": 20.81,
+          "particle_transitions": 0.0586,
+          "reply": 0.0,
+          "root_inference": 20.81,
+          "selection": 0.107,
+          "belief_tensor": 0.0
+        },
+        "charge_fixed_forecasts": true,
+        "pending_leaf_batch": 1
+      },
+      "host": {
+        "platform": "macOS-26.5.2-arm64-arm-64bit",
+        "machine": "arm64",
+        "cpu": "Apple M3 Pro"
+      },
+      "measured_at": "2026-08-15T18:43:51+00:00",
+      "games": 20,
+      "normal_turns": 10854,
+      "move_ms": {
+        "n": 10854,
+        "p50": 126.0,
+        "p99": 127.0,
+        "max": 128.0,
+        "mean": 126.4683
+      },
+      "completed_simulations": {
+        "n": 10854,
+        "p50": 5.0,
+        "p99": 5.0,
+        "max": 5.0,
+        "mean": 5.0
+      },
+      "completed_simulations_hist": {
+        "5": 10854
+      },
+      "tree_size": {
+        "n": 10854,
+        "p50": 6.0,
+        "p99": 36.0,
+        "max": 81.0,
+        "mean": 7.2086
+      },
+      "fallback_level": {
+        "average": 5826,
+        "policy": 5028
+      },
+      "forward_equivalents": {
+        "n": 10854,
+        "p50": 9.0,
+        "p99": 14.0,
+        "max": 26.0,
+        "mean": 9.546
+      },
+      "forward_by_consumer_mean": {
+        "belief_proposal": 0.0,
+        "root": 1.0,
+        "enemy_prior": 3.546,
+        "leaf_batch": 5.0
+      },
+      "forward_by_consumer_total": {
+        "belief_proposal": 0,
+        "root": 10854,
+        "enemy_prior": 38488,
+        "leaf_batch": 54270
+      },
+      "per_turn_p99_ms": {
+        "backup": 0.283,
+        "belief_proposal": 0.4183,
+        "leaf_batch": 104.05,
+        "particle_transitions": 0.0586,
+        "root_inference": 20.81,
+        "selection": 1.391
+      },
+      "per_call_p99_ms": {
+        "backup": 0.0566,
+        "belief_proposal": 0.4183,
+        "enemy_prior_batch": 0.0,
+        "hashing": 0.0,
+        "leaf_batch": 20.81,
+        "particle_transitions": 0.0586,
+        "reply": 0.0,
+        "root_inference": 20.81,
+        "selection": 0.107
+      },
+      "per_call_quantiles_ms": {
+        "backup": {
+          "p10": 0.0566,
+          "p50": 0.0566,
+          "p90": 0.0566,
+          "p99": 0.0566
+        },
+        "belief_proposal": {
+          "p10": 0.4183,
+          "p50": 0.4183,
+          "p90": 0.4183,
+          "p99": 0.4183
+        },
+        "enemy_prior_batch": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "hashing": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "leaf_batch": {
+          "p10": 20.81,
+          "p50": 20.81,
+          "p90": 20.81,
+          "p99": 20.81
+        },
+        "particle_transitions": {
+          "p10": 0.0586,
+          "p50": 0.0586,
+          "p90": 0.0586,
+          "p99": 0.0586
+        },
+        "reply": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0
+        },
+        "root_inference": {
+          "p10": 20.81,
+          "p50": 20.81,
+          "p90": 20.81,
+          "p99": 20.81
+        },
+        "selection": {
+          "p10": 0.107,
+          "p50": 0.107,
+          "p90": 0.107,
+          "p99": 0.107
+        }
+      },
+      "calls_mean": {
+        "backup": 5.0,
+        "belief_proposal": 1.0,
+        "enemy_prior_batch": 3.548,
+        "hashing": 1.0,
+        "leaf_batch": 5.0,
+        "particle_transitions": 1.0,
+        "reply": 1.0,
+        "root_inference": 1.0,
+        "selection": 8.546
+      }
+    }
+  },
+  "projection": {
+    "batch1-p50": {
+      "usable_ms": 140.0,
+      "spend_quantile": "p50",
+      "non_network_ms": 0.477,
+      "left_for_inference_ms": 139.523,
+      "forward_ms": 23.01,
+      "after_root_ms": 116.513,
+      "per_sim_spend_ms": 23.2372,
+      "batch_gate_ms": 23.1601,
+      "pending_leaf_batch": 1,
+      "projected_simulations": 5
+    },
+    "batch1-p90": {
+      "usable_ms": 140.0,
+      "spend_quantile": "p90",
+      "non_network_ms": 7.024,
+      "left_for_inference_ms": 132.976,
+      "forward_ms": 23.01,
+      "after_root_ms": 109.966,
+      "per_sim_spend_ms": 23.2994,
+      "batch_gate_ms": 23.1601,
+      "pending_leaf_batch": 1,
+      "projected_simulations": 4
+    },
+    "batch1-p99": {
+      "usable_ms": 140.0,
+      "spend_quantile": "p99",
+      "non_network_ms": 29.465,
+      "left_for_inference_ms": 110.535,
+      "forward_ms": 23.01,
+      "after_root_ms": 87.525,
+      "per_sim_spend_ms": 23.4432,
+      "batch_gate_ms": 23.1601,
+      "pending_leaf_batch": 1,
+      "projected_simulations": 3
+    },
+    "batch2-p50": {
+      "usable_ms": 140.0,
+      "spend_quantile": "p50",
+      "non_network_ms": 0.477,
+      "left_for_inference_ms": 139.523,
+      "forward_ms": 23.01,
+      "after_root_ms": 116.513,
+      "per_sim_spend_ms": 23.2372,
+      "batch_gate_ms": 46.1701,
+      "pending_leaf_batch": 2,
+      "projected_simulations": 4
+    },
+    "batch2-p90": {
+      "usable_ms": 140.0,
+      "spend_quantile": "p90",
+      "non_network_ms": 7.024,
+      "left_for_inference_ms": 132.976,
+      "forward_ms": 23.01,
+      "after_root_ms": 109.966,
+      "per_sim_spend_ms": 23.2994,
+      "batch_gate_ms": 46.1701,
+      "pending_leaf_batch": 2,
+      "projected_simulations": 4
+    },
+    "batch2-p99": {
+      "usable_ms": 140.0,
+      "spend_quantile": "p99",
+      "non_network_ms": 29.465,
+      "left_for_inference_ms": 110.535,
+      "forward_ms": 23.01,
+      "after_root_ms": 87.525,
+      "per_sim_spend_ms": 23.4432,
+      "batch_gate_ms": 46.1701,
+      "pending_leaf_batch": 2,
+      "projected_simulations": 2
+    },
+    "batch4-p50": {
+      "usable_ms": 140.0,
+      "spend_quantile": "p50",
+      "non_network_ms": 0.477,
+      "left_for_inference_ms": 139.523,
+      "forward_ms": 23.01,
+      "after_root_ms": 116.513,
+      "per_sim_spend_ms": 23.2372,
+      "batch_gate_ms": 92.1901,
+      "pending_leaf_batch": 4,
+      "projected_simulations": 4
+    },
+    "batch4-p90": {
+      "usable_ms": 140.0,
+      "spend_quantile": "p90",
+      "non_network_ms": 7.024,
+      "left_for_inference_ms": 132.976,
+      "forward_ms": 23.01,
+      "after_root_ms": 109.966,
+      "per_sim_spend_ms": 23.2994,
+      "batch_gate_ms": 92.1901,
+      "pending_leaf_batch": 4,
+      "projected_simulations": 4
+    },
+    "batch4-p99": {
+      "usable_ms": 140.0,
+      "spend_quantile": "p99",
+      "non_network_ms": 29.465,
+      "left_for_inference_ms": 110.535,
+      "forward_ms": 23.01,
+      "after_root_ms": 87.525,
+      "per_sim_spend_ms": 23.4432,
+      "batch_gate_ms": 92.1901,
+      "pending_leaf_batch": 4,
+      "projected_simulations": 0
+    }
+  }
+}

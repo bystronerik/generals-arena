@@ -1,7 +1,16 @@
 # Joe-net port plan
 
-Status: **plan only, written 2026-08-16. No code written. Nothing is
-implemented and no phase gate has run.**
+Status: **written 2026-08-16. N0 has run and passed on its middle row; nothing
+is ported.** The `bots/morpheus-joe/` fork does not exist and N1 has not
+started.
+
+N0's results are in [joe-net-n0.md](../../research/measurements/joe-net-n0.md)
+and they revise this document in six places. Each is marked **N0** where it
+appears below; the summary is §1.9. The short version: the forward is 98% of
+joe's move, `augment_obs` is fifty times cheaper than §5 assumed, `reserve_ms`
+is inert so the turn is 140 ms rather than 130, and the completed-simulation
+count is 5 on an ordinary turn and 3 on a belief-recovery turn — K0's `4 – 7`
+band, not its stop row.
 
 Goal: run **joe's frozen network** — forward pass and weights, unretrained —
 under **morpheus's search stack** (MCTS, particle belief filter, tactics
@@ -168,6 +177,13 @@ most important unknown in this plan**, because it decides both §5 (how many
 simulations survive) and §4 (whether history can be advanced per node). N0
 measures it first.
 
+**N0 measured it** ([joe-net-n0.md](../../research/measurements/joe-net-n0.md)
+§1). On one x86 core the forward is **20.81 ms p50 / 23.01 ms p99** and it is
+**98.2% of the move**. The whole observation pipeline — parse, raw, cost,
+`augment_obs`, normalize — is 0.067 ms. `augment_obs` alone is **0.042 ms**.
+The per-turn `eprintln!` of the free eval costs 0.274 ms, four times what
+`augment_obs` costs and more than every other non-forward stage together.
+
 ### 1.8 The value head's semantics, read out of `training/joe/`
 
 This was Q4, and it is now answered from source rather than assumed.
@@ -204,7 +220,8 @@ HL-Gauss smearing uses `hl_sigma = 0.04` against a bin spacing of 2/127 ≈
 0.0157 (`train/ppo.py:93-106`) — a ~5-bin smear, which is why the argmax bin is
 not the value and the dot product is mandatory.
 
-**Three caveats that make §7.4 concrete rather than speculative:**
+**Three caveats that make §7.4 concrete rather than speculative** (all three
+survive N0 untouched — N0 priced the budget, not the value):
 
 1. **It is a PPO critic, not a search value.** `train/ppo.py:40-61` computes
    GAE with `gae_lambda = 0.9`, so the target is a bootstrapped λ-return —
@@ -220,6 +237,25 @@ not the value and the dot product is mandatory.
    1200. Concrete prediction: **value calibration should be measurably worse
    near truncation**, and §7.4's calibration probe should bucket by turn to
    see it.
+
+### 1.9 What N0 changed, in one place
+
+Measured 2026-08-16;
+[joe-net-n0.md](../../research/measurements/joe-net-n0.md) carries the numbers
+and the method. Six revisions, listed here so no section below has to be read
+against a stale premise.
+
+| # | this plan said | N0 measured | where it lands |
+| --- | --- | --- | --- |
+| 1 | `augment_obs` ≈ 2 ms, so F ≈ 19 ms | `augment_obs` 0.042 ms, **F 20.81 p50 / 23.01 p99** | §5's budget is tighter, §6.3's fork is decided |
+| 2 | 130 ms usable (`normal_deadline_ms − reserve_ms`) | **140 ms** — `reserve_ms` is inert in both bots | §5.1's table is 10 ms low |
+| 3 | freezing the 14 history planes might be forced | 0.042 ms is far inside the "< 0.5 ms" row | **advance per node**; R3 and R8 retire |
+| 4 | dropping joe's mask build is a saving | 0.007 ms | §6.2 keeps its rationale, loses its saving |
+| 5 | ~4 leaf evaluations, one batch of 4 | batch 4 completes **zero**; batch 1 completes **5** ordinary / **3** on recovery | §5.3's batch change is required, not optional |
+| 6 | enemy priors are one of four forward consumers | they are **28%** of all forwards | §3.4 frees more than implied |
+
+Two knobs are now known to be parsed and never read: `min_simulations` (§1.4)
+and `reserve_ms`. Q9 covers both.
 
 ---
 
@@ -366,8 +402,16 @@ net change is expected to be small and is dwarfed by the forward itself.
 
 ### 5.1 The arithmetic, stated so N0 can refute it
 
-Deployed budget: `normal_deadline_ms 140`, `reserve_ms 10` → **130 ms** of
-usable turn.
+**N0 refuted it in three places; the original is kept below so the refutation
+is legible.** The corrections: the usable turn is **140 ms**, not 130 —
+`reserve_ms` is parsed and never read, in this bot and in the Python one. F is
+**23.01 ms p99**, not 19, because `augment_obs` is 0.042 ms rather than 2 ms.
+And the projected four leaf evaluations are **zero** at the shipped
+`pending_leaf_batch: 4`, because `can_admit` needs the whole batch's 92 ms
+forecast to fit and it does not. §5.4 has the measured replacement.
+
+Deployed budget as this section assumed it: `normal_deadline_ms 140`,
+`reserve_ms 10` → **130 ms** of usable turn.
 
 | line item | p99 ms/turn today | under joe's net |
 | --- | ---: | ---: |
@@ -434,9 +478,10 @@ would play joe's move, arrived at more expensively than joe-rs arrives at it.
 | `offline_p99_ms.root_inference` | 11.86 | measured F |
 | `offline_p99_ms.enemy_prior_batch` | 30.09 | **removed** (§3.4) |
 | `offline_p99_ms.belief_tensor` | 2.80 | **removed** (§3.2) |
-| `target_simulations` | 16 | from N0's measured count |
-| `widen_freeze_below` | 16 | must drop below the achievable count or widening never runs |
-| `pending_leaf_batch` | 4 | 1, unless N4's batching work lands |
+| `target_simulations` | 16 | **8** (N0: 5 is achievable on an ordinary turn; a target the controller cannot reach is not a target) |
+| `widen_freeze_below` | 16 | **2** (N0: at 16 against a forecast of 3–5, widening is frozen on every turn) |
+| `pending_leaf_batch` | 4 | **1 — required, not optional.** N0 measured **zero** completed simulations at 4, on every turn of 8,166: `can_admit` needs the whole 92 ms batch forecast to fit and it never does |
+| `reserve_ms` | 10 | either honored in `deadline_for_turn` or removed; today it is decorative (§1.9) |
 | `max_forward_equivalents` | 113 | ~8 |
 | `use_policy_proposal` | false | **removed** (§3.3) |
 | `network_width` / `trunk_channels` | 64 | **removed** — meaningless for a transformer |
@@ -459,6 +504,12 @@ The binary **already contains** the harness this needs:
 injected per-component costs on a charged virtual clock. Nothing about joe's
 net has to exist to ask what the controller does when a forward costs 19 ms.
 
+**N0 note on reading a charged clock.** It advances by the *forecast*, not by
+what the work costs, so a table of p99s does not model a p99 turn — it models a
+run in which every turn is a p99 turn. `particle_transitions` runs 0.059 ms
+filtered and 28.9 ms recovered, so that distinction is worth two simulations.
+Run the spike at p50 and at p99 and bracket it; one arm asserts, two measure.
+
 N0 is three measurements and one spike, in order:
 
 1. **Split joe's move path.** Add a `--stages` breakdown to joe-rs's existing
@@ -468,7 +519,10 @@ N0 is three measurements and one spike, in order:
    `augment_obs`'s per-call cost.
 2. **Count morpheus-rs's forwards.** `forward_by_consumer`
    (`runtime/metrics.rs:22`, four consumers) is already recorded per turn. Read
-   it off a 20-game run; no code change.
+   it off a 20-game run; no code change. **N0 correction: it is recorded but
+   never written out** — `runtime/telemetry.rs` emitted only the
+   `forward_equivalents` total, so this step needed a trace-line addition
+   after all.
 3. **Project.** `97 / F`, minus the root, minus whatever (1) says
    `augment_obs` costs per node if §4's history is advanced per node.
 4. **Spike, through the real controller.** Expose `fixed_forecasts_ms` from
@@ -544,6 +598,17 @@ that already only affords four simulations.
 | < 0.5 ms | **advance per node**, full history |
 | 0.5 – 1.5 ms | advance per node, but cap network evaluation at depth 2 |
 | > 1.5 ms | **freeze the 14 history planes at the root**; still advance the temporal window (§6.1) and the scalar/turn channels per node |
+
+**N0 measured 0.042 ms — the top row, by an order of magnitude.** The 14
+history planes are advanced per node and nothing is frozen. At depth 8 that is
+nine `AugState`s (403 KB) and nine `augment_obs` calls costing 0.38 ms
+together, against a forward that costs 23 ms; the history is 1.6% of one leaf
+evaluation.
+
+**Everything below in this section is therefore moot** and is kept only because
+it documents a risk that was priced and found not to exist. The off-distribution
+probe is not needed, R3 has no trigger, and R8 — which required both branches to
+close — cannot fire.
 
 **How far off-distribution freezing puts the net.** The frozen stack describes
 turns `[t−7, t]` while the board is at `t+d`. Concretely at depth 3–4: the
@@ -929,7 +994,7 @@ PYTHON=$PWD/.venv/bin/python .venv/bin/python competition-module/competition/mat
 The match must reach a normal end — win, loss, draw, or truncation. Games are
 stored under `data/games/<round>/` before any rating refit.
 
-### N0 — Does the budget exist? *(no port; the kill gate)*
+### N0 — Does the budget exist? *(no port; the kill gate)* — **DONE 2026-08-16**
 
 §5.4 in full: joe-rs `bench --stages` on Modal one-core x86; morpheus-rs's
 `forward_by_consumer` over 20 games; the projection; and the
@@ -942,6 +1007,20 @@ histogram plus degrade-level table from the spike. Matchup gate on `joe-rs`
 forecasts *off* for the gate match.
 
 **Decision:** §11's K0. If p50 simulations < 4, stop here.
+
+**Result: passed on K0's middle row.**
+[joe-net-n0.md](../../research/measurements/joe-net-n0.md). F = 20.81 p50 /
+23.01 p99; `augment_obs` = 0.042 ms; completed simulations **5** on an ordinary
+turn and **3** on a belief-recovery turn at `pending_leaf_batch: 1`, and
+**0** at the shipped batch of 4. Both matchups finished normally. §1.9 lists
+what it revised.
+
+One thing N0 did **not** deliver and N1 inherits: `forward_by_consumer` had to
+be added to the trace before N0.2 could be read at all, so the plan's "no code
+change" for that step was wrong. The additive edits N0 actually made — joe-rs's
+`bench --stages`, morpheus-rs's `forward_by_consumer` line and the
+`fixed_forecasts_ms` / `charge_fixed_forecasts` parse — are the ones §10's
+rollback list names, plus that one.
 
 ### N1 — Fork, artifact, forward pass
 
@@ -1082,7 +1161,7 @@ Rolling back after N6 costs the round's compute and nothing else.
 
 ## 11. Kill criteria
 
-### K0 — after N0, before any porting
+### K0 — after N0, before any porting — **RULED 2026-08-16: middle row**
 
 Read from the spike's completed-simulation histogram.
 
@@ -1095,6 +1174,30 @@ Read from the spike's completed-simulation histogram.
 Rationale: below four simulations the tree is one batch deep over a near-argmax
 prior, and the bot is joe with overhead. The rest of the plan cannot fix that,
 because the net is frozen.
+
+**Measured: 5 on an ordinary turn, 3 on a belief-recovery turn, at
+`pending_leaf_batch: 1`.** The middle row, and it is the middle row by two
+simulations rather than by a comfortable margin. Four conditions attach, and
+none of them is optional:
+
+1. **`pending_leaf_batch: 4` → `1`.** Not a tuning preference. At batch 4 the
+   controller admits **zero** simulations on every turn of 8,166 and the bot
+   plays joe's argmax with a 52 ms overhead. This is the single largest
+   configuration finding of N0.
+2. **`widen_freeze_below: 16` → 2.** At 16 against a forecast of 3–5, widening
+   is frozen on every turn and the root never leaves its initial candidate set.
+3. **§3.4 and §6.2 are counted in already** — the spike zeroed
+   `enemy_prior_batch` and the mask build is 0.007 ms. Neither can be spent
+   twice.
+4. **`prior_temperature` (§7.4) is now load-bearing, not a mitigation.** Five
+   simulations over a near-one-hot prior visits the argmax and perhaps one
+   alternative. R4's tripwire — "who's deciding" below ~5% — is the number to
+   watch at N3, and it is likelier to fire than the plan assumed.
+
+The honest description of the candidate is unchanged from §7.4 and is now
+measured rather than predicted: **joe's move, filtered through morpheus's
+tactics, with a three-to-five-simulation sanity check.** K1 is what decides
+whether that is worth 32 MB.
 
 ### K1 — after N6, the shipping decision
 
@@ -1135,14 +1238,14 @@ second qualification fails, stop.
 | --- | --- | --- | --- |
 | **R1** | The network is blind to the belief (§3.2), so leaves differing only in hidden-state uncertainty evaluate identically. Unfixable without retraining. | — (structural) | Priced by K1. If it is the reason the port loses, the answer is joe-rs, not a workaround. |
 | **R2** | Enemy priors go uniform (§3.4), weakening the enemy tables that the regret-matching in `search/matrix.rs` consumes. | `matrix` surface still green, but strength drops in N6 | None inside a frozen net. Priced by K1. |
-| **R3** | Frozen history (§6.3) puts the net off-distribution at depth, silently. | §6.3's probe: top-1 agreement at d=3 below 95% | Cap network evaluation at depth 2 — which at four simulations costs little. |
-| **R4** | The prior is too sharp for PUCT (§7.4); the search never explores. | "who's deciding" rate below ~5% | `prior_temperature > 1`, qualified at N4. |
+| ~~**R3**~~ | ~~Frozen history (§6.3) puts the net off-distribution at depth, silently.~~ **Retired by N0** — `augment_obs` is 0.042 ms, so history is advanced per node and nothing is frozen. | — | — |
+| **R4** | The prior is too sharp for PUCT (§7.4); the search never explores. **N0 raised this**: the budget is 3–5 simulations, so the search visits the argmax and perhaps one alternative. | "who's deciding" rate below ~5% | `prior_temperature > 1`, qualified at N4. It is now load-bearing rather than a mitigation. |
 | **R5** | ~~Joe's value sign or perspective convention is wrong.~~ **Retired by §1.8** — the value is the observing seat's, undiscounted, sparse-±1, so `backup_value`'s negation is correct as written. Residual risk is a transcription slip only. | N3's sign assertion | Flip and re-gate; cheap. |
 | **R9** | The pass collapse is wrong (§7.1). `max` under-weights an action the training distribution rated highly; `logsumexp` over-weights one the deployed joe never plays. | N3's `P_sum` / `P_max` / greedy-pass-rate experiment | Switch collapse and re-run N3's probes; it is a one-line change and must happen before N4 qualifies a config. |
 | **R10** | The value is a bootstrapped PPO critic under self-play (§1.8), used as an MCTS leaf value under uniform enemy actions. Miscalibration grows with depth and worsens near turn 1200. | N3's turn-bucketed calibration curve materially worse than morpheus's old WDL head | None inside a frozen net. If the curve is bad late, cap network evaluation depth and lean on the tactics layer past turn 800; priced by K1. |
 | **R6** | A joe re-export staleens the fork's weights mid-measurement (§8.7). | the fan-out test goes red | Freeze weights between r1 and r2; treat any sync as voiding both rounds. |
 | **R7** | Someone "improves" a copied joe file and breaks the transitive parity argument (§8.2). | the digest test goes red and names the file | Revert, or land the change in joe-rs and re-sync both downstream bots. |
-| **R8** | `augment_obs` is expensive enough that per-node advance is unaffordable *and* frozen history is too inaccurate — both branches of §6.3 closed. | N0.1 > 1.5 ms **and** R3's tripwire fires | Evaluate the network at the root only; the "search" becomes a one-ply tactics filter over joe's move. At that point K1's second row is the likely verdict. |
+| ~~**R8**~~ | ~~Both branches of §6.3 closed.~~ **Retired by N0** — it needed `augment_obs` > 1.5 ms; it is 0.042 ms. | — | — |
 
 Packaging is a **non-risk** (§8.8: 64% of the binding cap). Memory is a
 non-risk. Intake build time is a non-risk (dependency-free, 12.4 s measured on
@@ -1154,12 +1257,14 @@ joe-rs).
 
 Listed rather than decided.
 
-- **Q1.** What is joe's forward-only cost, separated from parse/obs/decode?
-  Everything in §5 hangs on it, and with Q4 closed it is now **the
-  highest-consequence unknown in the plan** — it is what K0 reads.
-  *Resolved by N0.1.*
-- **Q2.** What does `augment_obs` cost per call in Rust? Decides §6.3's fork.
-  *Resolved by N0.1.*
+- **~~Q1.~~ RESOLVED 2026-08-16 by N0.1.** joe's forward is **20.81 ms p50 /
+  23.01 ms p99** on one x86 core — **98.2%** of the 21.2 ms move. Everything
+  else in the path, parse through decode, is 0.37 ms and a third of that is one
+  `eprintln!`.
+  [joe-net-n0.md](../../research/measurements/joe-net-n0.md) §1.
+- **~~Q2.~~ RESOLVED 2026-08-16 by N0.1.** `augment_obs` is **0.042 ms p50 /
+  0.087 ms p99** — fifty times cheaper than §5 assumed. §6.3's fork takes its
+  top row: advance the full history per node.
 - **Q3.** Does batching four leaves in `gemm.rs` pay at joe's shapes, and by
   how much? §5.2 guesses 1.2–1.5× from arithmetic intensity; it is a guess.
   *N4, and only if it lands in joe-rs first (§8.2).*
@@ -1186,7 +1291,14 @@ Listed rather than decided.
   that is a cost/benefit call, not a fact.
 - **Q9.** Is `min_simulations` being inert (§1.4) intentional in
   `bots/morpheus-rs/` as well? If it was meant to enforce a floor, the port
-  inherits a latent behavior change the moment someone fixes it.
+  inherits a latent behavior change the moment someone fixes it. **N0 found a
+  second one: `reserve_ms`.** It is parsed, stored on `RuntimeConfig`, carried
+  through `to_runtime_config`, and read by nothing — `deadline_for_turn` is
+  `turn_start + normal_deadline_ms` — and the Python sibling is the same. So
+  every turn spends the full 140 ms and the 10 ms the file's own naming
+  promises to hold back is not held back. Two dead knobs in one config is a
+  pattern, and the question is now whether anything else in
+  `deployment.json` is decorative.
 - **Q10.** Do joe's build-legality rule and morpheus's `live_build_cost` agree
   cell-for-cell? Both implement the same documented formula, but after §6.2
   only morpheus's is consulted, and a disagreement would be silent.

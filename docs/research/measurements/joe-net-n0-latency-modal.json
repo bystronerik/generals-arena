@@ -1,0 +1,81 @@
+{
+  "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+  "machine": "x86_64",
+  "online_cpus": 17,
+  "cpu_model": "unknown",
+  "build_s": 12.4,
+  "bench_rc": 0,
+  "bench_stdout": "turns 2280 startup_ms 2483.8 p50 21.81 p90 22.55 p99 23.21 max 41.26",
+  "stages_rc": 0,
+  "stages_total_line": "turns 2280 startup_ms 93.4 p50 21.20 p90 22.08 p99 23.44 max 26.08",
+  "stages": {
+    "turns": 2280,
+    "startup_ms": 93.413,
+    "stages": {
+      "parse": {
+        "mean": 0.0117,
+        "p50": 0.0101,
+        "p90": 0.0178,
+        "p99": 0.0266,
+        "max": 0.0529
+      },
+      "raw": {
+        "mean": 0.0099,
+        "p50": 0.0087,
+        "p90": 0.015,
+        "p99": 0.0258,
+        "max": 0.0451
+      },
+      "mask": {
+        "mean": 0.0079,
+        "p50": 0.0072,
+        "p90": 0.0122,
+        "p99": 0.0192,
+        "max": 0.0568
+      },
+      "augment": {
+        "mean": 0.0448,
+        "p50": 0.0423,
+        "p90": 0.0653,
+        "p99": 0.0866,
+        "max": 0.1113
+      },
+      "normalize": {
+        "mean": 0.0035,
+        "p50": 0.0034,
+        "p90": 0.0048,
+        "p99": 0.0074,
+        "max": 0.0403
+      },
+      "forward": {
+        "mean": 20.8791,
+        "p50": 20.8106,
+        "p90": 21.6848,
+        "p99": 23.0097,
+        "max": 25.3109
+      },
+      "decode": {
+        "mean": 0.003,
+        "p50": 0.003,
+        "p90": 0.0035,
+        "p99": 0.0045,
+        "max": 0.0309
+      },
+      "stderr": {
+        "mean": 0.2912,
+        "p50": 0.274,
+        "p90": 0.4042,
+        "p99": 0.5141,
+        "max": 1.4305
+      },
+      "total": {
+        "mean": 21.2514,
+        "p50": 21.1972,
+        "p90": 22.0847,
+        "p99": 23.4438,
+        "max": 26.0765
+      }
+    }
+  },
+  "stages_table": "[joe-rs] load 72.5 ms, warmup 20.6 ms\n[joe-rs] stages over 2280 turns, startup 93.4 ms\n[joe-rs] stage           mean       p50       p90       p99       max\n[joe-rs] parse          0.012     0.010     0.018     0.027     0.053\n[joe-rs] raw            0.010     0.009     0.015     0.026     0.045\n[joe-rs] mask           0.008     0.007     0.012     0.019     0.057\n[joe-rs] augment        0.045     0.042     0.065     0.087     0.111\n[joe-rs] normalize      0.004     0.003     0.005     0.007     0.040\n[joe-rs] forward       20.879    20.811    21.685    23.010    25.311\n[joe-rs] decode         0.003     0.003     0.004     0.004     0.031\n[joe-rs] stderr         0.291     0.274     0.404     0.514     1.431\n[joe-rs] total         21.251    21.197    22.085    23.444    26.077"
+}

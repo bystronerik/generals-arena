@@ -78,6 +78,8 @@ Small topic files for the Generals Arena research repo.
 - [morpheus-rs M6 latency](research/measurements/morpheus-rs-m6-latency.md) — the Rust bot on M0's schedule, and the two ways a component table misleads
 - [morpheus-rs M6 strength](research/measurements/morpheus-rs-m6-strength.md) — the arena gate at parity knobs, and what a deadline-shaped configuration does to "identical"
 - [morpheus-rs M8 submission](research/measurements/morpheus-rs-m8-submission.md) — the audited archives, the intake selfcheck, and why a green smoke test proved nothing
+- [joe-net port plan](bots/morpheus-rs/joe-net-plan.md) — joe's frozen network under morpheus's search: the fork, what belief loses, and the gates
+- [joe-net N0](research/measurements/joe-net-n0.md) — the forward-only cost, the forward budget by consumer, and what the real controller does at a 21 ms forward
 
 ## Arena
 
