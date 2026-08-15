@@ -1,0 +1,10 @@
+[package]
+name = "joenet"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# Dependency-free, like every other crate here, and for a sharper reason: the
+# sources under `src/` are byte-identical copies of `bots/joe-rs/src/`, and
+# joe-rs is dependency-free. Adding a dependency would mean editing them.
+[dependencies]

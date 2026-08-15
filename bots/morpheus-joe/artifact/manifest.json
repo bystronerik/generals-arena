@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "weights": "ema.eqx",
+  "weights_sha256": "20e05e55a0d8959ab4b0efc9c1afa75be4771c6c70e63c989beaf16080801d2a",
+  "weights_size": 34237800,
+  "n_params": 8556250,
+  "network": {
+    "network": "history_transformer",
+    "pad_to": 21,
+    "history_size": 7,
+    "depth": 5,
+    "embed_dim": 384,
+    "n_head": 8,
+    "ff_factor": 3,
+    "patch_size": 3,
+    "value_loss": "ce",
+    "num_bins": 128,
+    "v_min": -1.0,
+    "v_max": 1.0
+  },
+  "checkpoint": {
+    "source": "r2",
+    "r2_key": "joe/joe-M-vast-20260813-0213/checkpoints/joe-M-vast-20260813-0213_ema_23500.eqx",
+    "run_name": "joe-M-vast-20260813-0213",
+    "global_step": 23500,
+    "curriculum_stage": 4,
+    "last_eval_wr": 0.974609375,
+    "engine_sha": "9e3b9d13cca51caa1bb07db48bb85c9e90ce0462"
+  },
+  "exported_at": 1786805609.1886258,
+  "tensor_schema": "joe-net-v1",
+  "safetensors": "model.safetensors",
+  "safetensors_sha256": "4f2ab87035599a6a9ab5d1eae5d45049b582fe31488571c8f46f45c1d96c4491",
+  "safetensors_size": 34235272
+}

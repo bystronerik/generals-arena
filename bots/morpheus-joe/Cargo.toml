@@ -1,0 +1,50 @@
+[workspace]
+resolver = "2"
+members = ["crates/joenet", "crates/core", "crates/bot"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+# An unstripped binary carries `morpheus_core::tactics` path by path in its
+# symbol table, and nothing at match time needs it: panics are caught and
+# reported by message, and the judge does not hand back backtraces. So this
+# costs nothing and shrinks what the judge builds.
+#
+# It used to be justified as concealment — "the other half of what a submission
+# gives away" — against the static variant that shipped a compiled binary. That
+# variant went at M8 and the argument went with it. The zip ships sources now,
+# and tools/rust-minify (repo root since J5.2, formerly tools/minify) strips
+# their comments but not their identifiers, so the names are in the archive
+# either way.
+strip = "symbols"
+# `panic = "abort"` would be the reflexive choice and is the wrong one here.
+# The judge treats a crash or an early exit as an immediate forfeit, while a
+# late or malformed reply is one fault out of a budget of fifty (RULES.md §08).
+# Unwinding lets `catch_unwind` in the bot turn a panic into a pass, which
+# costs one fault instead of the game.
+panic = "unwind"
+
+# Mutation testing only, never shipped and never benchmarked.
+#
+# `tools/mutation_check.py` rebuilds the crate once per mutation, and at M4
+# there are eighty-odd of them; against `release`'s fat LTO and single codegen
+# unit that link dominates the run and made the standing gate too expensive to
+# keep running. Nothing the tool asks depends on optimization — it asks only
+# whether the parity harness *notices* a deliberately broken behaviour — and
+# Rust does not reassociate floating point across optimization levels, so the
+# answers are the same ones `release` gives.
+#
+# That claim is checked rather than asserted: the tool runs a clean baseline
+# parity on this profile before applying any mutation and refuses to continue
+# if it fails. Per-stage *timings* remain build-sensitive (see M3's addendum in
+# the rewrite plan), which is why nothing is ever measured here.
+[profile.mutation]
+inherits = "release"
+lto = false
+codegen-units = 16

@@ -69,20 +69,37 @@ mv data/joe/joe-rs-parity/games data/joe/joe-rs-parity/games.step<OLD>
 .venv/bin/python bots/joe-rs/tools/make_smoke_fixture.py   # committed fixture
 .venv/bin/pytest bots/joe-rs/tests/ -m joe
 .venv/bin/python bots/joe-rs/tools/mutation_check.py
-# unclejoe is a second derived target: joe -> joe-rs -> unclejoe. It tracks
-# joe-rs's converted artifact, not joe's .eqx, because the joe-rs vs unclejoe
-# contrast has to isolate the tactics layer and that needs identical weights.
-.venv/bin/python bots/unclejoe/tools/sync_artifact.py
+# Two bots downstream now: joe -> joe-rs -> {unclejoe, morpheus-joe}. Both
+# track joe-rs's converted artifact, not joe's .eqx, because the joe-rs vs
+# unclejoe contrast has to isolate the tactics layer and the joe-rs vs
+# morpheus-joe contrast the search stack, and neither isolates anything
+# unless the arms run identical weights. One script walks both.
+.venv/bin/python scripts/joe_artifact_fanout.py
 cargo build --release --manifest-path bots/unclejoe/Cargo.toml
+cargo build --release --manifest-path bots/morpheus-joe/Cargo.toml
+# morpheus-joe also copies joe-rs's *source* byte for byte, which is how its
+# forward pass inherits this corpus's proof. Both copies are asserted here:
+.venv/bin/pytest tests/test_joe_source_fanout.py
 ```
 
-Nothing detects a skipped sync at play time — unclejoe would load the older
-weights, play, and look healthy — so the step belongs here or nowhere.
-`sync_artifact.py` verifies `safetensors_sha256` on both sides and writes the
-weights through a temporary file, which makes a *partial* sync (manifest
+Nothing detects a skipped sync at play time — a downstream bot would load the
+older weights, play, and look healthy — so the step belongs here or nowhere.
+`joe_artifact_fanout.py` verifies `safetensors_sha256` on both sides and writes
+the weights through a temporary file, which makes a *partial* sync (manifest
 copied, weights not) fail loudly instead of playing. `--check` answers "is
-unclejoe current?" without writing. A sync forks unclejoe's content hash,
-exactly as a re-conversion forks joe-rs's; the registry records it.
+every downstream current?" without writing, and `--bot <name>` narrows it to
+one. `bots/unclejoe/tools/sync_artifact.py` still does unclejoe alone and is
+unchanged. A sync forks the downstream bot's content hash, exactly as a
+re-conversion forks joe-rs's; the registry records it.
+
+**The checklist is not the mechanism.** Discipline is what failed here twice,
+so `tests/test_joe_source_fanout.py` runs in the default suite and turns a
+skipped step into a red result: it compares every downstream manifest's digest
+against joe-rs's, checks each manifest against the bytes beside it, and asserts
+that morpheus-joe's eleven copied source files are byte-identical to joe-rs's.
+It costs milliseconds. Note the consequence for a measurement round: a sync
+between two rounds of the same contrast **voids both**, because the arms are
+then different programs (joe-net-plan §8.7, §9).
 
 `--play` and `--capture` are split so `make_synthetic_long.py` can run
 between them: it needs the natural games' `.in.log` files to pick the

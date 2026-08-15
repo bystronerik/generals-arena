@@ -1,8 +1,10 @@
 # Joe-net port plan
 
-Status: **written 2026-08-16. N0 has run and passed on its middle row; nothing
-is ported.** The `bots/morpheus-joe/` fork does not exist and N1 has not
-started.
+Status: **written 2026-08-16. N0 passed on its middle row; N1 is done.** The
+`bots/morpheus-joe/` fork exists, carries joe's weights and joe's forward pass,
+and plays finishing games through a network-free evaluator. N2 has not started.
+What N1 changed about this document is marked **N1** where it appears, and the
+summary is at the end of the N1 phase entry below.
 
 N0's results are in [joe-net-n0.md](../../research/measurements/joe-net-n0.md)
 and they revise this document in six places. Each is marked **N0** where it
@@ -1022,7 +1024,7 @@ change" for that step was wrong. The additive edits N0 actually made — joe-rs'
 `fixed_forecasts_ms` / `charge_fixed_forecasts` parse — are the ones §10's
 rollback list names, plus that one.
 
-### N1 — Fork, artifact, forward pass
+### N1 — Fork, artifact, forward pass — **DONE 2026-08-16**
 
 Create `bots/morpheus-joe/` from `bots/morpheus-rs/`. Copy joe's five source
 files byte-identically. Wire the sync tool (§8.7). Delete `nn/{network,tensor}.rs`,
@@ -1034,6 +1036,76 @@ uniform stub, so the crate compiles and the seat runs.
 schema mismatch; the §8.2 digest test passes; the §8.7 staleness test passes;
 the 28 surviving parity surfaces are green on the smoke slice; matchup finishes
 with the stub-evaluator bot (it loses or truncates — both are normal ends).
+
+**Result: every gate met.** The crate builds warning-free. The seat resolves
+the artifact, verifies its digest, schema-checks it, loads 8,556,250 parameters
+and warms one forward in 131 + 15 ms, then decides through
+`ShapedUniformEvaluator`. `tests/test_joe_source_fanout.py` covers both §8.2
+and §8.7 and costs 0.07 s; the default suite holds at 13.5 s warm.
+`tests/test_morpheus_joe_selfcheck.py` proves the loader refuses a digest
+mismatch *and* a `depth: 6` manifest, which is the gate's "refuses a schema
+mismatch" in the two shapes that can actually occur. The 28 surfaces are green
+in **6.3 s**, against 11.4 s before — the retired Torch oracle was most of it.
+The gate match against `cm_expander` truncated at turn 1200, a normal end, with
+two castles built. Page: [morpheus-joe](../morpheus-joe/index.md).
+
+**Seven things N1 found that this plan did not say.** None changes a decision;
+all seven change what a later phase will find.
+
+1. **Joe's files need a crate, not a directory.** §8.5 keys the mutation map on
+   paths under `crates/core/src`, which assumes the copies live there. They
+   cannot: byte-identity includes the imports, and `board/obs.rs` opens with
+   `use crate::io::wire::{Observation, ...}` where joe's `Observation` carries
+   `i32` grids and morpheus's carries `u8`. Dropping the files into
+   `morpheus-joe-core` resolves those paths to different types with the same
+   names. They live in a **third crate**, `crates/joenet/`, which gives them
+   joe's `crate::` root; §8.5's rows move to `crates/joenet/src/` and nothing
+   else about §8 changes.
+2. **Eleven files, not five.** `board/mod.rs` and `io/mod.rs` name `action` and
+   `wire`, so the whole subtree is copied and the whole subtree is pinned. That
+   is strictly more coverage than §8.2 asked for.
+3. **§3.3 is forced at N1, not chosen at N3.** The policy-proposal path is the
+   only other consumer of `build_tensor`, so deleting `nn/tensor.rs` deletes
+   it. `ProposalPolicy`, `enemy_info_tensor`, the counting shim and
+   `use_policy_proposal` all went with it, and `propose_enemy_actions` lost its
+   `policy` and `max_proposal_batch` parameters. The `propose` parity surface
+   is unaffected: its integer layout keeps `n_unique_policy_inputs` and
+   `n_policy_batches`, both zero on the uniform branch the oracle has always
+   taken.
+4. **A third dead knob.** `max_proposal_batch` capped policy batches and
+   nothing else, so it joined `min_simulations` and `reserve_ms` the moment the
+   policy branch went. It is **removed** rather than added to Q9's list.
+5. **`decide` is retired, not merely oracle-less.** §2 says the surface "loses
+   its oracle"; in practice its Rust half cannot compile without a `Session`
+   and a `Heads` switch, so the kind is gone from the dispatch table. §8.4's
+   accounting is unchanged — what replaces it is N3's `prior` surface,
+   determinism, and the N6 round.
+6. **`legal_normalized_policy` needed a home.** §7.2 keeps it unchanged, and
+   `network.rs` was its only home. It is now `nn/head.rs`, alone, with N3's
+   remap and value decode landing beside it. Copying it forward rather than
+   deleting and re-deriving it matters because its oracle retired with the
+   Torch one.
+7. **Test module names collide across bots.** `tests/` has no `__init__.py`, so
+   a second `test_parity_tier1.py` breaks collection outright and a second
+   `parity_cases.py` would silently hand one bot the other's harness. Every
+   test module in the fork is bot-prefixed, as joe-rs's and unclejoe's already
+   were.
+
+Two deliberate non-actions, both scope calls rather than oversights:
+
+- **`deployment.json` is not re-tuned.** K0's four conditions
+  (`pending_leaf_batch` 4 → 1, `widen_freeze_below` 16 → 2,
+  `target_simulations` 16 → 8, `prior_temperature`) are non-optional *before
+  the candidate is measured*, which is N4. Applying them at N1 would tune
+  search knobs against a flat prior — a configuration for a bot nobody will
+  ship. What N1 did remove is only what became meaningless: the two dead knobs
+  above and the two CNN shape knobs (`network_width`, `trunk_channels`). The
+  file's own `belief_limitation_note` says all of this in the place someone
+  reading the knobs will look.
+- **The bot is not registered** in `data/bot_versions/`. Its content hash will
+  fork at N2 and again at N3, and a registration written from a dirty tree
+  records a closure ref that describes nothing. The first registration belongs
+  to the first phase that measures something.
 
 ### N2 — Observation bridge
 
