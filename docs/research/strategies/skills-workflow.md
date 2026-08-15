@@ -4,6 +4,12 @@ Design for the Cursor skill set of this repo. This file is a specification. It
 is not a `SKILL.md` file. An implementer agent writes the skill files from this
 file.
 
+Three skills of the first phase are removed: `write-strategy-spec`,
+`check-bot-diversity`, and `build-bot-from-spec`. The roster is full and new
+heuristic bots are no longer the work. Do not build these skills again. The
+spec and diversity documents under `docs/research/strategies/` stay, and an
+agent reads them directly.
+
 Scope: process only. Game knowledge stays in `docs/competition/`,
 `docs/engine/`, and `docs/bots/`. Strategy specs stay in
 `docs/research/strategies/`.
@@ -28,8 +34,8 @@ Two constraints act on the loop:
 - **Learned-bot gate.** The learned bot waits for about 10 heuristic bots plus a
   remote evaluation result.
 
-The skill set below maps one skill to each step, plus meta skills for git
-hygiene and skill self-improvement.
+The skill set below covers steps 3 to 6, plus meta skills for git hygiene and
+skill self-improvement. Steps 1 and 2 have no skill.
 
 ## 2. Skill inventory
 
@@ -38,11 +44,9 @@ Verdicts for the four skills under `.cursor/skills/`.
 | Skill | Verdict | Reason |
 | --- | --- | --- |
 | `run-competition-match` | Keep + improve | Correct content. It misses fault detection, seat-order swap, and the draw-heavy reality of this repo. |
-| `new-competition-bot` | Improve + rename to `build-bot-from-spec` | The scaffold step and the specification-to-code step always run together. Two skills with near-identical triggers cause the wrong skill to load. |
+| `new-competition-bot` | Removed | The scaffold step belonged to the first phase, when the roster was empty. |
 | `evaluate-bot-change` | Keep + improve | The A/B contract is good. It does not point at `scripts/measure_heuristics.py` or at the round report format. |
 | `update-leaderboard` | Keep | Small, single purpose, already correct. Add one line about git hygiene for `data/`. |
-
-No skill is removed. One skill is renamed.
 
 ### 2.1 `run-competition-match` — improvements
 
@@ -59,22 +63,7 @@ Add these sections:
 - **Draw baseline.** Most stored games end as draws at the 1200-turn cap. A
   draw is a valid gate pass. A draw is not evidence of strength.
 
-### 2.2 `new-competition-bot` → `build-bot-from-spec` — improvements
-
-Keep the scaffold instructions. Add these rules:
-
-- The skill takes one input: a path to `docs/research/strategies/<bot>.md`.
-- Every threshold in the specification becomes a named module constant in
-  `bots/<bot>/agent.py`. A later parameter revision edits constants only.
-- `main.py` and `run.sh` stay unchanged unless the wire protocol changes.
-- The bot must return a legal move or a pass inside the 150 ms move limit.
-- The bot must not read hidden engine state.
-- The skill ends with one verification match under `--mode competition`.
-
-Migration cost of the rename: update the skills table in `AGENTS.md`, the
-`bot-author` role row, and any link in `docs/bots/adding-a-bot.md`.
-
-### 2.3 `evaluate-bot-change` — improvements
+### 2.2 `evaluate-bot-change` — improvements
 
 - Point at `scripts/measure_heuristics.py` for a full round and at
   `arena/run_match.py` for a single pair.
@@ -84,78 +73,14 @@ Migration cost of the rename: update the skills table in `AGENTS.md`, the
   threshold change.
 - Require one changed parameter group per experiment.
 
-### 2.4 `update-leaderboard` — improvements
+### 2.3 `update-leaderboard` — improvements
 
 - Add one line: commit `data/ratings/` snapshots; do not commit
   `data/games/*.json` unless the user asks for the raw games.
 
 ## 3. New skills
 
-### 3.1 `write-strategy-spec`
-
-| Field | Value |
-| --- | --- |
-| Role | Strategist (think model) |
-| Inputs | Bot name, target niche, `RULES.md`, `docs/competition/**`, the diversity register, the latest round report |
-| Outputs | `docs/research/strategies/<bot>.md`, one link line in `docs/index.md` |
-| Freedom | Medium. The skill gives a section template. The strategist chooses the content. |
-
-Section template that the skill must give:
-
-```text
-# <bot> strategy specification
-## Goal
-## Diversity claim          (how this bot differs from every existing bot)
-## Strategy features
-## State
-## Phases and thresholds     (named constants, one value per line)
-## Threat or scoring model
-## Candidate move rules
-## Pseudocode for act()
-## Edge cases
-## Expected behavior against existing bots
-## Experiment hypothesis     (one falsifiable claim + seed grid + metrics)
-```
-
-Rules the skill must state:
-
-- Give every threshold a name and a value. Composer must not invent a number.
-- Write one falsifiable hypothesis.
-- Name the seed grid and the opponent set.
-- Do not write Python. Pseudocode only.
-
-`docs/research/strategies/garrison.md` is the reference example.
-
-### 3.2 `check-bot-diversity`
-
-| Field | Value |
-| --- | --- |
-| Role | Strategist (think model), cheap pass |
-| Inputs | A new or changed specification, all files in `docs/research/strategies/`, the latest round report |
-| Outputs | A verdict (`distinct` / `overlap` / `duplicate`) and an updated row in `docs/research/strategies/diversity-matrix.md` |
-| Freedom | Medium |
-
-The skill must define the diversity axes and require one value per axis:
-
-| Axis | Example values |
-| --- | --- |
-| Primary objective | land, castles, general kill, denial |
-| Risk posture | defensive, balanced, aggressive |
-| Time profile | early, mid, late, phase-switch |
-| Information use | visible only, fog memory, route memory |
-| Army handling | full stack, split, convoy, garrison reserve |
-
-Rules:
-
-- Two bots that match on four axes or more are a **duplicate**. Change the
-  specification or drop the bot.
-- The register file `diversity-matrix.md` is one table. One row per bot. The
-  skill creates the file when the file is absent.
-- Behavior evidence beats intent. When the round report shows the same win,
-  loss, and draw pattern against every opponent, mark **overlap** even when the
-  axes differ.
-
-### 3.3 `run-measurement-round`
+### 3.1 `run-measurement-round`
 
 | Field | Value |
 | --- | --- |
@@ -176,7 +101,7 @@ Content the skill must give:
   decisive games, and any bot with zero decisive games.
 - Never update ratings from stdout. Store first, then rate.
 
-### 3.4 `tune-bot-parameters`
+### 3.2 `tune-bot-parameters`
 
 | Field | Value |
 | --- | --- |
@@ -193,7 +118,7 @@ Rules:
 - Re-run the same seeds and the same opponents as the baseline arm.
 - Revert when the change does not improve the reported metric.
 
-### 3.5 `commit-research-increment`
+### 3.3 `commit-research-increment`
 
 | Field | Value |
 | --- | --- |
@@ -213,7 +138,7 @@ Rules the skill must give:
 - Never commit without an explicit user request when the repo policy requires
   that. State the proposed message and wait.
 
-### 3.6 `improve-skill-from-failure`
+### 3.4 `improve-skill-from-failure`
 
 | Field | Value |
 | --- | --- |
@@ -224,7 +149,7 @@ Rules the skill must give:
 
 This skill holds the auto-improve rules in section 4.
 
-### 3.7 Deferred: `learned-bot-readiness`
+### 3.5 Deferred: `learned-bot-readiness`
 
 Do not build this skill now. Build the skill when the heuristic count reaches
 about 10 and a remote evaluation path exists. The skill will check the learned-bot
@@ -308,17 +233,6 @@ description: >-
   swapping seat order, or writing a game record under data/games/.
 ```
 
-### `build-bot-from-spec` (renamed from `new-competition-bot`)
-
-```yaml
-description: >-
-  Scaffolds bots/<name>/ from bots/smoke/ and implements agent.py from a
-  strategy specification under docs/research/strategies/, keeping every
-  threshold as a named constant. Use when adding a competition bot, turning a
-  strategy spec into code, copying the smoke template, or wiring agent.py,
-  main.py, and run.sh for matchup.py.
-```
-
 ### `evaluate-bot-change`
 
 ```yaml
@@ -337,27 +251,6 @@ description: >-
   and publishes fit.json plus JSON and Markdown leaderboards under
   data/ratings/. Use when refreshing ratings, publishing the leaderboard, or
   closing a tournament or measurement round.
-```
-
-### `write-strategy-spec`
-
-```yaml
-description: >-
-  Writes a competition bot strategy specification under
-  docs/research/strategies/ with named thresholds, pseudocode, a diversity
-  claim, and one falsifiable hypothesis. Use when designing a new heuristic bot,
-  planning a strategy before any code, or revising a spec after a measurement
-  round.
-```
-
-### `check-bot-diversity`
-
-```yaml
-description: >-
-  Compares a new or changed bot strategy against every existing bot on
-  objective, risk, timing, information, and army-handling axes, then records the
-  verdict in the diversity matrix. Use when adding a bot, reviewing a strategy
-  spec, or checking that bots do not converge on the same behavior.
 ```
 
 ### `run-measurement-round`
@@ -405,11 +298,8 @@ description: >-
 | Skill | `disable-model-invocation` |
 | --- | --- |
 | `run-competition-match` | omit (auto) |
-| `build-bot-from-spec` | omit (auto) |
 | `evaluate-bot-change` | omit (auto) |
 | `update-leaderboard` | omit (auto) |
-| `write-strategy-spec` | omit (auto) |
-| `check-bot-diversity` | omit (auto) |
 | `run-measurement-round` | omit (auto) |
 | `tune-bot-parameters` | omit (auto) |
 | `commit-research-increment` | omit (auto) |
@@ -422,18 +312,16 @@ normal work.
 
 | Priority | Work |
 | --- | --- |
-| P0 | `write-strategy-spec`, `build-bot-from-spec` (rename plus improvements), `run-measurement-round` |
-| P1 | `tune-bot-parameters`, `check-bot-diversity`, improvements to `run-competition-match` and `evaluate-bot-change` |
+| P0 | `run-measurement-round` |
+| P1 | `tune-bot-parameters`, improvements to `run-competition-match` and `evaluate-bot-change` |
 | P2 | `commit-research-increment`, `improve-skill-from-failure`, one line in `update-leaderboard` |
 | Defer | `learned-bot-readiness` |
 
 ## 9. Repo changes that follow
 
-- `AGENTS.md`: update the skills table with the ten skills and the new name.
+- `AGENTS.md`: update the skills table with the current skills.
 - `AGENTS.md`: add `strategist` to the subagent role table with
-  `write-strategy-spec` and `check-bot-diversity`.
-- `docs/index.md`: link this file, the diversity matrix, and the measurements
-  directory.
-- `docs/research/strategies/diversity-matrix.md`: create the register.
+  `tune-bot-parameters`.
+- `docs/index.md`: link this file and the measurements directory.
 - `docs/research/measurements/`: create the directory on the first round.
 - `.gitignore`: decide the `data/games/*.json` rule before the next commit.

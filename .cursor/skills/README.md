@@ -6,8 +6,8 @@ Project skills for the Generals Competition research loop. Authority: [`docs/res
 
 | Model | Owns |
 | --- | --- |
-| **Think model** | Strategy specs, diversity review, parameter revision choices, skill fixes after failure |
-| **Composer** | Bot implementation, match runs, measurement rounds, constant edits, commits when asked |
+| **Think model** | Parameter revision choices, skill fixes after failure |
+| **Composer** | Match runs, measurement rounds, constant edits, commits when asked |
 
 **Composer must not invent a threshold.** Missing values go back to the think model.
 
@@ -15,12 +15,9 @@ Project skills for the Generals Competition research loop. Authority: [`docs/res
 
 | Step | Skill | Model | Path |
 | --- | --- | --- | --- |
-| 1. Strategy spec | write-strategy-spec | Think | [write-strategy-spec/](write-strategy-spec/) |
-| 1b. Diversity check | check-bot-diversity | Think | [check-bot-diversity/](check-bot-diversity/) |
-| 2. Bot from spec | build-bot-from-spec | Composer | [build-bot-from-spec/](build-bot-from-spec/) |
-| 2b. Verify match | run-competition-match | Composer | [run-competition-match/](run-competition-match/) |
-| 3. Measurement round | run-measurement-round | Composer | [run-measurement-round/](run-measurement-round/) |
-| 4. Parameter revision | tune-bot-parameters | Composer | [tune-bot-parameters/](tune-bot-parameters/) |
+| 1. Verify match | run-competition-match | Composer | [run-competition-match/](run-competition-match/) |
+| 2. Measurement round | run-measurement-round | Composer | [run-measurement-round/](run-measurement-round/) |
+| 3. Parameter revision | tune-bot-parameters | Composer | [tune-bot-parameters/](tune-bot-parameters/) |
 | A/B evaluation | evaluate-bot-change | Think + Composer | [evaluate-bot-change/](evaluate-bot-change/) |
 | Ratings | update-leaderboard | Composer | [update-leaderboard/](update-leaderboard/) |
 | Commits | commit-research-increment | Composer | [commit-research-increment/](commit-research-increment/) |

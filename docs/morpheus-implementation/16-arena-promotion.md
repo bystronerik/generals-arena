@@ -126,8 +126,11 @@ safety floors before the outcomes are inspected.
 The bootstrap path makes no absolute strength claim. It creates the
 non-provisional baseline required for later pairwise decisions.
 
-The repository's diversity matrix does not yet contain Morpheus. Promotion must
-add its measured row without changing the strategy specification.
+Promotion must record the measured five-axis verdict in
+[`docs/bots/morpheus/diversity.md`](../bots/morpheus/diversity.md) against the
+rules in
+[`docs/research/strategies/diversity-constraints.md`](../research/strategies/diversity-constraints.md).
+Do not change the strategy specification.
 
 ## Exit criterion
 

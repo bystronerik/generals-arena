@@ -136,8 +136,8 @@ commands, the two failure shapes, and the buffering trap:
 | Role | Owns | Skills | Done when |
 | --- | --- | --- | --- |
 | explorer | Read `docs/` + `RULES.md`; map engine APIs | `run-competition-match` to verify observations | Notes cite a finished `--mode competition` match; no unmeasured strategy claims |
-| bot-author | Add or change `bots/<name>/` from a spec under `docs/research/strategies/`; keep stdio protocol intact | `build-bot-from-spec`, then `run-competition-match` | New/changed `run.sh` finishes a competition match |
-| strategist | Write strategy specs; enforce bot diversity; choose parameter revisions after a round | `write-strategy-spec`, `check-bot-diversity`, `tune-bot-parameters` | Spec in `docs/research/strategies/` with diversity verdict; no bot code written |
+| bot-author | Add or change `bots/<name>/` from a spec under `docs/research/strategies/`; keep stdio protocol intact | `run-competition-match` | New/changed `run.sh` finishes a competition match |
+| strategist | Write strategy specs; choose parameter revisions after a round | `tune-bot-parameters` | Spec in `docs/research/strategies/`; no bot code written |
 | evaluator | Fixed grid; before/after winrate; **pairwise rating contrast with an interval, inside one round** | `run-measurement-round`, `evaluate-bot-change`, `update-leaderboard` | Games stored in `data/games/<round>/`; verdict quoted per [`docs/arena/decision-rule.md`](docs/arena/decision-rule.md), never as a rank and never across rounds |
 | remote-operator | Live classic blocks; human gate ladder | `run-remote-block`, `run-classic-grid` | Block report under `docs/research/measurements/`; logs in `data/remote_games/` |
 | auditor | Structure and duplication review | `structure-audit` | Report names concrete files and lines; no edits without a follow-up ask |

@@ -321,9 +321,8 @@ not move with the block result is dropped from the list, not defended.
 | Doc synchronization | Composer | mechanical |
 
 Rule of thumb: **one Think pass per block boundary; Composer inside a block.**
-Existing skills carry this split already — `write-strategy-spec` and
-`check-bot-diversity` are Think, `build-bot-from-spec`,
-`run-measurement-round` and `tune-bot-parameters` are Composer.
+Existing skills carry this split already — `run-measurement-round` and
+`tune-bot-parameters` are Composer.
 
 ---
 

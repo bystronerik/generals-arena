@@ -74,9 +74,8 @@ python competition-module/competition/matchup.py \
 
 ## Heuristic bots
 
-Scaffolded with the `build-bot-from-spec` skill from a spec under
-`docs/research/strategies/`. One doc file each, plus one experiment note each
-under `docs/research/experiments/`:
+Written from a spec under `docs/research/strategies/`. One doc file each, plus
+one experiment note each under `docs/research/experiments/`:
 
 | Bot | Idea | Doc |
 | --- | --- | --- |
