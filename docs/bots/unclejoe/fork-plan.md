@@ -7,10 +7,10 @@ for the results and the two places the code differs from this plan.
 
 This document covers the fork itself: the copy, the rename, the bot's own
 rating identity, and the proof that the fork is behavior-identical to joe-rs
-(milestone U1). What the fork is *for* — the tactics layer that overrides the
-NN move when a bounded exact search proves a kill or a defense — is the
-second document, [tactics-plan.md](tactics-plan.md), which builds on a
-finished U1.
+(milestone U1). What the fork is *for* — the tactics layer: a proof-gated
+exact-search override, exact-rule candidate filters, and an afterstate value
+re-rank that spends the whole turn budget — is the second document,
+[tactics-plan.md](tactics-plan.md), which builds on a finished U1.
 
 Ground rules honored throughout: `bots/joe/`, `bots/joe-rs/`, and
 `competition-module/` internals are never edited (the only joe-rs-adjacent

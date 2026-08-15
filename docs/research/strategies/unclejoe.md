@@ -1,35 +1,42 @@
-# unclejoe — joe-rs's network, with an exact search allowed to overrule it
+# unclejoe — joe-rs's network, with the whole turn budget spent on top of it
 
-Spec, written before the tactics code. Bot: `bots/unclejoe/`. Substrate and
-milestone U1: [`../../bots/unclejoe/fork-plan.md`](../../bots/unclejoe/fork-plan.md).
-Module layout and milestones U2–U5:
+Spec, written before the tactics code; revised 2026-08-15 after a design
+review changed the goal from "override rarely, finish early" to "spend the
+whole 150 ms turn budget". Bot: `bots/unclejoe/`. Substrate and milestone U1:
+[`../../bots/unclejoe/fork-plan.md`](../../bots/unclejoe/fork-plan.md).
+Module layout and milestones U2–U6:
 [`../../bots/unclejoe/tactics-plan.md`](../../bots/unclejoe/tactics-plan.md).
 
 Rule references: [`RULES.md`](../../../RULES.md) sections 02 (move order),
-04 (growth), 05 (combat), 06 (visibility), 07 (deathtouch, draw), 08 (150 ms
-per move).
+03 (castle building), 04 (growth), 05 (combat), 06 (visibility), 07
+(deathtouch, draw), 08 (150 ms per move).
 
 ## 1. The claim
 
 `bots/joe-rs` plays the frozen joe network greedily: one forward pass, argmax
-over the action logits, no search. A network trained on self-play answers
-*every* position with the same amortized guess, including the small class of
-positions where the right move is not a guess at all — where a handful of
-plies of exact simulation decides the game. unclejoe keeps that policy
-**unchanged** as the default move source and adds one thing: on the turns
-where an exact answer is cheap and reachable, compute it and play it instead.
+over the action logits, no search. That spends about 24 ms of a 150 ms turn
+(RULES.md §08) and throws the rest away. unclejoe keeps the policy unchanged
+as the move *prior* and spends the whole clock — on the only two computations
+the budget can trust: exact rule arithmetic, and the network's own value
+head.
 
-The hypothesis is narrow and falsifiable:
+Two hypotheses, separately falsifiable:
 
-> A greedy network policy loses measurable strength at the moments where the
-> correct move is provable — a forced general capture within a few plies, and
-> the reply that stops one — and a bounded exact search that fires only there
-> recovers part of it, without touching the policy elsewhere.
+> **H1 — provable moments.** A greedy network policy loses measurable
+> strength at the moments where the correct move is provable — a forced
+> general capture within a few plies, and the reply that stops one — and a
+> bounded exact search that fires only there recovers part of it, without
+> touching the policy elsewhere.
+>
+> **H2 — one-step improvement.** Given ~100 ms of spare clock, choosing
+> among the policy's own top-k moves by the network's **own value head**,
+> evaluated on one-ply afterstates, beats playing the argmax.
 
-If that is wrong, the failure is specific rather than mysterious: unclejoe and
-joe-rs come out flat while the shadow-mode counters show the triggers firing.
-That is a different result from "the search never ran", which is why U2 exists
-as its own milestone and reports fire rates before any override is live.
+The failure modes are specific rather than mysterious. H1 failing looks like
+a flat contrast while the shadow counters show the triggers firing. H2 fails
+earlier and cheaper: if the shadow re-rank (milestone U4) shows candidate
+value gaps sitting inside the head's noise, the re-rank never goes live and
+the negative is recorded without spending a round.
 
 ## 2. Why a fork, not a flag
 
@@ -53,20 +60,26 @@ rather than composed.
 
 ## 3. Concept
 
-Every turn, in this order:
+Every turn, against an internal 130 ms deadline (20 ms of slack under the
+limit for host jitter and reply emit), in this order:
 
 1. update per-game memory from the frame (enemy general location, remembered
    mountains, last-seen general army);
 2. run the full existing pipeline — frame → raw tensor, masks, augmented
-   observation, one forward pass, argmax — unchanged and unconditional;
-3. evaluate two cheap trigger predicates;
-4. if one fires, run a bounded exact search for a *proof*; play its move only
-   if it proved one;
-5. otherwise emit the network's move.
+   observation, one forward pass — unchanged and unconditional; read the
+   argmax, the top-k candidates, and the root value;
+3. evaluate two cheap trigger predicates; if one fires, run a bounded exact
+   search for a *proof*; a proof plays immediately;
+4. otherwise filter the candidates by exact rules (castle masks, refutation
+   veto — §7) and re-rank the survivors by afterstate value — anytime, in
+   policy order, until the clock reserve;
+5. play the best surviving value; degraded (early cutoff, everything
+   filtered), the argmax.
 
-The forward pass always runs even when a tactic overrides it. Skipping it
-would fork the state pipeline into two paths, one of them rarely exercised,
-and the pass is already inside the latency budget.
+The forward pass always runs even when an override wins. Every move played
+is one of: the argmax, a top-k policy candidate promoted by the network's
+own value head, or a proof-backed override. No hand-written evaluation
+function ever ranks a move.
 
 ## 4. Triggers (exact, and a deliberate superset)
 
@@ -127,12 +140,12 @@ to this spec:
 
 | Cap | Proposed | Why |
 | --- | --- | --- |
-| Depth | 3 of our moves | Beyond three plies the fog bound (§6) dominates and proofs stop landing. |
-| Node budget | 100,000 | A hard ceiling that does not depend on the clock. |
-| Deadline | 20 ms, checked every 1,024 nodes | The real guard: wall clock, not an estimate. |
+| Depth | 3 of our moves | Unchanged: beyond three plies the fog bound (§6) dominates and proofs stop landing — the binding constraint is knowledge, not compute. |
+| Node budget | 300,000 | The clock-independent ceiling, scaled from 100k at the old 20 ms deadline. |
+| Deadline | 60 ms, checked every 1,024 nodes | Up from 20 ms: trigger turns are where exactness matters most, and the clock exists to be spent. A decline still leaves ~45 ms of re-rank. |
 
-Hitting either cap declines, and a decline is a pass-through, never a
-half-searched move.
+Hitting either cap declines, and a decline is never a half-searched move: it
+falls through to the filtered re-rank (§7).
 
 ## 6. Fog, pessimistically
 
@@ -149,21 +162,75 @@ bounds enemy reinforcement and chase sources, so a kill is proven only if it
 lands against the last-seen general army plus growth since, plus the
 worst-case reinforcement that resolves first.
 
-## 7. Latency budget
+The pessimistic model is a **proof device, not a predictor**. It is never
+used to score re-rank lines (§7) — as a predictor it is paranoid, and a
+search steered by it would collapse into never leaving home.
 
-joe-rs's measured full-path cost is **p99 23.7 ms, max 34.5 ms** on the Modal
-one-core x86-64-v3 proxy ([`../../bots/joe-rs/latency.md`](../../bots/joe-rs/latency.md),
-2026-08-15). unclejoe's worst turn is that, plus two integer scans over at
-most 441 cells (microseconds), plus the search's 20 ms deadline: **≈ 55 ms
-against the 150 ms limit** (RULES.md §08). The deadline is enforced by the
-clock, so the bound does not depend on the node estimate holding.
+## 7. Spending the rest of the clock: filters and afterstate re-rank
 
-U4 proves it rather than arguing it: `unclejoe bench` over the 1,572-turn
-synthetic-long log, locally and on the Modal proxy, plus a constructed
-worst-case position as a Rust test that asserts the search returns inside the
-node cap.
+Two mechanisms, both strictly weaker than the override, consume the budget on
+ordinary turns.
 
-## 8. Evaluation
+**Exact-rule filters** remove candidates and never rank them. All three are
+arithmetic from RULES.md, not judgment:
+
+- *Castle crowding* (§03): the build price is 35 plus `max(0, 14 − 2·d)` for
+  each own structure at Manhattan distance `d`. Mask any build whose total
+  surcharge exceeds a cap (proposed **8** — only builds clear of own
+  structures pass).
+- *Castle lateness* (§03 + §04): production is 1 army per 2 turns, so payback
+  takes `2 × price` turns. Mask any build after a turn threshold (proposed
+  **650**).
+- *Refutation veto*: a depth-1 exact check — mask a candidate iff some
+  visible opponent reply captures our general after it. Sound, because it
+  quantifies over every visible reply from the true root. This closes the
+  first revision's known gap: the defense search declining and the bot then
+  playing a move the search had already seen lose.
+
+The two castle thresholds are the only uncalibrated constants in this spec.
+They sit behind their own switch, and the U4 shadow counts precede their
+going live.
+
+**Afterstate value re-rank** — one-step policy improvement. For each
+surviving top-k candidate (proposed `k = 5`, the argmax first) in policy
+order: advance it one ply through the exact forward model with the opponent
+passing, render the resulting position as an observation, run the forward,
+read the value head. Play the best value. Stop starting evaluations when the
+clock reserve is reached — the argmax is evaluated first, so a cutoff at any
+point degrades to the old bot.
+
+Known approximations, named rather than hidden:
+
+- *Opponent-pass afterstates are optimistic.* The refutation veto covers the
+  worst single reply against our general; every other reply is unmodeled.
+  Modeling it is impossible in principle here, not merely expensive: the
+  opponent's observation is not derivable from ours under fog, so there is
+  nothing to run a mirrored policy on. Depth stops at 1 for that reason, not
+  for budget.
+- *Afterstates are slightly out of distribution.* The value head trained on
+  real post-resolution frames; one-sided advances are near that distribution,
+  not in it. The U4 shadow re-rank measures whether the head's
+  discrimination survives before any move changes.
+
+## 8. Latency budget
+
+The budget is a resource, not a hazard to stay far from: the design rides an
+internal deadline of **130 ms** and must never cross 150 (RULES.md §08); the
+20 ms of slack absorb host jitter and reply emit. joe-rs's measured full-path
+cost is **p99 23.7 ms, max 34.5 ms** on the Modal one-core x86-64-v3 proxy
+([`../../bots/joe-rs/latency.md`](../../bots/joe-rs/latency.md), 2026-08-15),
+and the forward pass dominates it — so the spare clock holds about four extra
+forwards, which is exactly what the re-rank spends it on; a trigger turn
+spends a 60 ms proof search plus roughly two forwards instead. Sim, filters,
+and afterstate rendering are integer work, far below one forward.
+
+The guarantee is structural, not statistical: the anytime loop starts no
+evaluation past the reserve, a tiny-deadline test proves the degradation path
+to argmax, and U5 measures p99 **and max** on the Modal proxy before any
+rated round. Constants and the full table:
+[`tactics-plan.md`](../../bots/unclejoe/tactics-plan.md) §4.
+
+## 9. Evaluation
 
 Per [`../../arena/decision-rule.md`](../../arena/decision-rule.md), and the
 whole reason the fork exists:
@@ -176,28 +243,43 @@ whole reason the fork exists:
   alternate`, `--strict-versions`; ≥200 games per arm, ~1150 per arm for a
   ±25 interval.
 - Quote `Δ ± SE, CI₉₅, P(B>A)`, games per arm, and the verdict — never a rank.
-- **Replicate in a second, separately scheduled round before the result is
-  written down.** unclejoe is mildly deadline-shaped (the 20 ms cap), which is
-  the class the replication rule binds hardest on.
+- **Replication in a second, separately scheduled round is mandatory.**
+  Every turn now runs to the clock, so unclejoe is maximally deadline-shaped
+  — exactly the class the replication rule exists for. Note host state by
+  hand.
+- **Decomposition on a flat result.** Three mechanisms share the headline
+  contrast; the per-mechanism switches (`UNCLEJOE_OVERRIDE`,
+  `UNCLEJOE_MASKS`, `UNCLEJOE_RERANK`) make follow-up arms a one-line
+  `run.sh` export each — which forks the content hash into its own
+  registered identity, as intended. Each decomposition contrast runs inside
+  one round.
 - Both arms must be on the same network. If joe re-exports mid-evaluation,
   resync both bots or neither.
 
-Secondary, from shadow mode and the probe: trigger fire rate, search
-decline rate, and override count per game. A flat result with zero overrides
-and a flat result with many overrides are different findings.
+Secondary, from shadow mode: trigger fire rate, search decline rate, override
+count per game; and from the U4 shadow re-rank: would-change rate, the
+candidate value-gap distribution, mask and refutation counts. A flat result
+with zero overrides, a flat result with many overrides, and a flat result
+whose value gaps sat inside noise are three different findings.
 
-## 9. Non-goals
+## 10. Non-goals
 
 - **No new network, no retraining, no fine-tune.** The weights are joe's, byte
   for byte. Anything else makes the contrast about the network again.
-- **No general search.** The search fires only where a *proof* is reachable;
-  it is not an evaluation-based tree search over the whole game, and it never
-  plays a "best guess" move.
-- **No heuristic override.** If the search cannot prove the outcome, the
-  network's move stands, even when the tactic looks obviously right.
-- **No strategic layer.** Expansion, castle building, gathering, and targeting
-  stay entirely the network's.
+- **No depth ≥ 2 lookahead, and no opponent move model.** The opponent's
+  observation is not derivable from ours, so a mirrored policy is
+  unbuildable, and anything past one ply is a guess. The pessimistic fog
+  bound stays what it is — a proof device, never a predictor.
+- **No hand-written evaluation.** Exact rules from RULES.md may *remove*
+  candidates; only the network's own value head ever *ranks* them. The
+  override plays proofs only; the re-rank never overrides a proof.
+- **No strategic layer.** Expansion, gathering, and targeting stay entirely
+  the network's. The castle masks veto two provably-bad build shapes and
+  propose nothing.
 - **No dependencies.** The crate keeps an empty `[dependencies]`; intake
-  compiles one crate from source, and the search is integer work.
+  compiles one crate from source. Sim, filters, and afterstate rendering are
+  integer work, and the re-rank reuses the crate's own forward.
 - **No edits to joe, joe-rs, or the competition module.** The fork is the
-  mechanism that makes that possible.
+  mechanism that makes that possible. (Mechanical, non-behavioral edits to
+  unclejoe's *copied* files are allowed and listed —
+  [`tactics-plan.md`](../../bots/unclejoe/tactics-plan.md) §1.)
