@@ -126,7 +126,13 @@ class Agent:
 
         @eqx.filter_jit
         def step(net, raw, obs_state):
-            """Full per-move path: cost, masks, augment, forward, greedy."""
+            """Full per-move path: cost, masks, augment, forward, greedy.
+
+            The logits, the value, and the two masks come back alongside the
+            action so `bots/joe/probe.py` can read them off `self`. They are
+            outputs, not inputs: `action` is the same `argmax` of the same
+            `logits` it always was, so the chosen move is unchanged.
+            """
             cost = build_cost_from_raw(raw)
             aug, obs_state = augment_obs(raw, cost, obs_state)
             move = compute_valid_move_mask(
@@ -135,23 +141,32 @@ class Agent:
             temporal = jnp.stack(
                 [obs_state.opponent_army_history,
                  obs_state.opponent_land_history])
-            logits, _, _ = net._forward(aug, move, build, temporal)
+            logits, value, _ = net._forward(aug, move, build, temporal)
             action = decode_action(jnp.argmax(logits), pad_to)
-            return action, obs_state
+            return action, obs_state, logits, value, move, build
 
         self._net = net
         self._step = step
 
+        # Last decision, for bots/joe/probe.py. Left as device arrays: nothing
+        # on the move path reads them, so no transfer happens in a normal game.
+        self.logits = None
+        self.value = None
+        self.move_mask = None
+        self.build_mask = None
+
         # Compile now (first-move grace), on a frame-shaped dummy; then drop
         # the polluted obs_state — the real game starts from zeros.
         dummy = jnp.zeros((14, H, W), dtype=jnp.float32)
-        action, _ = self._step(self._net, dummy, self.obs_state)
+        action, *_ = self._step(self._net, dummy, self.obs_state)
         np.asarray(action)
         self.obs_state = self._init_obs_state()
 
     def act(self, obs):
         raw = self._jnp.asarray(frame_to_raw(obs))
-        action, self.obs_state = self._step(self._net, raw, self.obs_state)
+        (action, self.obs_state, self.logits, self.value,
+         self.move_mask, self.build_mask) = self._step(
+            self._net, raw, self.obs_state)
         p, r, c, d, s = (int(x) for x in self._np.asarray(action))
         if p == 1:
             # Pass row/col may point into the pad region (the pass channel is

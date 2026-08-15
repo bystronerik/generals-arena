@@ -614,6 +614,93 @@ _PROBE_KEYS = (
         MEAN,
         FIRST,
     ),
+    _key(
+        "joe_top5",
+        Kind.TOKEN,
+        "joe: the five highest action logits, highest first, packed as "
+        "'label:logit_milli' and joined by '|'. A label is 'pass', "
+        "'build@r.c', or '(move|half)@r.cd<dir>'",
+        F,
+    ),
+    _key(
+        "joe_margin_milli",
+        Kind.INT,
+        "joe: (top-1 logit - top-2 logit) * 1000. Near zero means the greedy "
+        "argmax is a coin flip between two actions; large means the policy is "
+        "confident in the one it picked",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "joe_entropy_milli",
+        Kind.INT,
+        "joe: Shannon entropy of the masked action softmax * 1000",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "joe_top1_prob_milli",
+        Kind.INT,
+        "joe: softmax probability of the argmax action * 1000. Training "
+        "rollouts sampled this distribution and deployment takes its argmax, "
+        "so this is the probability mass deployment discards each turn",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "joe_value_milli",
+        Kind.INT,
+        "joe: the value head's scalar output * 1000 (bin-weighted mean over "
+        "the CE bins, so it is in [v_min, v_max] * 1000)",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "joe_logits_hash",
+        Kind.TOKEN,
+        "joe: blake2b-64 of the whole float32 logit vector. The net is "
+        "deterministic, so two turns sharing a hash were fed an identical "
+        "tensor — the direct test for a stale AugmentedObsState",
+        F,
+    ),
+    _key(
+        "joe_move_cells",
+        Kind.INT,
+        "joe: legal (cell, direction) entries in the move mask this turn",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "joe_build_cells",
+        Kind.INT,
+        "joe: legal cells in the build mask this turn",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "joe_cell_revisits",
+        Kind.INT,
+        "joe: how many of the previous 11 turns already acted from the cell "
+        "chosen this turn",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
+        "joe_cycle_period",
+        Kind.INT,
+        "joe: length of the repeating action loop the last turns sit in "
+        "(1-4, three full repetitions required), 0 when they do not repeat",
+        F,
+        MEAN,
+        MAX,
+    ),
 )
 
 # Engine keys: ground truth, recorded per turn by the trajectory recorder.
