@@ -1,22 +1,44 @@
 //! The tactics layer — everything unclejoe does that joe-rs does not.
 //!
-//! At milestone U2 the layer only **watches**. It evaluates the two trigger
-//! predicates against every frame and writes what they found to stderr;
-//! nothing here touches the reply, so the two binaries still decide every
-//! frame identically. That is the point of a shadow milestone: the triggers
-//! are supersets by construction, and a superset's fire *rate* is an
+//! At milestone U2 the layer only **watches**. It evaluates the two tactics'
+//! trigger predicates against every frame and writes what they found to
+//! stderr; nothing here touches the reply, so the two binaries still decide
+//! every frame identically. That is the point of a shadow milestone: the
+//! triggers are supersets by construction, and a superset's fire *rate* is an
 //! empirical question — one worth answering before a search runs on the
 //! answer, let alone an override.
+//!
+//! # Shape
+//!
+//! **One file per tactic.** [`kill`] and [`defense`] each own a predicate,
+//! the result type it returns, and the tests for it; each will grow its proof
+//! search invocation in U3, beside the predicate that gates it. Everything
+//! neither of them owns alone is in [`common`] — distance in moves, and what
+//! a frame states about the army it does not show. This file is the
+//! composition root: it owns the shared scratch, runs the tactics, and keeps
+//! the shadow counters. A tactic never calls another tactic, and never
+//! reaches into another tactic's file for a helper; they meet here and in
+//! [`common`], and nowhere else.
+//!
+//! A tactic's predicate is neither a decision nor a heuristic. It is a cheap,
+//! exact test for "an exact search could have something to prove here", built
+//! as a **superset**: every position where the goal is provable inside the
+//! depth budget fires it, and the converse is not claimed. A fire on a dead
+//! position costs one search that then declines; a miss costs the point of
+//! the bot. Every bound is therefore loose in that one safe direction — with
+//! one named exception, the first-contact gate in [`defense`].
 //!
 //! The layer reads a `&Memory` and never writes one. `Seat::act` owns the
 //! memory update, for the same reason it owns `AugState`'s: per-game state
 //! advances every turn regardless of who chooses the move.
 
-pub mod triggers;
+pub mod common;
+pub mod defense;
+pub mod kill;
 
 use crate::board::memory::Memory;
 use crate::io::wire::Observation;
-use crate::tactics::triggers::{KillCause, ThreatCause, Triggers};
+use crate::tactics::common::Reach;
 
 // ---- constants ------------------------------------------------------------
 //
@@ -37,12 +59,13 @@ pub const SEARCH_DEPTH: i32 = 3;
 /// that same clock.
 pub const DEATHTOUCH_TURN: i32 = 800;
 
-/// The layer's per-game state: the trigger pass and the shadow counters.
+/// The layer's per-game state: the shared reach scratch and the shadow
+/// counters.
 #[derive(Debug, Default)]
 pub struct Tactics {
-    triggers: Triggers,
+    reach: Reach,
     turns: u32,
-    /// Copied off memory so the summary can report it: the defense trigger is
+    /// Copied off memory so the summary can report it: the defense tactic is
     /// silent until this is set, so it is the number that explains a low
     /// defense count.
     first_contact_turn: Option<i32>,
@@ -58,11 +81,13 @@ pub struct Tactics {
 }
 
 impl Tactics {
-    /// One shadow pass over a frame: evaluate both triggers, count, and log
-    /// each fire with the numbers it fired on. Returns nothing, because at
-    /// this milestone nothing may act on it.
+    /// One shadow pass over a frame: run both tactics, count, and log each
+    /// fire with the numbers it fired on. Returns nothing, because at this
+    /// milestone nothing may act on it.
     pub fn observe(&mut self, obs: &Observation, mem: &Memory) {
-        let fired = self.triggers.evaluate(obs, mem);
+        let kill = kill::evaluate(obs, mem, &mut self.reach);
+        let defense = defense::evaluate(obs, mem, &mut self.reach);
+
         self.turns += 1;
         self.first_contact_turn = mem.first_contact_turn;
         if mem.enemy_general.is_some() {
@@ -72,44 +97,37 @@ impl Tactics {
             self.general_visible += 1;
         }
 
-        if let Some(k) = fired.kill {
+        if let Some(k) = kill {
             self.kill += 1;
             match k.cause {
-                KillCause::ArmyBound => self.kill_army += 1,
-                KillCause::Deathtouch => self.kill_deathtouch += 1,
+                kill::Cause::ArmyBound => self.kill_army += 1,
+                kill::Cause::Deathtouch => self.kill_deathtouch += 1,
             }
             let (row, col) = (k.target / obs.w, k.target % obs.w);
             eprintln!(
                 "[unclejoe] turn {} trigger kill cause {} target {row},{col} \
                  reach_army {} last_seen_army {} stale {}",
                 obs.turn,
-                match k.cause {
-                    KillCause::ArmyBound => "army",
-                    KillCause::Deathtouch => "deathtouch",
-                },
+                k.cause.name(),
                 k.reach_army,
                 k.last_seen_army,
                 k.stale_turns,
             );
         }
 
-        if let Some(d) = fired.defense {
+        if let Some(d) = defense {
             self.defense += 1;
             match d.cause {
-                ThreatCause::VisibleStack => self.defense_stack += 1,
-                ThreatCause::Deathtouch => self.defense_deathtouch += 1,
-                ThreatCause::Fog => self.defense_fog += 1,
+                defense::Cause::VisibleStack => self.defense_stack += 1,
+                defense::Cause::Deathtouch => self.defense_deathtouch += 1,
+                defense::Cause::Fog => self.defense_fog += 1,
             }
             let (row, col) = (d.source / obs.w, d.source % obs.w);
             eprintln!(
                 "[unclejoe] turn {} trigger defense cause {} source {row},{col} \
                  threat_army {} general_army {}",
                 obs.turn,
-                match d.cause {
-                    ThreatCause::VisibleStack => "stack",
-                    ThreatCause::Deathtouch => "deathtouch",
-                    ThreatCause::Fog => "fog",
-                },
+                d.cause.name(),
                 d.threat_army,
                 d.general_army,
             );

@@ -40,14 +40,21 @@ owns the memory update, calls `tactics`, and is the only place that runs
 `nn` forwards on afterstates — the re-rank orchestration lives in
 `Seat::act`, so `tactics` never names `nn`.
 
-- `board/memory.rs` — persistent per-game memory the wire frame alone can't
-  give, unchanged from the first revision. `enemy_general: Option<usize>`
-  (set on first sighting; a general never moves, so it never goes stale),
-  `mountains: Vec<bool>` (ever-seen, a separate copy from `AugState`'s),
-  `general_visible_now: bool`, `last_seen_general_army: i32`,
-  `last_seen_turn: i32` for the fog bounds, and — added in U2 —
-  `first_contact_turn: Option<i32>`, the turn we first saw any enemy cell,
-  latched, which arms the defense trigger (§3).
+- `board/memory.rs` — persistent per-game memory. **What lives here is
+  decided by permanence, not by availability**: a fact a rule keeps true for
+  the whole game is settled once and read afterwards, never re-derived from
+  each frame, even when the frame states it. So: `own_general` and
+  `enemy_general: Option<usize>` (a general never relocates and a capture
+  ends the game, §05/§07), `mountains: Vec<bool>` (ever-seen, permanent by
+  §01, a separate copy from `AugState`'s), `first_contact_turn:
+  Option<usize>` (an event that cannot un-happen; it arms the defense
+  trigger, §3), plus the one *aging* pair — `last_seen_general_army: i32`
+  with `last_seen_turn: i32`, carried together so a bound can be aged — and
+  `general_visible_now: bool`. Anything a turn can change stays a frame read
+  (`tactics/common/frame.rs`), because caching it would mean inventing an
+  invalidation rule, and a stale value inside a proof is a wrong answer
+  rather than a slow one. Remembered **castles** join this list at U3: they
+  are permanent by §03 and the local sim needs them.
 - `search/sim.rs` — the local forward model over a full ≤21×21 patch of
   `(passable, owner ∈ {me, opp, neutral, unknown}, army: i32)` built from
   the frame plus `board::memory`, implementing the engine's exact
@@ -76,14 +83,28 @@ owns the memory update, calls `tactics`, and is the only place that runs
   the resulting ownership) → advance a **cloned** `AugState` → the
   augmented observation the forward consumes. None of this path is covered
   by the joe-rs parity corpus, so §5 gives it its own fixtures.
-- `tactics/triggers.rs` — the two trigger predicates, unchanged (§3).
+- `tactics/kill.rs`, `tactics/defense.rs` — **one file per tactic**, which
+  is a change from this plan's first shape (a single `triggers.rs` holding
+  both predicates). Each file owns its trigger predicate (§3), the result
+  type it returns, its tests, and — from U3 — the `search` call that the
+  predicate gates. The two never call each other; they meet in `mod.rs`.
+- `tactics/common/` — everything neither tactic owns alone, and the only
+  implementation of each question it answers: `reach.rs` is distance in
+  **moves** over cells not remembered as mountains, `frame.rs` is what a
+  frame states about the army it does not show (the hidden-army bound).
+  `search` reuses both for its move-generation window and its fog model in
+  U3. The
+  rule that keeps it small: a helper one tactic needs stays in that tactic's
+  file; a helper that encodes a *rule* comes here, because two callers
+  reading one rule two ways is the failure this module prevents.
 - `tactics/filters.rs` — **new**: the castle masks and the refutation-veto
   plumbing (§3).
-- `tactics/mod.rs` — orchestration: evaluate triggers against the frame and
-  a read-only `&Memory`, invoke `search` with the matching goal, and return
-  either a proven override or the filtered candidate list for `Seat::act`
-  to evaluate. Tactics never mutates memory; the memory update is
-  `Seat::act`'s job (§2).
+- `tactics/mod.rs` — the composition root: the constants block, the shared
+  reach scratch, the shadow counters, and the orchestration — run the
+  tactics against the frame and a read-only `&Memory`, invoke `search` with
+  the matching goal, and return either a proven override or the filtered
+  candidate list for `Seat::act` to evaluate. Tactics never mutates memory;
+  the memory update is `Seat::act`'s job (§2).
 - **Fog, pessimistically** — unchanged from the first revision, for the
   proof search only. `hidden = opp_army − Σ(visible enemy army)` bounds
   every never-seen-mountain fogged cell independently. Pessimism makes
@@ -229,12 +250,18 @@ deadline degrades the loop to the argmax.
 
 - **Rust (`cargo test`, zero cost to the Python budget):** in the new
   modules' unit tests, each beside its code —
-  - `board/memory.rs`: enemy-general lock-in on first sighting, mountain
-    accumulation, last-seen army/turn tracking through visibility changes;
-  - each trigger: fires on a position with a real threat/kill at each depth
-    1–3; stays silent with the general absent, out of range, behind
-    remembered mountains, or pre-800 with insufficient army; the fog arm
-    fires exactly when `hidden` crosses the threshold;
+  - `board/memory.rs`: both generals settled once and never displaced —
+    including ours surviving a frame that omits it — mountain accumulation,
+    first contact latching, last-seen army/turn tracking through visibility
+    changes;
+  - each tactic, in its own file: fires on a position with a real
+    threat/kill at each depth 1–3; stays silent with the general absent, out
+    of range, behind remembered mountains, or pre-800 with insufficient
+    army; the fog arm fires exactly when `hidden` crosses the threshold, and
+    not at all before first contact;
+  - `tactics/common/`: the step budget, walls that must be gone around and
+    never through, a sealed cell; the hidden-army remainder including its
+    zero floor;
   - `search/sim.rs`: priority-ladder cases straight from RULES.md §02,
     tie-keeps-defender, growth parity, deathtouch and its chase defense;
   - `search/minimax.rs`: finds a forced 1-, 2-, and 3-ply kill; finds the
@@ -294,8 +321,9 @@ deadline degrades the loop to the argmax.
 - **U2 — memory + triggers, shadow.** `board/memory.rs` and both triggers
   in `tactics/`, logging fires to stderr, never overriding. Done when:
   memory and trigger unit tests pass and a gate match's stderr shows sane
-  fire rates. **Shipped 2026-08-15**: 20 new unit tests (38 total, all
-  passing), four gate matches and the corpus replay measured in
+  fire rates. **Shipped 2026-08-15**: 25 new unit tests (43 total, all
+  passing), one file per tactic (§1), four gate matches and the corpus
+  replay measured in
   [shadow.md](shadow.md), wire-replay equality still holding. The
   measurement changed the defense trigger inside the milestone — it now
   waits for first contact (§3) — which is the one place U2 traded a superset

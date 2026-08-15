@@ -1,11 +1,22 @@
-//! Per-game memory: the facts one wire frame cannot carry.
+//! Per-game memory: the facts that hold for a whole game.
 //!
-//! The engine sends a fogged frame per turn and nothing else (RULES.md §06),
-//! so three facts a tactic needs are simply absent from the frame it has to
-//! fire on: where the enemy general is once it fades back into fog, which
-//! cells are permanently impassable, and how large the general's garrison was
-//! when we last looked at it. All three are accumulations over frames, and
-//! this is where they accumulate.
+//! **What lives here is decided by permanence, not by availability.** A fact
+//! that a rule makes permanent is established once and read afterwards; it is
+//! not re-derived from each frame, even when the frame happens to state it.
+//! Both generals' cells are the clearest case — a general never relocates,
+//! and the only event that changes its cell's owner is a capture, which ends
+//! the game (RULES.md §05, §07) — so a general's position is settled the
+//! first time it is seen and cannot go stale while there is still a turn to
+//! play. Mountains are permanent by §01, first contact is an event that
+//! cannot un-happen, and the last-seen garrison is the one *aging* fact here,
+//! carried with the turn it was taken on so a bound can be aged honestly.
+//!
+//! What is deliberately **not** here: everything a turn can change — current
+//! ownership, current armies, this turn's visibility, the opponent's army
+//! total. Those are frame reads, and caching one would mean inventing an
+//! invalidation rule. A stale value inside a proof search is not a slow path,
+//! it is a wrong answer, so the bar for adding a field is that a rule in
+//! RULES.md keeps it true.
 //!
 //! `AugState` (`board::obs`) already carries a mountain plane and a
 //! last-seen-army plane for the network. This is a separate copy on purpose.
@@ -15,13 +26,10 @@
 //! parity corpus owns, and any tactic-driven change to it would break that
 //! corpus. This copy is board-shaped, integer, and answers one question per
 //! field.
-//!
-//! What is deliberately **not** here: anything a frame states directly — our
-//! own general, current ownership, current armies, the opponent's army total.
-//! A tactic reads those from the frame it was handed.
 
 use crate::io::wire::{
-    Observation, OWNER_OPP, TYPE_FOG, TYPE_GENERAL, TYPE_MOUNTAIN, TYPE_STRUCTURE_IN_FOG,
+    Observation, OWNER_ME, OWNER_OPP, TYPE_FOG, TYPE_GENERAL, TYPE_MOUNTAIN,
+    TYPE_STRUCTURE_IN_FOG,
 };
 
 /// Is this cell in view this turn?
@@ -42,12 +50,17 @@ pub fn is_visible(cell_type: i32) -> bool {
 pub struct Memory {
     pub h: usize,
     pub w: usize,
+    /// Our own general's cell, settled on the first frame. We own it and
+    /// vision is a 3×3 pool around owned cells, so the first frame always
+    /// carries it and it is never in doubt afterwards. `None` only before the
+    /// first update, or on a frame so malformed that our own general was not
+    /// in it — and in that second case the remembered cell is the right
+    /// answer, not the missing one.
+    pub own_general: Option<usize>,
     /// The enemy general's cell, once seen. Set on the first sighting and
-    /// never moved afterwards: a general never relocates, and the only event
-    /// that changes the cell's owner — a capture — ends the game (RULES.md
-    /// §05, §07). So the remembered cell cannot go stale while there is still
-    /// a turn to play. `None` until the first sighting, which is also the
-    /// honest state: no kill is provable against an unlocated general.
+    /// never moved afterwards, for the reason given in the module docs.
+    /// `None` until that sighting, which is also the honest state: no kill is
+    /// provable against an unlocated general.
     pub enemy_general: Option<usize>,
     /// Cells seen to be mountains at least once. Mountains are impassable and
     /// permanent (RULES.md §01), so a sighting is knowledge that never
@@ -76,6 +89,7 @@ impl Memory {
         Self {
             h,
             w,
+            own_general: None,
             enemy_general: None,
             mountains: vec![false; h * w],
             first_contact_turn: None,
@@ -106,11 +120,12 @@ impl Memory {
             if cell_type == TYPE_MOUNTAIN {
                 self.mountains[i] = true;
             }
-            if self.enemy_general.is_none()
-                && cell_type == TYPE_GENERAL
-                && obs.owner_grid[i] == OWNER_OPP
-            {
-                self.enemy_general = Some(i);
+            if cell_type == TYPE_GENERAL {
+                match obs.owner_grid[i] {
+                    OWNER_ME if self.own_general.is_none() => self.own_general = Some(i),
+                    OWNER_OPP if self.enemy_general.is_none() => self.enemy_general = Some(i),
+                    _ => {}
+                }
             }
         }
 
@@ -180,13 +195,36 @@ mod tests {
     }
 
     #[test]
-    fn our_own_general_is_not_the_enemys() {
+    fn the_two_generals_never_change_places() {
         let mut mem = Memory::new(4, 4);
         let mut obs = frame(4, 4, 3);
         put(&mut obs, 0, 0, TYPE_GENERAL, OWNER_ME, 30);
         mem.update(&obs);
+        assert_eq!(mem.own_general, Some(at(&obs, 0, 0)));
         assert_eq!(mem.enemy_general, None);
         assert!(!mem.general_visible_now);
+
+        // Theirs turns up later and does not disturb ours.
+        let mut both = frame(4, 4, 4);
+        put(&mut both, 0, 0, TYPE_GENERAL, OWNER_ME, 31);
+        put(&mut both, 3, 3, TYPE_GENERAL, OWNER_OPP, 12);
+        mem.update(&both);
+        assert_eq!(mem.own_general, Some(at(&both, 0, 0)));
+        assert_eq!(mem.enemy_general, Some(at(&both, 3, 3)));
+    }
+
+    #[test]
+    fn our_general_survives_a_frame_that_omits_it() {
+        // Settled once, read afterwards: a frame we could not parse into a
+        // general does not unlearn where ours is.
+        let mut mem = Memory::new(4, 4);
+        let mut obs = frame(4, 4, 1);
+        put(&mut obs, 2, 1, TYPE_GENERAL, OWNER_ME, 8);
+        mem.update(&obs);
+        assert_eq!(mem.own_general, Some(at(&obs, 2, 1)));
+
+        mem.update(&frame(4, 4, 2)); // no general anywhere on this frame
+        assert_eq!(mem.own_general, Some(at(&obs, 2, 1)));
     }
 
     #[test]
