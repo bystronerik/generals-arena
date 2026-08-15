@@ -172,8 +172,36 @@ CH21_MAX_ULP = 0
 # bin *sharpness*, and a better-trained net puts more mass on fewer bins, so
 # the dot product with `bin_centers` amplifies smaller bin deltas. Worth a
 # real check, not an assumption, if it clears its pin.
-LOGIT_REL_ACHIEVED = 8.0e-6   # worst measured 6.014e-6 (step 16500, gemm.rs)
-BIN_REL_ACHIEVED = 1.6e-5     # worst measured 9.638e-6 (step 16500, gemm.rs)
+#   -> At step 23500 it fell to 3.397e-6 (68% of the pin), so the three-export
+#      climb was wander, not a trend. No check is owed; do not re-open it on
+#      the strength of the run of three alone.
+# 2026-08-15, step 23500 (703 frames): rel logit 1.041e-5 — the first relative
+# pin to fire, after four exports in which none had moved. Re-pinned to 1.6e-5.
+# The argument that this is corpus composition and not a drifting kernel:
+#
+#   percentile   p50        p90        p99        p100
+#   rel logit    1.406e-6   2.492e-6   4.331e-6   1.041e-5
+#
+# Only 2 of 703 frames exceed the old 8e-6 pin, and the worst one
+# (garrison-seed12 t575) pairs a mid-sized absolute error, 9.823e-5, with a
+# frame scale of 9.44 against a corpus median of 17.21 — the small denominator
+# is what makes the ratio, not a large numerator. The corpus max |dlogit|,
+# 1.202e-4, lands on a *different* frame (t650, scale 13.76, rel 8.731e-6).
+# Every one of the 14 games changed length at this export, so no frame in this
+# corpus was in the last one; the max is taken over an entirely new population.
+#
+# Step 1 of the diagnostic order holds: `bots/joe-rs/src/` has not changed
+# since b4516e0 (03:13), the step-21000 row above was measured at 16:24, and
+# `cargo build` was a no-op at this export. The same kernel produced both
+# numbers, so only the weights and the frames moved — this cannot be code
+# drift. `mutation_check` then kills 9/9 at the pin below, which is what says
+# the looser bound still catches a real defect. Read p99 first if this fires
+# again: a kernel change moves the whole distribution, and this one did not.
+#
+# Tier 3 was 703/703 greedy actions equal at this export — zero divergences —
+# so nothing consumed the `tie_margin_max` that widens with this pin.
+LOGIT_REL_ACHIEVED = 1.6e-5   # worst measured 1.041e-5 (step 23500, gemm.rs)
+BIN_REL_ACHIEVED = 1.6e-5     # worst measured 9.837e-6 (step 23500, gemm.rs)
 # |value| <= 1 by construction (bin_centers span [-1, 1]), so this one is
 # already scale-free and stays absolute. It tracks bin sharpness rather than
 # bin magnitude: 9.537e-7 at step 5000, 2.205e-6 at step 6000, and on the
