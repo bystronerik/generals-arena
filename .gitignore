@@ -52,10 +52,6 @@ data/joe/*
 # manifest.json pins exactly which weights a checkout is missing; the content
 # hash still covers the .eqx, so an export forks the rating identity.
 bots/joe/artifact/*.eqx
-# `bots/joe_base/` is a frozen copy of an earlier joe checkpoint, kept only
-# for the duration of one comparison (decision-rule.md: cross-round baselines
-# are not comparators). Same weights rule.
-bots/joe_base/artifact/*.eqx
 
 # joe-rs weights follow the same rule as joe's: derived from the joe artifact
 # by bots/joe-rs/tools/convert_artifact.py, pinned by the committed
