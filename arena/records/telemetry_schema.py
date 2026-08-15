@@ -684,10 +684,29 @@ _PROBE_KEYS = (
         MAX,
     ),
     _key(
+        "joe_reppen_overrode",
+        Kind.BOOL01,
+        "joe: the repetition penalty changed the emitted action this turn, so "
+        "joe did not play the network's own argmax",
+        F,
+        MEAN,
+        AUC,
+        FIRST,
+    ),
+    _key(
+        "joe_visit_peak_milli",
+        Kind.INT,
+        "joe: largest decayed visit count on any cell * 1000; bounded by "
+        "1 / (1 - REPEAT_DECAY)",
+        F,
+        MEAN,
+        MAX,
+    ),
+    _key(
         "joe_cell_revisits",
         Kind.INT,
         "joe: how many of the previous 11 turns already acted from the cell "
-        "chosen this turn",
+        "joe played this turn (post-penalty)",
         F,
         MEAN,
         MAX,
@@ -695,8 +714,9 @@ _PROBE_KEYS = (
     _key(
         "joe_cycle_period",
         Kind.INT,
-        "joe: length of the repeating action loop the last turns sit in "
-        "(1-4, three full repetitions required), 0 when they do not repeat",
+        "joe: length of the repeating loop the last **emitted** actions "
+        "sit in (1-4, three full repetitions required), 0 when they do "
+        "not repeat. Emitted, not raw: it tracks the post-penalty action",
         F,
         MEAN,
         MAX,

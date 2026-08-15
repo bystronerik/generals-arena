@@ -225,6 +225,67 @@ to +0.815), and seed 0 built two and won at turn 288. The castle is the
 *occasion*, not the cause; removing it would forfeit real value and leave the
 argmax/sampling mismatch in place to resurface elsewhere.
 
+## Implemented: remedy 3, the repetition penalty (2026-08-16)
+
+Joe now keeps a decayed per-cell count of the cells it moved *from*
+(`REPEAT_PENALTY = 2.0`, `REPEAT_DECAY = 0.90`) and subtracts it from every
+action logit at those cells before the argmax. No randomness: joe stays a
+deterministic function of the game. Builds and passes carry no cell, so neither
+accumulates.
+
+**The mechanism is proven, at unit level.** `test_repetition_penalty_breaks_a_
+frozen_board` replays one mid-game frame forever. The network settles on a
+single action and returns it for 22 of 24 turns — the limit cycle in its purest
+form — and the penalty breaks it. That is a controlled demonstration; everything
+below is not.
+
+**Outcomes on the 10-game grid** (seeds 0-4 × both seats, macaria):
+
+| | Baseline | With penalty |
+| --- | ---: | ---: |
+| Wins | 9/10 | **10/10** |
+| Mean turns | 340 | 368 |
+| Longest game | 681 | **885** (cap is 1200) |
+| Seed 1 seat 1 | **loss @641** | win @437 |
+
+**What did *not* happen: joe did not stop cycling.** On the diagnosed game the
+detected cycle rate went **up**, 14.0% → 18.1%, and the longest single span grew
+from 17 turns to 29. What changed is which cycle and at what cost:
+
+| | Baseline | With penalty |
+| --- | --- | --- |
+| Longest span | 17 turns, period 4, the castle corridor | 29 turns, period 2 |
+| Value during it | **−0.742 → −0.616** | **+0.474 → +0.491** |
+| The period-4 castle cycle | repeated 17-turn stretches | once, 4 turns |
+| Joe's land, t=151→401 | 59 → **48** | 59 → **81** |
+| Joe's army, t=151→401 | 162 → **362** | 162 → **561** |
+
+So the specific pathology — the period-4 walk around a self-built castle while
+land bleeds — is gone, and joe's army compounds instead of stalling. But joe
+still repeats itself often, and a naive "cycle count" reading of this change
+would call it a regression. **The cycle rate is not the success metric**; cycling
+while the economy compounds is not the failure that was diagnosed.
+
+### What is not established
+
+- **n = 1 per grid cell.** This is not a measured verdict. A verdict needs both
+  arms in one rating round, per
+  [decision-rule](../../arena/decision-rule.md).
+- **The constants are not fitted, and outcomes are not monotone in them.** On
+  the diagnosed seed, penalty 2.0 and 4.0 both win and **3.0 loses**. Single
+  games are chaotic in these constants. Do not hand-tune them; 2.0 was chosen
+  over 4.0 only because it matched on wins with a shorter worst case (885 vs
+  1087 turns against a 1200-turn cap), which is a safety margin rather than a
+  strength claim.
+- **Whether the penalty caused the improvement is genuinely open.** Given that
+  sensitivity, "the mechanism works" and "the perturbation reshuffled a chaotic
+  system into a luckier trajectory" are not distinguishable at this sample size.
+  The unit test settles the mechanism; only a round can settle the outcome.
+
+Latency is unaffected — the penalty is one array subtract inside the existing
+jit. Local full-path percentiles over 2 games: p50 5.5 ms, p99 9.5 ms, max
+13.7 ms, against a 150 ms budget.
+
 ## Instrumentation added
 
 - `bots/joe/probe.py` — top-5 decoded logits, top1−top2 margin, softmax entropy,
@@ -237,7 +298,12 @@ argmax/sampling mismatch in place to resurface elsewhere.
   `test_agent_matches_training_eval_path`, which pins the greedy action to the
   training path. **This forks joe's content hash and therefore its rating
   identity**, as accepted in the task.
-- `arena/records/telemetry_schema.py` — ten `joe_*` keys declared.
+- `arena/records/telemetry_schema.py` — twelve `joe_*` keys declared.
+  `joe_top5`, `joe_margin_milli` and `joe_entropy_milli` describe the network's
+  raw preference, before the penalty. `joe_cycle_period` and
+  `joe_cell_revisits` describe the action joe **played**, after it — reading
+  those two off the raw argmax would report whether the network cycles while the
+  penalty was busy making sure the bot does not.
 - `scripts/inspect_joe_{oscillation,confinement,window,castle_pull,frontier}.py`
   — the read side.
 

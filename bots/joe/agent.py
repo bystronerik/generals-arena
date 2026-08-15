@@ -25,6 +25,29 @@ import numpy as np
 BOT_DIR = Path(__file__).resolve().parent
 ARTIFACT_DIR = BOT_DIR / "artifact"
 
+# Repetition penalty. The network is a deterministic function of the board, so
+# where the board is locally periodic the greedy argmax is periodic too: joe
+# walks one stack around a structure it owns and never leaves. PPO collected its
+# data by *sampling* this policy, which left such a loop within a few turns
+# every time, so the gradient never had to learn an escape. See
+# docs/research/measurements/joe-argmax-limit-cycle.md.
+#
+# A decayed count of the cells joe recently moved from, subtracted from every
+# action logit at those cells, removes the fixed point without any randomness.
+# A cell revisited every other turn settles at PENALTY / (1 - DECAY**2), so
+# ~10.5 logits here — the same order as the ~11.3 logit median margin with which
+# the net pulls army back onto its own structures, which is the force that
+# closes the loop. A whole corridor accumulates more than any one of its cells,
+# and one escape is enough. Isolated repeats stay far below this and are left
+# alone.
+#
+# **Do not hand-tune these.** Neither is fitted, and game outcomes are not
+# monotone in them: on the seed this was diagnosed from, 2.0 and 4.0 both win
+# and 3.0 loses. Single games are chaotic in these constants, so a change needs
+# a measurement round with both arms, not a seed or two.
+REPEAT_PENALTY = 2.0
+REPEAT_DECAY = 0.90
+
 # Wire protocol cell types (competition-module/competition/protocol.py).
 TYPE_FOG = 0
 TYPE_PLAIN = 1
@@ -81,6 +104,7 @@ class Agent:
 
         from joe_net import HistoryTransformer
         from joe_obs import (
+            N_ACTION_CHANNELS,
             augment_obs,
             build_cost_from_raw,
             compute_build_mask_from_raw,
@@ -125,13 +149,14 @@ class Agent:
         self._init_obs_state = lambda: init_obs_state(pad_to)
 
         @eqx.filter_jit
-        def step(net, raw, obs_state):
-            """Full per-move path: cost, masks, augment, forward, greedy.
+        def step(net, raw, obs_state, visits):
+            """Full per-move path: cost, masks, augment, forward, selection.
 
-            The logits, the value, and the two masks come back alongside the
-            action so `bots/joe/probe.py` can read them off `self`. They are
-            outputs, not inputs: `action` is the same `argmax` of the same
-            `logits` it always was, so the chosen move is unchanged.
+            `logits` is what the network returned, before the repetition
+            penalty — the probe reads it, and the fidelity test pins its argmax
+            to the training path. The emitted action is the argmax of the
+            *penalised* logits, which differ only at cells joe moved from
+            recently.
             """
             cost = build_cost_from_raw(raw)
             aug, obs_state = augment_obs(raw, cost, obs_state)
@@ -142,8 +167,27 @@ class Agent:
                 [obs_state.opponent_army_history,
                  obs_state.opponent_land_history])
             logits, value, _ = net._forward(aug, move, build, temporal)
-            action = decode_action(jnp.argmax(logits), pad_to)
-            return action, obs_state, logits, value, move, build
+
+            # One penalty per cell, applied to that cell's whole action column.
+            # The masked entries are already -1e9, and the penalty is bounded by
+            # REPEAT_PENALTY / (1 - REPEAT_DECAY) = 40, so this can never lift an
+            # illegal action into contention.
+            penalised = (logits.reshape(N_ACTION_CHANNELS, pad_to, pad_to)
+                         - REPEAT_PENALTY * visits[None, :, :]).reshape(-1)
+            idx = jnp.argmax(penalised)
+            action = decode_action(idx, pad_to)
+
+            # Count the cell joe moved *from*. Builds are one-shot per cell and
+            # pass carries no cell, so neither accumulates a penalty.
+            cells = pad_to * pad_to
+            channel, position = idx // cells, idx % cells
+            row, col = position // pad_to, position % pad_to
+            new_visits = (visits * REPEAT_DECAY).at[row, col].add(
+                jnp.where(channel < 8, 1.0, 0.0))
+
+            overrode = idx != jnp.argmax(logits)
+            return (action, obs_state, logits, value, move, build,
+                    new_visits, overrode, idx)
 
         self._net = net
         self._step = step
@@ -154,19 +198,27 @@ class Agent:
         self.value = None
         self.move_mask = None
         self.build_mask = None
+        self.overrode = None
+        self.action_idx = None
+
+        self._init_visits = lambda: jnp.zeros((pad_to, pad_to), dtype=jnp.float32)
+        self.visits = self._init_visits()
 
         # Compile now (first-move grace), on a frame-shaped dummy; then drop
-        # the polluted obs_state — the real game starts from zeros.
+        # the polluted obs_state and visit counts — the real game starts from
+        # zeros, so joe's first move is the network's own argmax.
         dummy = jnp.zeros((14, H, W), dtype=jnp.float32)
-        action, *_ = self._step(self._net, dummy, self.obs_state)
+        action, *_ = self._step(self._net, dummy, self.obs_state, self.visits)
         np.asarray(action)
         self.obs_state = self._init_obs_state()
+        self.visits = self._init_visits()
 
     def act(self, obs):
         raw = self._jnp.asarray(frame_to_raw(obs))
         (action, self.obs_state, self.logits, self.value,
-         self.move_mask, self.build_mask) = self._step(
-            self._net, raw, self.obs_state)
+         self.move_mask, self.build_mask, self.visits,
+         self.overrode, self.action_idx) = self._step(
+            self._net, raw, self.obs_state, self.visits)
         p, r, c, d, s = (int(x) for x in self._np.asarray(action))
         if p == 1:
             # Pass row/col may point into the pad region (the pass channel is
