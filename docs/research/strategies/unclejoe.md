@@ -86,11 +86,14 @@ function ever ranks a move.
 Both are integer scans over the parsed frame plus memory. A trigger that fires
 on a dead position costs one search that declines; a trigger that misses a
 live one costs the whole point of the bot. So both are loose on purpose.
-`D` is the search's depth budget in our moves (proposed 3, §5).
+`D` is the search's depth budget in our moves (proposed 3, §5), and range is
+measured in **moves** — a bounded BFS over every cell not remembered as a
+mountain, which excludes nothing that could arrive in `D` moves and does
+exclude armies a permanent wall stands between.
 
 **Kill.** The enemy general has been seen (its cell is remembered — a general
-never moves), and some cell we own with `army > 1` lies within Manhattan
-distance `D` of it, and either
+never moves), and some cell we own with `army > 1` lies within `D` moves of
+it, and either
 
 - `obs.turn ≥ 800` — deathtouch is live, so any unit is potentially lethal
   (RULES.md §07); or
@@ -101,7 +104,15 @@ distance `D` of it, and either
 Before the general has been seen the trigger cannot fire. That is correct, not
 a gap: no exact kill is provable against an unlocated general.
 
-**Immediate defense.** With `g` our general (always known), fire if
+**Immediate defense.** Never before first contact — the turn we first see any
+enemy cell, remembered and latched. Ungated, the fog arm below fires on
+essentially every pre-contact turn, since `hidden` with nothing of the
+opponent ever seen is their entire army; gated, it is silent until they show
+themselves. This is the layer's **one assumption rather than a bound**: it is
+exact only through turn 13 (spawn distance ≥17 BFS steps, one move per turn,
+so nothing enemy can be within `D` of us yet), and after that it trades the
+superset property for the pre-contact searches. After contact, with `g` our
+general (always known), fire if
 
 - any *visible* enemy cell within `D` of `g` holds `army ≥ army(g)` — loose:
   it ignores the leave-one-behind rule and multi-step attrition; or
@@ -114,7 +125,15 @@ adjacent to our general is always visible: the fog arm only matters at
 `D ≥ 2`.
 
 Expected fire rate is low — most turns have nothing within three tiles of
-either general. U2 measures it rather than assuming it.
+either general. U2 measured it rather than assuming it
+([`../../bots/unclejoe/shadow.md`](../../bots/unclejoe/shadow.md),
+2026-08-15). The expectation holds for the kill trigger (0–7% of turns) and,
+once the contact gate is in, for the defense trigger in three of four gate
+matches (0–0.6%). It does **not** hold in the fourth: a general with a fog
+pocket permanently inside `D` fires the fog arm on 88% of turns. The arm is
+bimodal, not merely loose, and tightening it further — a hidden-army bound
+per reachable fogged cell instead of the global budget at every cell — is a
+decision this spec owes its next revision.
 
 ## 5. Search model and caps
 

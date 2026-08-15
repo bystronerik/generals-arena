@@ -14,6 +14,11 @@
 //! argmax — exactly what the Python sibling's `agent.py` does. No search, no
 //! sampling; joe is deterministic at play time.
 //!
+//! The `tactics` layer runs alongside that path in **shadow** (milestone U2):
+//! it accumulates per-game memory, evaluates its trigger predicates, and
+//! reports on stderr. It chooses nothing yet, so the reply is still the
+//! network's argmax and still equals joe-rs's, frame for frame.
+//!
 //! The parity harness stays behind in joe-rs and is not forked. It proves the
 //! ported surfaces against a JAX oracle keyed to these weights, and the code it
 //! proves is byte-identical here, so a second copy would double the re-export
@@ -47,7 +52,7 @@
 //! may name the ones above it and must not name the ones below it.
 //!
 //! ```text
-//! xla_math  io  ->  board  ->  nn  ->  main
+//! xla_math  io  ->  board  ->  tactics  ->  nn  ->  main
 //! ```
 //!
 //! `xla_math` is the floor — the f32 sites where XLA does not compute what
@@ -55,6 +60,12 @@
 //! channel is. This file sits above the stack because it is the composition
 //! root. Nothing enforces the rule but review; a crate split would, and costs
 //! more than it is worth at this size.
+//!
+//! `tactics` is the fork's own layer and sits under `nn` on purpose: it reads
+//! the board and never the network, so `nn` stays byte-identical to joe-rs's
+//! and stays unaware that any of this exists. Anything that needs both — the
+//! planned afterstate re-rank — is composed here instead. (`search` joins the
+//! chain between `board` and `tactics` with the proof search, milestone U3.)
 //!
 //! Single-threaded by construction. One dedicated core is a competition
 //! constraint, not a tuning choice, so nothing here may spawn a thread.
@@ -70,6 +81,7 @@ mod io;
 // its dead-code warning.
 #[allow(dead_code)]
 mod nn;
+mod tactics;
 mod xla_math;
 
 use std::io::{self as stdio, BufWriter, Write};
@@ -78,6 +90,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use crate::board::action::{argmax, decode_action};
+use crate::board::memory::Memory;
 use crate::board::obs::{
     augment_obs, build_cost_from_raw, compute_build_mask_from_raw, compute_valid_move_mask,
     frame_to_raw, normalize_observations, prepare_action_mask, AugScratch, AugState, CELLS,
@@ -88,6 +101,7 @@ use crate::io::wire::{
     TYPE_GENERAL, TYPE_PLAIN,
 };
 use crate::nn::net::Net;
+use crate::tactics::Tactics;
 
 /// Where `model.safetensors` + `manifest.json` live. `run.sh` exports
 /// `UNCLEJOE_ARTIFACT`; the exe-relative fallback covers running the binary by
@@ -124,6 +138,10 @@ struct Seat {
     aug: Vec<f32>,
     penalties: Vec<f32>,
     temporal: Vec<f32>,
+    /// The tactics layer's per-game state, alongside `AugState` and advanced
+    /// on the same schedule.
+    memory: Memory,
+    tactics: Tactics,
 }
 
 impl Seat {
@@ -149,6 +167,8 @@ impl Seat {
             aug: vec![0.0; N_CHANNELS * CELLS],
             penalties: vec![0.0; N_ACTION_CHANNELS * CELLS],
             temporal: vec![0.0; 2 * TEMPORAL_WINDOW],
+            memory: Memory::new(h, w),
+            tactics: Tactics::default(),
         };
 
         // Warmup: one forward on zeros primes the allocator and page cache.
@@ -163,8 +183,14 @@ impl Seat {
     }
 
     /// The full per-move path. Mirrors `agent.py::step` + the pass clamp in
-    /// `agent.py::act`.
+    /// `agent.py::act`, with the tactics layer's shadow pass around it.
     fn act(&mut self, obs: &Observation) -> Result<Action, String> {
+        // Tactics step 1: per-game memory advances first and unconditionally,
+        // exactly like `AugState` below it. Whoever ends up choosing the move
+        // — and, later, whichever kill-switch is set — the accumulation must
+        // not have a hole in it.
+        self.memory.update(obs);
+
         frame_to_raw(obs, &mut self.raw);
         build_cost_from_raw(&self.raw, self.h, self.w, &mut self.cost);
         compute_valid_move_mask(&self.raw, self.h, self.w, &mut self.move_mask);
@@ -194,6 +220,10 @@ impl Seat {
         let a = decode_action(argmax(&fwd.logits));
         // Free eval telemetry (port-plan §5): v1 play ignores the value.
         eprintln!("[unclejoe] turn {} value {:+.4}", obs.turn, fwd.value);
+        // Tactics step 3, in shadow: the triggers look at the same frame and
+        // report. They choose nothing, so the reply below is unchanged — the
+        // override arrives with the proof search (milestone U3).
+        self.tactics.observe(obs, &self.memory);
         if a.pass_field == 1 {
             // The pass channel's argmax cell can sit in the pad region; the
             // engine ignores row/col on a pass, but keep the reply in bounds.
@@ -284,6 +314,12 @@ fn wire_main() -> Result<(), String> {
             break; // engine hung up while we were replying
         }
     }
+    // EOF is the only end-of-game signal there is, so the shadow report goes
+    // here. It is the one place a whole game's trigger rates can be read off
+    // a match log.
+    if let Some(seat) = seat.as_ref() {
+        seat.tactics.log_summary();
+    }
     let _ = writer.flush();
     Ok(())
 }
@@ -322,6 +358,11 @@ fn bench_main() -> Result<(), String> {
         write_action(&mut sink, action).map_err(|e| e.to_string())?;
         times_ms.push(t0.elapsed().as_secs_f64() * 1e3);
     }
+
+    // A recorded log is a whole game too, so the replay reports its trigger
+    // rates alongside the latency line — shadow numbers over a fixed corpus,
+    // free of a live match.
+    seat.tactics.log_summary();
 
     times_ms.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let pct = |p: f64| times_ms[((times_ms.len() as f64 - 1.0) * p) as usize];

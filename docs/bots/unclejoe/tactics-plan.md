@@ -45,7 +45,9 @@ owns the memory update, calls `tactics`, and is the only place that runs
   (set on first sighting; a general never moves, so it never goes stale),
   `mountains: Vec<bool>` (ever-seen, a separate copy from `AugState`'s),
   `general_visible_now: bool`, `last_seen_general_army: i32`,
-  `last_seen_turn: i32` for the fog bounds.
+  `last_seen_turn: i32` for the fog bounds, and — added in U2 —
+  `first_contact_turn: Option<i32>`, the turn we first saw any enemy cell,
+  latched, which arms the defense trigger (§3).
 - `search/sim.rs` — the local forward model over a full ≤21×21 patch of
   `(passable, owner ∈ {me, opp, neutral, unknown}, army: i32)` built from
   the frame plus `board::memory`, implementing the engine's exact
@@ -99,6 +101,11 @@ mutating the live one. Rule amended: no *behavioral* change to any copied
 file; every mechanical edit is listed in this section when it is made. The
 wire-replay equality test (§5) is the guard that "mechanical" stays true.
 
+Mechanical edits made so far:
+
+- `board/mod.rs` (U2) — `pub mod memory;` and one sentence of module doc
+  naming it. No code path changed.
+
 ## 2. Per-turn flow in `Seat::act`
 
 Stamp `t0` when the frame arrives; everything below runs against
@@ -141,16 +148,26 @@ mechanism.
 
 The two trigger predicates are unchanged from the first revision — exact,
 conservative-superset, O(board-scan) integer checks over the parsed frame
-plus memory. **Kill**: `enemy_general` known, an own cell with `army > 1`
-within Manhattan `D` (= depth budget, ≤3) of it, and either `obs.turn ≥
-800` (deathtouch) or neighborhood army `> last_seen_general_army` (a stale
-lower bound — underestimating keeps the superset property).
-**Immediate defense**: a visible enemy cell within `D` of our general with
+plus memory. Range is `D` (= depth budget, ≤3) **moves**, measured by a
+bounded BFS over every cell not remembered as a mountain: army travels one
+orthogonal step per turn and mountains are the only permanently impassable
+cells, so nothing that could arrive in `D` moves is excluded, and armies a
+wall stands between are. **Kill**: `enemy_general` known, an own cell with
+`army > 1` within `D` of it, and either `obs.turn ≥ 800` (deathtouch) or
+neighborhood army `> last_seen_general_army` (a stale lower bound —
+underestimating keeps the superset property).
+**Immediate defense**: nothing before first contact (`first_contact_turn`
+set), and then a visible enemy cell within `D` of our general with
 `army ≥ army(g)`; or `obs.turn ≥ 800` and any visible enemy cell with
 `army > 1` within `D`; or a fogged cell within `D` with `hidden ≥ army(g)`.
 Firing costs only a search that then declines; missing a real case is the
-failure mode, so both stay deliberately loose. Expected fire rate is low;
-U2 measures it before anything overrides.
+failure mode, so both stay deliberately loose. U2 measured the rate before
+anything overrode anything, and the contact precondition is what it bought:
+ungated, the fog arm fired on **every turn before contact in every game**,
+because `hidden` with no enemy ever seen is their whole army. That gate is
+the layer's one non-proof assumption — exact only through turn 13, where
+the ≥17-step spawn distance makes an enemy in range impossible — and
+[shadow.md](shadow.md) records it as such.
 
 The filters are new, and a different kind of object: exact arithmetic from
 RULES.md that removes candidates and never ranks them.
@@ -277,7 +294,20 @@ deadline degrades the loop to the argmax.
 - **U2 — memory + triggers, shadow.** `board/memory.rs` and both triggers
   in `tactics/`, logging fires to stderr, never overriding. Done when:
   memory and trigger unit tests pass and a gate match's stderr shows sane
-  fire rates.
+  fire rates. **Shipped 2026-08-15**: 20 new unit tests (38 total, all
+  passing), four gate matches and the corpus replay measured in
+  [shadow.md](shadow.md), wire-replay equality still holding. The
+  measurement changed the defense trigger inside the milestone — it now
+  waits for first contact (§3) — which is the one place U2 traded a superset
+  for an assumption. Two more things U3 inherits: the tactics constants
+  block is `src/tactics/mod.rs`
+  (`SEARCH_DEPTH`, `DEATHTOUCH_TURN` so far), and the triggers measure range
+  as **moves over cells not remembered as mountains**, not raw Manhattan
+  distance — still a superset, since mountains are the only permanently
+  impassable cells, and tighter than counting armies a wall stands between.
+  One open item goes to U3: even gated on contact, the fog arm fires on 88%
+  of turns in one of the four gate matches, so the defense search's *decline*
+  path is the hot path in a game shaped like that one.
 - **U3 — proof search + override live.** `search/sim.rs`,
   `search/minimax.rs` (including `refutes()`, not yet wired to anything),
   the `tactics/` orchestration and override in `act`, the

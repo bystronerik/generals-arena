@@ -15,6 +15,10 @@
 //! multiplies and `RECIP_*` multiplies mirrored site by site in the oracle's
 //! op order (port-plan §4). The one transcendental, `log1p` on channel 21,
 //! is swept exhaustively rather than assumed — see `crate::xla_math`.
+//!
+//! `memory` is the fork's own addition: the per-game accumulations a tactic
+//! needs and a single frame cannot state. It simulates nothing either.
 
 pub mod action;
+pub mod memory;
 pub mod obs;
