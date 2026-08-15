@@ -139,6 +139,28 @@ BIN_TOL_NOMINAL = 3e-4        # worst measured 1.621e-4 (step 20500, gemm.rs)
 # 16% headroom, so it is the pin most likely to come due next. If it does,
 # the test above applies — check the relative pins and the scale-free value
 # scalar first, and only re-size once they show the forward pass is healthy.
+#
+# 2026-08-15, step 21000 (704 frames): rel logit 3.847e-6, rel bin 9.350e-6,
+# value 3.949e-6 — all inside, and rel logit *fell*. But |dlogit| reached
+# 9.918e-5 and cleared 1e-4 by 0.8%, so the warning above all but came due.
+# Three exports of absolute logit error: 8.202e-5, 8.631e-5, 9.918e-5, while
+# the logit scale fell 43.39 -> 42.31 -> 40.17. Rising absolute error at a
+# falling scale is the signature of a max taken over different frames, not of
+# a kernel that is drifting — the relative gate, measured on the same frames,
+# improved over the same three exports.
+#
+# Two absolute backstops have now needed attention in three exports while no
+# relative pin has moved once. That asymmetry is the argument for retiring
+# the absolute pair and letting the per-frame relative gates carry the whole
+# tier-2 contract; they are the statistic that transfers between corpora,
+# which is the property this gate needs. Left in place pending that decision.
+#
+# The scale-free value scalar is also climbing: 1.699e-6 -> 3.159e-6 ->
+# 3.949e-6, now 79% of its 5.0e-6 pin. Scale wander does not explain this one.
+# The benign reading is the one this file already gives — the scalar tracks
+# bin *sharpness*, and a better-trained net puts more mass on fewer bins, so
+# the dot product with `bin_centers` amplifies smaller bin deltas. Worth a
+# real check, not an assumption, if it clears its pin.
 LOGIT_REL_ACHIEVED = 8.0e-6   # worst measured 6.014e-6 (step 16500, gemm.rs)
 BIN_REL_ACHIEVED = 1.6e-5     # worst measured 9.638e-6 (step 16500, gemm.rs)
 # |value| <= 1 by construction (bin_centers span [-1, 1]), so this one is

@@ -40,6 +40,11 @@
       "at": "2026-08-15T07:40:24Z",
       "content_hash": "13fb3c9c7327",
       "seq": 8
+    },
+    {
+      "at": "2026-08-15T09:07:07Z",
+      "content_hash": "abec115a5a61",
+      "seq": 9
     }
   ],
   "version": 1,
@@ -487,6 +492,61 @@
       ],
       "first_seen_at": "2026-08-15T07:40:24Z",
       "git_commit": "27da657040e1385c9906361aa74e9960ee618396",
+      "git_dirty": true
+    },
+    {
+      "closure_ref": "refs/bot-versions/abec115a5a61",
+      "closure_tree": "b1b6fd908fab998de624e9870f806d232c130a03",
+      "content_hash": "abec115a5a61",
+      "files": [
+        {
+          "blob": "f617a874ff8080e82a8c27d5a0bf42396cdcf345",
+          "path": "bots/_common/__init__.py",
+          "sha256": "a9854ccb701414c1414c6d2f78c67352338e2276f07baae91b5a1dc8509756dc"
+        },
+        {
+          "blob": "89e238f0486adbb1ce6952ace3f5d2dff80bf80b",
+          "path": "bots/_common/wire.py",
+          "sha256": "5631a25c571bb7a196a9ff8e51f8b03383cfd0ac88606dcd986bbbfce3146b81"
+        },
+        {
+          "blob": "cdfa3b26f8734684ccceaee864be22f639650af7",
+          "path": "bots/joe/agent.py",
+          "sha256": "d77dc6e1ebe65841a3ff5b0c8c6e2200fb098288d4b0f199542b2641e821ac9d"
+        },
+        {
+          "blob": "9b0d4057ef18543abc2df2ae38b77a622abca4d5",
+          "path": "bots/joe/artifact/ema.eqx",
+          "sha256": "474dbf2d93b76e77ec8bb752551ae95b3d444cfe8c979e62298b17d6e097c29c"
+        },
+        {
+          "blob": "e1f67312c755d219c4ff1c20cebc8a3d7254f51d",
+          "path": "bots/joe/artifact/manifest.json",
+          "sha256": "e220c7aa4a163e558818e5e5b9026083b15e386b76503eb6f1eca86786377d5a"
+        },
+        {
+          "blob": "fbe207282692fc038ca320db77b929feecc99b4a",
+          "path": "bots/joe/joe_net.py",
+          "sha256": "b0061a13d3a10f1192102ca4beea7d39ae0ad4e7eb3ab23e022c217edc051c82"
+        },
+        {
+          "blob": "6fb0b4a1a115036f6178dcde442dfbe9382569e4",
+          "path": "bots/joe/joe_obs.py",
+          "sha256": "36c18cd7b741f900c570c54b0153645110b5de8f1e7472c313cd5cd7d79bfebe"
+        },
+        {
+          "blob": "66e85e356b69b326116a8726b122028662c32a12",
+          "path": "bots/joe/main.py",
+          "sha256": "19bc1709a04a6d2228b5f8bca049aacb70e2258d8da47f98fcacbd5773a08b8b"
+        },
+        {
+          "blob": "6864dbd6b71624126537d0331508fd67cc067fd7",
+          "path": "bots/joe/run.sh",
+          "sha256": "8d9a48b4577311de419a5efdbb296076cec92c315c7068af7805f03c38ddc2e8"
+        }
+      ],
+      "first_seen_at": "2026-08-15T09:07:07Z",
+      "git_commit": "4ec44b8a2c1b48eb7d197149810bb7fb57831fc5",
       "git_dirty": true
     }
   ]
