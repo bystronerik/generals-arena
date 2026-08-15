@@ -118,12 +118,28 @@ pub const FOG_GROWTH_MARGIN: i32 = SEARCH_DEPTH;
 /// How many of the policy's actions the re-rank looks at. The argmax is the
 /// first of them, which is what makes the loop anytime: cut it off anywhere
 /// and the reply degrades to exactly joe-rs's.
-pub const TOP_K: usize = 5;
+///
+/// **Four, because four is what the turn pays for.** One evaluation is one
+/// forward, the live path already spends one, and the deadline is 130 ms: at
+/// joe-rs's measured ~24 ms per forward that leaves room for four and not
+/// five. U4 shipped this at five and measured the loop cutting itself off on
+/// 4,008 of 4,037 turns at an average of 3.9 — the anytime cutoff was quietly
+/// supplying the real constant, so it is written down here instead.
+pub const TOP_K: usize = 4;
 
-/// Start no afterstate evaluation with less than this left of the turn. One
-/// evaluation is a forward pass, and a forward that overruns the deadline is
-/// worth less than no forward at all.
-pub const RERANK_RESERVE_MS: u64 = 25;
+/// The floor under the re-rank's reserve, and what it uses before it has
+/// measured anything.
+///
+/// **The reserve itself is measured, not guessed.** An evaluation is a whole
+/// forward pass, so a fixed reserve is a claim about how long a forward takes
+/// on a host this code has never run on — and U4 shipped that claim at 25 ms
+/// against a forward that costs 22 ms typical and 48 ms at its worst, which
+/// let the loop start work it could not finish. [`Tactics::reserve_ms`]
+/// instead keeps the cost of the slowest evaluation this game and refuses to
+/// start another with less than that left; the warmup forward seeds it before
+/// the first frame, so this floor binds only if that came back implausibly
+/// cheap.
+pub const RERANK_RESERVE_FLOOR_MS: u64 = 25;
 
 /// The most §03 crowding surcharge a build may carry and still be valued.
 /// Eight admits exactly one own structure at three steps or further; anything
@@ -290,16 +306,6 @@ impl Score {
     }
 }
 
-/// Is there room in the turn to start another afterstate evaluation?
-///
-/// This is the whole of the anytime guarantee. The argmax is candidate #1, so
-/// a loop cut off at any point — here, or before the first evaluation — plays
-/// what joe-rs would have played.
-pub fn have_time(t0: Instant) -> bool {
-    let spent = t0.elapsed().as_millis();
-    let left = i128::from(TURN_DEADLINE_MS) - spent as i128;
-    left >= i128::from(RERANK_RESERVE_MS)
-}
 
 /// The layer's per-game state: the switches, the shared scratch, and the
 /// counters.
@@ -351,6 +357,9 @@ pub struct Tactics {
     /// this distribution, and a mean cannot answer it. One f32 per turn, so a
     /// 1,200-turn game costs under 5 KB against a 2 GB cap.
     gaps: Vec<f32>,
+    /// The most one afterstate evaluation has cost this game, in ms. This is
+    /// the reserve — see [`Tactics::reserve_ms`].
+    slowest_eval_ms: f64,
 }
 
 impl Tactics {
@@ -402,6 +411,7 @@ impl Tactics {
             masked_refuted: 0,
             all_masked: 0,
             gaps: Vec::new(),
+            slowest_eval_ms: 0.0,
         }
     }
 
@@ -409,6 +419,47 @@ impl Tactics {
     /// forward, because that is the one part of this milestone with a cost.
     pub fn reranking(&self) -> bool {
         self.switches.tactics && self.switches.rerank
+    }
+
+    /// Seed the reserve from a forward this host has already paid for.
+    ///
+    /// `Seat::new` runs one warmup forward on zeros before the first frame, so
+    /// this costs nothing extra and answers the question a fixed constant can
+    /// only guess at: how long does a forward take *here*. A cold forward errs
+    /// high, which is the direction a reserve should err.
+    pub fn seed_reserve(&mut self, warmup_ms: f64) {
+        self.note_evaluation(warmup_ms);
+        eprintln!("[unclejoe] re-rank reserve seeded at {} ms", self.reserve_ms());
+    }
+
+    /// What one afterstate evaluation cost, folded into the reserve.
+    pub fn note_evaluation(&mut self, ms: f64) {
+        if ms.is_finite() {
+            self.slowest_eval_ms = self.slowest_eval_ms.max(ms);
+        }
+    }
+
+    /// How much of the turn to keep back before starting another evaluation:
+    /// the worst one this game has cost, never below the floor.
+    ///
+    /// Measuring rather than guessing is what makes this host-independent. A
+    /// slower machine measures a bigger reserve and runs fewer candidates; the
+    /// loop is anytime, so running fewer is a degradation and not a fault.
+    fn reserve_ms(&self) -> u64 {
+        RERANK_RESERVE_FLOOR_MS.max(self.slowest_eval_ms.ceil() as u64)
+    }
+
+    /// Is there room in the turn to start another afterstate evaluation?
+    ///
+    /// This is the whole of the anytime guarantee, and it only holds while the
+    /// reserve covers what an evaluation actually costs — which is why the
+    /// reserve is measured. The argmax is candidate #1, so a loop cut off at
+    /// any point, here or before the first evaluation, plays what joe-rs would
+    /// have played.
+    pub fn have_time(&self, t0: Instant) -> bool {
+        let spent = t0.elapsed().as_millis();
+        let left = i128::from(TURN_DEADLINE_MS) - spent as i128;
+        left >= i128::from(self.reserve_ms())
     }
 
     /// The forward model an afterstate advances on: the board as the frame
@@ -894,6 +945,7 @@ impl Tactics {
         };
         eprintln!(
             "[unclejoe] tactics rerank: turns {} ({:.1}%) forwards {} cutoffs {} wins {} \
+             slowest_eval_ms {:.1} reserve_ms {} \
              would_change {} ({:.1}%) argmax_masked {} all_masked {} \
              masked crowding {} late {} refuted {} \
              gap p50 {:.4} p90 {:.4} p99 {:.4} max {:.4}",
@@ -902,6 +954,8 @@ impl Tactics {
             self.rerank_forwards,
             self.rerank_cutoffs,
             self.rerank_wins,
+            self.slowest_eval_ms,
+            self.reserve_ms(),
             self.would_change,
             pct(self.would_change),
             self.argmax_masked,
@@ -1131,10 +1185,43 @@ mod tests {
     /// evaluation, so the reply degrades to the argmax the network named.
     #[test]
     fn a_spent_turn_starts_no_evaluation() {
-        assert!(have_time(Instant::now()));
-        let reserve = TURN_DEADLINE_MS - RERANK_RESERVE_MS;
-        assert!(!have_time(Instant::now() - Duration::from_millis(reserve + 5)));
-        assert!(!have_time(Instant::now() - Duration::from_secs(10)));
+        let tactics = Tactics::new(true);
+        assert!(tactics.have_time(Instant::now()));
+        let room = TURN_DEADLINE_MS - tactics.reserve_ms();
+        assert!(!tactics.have_time(Instant::now() - Duration::from_millis(room + 5)));
+        assert!(!tactics.have_time(Instant::now() - Duration::from_secs(10)));
+    }
+
+    /// The reserve is what an evaluation has actually cost, never below the
+    /// floor. This is the fix for U4's measured overrun: a fixed 25 ms reserve
+    /// let the loop start a 48 ms forward with 25 ms of turn left.
+    #[test]
+    fn the_reserve_is_measured_and_floored() {
+        let mut tactics = Tactics::new(true);
+        assert_eq!(tactics.reserve_ms(), RERANK_RESERVE_FLOOR_MS, "nothing measured yet");
+
+        // A forward faster than the floor does not lower it.
+        tactics.note_evaluation(3.0);
+        assert_eq!(tactics.reserve_ms(), RERANK_RESERVE_FLOOR_MS);
+
+        // A slow one raises it, and it is the worst that counts, not the last.
+        tactics.note_evaluation(47.2);
+        assert_eq!(tactics.reserve_ms(), 48, "rounded up, never down");
+        tactics.note_evaluation(20.0);
+        assert_eq!(tactics.reserve_ms(), 48);
+    }
+
+    /// A reserve that grew closes the window sooner — which is the whole point
+    /// of measuring it, and the behaviour a slower host gets for free.
+    #[test]
+    fn a_bigger_reserve_stops_the_loop_earlier() {
+        let mut tactics = Tactics::new(true);
+        // Half the turn gone: room for a floor-sized evaluation, not for a
+        // 70 ms one.
+        let half = Instant::now() - Duration::from_millis(TURN_DEADLINE_MS / 2);
+        assert!(tactics.have_time(half));
+        tactics.note_evaluation(70.0);
+        assert!(!tactics.have_time(half));
     }
 
     fn five(action: Action) -> Action5 {

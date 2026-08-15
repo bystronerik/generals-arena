@@ -236,12 +236,15 @@ They sit behind their own switch, and the U4 shadow counts precede their
 going live.
 
 **Afterstate value re-rank** — one-step policy improvement. For each
-surviving top-k candidate (proposed `k = 5`, the argmax first) in policy
-order: advance it one ply through the exact forward model with the opponent
-passing, render the resulting position as an observation, run the forward,
-read the value head. Play the best value. Stop starting evaluations when the
-clock reserve is reached — the argmax is evaluated first, so a cutoff at any
-point degrades to the old bot.
+surviving top-k candidate (`k = 4` — U4 measured that five does not fit the
+turn) in policy order: advance it one ply through the exact forward model with
+the opponent passing, render the resulting position as an observation, run the
+forward, read the value head. Play the best value. Stop starting evaluations
+when the clock reserve is reached — the argmax is evaluated first, so a cutoff
+at any point degrades to the old bot. The reserve is **measured, not
+declared**: it is what the slowest evaluation this game cost, seeded by the
+warmup forward, because a fixed reserve is a claim about a host this code has
+never run on.
 
 Known approximations, named rather than hidden:
 

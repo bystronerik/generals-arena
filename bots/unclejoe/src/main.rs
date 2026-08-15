@@ -175,7 +175,7 @@ impl Seat {
         let net = Net::load(&artifact_dir())?;
         let load_ms = load.elapsed().as_secs_f64() * 1e3;
 
-        let seat = Self {
+        let mut seat = Self {
             net,
             h,
             w,
@@ -202,6 +202,10 @@ impl Seat {
             .map_err(|e| format!("warmup forward: {e}"))?;
         let warmup_ms = warm.elapsed().as_secs_f64() * 1e3;
         eprintln!("[unclejoe] load {load_ms:.1} ms, warmup {warmup_ms:.1} ms");
+        // The re-rank's reserve has to cover one forward, and that warmup was
+        // one — on this host, before any frame arrives. Measuring beats
+        // guessing, and this measurement was already paid for.
+        seat.tactics.seed_reserve(warmup_ms);
         Ok(seat)
     }
 
@@ -313,10 +317,13 @@ impl Seat {
                 if rank > 0 && candidate.masked.is_some() {
                     continue;
                 }
-                if !tactics::have_time(t0) {
+                if !tactics.have_time(t0) {
                     cutoff = true;
                     break;
                 }
+                // Timed end to end — render plus forward — because that whole
+                // cost is what the next `have_time` has to reserve for.
+                let began = Instant::now();
                 scored[rank] = match afterstate.advance(candidate.play, state) {
                     Advance::Wins => Score::Wins,
                     Advance::Ready => {
@@ -335,6 +342,7 @@ impl Seat {
                     }
                 };
                 afterstate.undo();
+                tactics.note_evaluation(began.elapsed().as_secs_f64() * 1e3);
             }
         }
         tactics.report_rerank(obs, slate, &scored, cutoff);

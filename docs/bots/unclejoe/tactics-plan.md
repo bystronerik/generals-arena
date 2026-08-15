@@ -9,10 +9,11 @@ proven), and the spec is
 [`../../research/strategies/unclejoe.md`](../../research/strategies/unclejoe.md).
 Measurements live in [shadow.md](shadow.md).
 
-**The build in the tree today must not be rated.** U4 wired the afterstate
-re-rank in shadow, and the forwards it spends put p99 at 143 ms and max at
-181 ms against RULES.md §08's 150 (§7, U4). `UNCLEJOE_RERANK=0` restores U3's
-cost.
+U4's re-rank runs in shadow: it spends the turn's spare clock on afterstate
+forwards, logs what a live loop would have chosen, and plays the network's
+argmax anyway. It rides the deadline by design — p99 112 ms, max 131 ms on the
+dev host against RULES.md §08's 150 — so U5's proxy measurement is mandatory
+before any rated round. `UNCLEJOE_RERANK=0` restores U3's cost.
 
 Revised 2026-08-15 after a design review. The goal changed: **spend the whole
 150 ms turn budget** (RULES.md §08), not finish the move early. The
@@ -153,7 +154,7 @@ jitter and reply emit.
    chooses the move and regardless of any kill-switch.
 2. Run the full existing pipeline unchanged — frame→raw, masks,
    `augment_obs`, forward, argmax — and additionally read the top
-   `TOP_K = 5` legal candidates in policy order and the root value. Never
+   `TOP_K = 4` legal candidates in policy order and the root value. Never
    skip the forward.
 3. Evaluate the triggers. On a fire, run the proof search
    (`PROOF_DEADLINE_MS = 60`, `PROOF_NODE_BUDGET = 300,000`). A proof
@@ -162,7 +163,9 @@ jitter and reply emit.
 4. Re-rank. For each candidate in policy order: drop it if a filter masks
    it (castle rules) or `refutes()` it; otherwise build the afterstate, run
    the forward, record the value. Stop starting evaluations when the
-   remaining clock is under `RERANK_RESERVE_MS = 25`. Play the best-valued
+   remaining clock is under the reserve — which is what the slowest
+   evaluation so far this game cost, never below
+   `RERANK_RESERVE_FLOOR_MS = 25`. Play the best-valued
    surviving candidate; with none evaluated yet (cutoff before the first
    forward), play the first surviving candidate in policy order; if every
    candidate is filtered, the filters are moot — play the argmax.
@@ -254,8 +257,8 @@ guarantee is the anytime structure, not an estimate.
 | `SEARCH_DEPTH` | 3 | `D`: the kill proof's horizon, and the trigger scan radius |
 | `DEFENSE_DEPTH` | 1 | the defense proof's horizon (U3, §7) |
 | `FOG_GROWTH_MARGIN` | 3 | added to the hidden bound so an aged bound is still a bound (U3, §7) |
-| `TOP_K` | 5 | candidates read from the policy (argmax is #1) |
-| `RERANK_RESERVE_MS` | 25 | start no afterstate eval under this remainder |
+| `TOP_K` | 4 | candidates read from the policy (argmax is #1) |
+| `RERANK_RESERVE_FLOOR_MS` | 25 | floor under the *measured* re-rank reserve |
 | `CASTLE_SURCHARGE_CAP` | 8 | §3 |
 | `CASTLE_LATE_TURN` | 650 | §3 |
 
@@ -283,18 +286,32 @@ the synthetic-long log, locally and on the Modal proxy, reporting p99
 **and max** against 150; plus a Rust test that an artificially tiny
 deadline degrades the loop to the argmax.
 
-**U4 measured this table and two of its rows are wrong** ([shadow.md](shadow.md)
-§U4). `RERANK_RESERVE_MS = 25` is smaller than the thing it reserves for: one
+**U4 measured this table, found two rows wrong, and fixed both**
+([shadow.md](shadow.md) §U4).
+
+`RERANK_RESERVE_MS = 25` was smaller than the thing it reserved for: one
 evaluation is a whole forward, 22 ms typical and 48 ms at joe-rs's own max on
-the dev host. So the anytime structure bounds where the loop stops *starting*
-work and not where it stops working, and the guarantee above has a hole
-exactly that wide — measured at p99 143 ms, max 181 ms. `TOP_K = 5` is the
-second: five afterstates plus the live forward is ~138 ms before any
-rendering, so the loop cut off on 4,008 of 4,037 turns and averaged 3.9
-forwards. The arithmetic below counted the spare clock correctly and then
-spent it as though the reserve were free. A reserve must exceed the **worst**
-cost of one evaluation, or the loop must reserve what its own last evaluation
-took; and `TOP_K` should be chosen on the Modal proxy, not here.
+the dev host. So the anytime structure bounded where the loop stopped
+*starting* work and not where it stopped working, and the guarantee above had
+a hole exactly that wide — measured at p99 143 ms, max 181 ms. **The reserve
+is now measured rather than declared**: the loop keeps the cost of its own
+slowest evaluation this game and starts no other with less than that left,
+seeded before the first frame by the warmup forward `Seat::new` already pays
+for. The constant that remains is a floor under that measurement. This is
+what makes the guarantee host-independent — a slower machine measures a bigger
+reserve and runs fewer candidates, which is a degradation of an anytime loop
+and not a fault.
+
+`TOP_K = 5` was the second: five afterstates plus the live forward is ~138 ms
+before any rendering, so the loop cut off on 4,008 of 4,037 turns and averaged
+3.9. It is now **4** — the number the deadline pays for at a ~24 ms forward.
+
+Re-measured with both fixes: **p99 112 ms, max 131 ms**, inside the 130 ms
+internal deadline and so inside 150 with the slack untouched. The remaining
+gap between `TOP_K = 4` and the 3.4 evaluations actually run is the dev host's
+own jitter — a single stalled evaluation ratchets the reserve up for the rest
+of the game, and this host stalls where the Modal proxy does not (joe-rs max
+26 ms here on the same run, 34.5 ms on the proxy). U5 confirms `TOP_K` there.
 
 ## 5. Tests
 
@@ -464,17 +481,23 @@ took; and `TOP_K` should be chosen on the Modal proxy, not here.
     supported as specified. The live re-rank does not ship. A **minimum-gap
     threshold** would act on the 8% instead of the 49%, and that is the
     strategist revision this data argues for.
-  - **`RERANK_RESERVE_MS = 25` is smaller than one evaluation.** An
-    evaluation is a whole forward — 22 ms typical, 48 ms at joe-rs's own max
-    on the dev host — so the anytime structure bounds where the loop stops
-    *starting* work, not where it stops working. Measured: p99 143 ms, max
-    181 ms, over the 150 ms limit. §4's "the guarantee is the anytime
-    structure, not an estimate" has that hole in it. The U4 build must not
-    be rated; `UNCLEJOE_RERANK=0` restores U3's cost.
-  - **`TOP_K = 5` is not a budget that exists.** The loop cut off on 4,008
-    of 4,037 turns and averaged 3.9 forwards. Five afterstates plus the live
-    forward is ~138 ms before any rendering. Four is what the dev host pays
-    for; the Modal proxy is where the number should be chosen.
+  - **The reserve and `TOP_K` were both wrong, and were fixed inside the
+    milestone.** `RERANK_RESERVE_MS = 25` was smaller than one evaluation —
+    a whole forward, 22 ms typical and 48 ms at worst — so the loop started
+    work it could not finish: p99 143 ms, max 181 ms, over the limit. The
+    reserve is now **measured**, not declared (§4), and `TOP_K` is 4. After
+    the fix: **p99 112 ms, max 131 ms**, inside the 130 ms internal deadline
+    on the same host and the same corpus. Every other number below was
+    re-measured against the fixed build.
+  - **The reserve ratchets and never decays.** One stalled evaluation pins
+    it for the rest of the game — 40 to 55 ms across the five runs, against
+    a ~23 ms typical evaluation — which costs a candidate per turn on a
+    noisy host and is why 4,039 turns averaged 3.4 forwards rather than 4.
+    That is the conservative direction and it is deliberate: a reserve set
+    to the typical cost is exactly the bug this milestone fixed. Whether a
+    decaying bound buys back the candidate without giving back the
+    guarantee is a U5 question, and it should be asked on the Modal proxy,
+    where the stalls are smaller.
   - **The masks are real but rare.** 49 candidates removed over 4,037 turns,
     and the argmax on 9 of them. A mask-only contrast needs far more games
     than the plan's ~1150/arm to resolve, which changes what a decomposition
