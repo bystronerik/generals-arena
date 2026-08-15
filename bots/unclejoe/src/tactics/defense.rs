@@ -1,10 +1,15 @@
 //! The defense tactic: can they take ours?
 //!
-//! At this milestone the file is only the trigger — the predicate that says a
-//! defense proof is worth attempting. The proof search it will call arrives
-//! in U3, and lands here, beside the predicate that gates it.
+//! Three parts, in the order they run: the trigger, [`argmax_loses`], and
+//! [`prove`]. The middle one is what keeps this tactic honest. A defense
+//! search asked "is there a move that survives?" answers *yes* on almost every
+//! quiet turn, because almost every move survives a turn where nothing is
+//! happening — and an override on that answer would replace the network's move
+//! with an arbitrary safe one. So the override needs two facts, not one: the
+//! move the network chose **provably** loses the general, and another move
+//! **provably** does not. Neither alone moves anything.
 //!
-//! Three arms, and the third is what makes this more than a look at the
+//! Three trigger arms, and the third is what makes this more than a look at the
 //! frame. Vision is a 3×3 pool around owned cells (RULES.md §06), so the ring
 //! adjacent to our general is always lit and the fog arm only ever fires at
 //! distance 2 or more — exactly where a stack can be sitting one step outside
@@ -24,8 +29,10 @@
 
 use crate::board::memory::{is_visible, Memory};
 use crate::io::wire::{Observation, OWNER_OPP};
+use crate::search::minimax::{self, Goal, Limits, Report};
+use crate::search::sim::{Choice, Sim};
 use crate::tactics::common::{hidden_army, Reach};
-use crate::tactics::{DEATHTOUCH_TURN, SEARCH_DEPTH};
+use crate::tactics::{DEATHTOUCH_TURN, DEFENSE_DEPTH, SEARCH_DEPTH};
 
 /// Why the trigger fired, worst first — the order they are reported in when
 /// several apply on one frame.
@@ -116,6 +123,32 @@ pub fn evaluate(obs: &Observation, mem: &Memory, reach: &mut Reach) -> Option<Fi
         }
     }
     worst
+}
+
+/// Does the move the network chose hand over the general?
+///
+/// Over the **visible-only** board, so every reply counted here is one the
+/// opponent demonstrably has: a `true` is a fact about the game, not about the
+/// pessimistic model. Under fog the two boards agree anyway at this horizon —
+/// vision is the 3×3 pool around owned cells (RULES.md §06), so every cell
+/// that could reach our general in one move is lit.
+pub fn argmax_loses(argmax: Choice, visible: &mut Sim, window: &[bool]) -> bool {
+    minimax::refutes(visible, argmax, window)
+}
+
+/// Try to prove that some action keeps the general.
+///
+/// Depth one, where a defense proof means something. The horizon is not a
+/// budget decision: at one ply the pessimistic board costs us nothing, because
+/// every cell within a move of our general is visible and the fog bound has
+/// nowhere to sit. At two it costs us everything — a fogged cell two steps out
+/// holds the opponent's whole unaccounted army, so almost nothing is provable
+/// and the search would spend the clock proving it. The trigger still scans
+/// `SEARCH_DEPTH` moves out, which is a superset of what this can answer; the
+/// extra fires cost a [`argmax_loses`] call that says no.
+pub fn prove(fire: &Fire, sim: &mut Sim, window: &[bool], limits: &Limits) -> Report {
+    let limits = Limits { depth: DEFENSE_DEPTH, ..*limits };
+    minimax::prove(sim, Goal::Survive, fire.general, window, &limits)
 }
 
 #[cfg(test)]

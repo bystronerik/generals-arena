@@ -159,12 +159,21 @@ to this spec:
 
 | Cap | Proposed | Why |
 | --- | --- | --- |
-| Depth | 3 of our moves | Unchanged: beyond three plies the fog bound (§6) dominates and proofs stop landing — the binding constraint is knowledge, not compute. |
+| Depth, kill | 3 of our moves | Unchanged: beyond three plies the fog bound (§6) dominates and proofs stop landing — the binding constraint is knowledge, not compute. |
+| Depth, defense | 1 | Set in U3, and not for budget. At one ply the fog bound costs nothing — vision is the 3×3 pool around owned cells, so every cell that can reach our general in one move is visible. At two it costs everything, since a fogged cell two steps out is credited with their whole unaccounted army. |
 | Node budget | 300,000 | The clock-independent ceiling, scaled from 100k at the old 20 ms deadline. |
-| Deadline | 60 ms, checked every 1,024 nodes | Up from 20 ms: trigger turns are where exactness matters most, and the clock exists to be spent. A decline still leaves ~45 ms of re-rank. |
+| Deadline | 60 ms per search, checked every 1,024 nodes | Up from 20 ms: trigger turns are where exactness matters most, and the clock exists to be spent. Per search, not per turn — both triggers can fire on one turn, and a declining kill must not starve the defense behind it. |
+| Fog growth margin | 3 | Added to the hidden bound: a fogged cell could be a castle or general producing on the §04 clock, and a 50-turn tick can land inside the horizon. An aged bound has to still be a bound. |
 
 Hitting either cap declines, and a decline is never a half-searched move: it
 falls through to the filtered re-rank (§7).
+
+Measured in U3 ([`../../bots/unclejoe/shadow.md`](../../bots/unclejoe/shadow.md),
+2026-08-16): across four gate matches neither cap ever bound. The kill search
+declined 87 of 88 fires by exhausting its tree, at ~2–3k nodes and ≤26 ms per
+fire. The override fired **once in 2,900 turns**, and on that turn it proved
+the move the network was already playing — the first evidence on H1, and it is
+weak.
 
 ## 6. Fog, pessimistically
 
@@ -204,7 +213,11 @@ arithmetic from RULES.md, not judgment:
   visible opponent reply captures our general after it. Sound, because it
   quantifies over every visible reply from the true root. This closes the
   first revision's known gap: the defense search declining and the bot then
-  playing a move the search had already seen lose.
+  playing a move the search had already seen lose. **The check itself ships
+  in U3**, one milestone early, as the gate on the defense override: without
+  it a defense proof would answer "some move survives" on nearly every quiet
+  turn and the override would replace the network's move with an arbitrary
+  safe one. Masking candidates with it is still U4's.
 
 The two castle thresholds are the only uncalibrated constants in this spec.
 They sit behind their own switch, and the U4 shadow counts precede their

@@ -1,8 +1,9 @@
 //! The kill tactic: can we take their general?
 //!
-//! At this milestone the file is only the trigger — the predicate that says a
-//! kill proof is worth attempting. The proof search it will call arrives in
-//! U3, and lands here, beside the predicate that gates it.
+//! Two halves, in the order they run: the trigger, which says a proof is worth
+//! attempting, and [`prove`], which attempts it. The trigger is cheap and
+//! wrong in one direction on purpose; the proof is exact and silent unless it
+//! is certain.
 //!
 //! The predicate is a **superset**: every position where a kill is provable
 //! within the depth budget fires it. The converse is not claimed. Both
@@ -15,6 +16,8 @@
 
 use crate::board::memory::Memory;
 use crate::io::wire::{Observation, OWNER_ME};
+use crate::search::minimax::{self, Goal, Limits, Report};
+use crate::search::sim::Sim;
 use crate::tactics::common::Reach;
 use crate::tactics::{DEATHTOUCH_TURN, SEARCH_DEPTH};
 
@@ -90,6 +93,19 @@ pub fn evaluate(obs: &Observation, mem: &Memory, reach: &mut Reach) -> Option<Fi
         // pre-sighting sentinel here.
         stale_turns: obs.turn - mem.last_seen_turn,
     })
+}
+
+/// Try to prove the kill the trigger suspects.
+///
+/// The search runs on the **pessimistic** board, so the general it has to beat
+/// is not the stale bound the trigger compared against: it is that garrison
+/// plus everything the fog could be holding beside it. That is why a fire is
+/// so much cheaper than a proof, and why most fires end here with nothing.
+///
+/// Iterative deepening comes from the search, and the shortest kill is the one
+/// it returns — a win now cannot be improved on by a win in three plies.
+pub fn prove(fire: &Fire, sim: &mut Sim, window: &[bool], limits: &Limits) -> Report {
+    minimax::prove(sim, Goal::Kill, fire.target, window, limits)
 }
 
 #[cfg(test)]

@@ -2,8 +2,9 @@
 
 What the tactics layer *would* have done, measured while it did nothing. The
 milestones that end in a shadow report write their sections here:
-[tactics-plan.md](tactics-plan.md) §7 — U2 (triggers) below, U4 (afterstate
-re-rank) later.
+[tactics-plan.md](tactics-plan.md) §7 — U2 (triggers) below, U3 (what the
+searches behind those triggers proved) after it, U4 (afterstate re-rank)
+later.
 
 ## U2 — trigger fire rates (2026-08-15)
 
@@ -139,3 +140,85 @@ The gate at seed 0 ends on turn 770 where [fork-plan.md](fork-plan.md) §7
 recorded turn 385 for U1. That is the step-23500 checkpoint sync, not the
 tactics layer — both bots moved to the new artifact together, and the match
 is deterministic (two runs, same turn).
+
+## U3 — what the searches proved (2026-08-16)
+
+Build: `bots/unclejoe/` at the U3 code, same artifact `4f2ab8703559`, same dev
+arm64 macOS host, same four gate seeds. The triggers are unchanged from U2, so
+their columns repeat the table above; what is new is the column after each —
+what the proof search behind the trigger did with the fire.
+
+| Game | Turns | Result | Kill fires | Kill proved | Defense fires | argmax refuted | Defense proved | Search nodes | Slowest search |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| gate seed 0 | 770 | loss | 0 | 0 | 678 | 1 | 0 | 34 | < 0.05 ms |
+| gate seed 1 | 659 | loss | 0 | 0 | 3 | 1 | 0 | 72 | < 0.05 ms |
+| gate seed 2 | 624 | win | 29 | 0 | 0 | 0 | 0 | 92,464 | 26.4 ms |
+| gate seed 3 | 847 | win | 59 | 1 | 5 | 0 | 0 | 120,091 | 10.7 ms |
+
+2,900 turns. The kill trigger fired 88 times and every fire ran a proof search;
+the defense trigger fired 686 times and **two** of them got past the refutation
+gate to a search. One override came out of the 90, and no cap tripped in any of
+them. Every match reached a normal end — a general capture, no faults, no
+timeouts — on the same turn as its U2 run, with the same winner.
+
+### The one override agreed with the network
+
+Seed 3, turn 846: `override kill depth 1 nodes 18`, a deathtouch touch onto the
+general at (1, 19) from (1, 18). It is the move that won the game — and it is
+also the move joe was already making. Re-running the same seed with
+`UNCLEJOE_OVERRIDE=0` gives a log that is identical line for line, ending on
+turn 847 with the same capture. So the honest reading of U3's four matches is:
+the override fired once in 2,900 turns and changed nothing.
+
+That is a finding rather than a defect, and it is the one H1 was written to be
+falsifiable about ([the spec](../../research/strategies/unclejoe.md) §1): a
+proof-gated override can only pay where the network is wrong *and* the
+position is provable, and this sample found no such position. It also sets the
+expectation for U6 — an override-only contrast at this rate cannot move a
+rating, so the decomposition arm that matters is the re-rank's.
+
+### The kill search finishes; the caps never bind
+
+The kill trigger fired 88 times across the two won games and the search
+declined 87 of them, each time by exhausting its tree rather than by running
+out: `kill capped 0` everywhere. Cost per fire is ~3,200 nodes (seed 2) and
+~2,000 (seed 3) against a 300,000-node ceiling, and the slowest single search
+was 26.4 ms against a 60 ms deadline.
+
+So in real positions the depth-3 proof search is not budget-limited. The reason
+is the one the plan predicted: the enemy general is *in view* on 3–5% of turns,
+and when it is not, the pessimistic bound puts the whole hidden army on its
+cell and every neighbour of it — a position that refutes at depth 1 and costs
+almost nothing to refute. The binding constraint is knowledge, not compute.
+
+Worst-case turn cost is therefore ~49 ms — a 22 ms forward plus a 26 ms search
+— against a 150 ms limit. U5 re-measures on the Modal proxy, where it matters.
+
+### The defense override is a last-ply net, and both catches were already lost
+
+681 defense trigger fires produced **two** refutations of the network's move,
+and no defense proof. That gap is the design working as intended in one place
+and running out of room in another.
+
+Working as intended: `refutes` asks whether a *visible* reply takes the general
+one ply from now, which needs an enemy stack already adjacent to it. 679 of the
+681 fires never had one — they are the fog arm firing on a pocket three moves
+out (§ *The fog arm still pins at 100% after contact in one game*, above), and
+each ended on the cheap check without a search.
+
+Running out of room: both refutations landed on the turn the game ended, and
+neither had a defense to find. By the time a stack that beats the garrison is
+adjacent, the ply that could have saved the general is two or three turns back
+— and that is exactly the horizon the fog bound makes unprovable, since a
+fogged cell two steps from our general is credited with the opponent's whole
+unaccounted army. So the defense override is structurally a one-ply net, which
+[tactics-plan.md](tactics-plan.md) §7 now records as `DEFENSE_DEPTH = 1` rather
+than leaving it implied.
+
+### What did not change
+
+Wire-replay equality still holds with `UNCLEJOE_TACTICS=0`: 14 games, 7,092
+turns, every reply equal to Python joe's recording. With the master switch off
+the layer is not merely quiet — `decide` returns before the triggers run — so
+that test proves the U3 code cannot reach the reply, and the four gate matches
+prove that when it can, it did not.

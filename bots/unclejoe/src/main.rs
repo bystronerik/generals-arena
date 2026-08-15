@@ -1,12 +1,13 @@
 //! `unclejoe` — joe-rs's seat, forked to carry a tactics layer.
 //!
-//! A fork of `bots/joe-rs`, taken whole: every module below this one is a
-//! verbatim copy, and at this milestone the two binaries decide every frame
-//! identically. That is the point of the fork rather than a step on the way to
-//! it — the planned tactics layer is measured against joe-rs, and a contrast
-//! that isolates one change needs the other side of the program to be a copy,
-//! not a rewrite. The weights are a byte copy of joe-rs's artifact for the same
-//! reason (`tools/sync_artifact.py` re-copies them after a joe re-export).
+//! A fork of `bots/joe-rs`, taken whole: every module the network path uses is
+//! a verbatim copy, and with `UNCLEJOE_TACTICS=0` the two binaries decide
+//! every frame identically. That is the point of the fork rather than a step
+//! on the way to it — the tactics layer is measured against joe-rs, and a
+//! contrast that isolates one change needs the other side of the program to be
+//! a copy, not a rewrite. The weights are a byte copy of joe-rs's artifact for
+//! the same reason (`tools/sync_artifact.py` re-copies them after a joe
+//! re-export).
 //!
 //! Wire mode (no arguments): the competition stdio seat. Per turn: parse the
 //! frame, rebuild the 14-channel raw tensor, build cost + masks, augment to
@@ -14,10 +15,12 @@
 //! argmax — exactly what the Python sibling's `agent.py` does. No search, no
 //! sampling; joe is deterministic at play time.
 //!
-//! The `tactics` layer runs alongside that path in **shadow** (milestone U2):
-//! it accumulates per-game memory, evaluates its trigger predicates, and
-//! reports on stderr. It chooses nothing yet, so the reply is still the
-//! network's argmax and still equals joe-rs's, frame for frame.
+//! The `tactics` layer wraps that path (milestone U3): it accumulates per-game
+//! memory, evaluates its trigger predicates, and on a fire runs a bounded
+//! exact search. The reply is still the network's argmax on all but the rare
+//! turn where that search **proves** another action — a forced general
+//! capture, or the answer to a threat the network's move demonstrably loses
+//! to. A decline, a cap, or `UNCLEJOE_TACTICS=0` leaves joe-rs's reply.
 //!
 //! The parity harness stays behind in joe-rs and is not forked. It proves the
 //! ported surfaces against a JAX oracle keyed to these weights, and the code it
@@ -52,7 +55,7 @@
 //! may name the ones above it and must not name the ones below it.
 //!
 //! ```text
-//! xla_math  io  ->  board  ->  tactics  ->  nn  ->  main
+//! xla_math  io  ->  board  ->  search  ->  tactics  ->  nn  ->  main
 //! ```
 //!
 //! `xla_math` is the floor — the f32 sites where XLA does not compute what
@@ -61,11 +64,13 @@
 //! root. Nothing enforces the rule but review; a crate split would, and costs
 //! more than it is worth at this size.
 //!
-//! `tactics` is the fork's own layer and sits under `nn` on purpose: it reads
-//! the board and never the network, so `nn` stays byte-identical to joe-rs's
-//! and stays unaware that any of this exists. Anything that needs both — the
-//! planned afterstate re-rank — is composed here instead. (`search` joins the
-//! chain between `board` and `tactics` with the proof search, milestone U3.)
+//! `search` and `tactics` are the fork's own layers, and they sit under `nn`
+//! on purpose: they read the board and never the network, so `nn` stays
+//! byte-identical to joe-rs's and stays unaware that any of this exists.
+//! Anything that needs both — the planned afterstate re-rank — is composed
+//! here instead. `search` knows the rules and nothing about why it is being
+//! asked; `tactics` knows which question to ask and owns every constant the
+//! two share.
 //!
 //! Single-threaded by construction. One dedicated core is a competition
 //! constraint, not a tuning choice, so nothing here may spawn a thread.
@@ -81,6 +86,7 @@ mod io;
 // its dead-code warning.
 #[allow(dead_code)]
 mod nn;
+mod search;
 mod tactics;
 mod xla_math;
 
@@ -145,7 +151,10 @@ struct Seat {
 }
 
 impl Seat {
-    fn new(h: usize, w: usize) -> Result<Self, String> {
+    /// `player_id` is the seat the handshake gave us. Only the tactics layer
+    /// reads it: the §02 move-order ladder ends in a seat-index tiebreak, so
+    /// the forward model cannot resolve an exactly equal clash without it.
+    fn new(player_id: u8, h: usize, w: usize) -> Result<Self, String> {
         if h > PAD || w > PAD {
             return Err(format!("board {h}x{w} exceeds the net's pad_to {PAD}"));
         }
@@ -168,7 +177,7 @@ impl Seat {
             penalties: vec![0.0; N_ACTION_CHANNELS * CELLS],
             temporal: vec![0.0; 2 * TEMPORAL_WINDOW],
             memory: Memory::new(h, w),
-            tactics: Tactics::default(),
+            tactics: Tactics::new(player_id == 0),
         };
 
         // Warmup: one forward on zeros primes the allocator and page cache.
@@ -183,12 +192,16 @@ impl Seat {
     }
 
     /// The full per-move path. Mirrors `agent.py::step` + the pass clamp in
-    /// `agent.py::act`, with the tactics layer's shadow pass around it.
+    /// `agent.py::act`, with the tactics layer wrapped around it.
     fn act(&mut self, obs: &Observation) -> Result<Action, String> {
+        // The turn's clock starts the moment the frame is in hand. Everything
+        // the tactics layer does runs against it (`TURN_DEADLINE_MS`), which
+        // is the only reason a search can be given a budget at all.
+        let t0 = Instant::now();
         // Tactics step 1: per-game memory advances first and unconditionally,
         // exactly like `AugState` below it. Whoever ends up choosing the move
-        // — and, later, whichever kill-switch is set — the accumulation must
-        // not have a hole in it.
+        // — and whichever kill-switch is set — the accumulation must not have
+        // a hole in it.
         self.memory.update(obs);
 
         frame_to_raw(obs, &mut self.raw);
@@ -220,10 +233,13 @@ impl Seat {
         let a = decode_action(argmax(&fwd.logits));
         // Free eval telemetry (port-plan §5): v1 play ignores the value.
         eprintln!("[unclejoe] turn {} value {:+.4}", obs.turn, fwd.value);
-        // Tactics step 3, in shadow: the triggers look at the same frame and
-        // report. They choose nothing, so the reply below is unchanged — the
-        // override arrives with the proof search (milestone U3).
-        self.tactics.observe(obs, &self.memory);
+        // Tactics steps 3 and 4: the triggers look at the same frame, and a
+        // search behind one of them may prove a move. It only ever replaces
+        // the argmax on a proof — a decline, a cap, or a switch set to zero
+        // all leave the network's move exactly as it was.
+        if let Some(proven) = self.tactics.decide(obs, &self.memory, a, t0) {
+            return Ok(proven);
+        }
         if a.pass_field == 1 {
             // The pass channel's argmax cell can sit in the pad region; the
             // engine ignores row/col on a pass, but keep the reply in bounds.
@@ -260,7 +276,7 @@ fn wire_main() -> Result<(), String> {
     let mut seat = if pass_only {
         None
     } else {
-        match Seat::new(handshake.h, handshake.w) {
+        match Seat::new(handshake.player_id, handshake.h, handshake.w) {
             Ok(seat) => Some(seat),
             Err(e) => {
                 eprintln!("[unclejoe] cannot start the seat, passing every turn: {e}");
@@ -339,7 +355,7 @@ fn bench_main() -> Result<(), String> {
         .map_err(|e| e.to_string())?
         .ok_or("empty input")?;
     let load = Instant::now();
-    let mut seat = Seat::new(handshake.h, handshake.w)?;
+    let mut seat = Seat::new(handshake.player_id, handshake.h, handshake.w)?;
     let startup_ms = load.elapsed().as_secs_f64() * 1e3;
 
     let mut obs = Observation::with_dims(handshake.h, handshake.w);
@@ -491,7 +507,7 @@ fn run_selfcheck() -> ! {
     // The playing path itself, not a reconstruction of it: same constructor,
     // same warmup, same parser, same `act`.
     let began = Instant::now();
-    match Seat::new(PAD, PAD) {
+    match Seat::new(0, PAD, PAD) {
         Ok(mut seat) => {
             say("startup_ms", format!("{:.3}", began.elapsed().as_secs_f64() * 1e3));
             let text = selfcheck_input();

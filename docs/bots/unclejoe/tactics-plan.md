@@ -91,9 +91,11 @@ owns the memory update, calls `tactics`, and is the only place that runs
 - `tactics/common/` — everything neither tactic owns alone, and the only
   implementation of each question it answers: `reach.rs` is distance in
   **moves** over cells not remembered as mountains, `frame.rs` is what a
-  frame states about the army it does not show (the hidden-army bound).
-  `search` reuses both for its move-generation window and its fog model in
-  U3. The
+  frame states about the army it does not show (the hidden-army bound). Both
+  feed `search` in U3, but as **arguments rather than a dependency**: the DAG
+  above puts `search` below `tactics`, so `tactics` computes the window and
+  the fog bound with these helpers and hands them to the search, which
+  re-derives neither. The
   rule that keeps it small: a helper one tactic needs stays in that tactic's
   file; a helper that encodes a *rule* comes here, because two callers
   reading one rule two ways is the failure this module prevents.
@@ -221,12 +223,21 @@ guarantee is the anytime structure, not an estimate.
 | Constant | Value | Role |
 | --- | --- | --- |
 | `TURN_DEADLINE_MS` | 130 | internal deadline; 20 ms slack for host jitter + emit |
-| `PROOF_DEADLINE_MS` | 60 | proof-search wall clock, checked every 1,024 nodes |
+| `PROOF_DEADLINE_MS` | 60 | one proof search's wall clock, checked every 1,024 nodes |
 | `PROOF_NODE_BUDGET` | 300,000 | clock-independent ceiling, scaled from 100k at 20 ms |
+| `SEARCH_DEPTH` | 3 | `D`: the kill proof's horizon, and the trigger scan radius |
+| `DEFENSE_DEPTH` | 1 | the defense proof's horizon (U3, §7) |
+| `FOG_GROWTH_MARGIN` | 3 | added to the hidden bound so an aged bound is still a bound (U3, §7) |
 | `TOP_K` | 5 | candidates read from the policy (argmax is #1) |
 | `RERANK_RESERVE_MS` | 25 | start no afterstate eval under this remainder |
 | `CASTLE_SURCHARGE_CAP` | 8 | §3 |
 | `CASTLE_LATE_TURN` | 650 | §3 |
+
+`PROOF_DEADLINE_MS` is per search, not per turn: both triggers can fire on one
+turn, and a kill search that runs to its deadline must not starve the defense
+proof behind it. Each search takes `min(now + 60 ms, t0 + 130 ms)`, so the
+worst trigger turn is one forward plus 60 ms plus the remainder — still inside
+the internal deadline.
 
 All constants live in one place in the code and are quoted here and in the
 spec; a change to them is a change to both documents.
@@ -337,11 +348,57 @@ deadline degrades the loop to the argmax.
   of turns in one of the four gate matches, so the defense search's *decline*
   path is the hot path in a game shaped like that one.
 - **U3 — proof search + override live.** `search/sim.rs`,
-  `search/minimax.rs` (including `refutes()`, not yet wired to anything),
-  the `tactics/` orchestration and override in `act`, the
-  `UNCLEJOE_TACTICS` master and `UNCLEJOE_OVERRIDE` switches. Done when:
-  §5's sim, minimax, and trigger tests pass and wire-replay equality holds
-  with tactics off.
+  `search/minimax.rs` (including `refutes()`), the `tactics/` orchestration
+  and override in `act`, the `UNCLEJOE_TACTICS` master and
+  `UNCLEJOE_OVERRIDE` switches. Done when: §5's sim, minimax, and trigger
+  tests pass and wire-replay equality holds with tactics off.
+  **Shipped 2026-08-16**: 74 unit tests, all passing — 31 new, being 17 on the
+  forward model, 12 on the search, and 2 on the action codec between the layer
+  and the wire. Wire-replay equality holds over 14 games and 7,092 turns with
+  `UNCLEJOE_TACTICS=0`, and four gate matches are measured in
+  [shadow.md](shadow.md). No mechanical edit to
+  a copied file was needed after all — the afterstate clone (§1) is U4's
+  problem, and U3 needed none. Five things U4 inherits:
+  - **`search` does not name `tactics`.** §1's DAG and §1's `common/` bullet
+    disagreed about which way the U3 dependency would run; the DAG won.
+    `tactics` computes the window with `common::reach` and the fog bound with
+    `common::frame`, then passes both into the search as arguments. One
+    implementation of each rule, no upward edge.
+  - **`refutes()` is wired, as the defense override's gate rather than as a
+    filter.** A defense proof alone answers "does *some* action survive?",
+    which is *yes* on nearly every quiet turn — an override on that answer
+    would swap the network's move for an arbitrary safe one. So the override
+    needs two facts: the argmax **provably loses** the general (`refutes`, on
+    the visible-only board, so every reply counted is one the opponent really
+    has) and another action **provably does not** (the pessimistic proof).
+    U4's veto use — masking candidates — is unchanged and still to come.
+  - **The defense proof's horizon is one ply** (`DEFENSE_DEPTH = 1`), not
+    `SEARCH_DEPTH`. At one ply the pessimistic model costs nothing, because
+    vision is the 3×3 pool around owned cells (§06) and every cell that can
+    reach our general in one move is therefore lit. At two it costs
+    everything: a fogged cell two steps out carries the whole unaccounted
+    army, so almost nothing is provable and the search would spend the clock
+    proving it. The trigger still scans `D = 3`, a superset; the extra fires
+    cost one `refutes()` call each.
+  - **Three model assumptions**, stated in `search/sim.rs` and
+    `search/minimax.rs` rather than buried: opponent **builds are modeled as
+    a pass** (a build is a pass that also spends 35+ army off one of their own
+    cells, so it is dominated by a pass except for the new castle's ≤1 army of
+    production inside the horizon); **replies from outside the window are
+    modeled as a pass** (they cannot reach the general inside the horizon and
+    they commute with our move, with a residue this search does not see — a
+    source just outside that walks in and interferes at a later ply); and
+    passability is **asymmetric** — `TYPE_STRUCTURE_IN_FOG` is closed to us
+    and open to them, which is the exact reading of the two fog codes and not
+    an assumption at all. That last point is also why the owner field ended up
+    three-valued rather than the four §1 proposed: `unknown` is not a state
+    the resolution code ever has to reason about, because a fogged cell is
+    *materialized* at construction — enemy-owned, holding the bound — and the
+    two passability masks carry everything the fourth value would have said.
+  - **Every emitted override is a legal action, by construction.** Vision is
+    the 3×3 pool around owned cells, so every neighbour of a cell we own is
+    visible; the destination of any move the search generates from our own
+    cells is therefore known exactly, and never a guess about fog.
 - **U4 — afterstates + shadow re-rank.** `search/afterstate.rs`,
   `tactics/filters.rs`, the forwards wired in `Seat::act` **logging
   only**: play the argmax, log per-turn candidate values, the value gap
