@@ -64,10 +64,15 @@ LOGIT_TOL_NOMINAL = 1e-4
 # pins, arriving through the backstop instead.
 #
 # Sized at ~2x the worst measured, the same headroom the pins below carry. It
-# still binds: the relative gate alone would allow 1.6e-5 * 37.21 = 5.9e-4 on
+# still binds: the relative gate alone would allow 1.6e-5 * 51.03 = 8.2e-4 on
 # a max-scale frame, so this remains a real ceiling on a blow-up that the
 # relative gate would excuse, rather than dead code.
-BIN_TOL_NOMINAL = 3e-4        # worst measured 1.335e-4 (step 16500, gemm.rs)
+#
+# Step 20500 confirms the split was the right call and not a one-off: |dbin|
+# moved again to 1.621e-4, so the shared 1e-4 would have failed a second
+# consecutive export. The bin scale rose this time (37.21 -> 51.03) after
+# falling the time before, which is the wander the pins below describe.
+BIN_TOL_NOMINAL = 3e-4        # worst measured 1.621e-4 (step 20500, gemm.rs)
 #
 # The achieved gate is **relative, per frame**: each frame's max |delta| over
 # that frame's own largest reference activation, maximised across frames.
@@ -127,6 +132,13 @@ BIN_TOL_NOMINAL = 3e-4        # worst measured 1.335e-4 (step 16500, gemm.rs)
 # scalar, which is scale-free and summarises these same bins, improved
 # (2.682e-6 -> 1.699e-6), which is what rules out a numerical regression in
 # the bin path and leaves only the backstop re-sizing above.
+#
+# 2026-08-15, step 20500 (701 frames): rel logit 5.837e-6, rel bin 8.907e-6,
+# value 3.159e-6 — all inside, pins keep their sizing for a second export.
+# Watch the *logit* absolute backstop: |dlogit| 8.631e-5 against 1e-4 leaves
+# 16% headroom, so it is the pin most likely to come due next. If it does,
+# the test above applies — check the relative pins and the scale-free value
+# scalar first, and only re-size once they show the forward pass is healthy.
 LOGIT_REL_ACHIEVED = 8.0e-6   # worst measured 6.014e-6 (step 16500, gemm.rs)
 BIN_REL_ACHIEVED = 1.6e-5     # worst measured 9.638e-6 (step 16500, gemm.rs)
 # |value| <= 1 by construction (bin_centers span [-1, 1]), so this one is
