@@ -5,6 +5,38 @@ proof is itself checked. Tiers follow port-plan §6; both morpheus-rs rules
 apply: *replay proves agreement, mutation proves the proof*, and *loose
 float tolerances cannot see precision bugs*.
 
+## What parity covers: the network, not joe's research layer
+
+**joe-rs ports joe's network path. It does not port joe's selection layer.**
+
+Since 2026-08-16 `bots/joe/agent.py` applies a **repetition penalty** before
+its argmax: a decayed count of the cells joe moved from, subtracted from
+those cells' action logits (`REPEAT_PENALTY = 2.0`, `REPEAT_DECAY = 0.90`,
+commit `1f550ad`). It exists to break an argmax limit cycle. It is a
+**research feature of joe alone** and is deliberately absent from joe-rs,
+which still emits `argmax(logits)`.
+
+So the two bots emit different moves on repeated cells, by design. The
+consequence for this harness is specific and easy to trip over:
+
+| reference | what it is | who is graded on it |
+| --- | --- | --- |
+| `.npz` surfaces, incl. `all_action` | the **unpenalised** JAX oracle | joe-rs — every tier, and `test_wire_replay.py` |
+| `.out.log` | what **deployed joe** actually replied, penalised | nobody grades joe-rs on this |
+
+`test_wire_replay.py` therefore compares the binary against the `.npz`'s
+`all_action`, **not** against the `.out.log`. Grading joe-rs on the
+`.out.log` fails it for a difference it is supposed to have — that is what
+happened on the step-29000 rebuild, at `aegis-seed0` turn 57.
+
+The `.out.log` still earns its keep: `capture_fixtures.py` mirrors the
+penalty (importing both constants from `agent.py`, never copying them) purely
+to recompute the penalised action and assert it against the recorded reply.
+That keeps the recorded games honest about the deployed path while leaving
+every surface joe-rs sees unpenalised. If the penalty is ever retuned, the
+import follows it; if it is ever ported to joe-rs, this whole section and
+`test_wire_replay.py`'s reference both have to change.
+
 ## Corpus
 
 `tools/capture_fixtures.py`, two phases:
