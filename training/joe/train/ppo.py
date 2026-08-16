@@ -28,7 +28,8 @@ import jax.random as jrandom
 
 from training.joe.config import CurriculumStage
 from training.joe.env import make_competition_env, preset_min_generals_distance
-from training.joe.state import check_curriculum_stage, write_state
+from training.joe.state import (check_curriculum_stage, prune_checkpoints,
+                                write_state)
 from training.joe.train.evaluations import periodic_eval
 from training.joe.train.rollout_selfplay import collect_rollout
 
@@ -663,7 +664,15 @@ def train(cfg, network, optimizer, opt_state, logger, key, bundle,
                 curriculum_stage=current_stage_idx, last_eval_wr=last_eval_wr)
             print(f"  SAVED: {', '.join(written)}", flush=True)
             if on_checkpoint is not None:
-                on_checkpoint()
+                # The hook returns the newest step R2 has verified (None for
+                # hooks with no bucket behind them). Everything below it is
+                # redundant on disk; everything at or above it is still the
+                # only copy, so a stalled uploader simply prunes nothing.
+                confirmed = on_checkpoint()
+                pruned = prune_checkpoints(ckpt_dir, run_name, confirmed)
+                if pruned:
+                    print(f"  PRUNED {len(pruned)} file(s) below step "
+                          f"{confirmed}", flush=True)
 
         # Free large arrays to limit allocator fragmentation on the next rollout
         del obs, move_masks, build_masks, temporal, actions, lps, advs, rets

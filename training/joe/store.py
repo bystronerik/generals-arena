@@ -320,9 +320,15 @@ class CheckpointUploader:
 
     Each call joins any in-flight upload of the previous checkpoint (so the
     ordered protocol holds), re-reads ``state.json``, and uploads in a
-    thread — the training loop never blocks on the network. A failed upload
-    prints loudly and is retried on the next checkpoint; ``latest.json``
-    keeps pointing at the last verified set in the meantime.
+    thread — the training loop never blocks on the network, and an upload
+    that raises is swallowed so R2 can never stop training.
+
+    A failed upload prints loudly and ``latest.json`` keeps pointing at the
+    last verified set. The next checkpoint re-reads ``state.json`` and
+    uploads whatever it names *then*, so recovery skips the missed step
+    rather than replaying it — only the newest set has to be durable for a
+    resume. ``__call__`` returns the confirmed step so the caller can prune
+    local files behind it.
     """
 
     def __init__(self, store, ckpt_dir, run_name):
@@ -334,9 +340,20 @@ class CheckpointUploader:
         self._start_files_done = False
 
     def __call__(self):
+        """Start the newest upload; return the last step R2 has verified.
+
+        ``wait()`` runs first, so the returned step already accounts for the
+        upload the previous call started. It is the newest global step whose
+        blobs are all in the bucket and checksum-verified, which is exactly
+        the step ``prune_checkpoints`` may delete below. A failed upload
+        leaves it where it was, so nothing local is pruned until a later
+        upload succeeds.
+        """
         self.wait()
+        confirmed = self._uploaded_step
         self._thread = threading.Thread(target=self._upload_once, daemon=True)
         self._thread.start()
+        return confirmed
 
     def wait(self):
         """Block until the in-flight upload (if any) finishes."""

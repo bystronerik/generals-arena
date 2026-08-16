@@ -33,26 +33,32 @@ def _instance_id():
 
 
 class _IntervalUploader(threading.Thread):
-    """Daemon thread: call ``fn`` every ``interval_s`` until ``stop()``."""
+    """Daemon thread: call ``fn`` every ``interval_s`` until ``stop()``.
+
+    The event is ``_stop_event``, not ``_stop``: ``threading.Thread._stop``
+    is a real method the stdlib calls from inside ``join()``, so shadowing
+    it with an Event makes every ``stop()`` raise ``TypeError`` and hides
+    whatever error was being cleaned up after.
+    """
 
     def __init__(self, fn, interval_s, name):
         super().__init__(name=name, daemon=True)
         self._fn = fn
         self._interval_s = interval_s
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
 
     def run(self):
-        while not self._stop.is_set():
+        while not self._stop_event.is_set():
             try:
                 self._fn()
             except Exception:
                 print(f"{self.name} failed (will retry)", flush=True)
                 traceback.print_exc()
-            if self._stop.wait(self._interval_s):
+            if self._stop_event.wait(self._interval_s):
                 break
 
     def stop(self):
-        self._stop.set()
+        self._stop_event.set()
         self.join(timeout=self._interval_s + 5)
         try:
             self._fn()

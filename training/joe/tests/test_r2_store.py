@@ -241,6 +241,44 @@ def test_uploader_failure_retries_next_checkpoint(store, tmp_path, capsys):
     assert store.resolve_latest("joe-x")["state"]["global_step"] == 100
 
 
+def test_uploader_returns_the_confirmed_step(store, tmp_path):
+    # The return value is the floor prune_checkpoints deletes below, so it
+    # reports the step the *previous* call verified, never the one this call
+    # is about to start uploading.
+    make_ckpt_dir(tmp_path, "joe-x", 100)
+    uploader = CheckpointUploader(store, str(tmp_path), "joe-x")
+    assert uploader() == -1
+    make_ckpt_dir(tmp_path, "joe-x", 200)
+    assert uploader() == 100
+    assert uploader() == 200
+
+
+def test_confirmed_step_holds_still_while_uploads_fail(store, tmp_path,
+                                                       capsys):
+    # A stalled bucket must never move the prune floor: every checkpoint
+    # from the last verified step onward stays on disk until R2 comes back.
+    make_ckpt_dir(tmp_path, "joe-x", 100)
+    uploader = CheckpointUploader(store, str(tmp_path), "joe-x")
+    uploader()
+    uploader.wait()
+
+    store.client.fail_after_puts = 0
+    for step in (200, 300, 400):
+        make_ckpt_dir(tmp_path, "joe-x", step)
+        assert uploader() == 100
+    assert "R2 upload failed" in capsys.readouterr().out
+    assert store.resolve_latest("joe-x")["state"]["global_step"] == 100
+
+    # Recovery uploads the newest state and skips the missed steps outright
+    store.client.fail_after_puts = None
+    uploader()
+    uploader.wait()
+    assert store.resolve_latest("joe-x")["state"]["global_step"] == 400
+    assert uploader() == 400
+    for skipped in ("joe-x_200.eqx", "joe-x_300.eqx"):
+        assert f"joe/joe-x/checkpoints/{skipped}" not in store.client.objects
+
+
 def test_uploader_uploads_final_artifacts(store, tmp_path):
     state = make_ckpt_dir(tmp_path, "joe-x", 100)
     (tmp_path / "joe-x_final.eqx").write_bytes(b"final" * 100)
