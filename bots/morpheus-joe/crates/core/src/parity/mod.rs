@@ -24,7 +24,11 @@
 //! [`bench`] the belief benchmark, and [`surfaces`] one file per group of
 //! kinds. This file is `run()`: one line per kind.
 //!
-//! ## Twenty-eight kinds, down from thirty-three
+//! ## Twenty-six inherited kinds, down from thirty-one, plus one new one
+//!
+//! (N1 wrote "twenty-eight, down from thirty-three". Both numbers were wrong;
+//! `bots/morpheus-rs/` dispatches 31 and this file dispatches 26 of them. N2
+//! counted them.)
 //!
 //! Five are retired by the port and none of them is replaced at N1
 //! (joe-net-plan §8.3, §8.4): `tensor` (the 49-plane input build), `net`
@@ -34,11 +38,18 @@
 //! three died with the Torch oracle, which is where ~7 of the smoke slice's
 //! ~11.4 s went, so the smoke suite gets faster.
 //!
-//! The 28 that survive are checked against **Python morpheus, unchanged** —
+//! The 26 that survive are checked against **Python morpheus, unchanged** —
 //! none of them involves the network, and the committed corpus at
 //! `tests/fixtures/parity-smoke.jsonl.gz` is kept exactly as it is. The
 //! retired surfaces' fixture strata become dead weight in that file, which is
 //! cheaper than regenerating the corpus to remove them.
+//!
+//! `sequence` is the twenty-seventh and the first with a **different oracle**:
+//! not Python morpheus and not the retired Torch graph, but joe's own recorded
+//! corpus under `data/joe/joe-rs-parity/games/`, which stores a per-turn digest
+//! of the augmented tensor that joe's JAX pipeline produced. It is N2's gate —
+//! see `surfaces/bridge.rs`. N3 adds a twenty-eighth, `prior`, with a third
+//! oracle again (NumPy over JAX joe).
 
 pub mod bench;
 pub mod codec;
@@ -77,6 +88,7 @@ pub fn run<R: BufRead, W: Write>(kind: &str, reader: &mut R, writer: &mut W) -> 
             "memory" => surfaces::board::memory(&mut ints, &mut out, &mut ctx)?,
             "hash" => surfaces::board::hash(&mut ints, &mut out, &mut ctx)?,
             "symmetry" => surfaces::board::symmetry(&mut ints, &mut out, &mut ctx)?,
+            "sequence" => surfaces::bridge::sequence(&mut ints, &mut out, &mut ctx)?,
             "toplegal" => surfaces::net::toplegal(&mut ints, &mut out, &mut ctx)?,
             "npsum" => surfaces::numpy::npsum(&mut ints, &mut out, &mut ctx)?,
             "argsort" => surfaces::numpy::argsort(&mut ints, &mut out, &mut ctx)?,

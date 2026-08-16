@@ -17,3 +17,6 @@ dependencies = [
 [[package]]
 name = "morpheus-joe-core"
 version = "0.1.0"
+dependencies = [
+ "joenet",
+]

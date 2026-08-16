@@ -6,13 +6,19 @@
 //! candidate, and joe-rs playing in the **same** rating round, and a baseline
 //! that exists only in git history cannot be an arm (§0).
 //!
-//! **At N1 the net is loaded but not consulted.** `Seat::new` resolves the
-//! artifact, verifies its digest, schema-checks it and warms one forward — so
-//! the artifact wiring, the refusal path and the startup budget are all real —
-//! and then plays through the network-free `ShapedUniformEvaluator`. The
-//! observation bridge is N2 and the remap plus value decode are N3. A seat
-//! that finishes matches while deciding badly is exactly what this phase's
-//! gate asks for; a rating from it would mean nothing.
+//! **At N2 the net decides, and the search does not.** `Seat::new` resolves
+//! the artifact, verifies its digest, schema-checks it and warms one forward,
+//! and every turn then goes through the observation bridge into joe's forward
+//! pass and out through joe's greedy argmax. That is deliberate and it is the
+//! phase's gate: at N2 the fork **is** joe-rs wearing morpheus's I/O, so its
+//! replies must be byte-equal to joe-rs's over a whole recorded game, and any
+//! divergence is a bridge bug caught before the search can complicate it.
+//!
+//! What that leaves unbuilt is the whole of N3 — the 4,410 -> 3,970 channel
+//! remap, the 128-bin value decode, and the evaluator that hands both to the
+//! search. Until they land, `RuntimeController` is constructed and never
+//! consulted on this arm, and a rating from this bot would measure joe-rs with
+//! a slower launcher. See [`Seat::act`].
 //!
 //! Two behaviours here are not placeholders and should survive the port:
 //!
@@ -29,9 +35,11 @@ use std::time::Instant;
 
 mod artifact;
 
+use joenet::board::action::{argmax, decode_action};
 use joenet::board::obs::{CELLS, N_ACTION_CHANNELS, N_CHANNELS, TEMPORAL_WINDOW};
 use joenet::nn::net::Net;
 use morpheus_joe_core::belief::Action5;
+use morpheus_joe_core::nn::bridge::ObsBridge;
 use morpheus_joe_core::runtime::deployment::{
     default_deployment_path, deployment_candidates, load_deployment, try_load_deployment,
     DeploymentConfig, EvaluatorKind,
@@ -53,14 +61,14 @@ use morpheus_joe_core::io::wire::{
 struct Seat {
     controller: RuntimeController,
     evaluator: Box<dyn SearchEvaluator>,
-    /// Joe's frozen net: loaded, schema-checked, warmed, and **not consulted**.
+    /// Joe's frozen net, and the bridge that feeds it.
     ///
-    /// Held rather than dropped so the 34 MB of weights stay resident and the
-    /// startup and memory numbers this phase reports are the ones the real bot
-    /// will pay. N2 hands it the bridged `AugState`; until then the evaluator
-    /// beside it decides everything.
-    #[allow(dead_code)]
-    net: Option<Net>,
+    /// `Some` on the `network` arm, where [`Seat::act`] decides through it and
+    /// the controller stands idle; `None` on the `uniform` arm, where the
+    /// controller and `evaluator` decide as they always have. The two are one
+    /// `Option` rather than two because a net without a bridge cannot be asked
+    /// anything and a bridge without a net has nothing to answer.
+    joe: Option<(Net, ObsBridge)>,
     /// `(load, warmup, init)` in ms — plan §11's fourth success criterion, and
     /// the only place it can be measured: the grace window is spent here.
     startup_ms: (f64, f64, f64),
@@ -76,12 +84,10 @@ impl Seat {
         let deployment: DeploymentConfig = try_load_deployment();
         let mut load_ms = 0.0;
         let mut warmup_ms = 0.0;
-        // Both arms decide through the same network-free evaluator at N1. The
-        // `Network` arm still pays for the artifact — resolve, verify, load,
-        // warm — because that is what this phase's gate is about, and because
-        // a bot that only discovers a bad artifact at N2 has spent a phase
-        // proving nothing.
-        let mut net = None;
+        // The `network` arm resolves, verifies, loads and warms the artifact
+        // and then decides through it; the `uniform` arm skips all four and
+        // decides through the network-free evaluator below.
+        let mut joe = None;
         if deployment.evaluator == EvaluatorKind::Network {
             let load = Instant::now();
             let loaded = artifact::load(&artifact::default_artifact_dir()?)?;
@@ -100,7 +106,7 @@ impl Seat {
                 .forward(&aug, &penalties, &temporal)
                 .map_err(|e| format!("warmup forward: {e}"))?;
             warmup_ms = warm.elapsed().as_secs_f64() * 1e3;
-            net = Some(loaded);
+            joe = Some((loaded, ObsBridge::new(h, w)?));
         }
         let evaluator: Box<dyn SearchEvaluator> = Box::new(ShapedUniformEvaluator {
             knobs: deployment.shaping_knobs(),
@@ -143,7 +149,7 @@ impl Seat {
              \"pending_leaf_batch\":{},\"search_depth\":{},\
              \"widen_freeze_below\":{},\"max_forward_equivalents\":{},\
              \"normal_deadline_ms\":{},\"reserve_ms\":{},\"admission_guard_ms\":{},\
-             \"spike\":{},\"charged\":{},\"net_consulted\":false}}",
+             \"spike\":{},\"charged\":{},\"net_consulted\":{},\"search_runs\":{}}}",
             deployment.n_particles,
             deployment.target_simulations,
             deployment.min_simulations,
@@ -156,18 +162,76 @@ impl Seat {
             deployment.admission_guard_ms,
             spiking,
             charged,
+            // Both flip at N3, when the evaluator hands joe's prior and value
+            // to the search instead of the seat playing joe's argmax.
+            joe.is_some(),
+            joe.is_none(),
         );
         Ok(Self {
             controller,
             evaluator,
-            net,
+            joe,
             startup_ms: (load_ms, warmup_ms, (total_ms - load_ms - warmup_ms).max(0.0)),
             config_json,
         })
     }
 
+    /// One frame in, one reply out.
+    ///
+    /// **N2's decision path is joe's, not morpheus's**, and the whole phase
+    /// gate rests on that: the fork must reply byte-for-byte as joe-rs does
+    /// over a recorded game, which is the check that localizes a bridge bug
+    /// before the search exists to hide one. So the turn is the bridge, one
+    /// forward, joe's mask, joe's argmax, joe's decode, and joe's pass clamp —
+    /// `RuntimeController` is built and not called.
+    ///
+    /// Two details are the reason this is not simply joe-rs's `act`:
+    ///
+    /// * **The network is asked with zero penalties** (§6.2), and joe's mask
+    ///   is added to the logits it returns. Joe's forward adds `penalties` to
+    ///   its flat logits in one elementwise pass after unpatchify, so the two
+    ///   orders give bit-identical logits — and the call this bot makes is
+    ///   already the call the shipped bot will make.
+    /// * **The frame is morpheus's**, widened inside the bridge. Nothing else
+    ///   about the path differs, which is what makes a divergence diagnostic.
+    ///
+    /// N3 replaces everything after `advance` with the 4,410 -> 3,970 remap,
+    /// morpheus's own `legal_mask`, the 128-bin value decode, and
+    /// `controller.decide`.
     fn act(&mut self, obs: &Observation) -> Action {
-        wire(self.controller.decide(self.evaluator.as_mut(), obs))
+        let Some((net, bridge)) = self.joe.as_mut() else {
+            return wire(self.controller.decide(self.evaluator.as_mut(), obs));
+        };
+        bridge.advance(obs);
+        let mut forward = match net.forward(bridge.aug(), bridge.penalties(), bridge.temporal()) {
+            Ok(out) => out,
+            Err(err) => {
+                // A forward that will not run is not a frame we can answer,
+                // but it is still a frame we must reply to: the judge forfeits
+                // the match on an early exit and charges one fault out of
+                // fifty for a skip (RULES.md §08).
+                eprintln!("[morpheus-joe] turn {} forward: {err}; passing", obs.turn);
+                return PASS;
+            }
+        };
+        for (logit, penalty) in forward.logits.iter_mut().zip(bridge.joe_action_penalties()) {
+            *logit += penalty;
+        }
+        let action = decode_action(argmax(&forward.logits));
+        if action.pass_field == 1 {
+            // The pass channel's argmax cell can sit in the pad region. The
+            // engine ignores row and col on a pass; keep the reply in bounds
+            // anyway, exactly as joe-rs does, or the two logs differ on a
+            // field neither bot means.
+            return PASS;
+        }
+        Action {
+            pass: action.pass_field as u8,
+            row: action.row as u16,
+            col: action.col as u16,
+            dir: action.dir as u8,
+            split: action.is_half as u8,
+        }
     }
 }
 
@@ -405,8 +469,8 @@ fn run_selfcheck() -> ! {
             // A degraded seat answers every frame with `1 0 0 0 0`. On this
             // position — a general on thirteen army with four empty
             // neighbours — a skip is not a decision this bot makes, and that
-            // holds at N1: the prior is flat, but the tactics layer and the
-            // hard rules still run and still prefer a move to a skip.
+            // holds at N2 for a sharper reason than it did at N1: the reply is
+            // joe's own argmax over a real frame, and joe expands.
             if action.pass == 1 {
                 failures.push(
                     "the seat skipped a turn with an obvious move available, which is \

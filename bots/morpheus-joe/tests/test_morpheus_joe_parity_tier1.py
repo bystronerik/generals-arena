@@ -14,11 +14,17 @@ thirty-odd subprocess round-trips into a release binary that a cold checkout
 does not have — so the default suite was paying eleven seconds for something
 that silently skips wherever the binary is absent.
 
-**Twenty-eight kinds since N1**, down from thirty-three: `tensor`, `net`,
+**Twenty-six kinds since N1**, down from thirty-one: `tensor`, `net`,
 `prior`, `summary` and `decide` are retired with the port, and
-`morpheus_joe_parity_cases` says which and why. What survives is every surface that has nothing to do with
-a network — which is every surface the joe-net port does not touch — so this
-file is a regression gate on the fork, not a re-derivation.
+`morpheus_joe_parity_cases` says which and why. (N1 wrote "twenty-eight, down
+from thirty-three"; N2 counted the dispatch table and both numbers were two
+high.) What survives is every surface that has nothing to do with a network —
+which is every surface the joe-net port does not touch — so this file is a
+regression gate on the fork, not a re-derivation.
+
+The port's own new surface, `sequence`, is **not** here: its oracle is joe's
+recorded corpus rather than Python morpheus, so it runs from
+`test_morpheus_joe_bridge.py`.
 
 What "exact" means here is bit-exact, and everything downstream inherits it:
 the belief filter's likelihood is *observations match or they do not*, so a

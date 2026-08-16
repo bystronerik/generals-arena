@@ -34,6 +34,17 @@ BOT_DIR = Path(__file__).resolve().parents[1]
 REPO = BOT_DIR.parents[1]
 SRC = BOT_DIR / "crates" / "core" / "src"
 
+# The one surface whose oracle is not Python morpheus.
+#
+# `morpheus_joe_parity_cases.py` compares the port against the Python bot, and
+# every kind it knows about is checked that way. `sequence` is checked against
+# **joe's** recorded corpus instead — the per-turn tensor digests that joe's
+# own JAX pipeline produced — so it lives behind a pytest driver rather than in
+# that harness, and `_parity` below routes it there. N3's `prior` surface will
+# want the same treatment for a third oracle again (NumPy over JAX joe).
+SEQUENCE_SURFACE = "sequence"
+SEQUENCE_TEST = "tests/test_morpheus_joe_bridge.py"
+
 
 # Which parity surfaces can possibly see a break in each source file.
 #
@@ -88,6 +99,10 @@ FILE_SURFACES: dict[str, tuple[str, ...]] = {
     "search/tree.rs": ("search", "evict"),
     "search/select.rs": ("search",),
     "search/backup.rs": ("search",),
+    # N2. The observation bridge is reachable from one surface and only one,
+    # and that surface has a different oracle from every other entry above —
+    # see `SEQUENCE_SURFACE`.
+    "nn/bridge.rs": (SEQUENCE_SURFACE,),
 }
 
 
@@ -1092,6 +1107,29 @@ MUTATIONS: tuple[Mutation, ...] = (
         "node, and `reuse_or_reset` does the same on a reused child. Measured "
         "over 742 selections in the search setups: they never differ.",
     ),
+    # N2. The observation bridge, whose failure mode is the quietest in the
+    # port: every one of these leaves a tensor in range, plausible, and wrong,
+    # and a frozen net answers it with a confident bad move. The `sequence`
+    # surface is the only thing that can see them, which is why it is the one
+    # entry in `FILE_SURFACES` with a different oracle.
+    Mutation(
+        "the turn's history advances by one turn",
+        "nn/bridge.rs",
+        "std::mem::swap(&mut self.state, &mut self.next);",
+        "if false { std::mem::swap(&mut self.state, &mut self.next); }",
+    ),
+    Mutation(
+        "the owner grid widens from the owner grid",
+        "nn/bridge.rs",
+        "self.frame.owner_grid[i] = obs.owner_grid[i] as i32;",
+        "self.frame.owner_grid[i] = obs.type_grid[i] as i32;",
+    ),
+    Mutation(
+        "the temporal input's two halves are army then land",
+        "nn/bridge.rs",
+        "self.temporal[..TEMPORAL_WINDOW].copy_from_slice(&self.state.opponent_army_history);\n        self.temporal[TEMPORAL_WINDOW..].copy_from_slice(&self.state.opponent_land_history);",
+        "self.temporal[..TEMPORAL_WINDOW].copy_from_slice(&self.state.opponent_land_history);\n        self.temporal[TEMPORAL_WINDOW..].copy_from_slice(&self.state.opponent_army_history);",
+    ),
 )
 
 
@@ -1123,18 +1161,64 @@ def _build() -> bool:
     return result.returncode == 0
 
 
-def _parity(args: list[str]) -> tuple[bool, str]:
-    """`(all kinds agreed, output)` for one parity run."""
+def _sequence() -> tuple[bool, str]:
+    """`(agreed, output)` for the one surface joe's own corpus checks."""
     env = os.environ.copy()
     env["MORPHEUS_JOE_BINARY"] = str(MUTATION_BINARY)
     result = subprocess.run(
-        [sys.executable, str(BOT_DIR / "tests" / "morpheus_joe_parity_cases.py"), *args],
+        [sys.executable, "-m", "pytest", "-q", "-m", "morpheus",
+         str(BOT_DIR / SEQUENCE_TEST)],
         cwd=str(REPO),
         env=env,
         capture_output=True,
         text=True,
     )
     return result.returncode == 0, result.stdout + result.stderr
+
+
+def _parity(args: list[str]) -> tuple[bool, str]:
+    """`(all kinds agreed, output)` for one parity run.
+
+    Two harnesses behind one call, because the mutations do not care which
+    oracle answers them. `--kinds sequence` goes to the pytest driver over
+    joe's corpus; everything else goes to the Python-morpheus harness. A run
+    that asks for both — which "all surfaces" does — has to agree on both.
+    """
+    if "--kinds" in args:
+        at = args.index("--kinds")
+        head, kinds = args[:at], args[at + 1:]
+    else:
+        head, kinds = list(args), []
+    # No `--kinds` means "all surfaces", which includes this one.
+    run_sequence = not kinds or SEQUENCE_SURFACE in kinds
+    others = [kind for kind in kinds if kind != SEQUENCE_SURFACE]
+
+    agreed, output = True, ""
+    # `--kinds sequence` alone leaves the other harness nothing to do, and
+    # calling it with no kinds would silently run its whole default set.
+    if others or not kinds:
+        env = os.environ.copy()
+        env["MORPHEUS_JOE_BINARY"] = str(MUTATION_BINARY)
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(BOT_DIR / "tests" / "morpheus_joe_parity_cases.py"),
+                *head,
+                *(["--kinds", *others] if others else []),
+            ],
+            cwd=str(REPO),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        agreed = result.returncode == 0
+        output += result.stdout + result.stderr
+
+    if run_sequence:
+        ok, text = _sequence()
+        agreed = agreed and ok
+        output += text
+    return agreed, output
 
 
 def main(argv: list[str] | None = None) -> int:

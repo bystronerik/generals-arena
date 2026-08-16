@@ -5,6 +5,7 @@
 
 pub mod belief;
 pub mod board;
+pub mod bridge;
 pub mod net;
 pub mod numpy;
 pub mod search;

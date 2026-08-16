@@ -161,12 +161,12 @@ pub(in crate::parity) fn write_memory(out: &mut Vec<i64>, memory: &VisibleMemory
 /// Run one parity kind end to end over stdin, writing one line per case.
 /// f32 out as its raw bit pattern, the same lossless channel `Ints::floats`
 /// reads in.
-// Unused since N1 and kept on purpose: `push_f32` wrote the f32 bit patterns
-// the retired `tensor`, `net` and `summary` surfaces rode out on, and N3's new
-// `prior` surface emits joe's 4,410 raw logits and its 128 bin logits the same
-// way. Deleting and re-deriving a bit-exact float codec is a parity risk with
-// no upside (joe-net-plan §8.4).
-#[allow(dead_code)]
+// Unused for the length of N1 and kept on purpose, which N2 vindicated: this
+// wrote the bit patterns the retired `tensor`, `net` and `summary` surfaces
+// rode out on, and `sequence` now writes joe's whole final `AugState` through
+// it. N3's `prior` surface emits the 4,410 raw logits and the 128 bin logits
+// the same way. Deleting and re-deriving a bit-exact float codec is a parity
+// risk with no upside (joe-net-plan §8.4).
 pub(in crate::parity) fn push_f32(out: &mut Vec<i64>, values: &[f32]) {
     out.extend(values.iter().map(|v| v.to_bits() as i64));
 }

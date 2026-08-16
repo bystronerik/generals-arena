@@ -3,13 +3,18 @@
 # result means anything. Required before an N-phase gate and before any
 # registry step of morpheus-joe (rewrite-plan §5, joe-net-plan §9).
 #
-# Twenty-eight surfaces since N1, all of them against Python morpheus and none
+# Twenty-six surfaces since N1, all of them against Python morpheus and none
 # of them a network: what the port deleted, it deleted from both sides. joe's
 # forward is covered elsewhere and differently — see tests/morpheus_joe_parity_cases.py.
 #
+# The twenty-seventh, `sequence`, is not run from here. Its oracle is joe's own
+# recorded corpus rather than Python morpheus, so it lives in
+# tests/test_morpheus_joe_bridge.py and the mutation check below dispatches to
+# it for anything under nn/bridge.rs.
+#
 # Minutes, not seconds — hundreds of thousands of cases. The CI-sized slice is
-# `pytest -m morpheus bots/morpheus-joe/tests/`, which runs the same code over
-# the committed seven-frame fixture in about six seconds.
+# `pytest -m morpheus bots/morpheus-joe/tests/`, which runs every surface —
+# both oracles — plus the wire replay, in about twenty-three seconds.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"

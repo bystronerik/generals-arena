@@ -1,10 +1,11 @@
 # Joe-net port plan
 
-Status: **written 2026-08-16. N0 passed on its middle row; N1 is done.** The
-`bots/morpheus-joe/` fork exists, carries joe's weights and joe's forward pass,
-and plays finishing games through a network-free evaluator. N2 has not started.
-What N1 changed about this document is marked **N1** where it appears, and the
-summary is at the end of the N1 phase entry below.
+Status: **written 2026-08-16. N0 passed on its middle row; N1 and N2 are
+done.** The `bots/morpheus-joe/` fork exists, carries joe's weights and joe's
+forward pass, and plays joe's argmax through morpheus's I/O — proved byte-equal
+to joe over three recorded games. N3 has not started. What each phase changed
+about this document is recorded at the end of its entry below; Q10 and Q11
+closed at N2.
 
 N0's results are in [joe-net-n0.md](../../research/measurements/joe-net-n0.md)
 and they revise this document in six places. Each is marked **N0** where it
@@ -1107,7 +1108,7 @@ Two deliberate non-actions, both scope calls rather than oversights:
   records a closure ref that describes nothing. The first registration belongs
   to the first phase that measures something.
 
-### N2 — Observation bridge
+### N2 — Observation bridge — **DONE 2026-08-16**
 
 Joe's `AugState` advanced once per real turn from morpheus's `Observation`
 (§4). Zero penalties (§6.2). The temporal window from `emit_observation`'s
@@ -1122,6 +1123,69 @@ matchup finishes.
 
 That last check is strong: at N2 the fork *is* joe-rs wearing morpheus's I/O,
 so any divergence is a bridge bug and is localized before search complicates it.
+
+**Result: every gate met, each on its first run** — which is the byte-identity
+rule of §8.2 paying out, not luck: everything downstream of the widening loop
+is joe's own code, so the only thing N2 could get wrong was the loop and the
+order around it. Over three whole corpus
+games — `aegis-seed0` (21×18), `blitz-seed7` (21×19), `boom-seed2` (21×20),
+**967 turns** — every
+per-turn tensor digest equals the one joe's JAX pipeline recorded, every field
+of the final `AugState` is bit-exact, and **zero** cells disagree between joe's
+`build_cost_from_raw` and morpheus's `live_build_cost`. Over the same three
+games the binary's replies are byte-equal to Python joe's, turn for turn. The
+gate match against `cm_expander` ended normally, and this time by winning: the
+enemy general fell on turn 304, because the seat is now playing joe. Startup is
+load 127 ms / warmup 15 ms, a decision is 15.5 ms, and the default suite holds
+at 13.7 s warm. Page: [bridge.md](../morpheus-joe/bridge.md).
+
+**All of it was measured on the step-23500 checkpoint**, and joe was re-exported
+to step 29000 later the same day. The two gates answer that differently, which
+is worth knowing before N3 reads them: `sequence` is weight-independent — the
+augmented tensor is a function of the frames alone — so a rebuilt corpus
+re-gates it and it still passes. The wire replay compares *decisions*, so it
+goes red until `scripts/joe_artifact_fanout.py` puts both bots on one
+checkpoint. That is R6 working, not a flake.
+
+**Four things N2 found that this plan did not say.**
+
+1. **"Zero penalties" and "byte-equal replies" cannot both hold naively, and
+   the fix is free.** joe-rs argmaxes over *masked* logits, so an unmasked
+   argmax diverges wherever joe's best raw action is illegal and the comparison
+   proves nothing. But joe's forward adds `penalties` to its flat logits in one
+   elementwise pass after unpatchify, so asking the net with zeros and adding
+   the mask to what it returns is **bit-identical** — `x + 0.0 + p` and `x + p`
+   agree for every finite `x`, including `-0.0`. The network call is already
+   the call the shipped bot will make, and `ObsBridge::joe_action_penalties` is
+   the one piece of scaffolding N3 deletes.
+2. **The `sequence` surface needed a fourth column the plan did not ask for.**
+   The `(2, 512)` temporal buffer handed to the forward is a *copy* of two
+   `AugState` ring buffers, so a stale copy or swapped halves leaves a state
+   the corpus still agrees with and a network input that is wrong on every
+   turn. Neither the digest nor the final-state check can see it. The surface
+   now emits the buffer and the test asserts it is that copy — verified by
+   applying the swap and watching only that assertion fail.
+3. **The mutation checker had to learn a second oracle.** `nn/bridge.rs` is
+   reachable from `sequence` and nothing else, and `sequence` is checked
+   against joe's corpus rather than Python morpheus. `_parity` now splits the
+   kinds and routes it to its pytest driver. N3's `prior` surface needs the
+   same for a third oracle again, so §8.5's "each must make the new `prior`
+   surface fail" is now cheap to honor. Three bridge mutations, 3/3 caught.
+4. **N1 left the mutation gate red for most of the map.**
+   `morpheus_joe_parity_cases.py`'s CLI default `--kinds` still named the five
+   retired kinds, so a bare run — which is what `mutation_check.py` makes for
+   every mutation whose file maps to "all surfaces" — died on `unknown kind
+   'tensor'`. Fixed, and the fork's first full pass then ran: **118/140 caught,
+   22 survived, every survivor carrying a recorded note**
+   ([report](../../research/measurements/morpheus-joe-mutation-check.json)).
+   While counting them: the surviving surfaces are **26, down from 31**, not
+   the "28, down from 33" N1 wrote in three places.
+
+Two deliberate non-actions, unchanged from N1's reasoning. `deployment.json` is
+still not re-tuned — K0's four conditions belong to N4, and tuning search knobs
+for a bot whose search does not run would be worse than leaving them wrong and
+saying so. And the bot is still **not registered** in `data/bot_versions/`: its
+content hash forks again at N3, and N2 measured a bridge, not a strength.
 
 ### N3 — Search integration
 
@@ -1371,15 +1435,20 @@ Listed rather than decided.
   promises to hold back is not held back. Two dead knobs in one config is a
   pattern, and the question is now whether anything else in
   `deployment.json` is decorative.
-- **Q10.** Do joe's build-legality rule and morpheus's `live_build_cost` agree
-  cell-for-cell? Both implement the same documented formula, but after §6.2
-  only morpheus's is consulted, and a disagreement would be silent.
-  *Assert at N2.*
-- **Q11.** Does the fork need its own `AugState` sequence fixtures, or does
-  joe-rs's corpus suffice? The code is byte-identical (§8.2) but the *driver*
-  differs — morpheus feeds it from `emit_observation`, joe-rs from the wire.
-  N2's byte-equal-replies check probably settles this; if it does not, three
-  full-game sequences must be re-captured through the fork's own path.
+- **~~Q10.~~ RESOLVED 2026-08-16 by N2.** They agree on **every cell of 967
+  turns** across three games, with morpheus's `VisibleMemory` advanced exactly
+  as the runtime advances it. The latched half of morpheus's rule
+  (`own_general`, `known_castle`) never adds a structure the frame does not
+  already show, which is what "owning a cell implies seeing it" predicted. The
+  count is a standing column of the `sequence` surface rather than a one-time
+  assertion, so it stays closed.
+- **~~Q11.~~ RESOLVED 2026-08-16 by N2.** joe-rs's corpus suffices and the fork
+  captures nothing. `all_aug_hash` and `final_state_*` are recorded from the
+  **JAX** pipeline, not from Rust, so replaying the same `.in.log` through the
+  fork's own driver compares it against joe rather than against joe-rs — a
+  better oracle than the fixtures this question proposed. The one thing the
+  corpus does not record is the `(2, 512)` buffer handed to the forward; that
+  is checked against the state it is copied from instead.
 - **Q12.** `resident_memory_target_mb` needs re-deriving. Trivially safe
   against the 2 GB cap, but the number in `deployment.json` should not be a
   leftover.
@@ -1391,8 +1460,10 @@ Listed rather than decided.
 Per docs-keeper rules, implementation knowledge splits into small topic files
 rather than growing this plan:
 
-- `docs/bots/morpheus-joe/` — `index.md`, `net.md` (the remap and value
-  conversion), `parity.md` (what §8 actually achieved), `packaging.md`.
+- `docs/bots/morpheus-joe/` — `index.md` (N1), `bridge.md` (N2: the widening,
+  the zero penalties, the `sequence` surface and Q10), `net.md` (N3: the remap
+  and value conversion), `parity.md` (what §8 actually achieved),
+  `packaging.md`.
 - [`docs/bots/joe-rs/export.md`](../joe-rs/export.md) — the fork joins "After a
   joe re-export".
 - [`docs/bots/morpheus-rs/belief.md`](belief.md) — a pointer noting the fork's

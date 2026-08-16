@@ -83,6 +83,7 @@ Small topic files for the Generals Arena research repo.
 - [joe-net port plan](bots/morpheus-rs/joe-net-plan.md) — joe's frozen network under morpheus's search: the fork, what belief loses, and the gates
 - [joe-net N0](research/measurements/joe-net-n0.md) — the forward-only cost, the forward budget by consumer, and what the real controller does at a 21 ms forward
 - [morpheus-joe](bots/morpheus-joe/index.md) — the fork that runs joe's frozen net under morpheus's search: crate layout, the byte-identity rule, and what N1 deleted
+- [morpheus-joe observation bridge](bots/morpheus-joe/bridge.md) — morpheus's frame into joe's `AugState`: the widening, the zero penalties, and the two gates that prove it
 
 ## Arena
 

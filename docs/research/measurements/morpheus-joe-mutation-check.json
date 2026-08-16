@@ -1,0 +1,1376 @@
+{
+  "scope": "smoke",
+  "results": [
+    {
+      "name": "50-tick army growth",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "even-tick structure growth",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "numpy negative-index wrap",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "deathtouch turn boundary",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "attacker wins ties",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "half-split rounds up",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "a move may empty its source",
+      "outcome": "survived",
+      "note": "Equivalent mutant, not a harness hole. `army_to_move` guards its invariant twice over \u2014 once in the `raw` formula and again in the clamp \u2014 so either alone is sufficient and deleting either is unobservable. The Python is written the same way; the redundancy is being ported faithfully, not introduced here.",
+      "surfaces": "all"
+    },
+    {
+      "name": "build ignores affordability",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "build proximity surcharge dropped",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "loser cells not transferred",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "neutral flag survives a loss",
+      "outcome": "survived",
+      "note": "Unobservable by construction: `ownership_neutral` and `ownership[seat]` are disjoint on every well-formed state, so the mask it clears is always empty. Faithful to the Python, and only a malformed state could tell the difference.",
+      "surfaces": "all"
+    },
+    {
+      "name": "visibility is 4-neighbour",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "structures under fog read as fog",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "fogged armies leak",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "half-split legal at two army",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "build on unexplored ground",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "moves into mountains are legal",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "a fogged structure is always a mountain",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "plain fog erases a known castle",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "castle owner refreshes on any sighting",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "dynamic memory refreshes through fog",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": "all"
+    },
+    {
+      "name": "owner planes hashed as int32",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "hash",
+        "propose"
+      ]
+    },
+    {
+      "name": "board dimensions left out of the digest",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "hash",
+        "propose"
+      ]
+    },
+    {
+      "name": "rot90+flip composed in the other order",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "symmetry"
+      ]
+    },
+    {
+      "name": "directions do not follow rotations",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "symmetry"
+      ]
+    },
+    {
+      "name": "numpy sum reassociated as a plain loop",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "npsum",
+        "argsort",
+        "propose",
+        "filter",
+        "rejuvenate",
+        "maxent",
+        "reservoir",
+        "toplegal",
+        "initbelief"
+      ]
+    },
+    {
+      "name": "argsort made stable",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "npsum",
+        "argsort",
+        "propose",
+        "filter",
+        "rejuvenate",
+        "maxent",
+        "reservoir",
+        "toplegal",
+        "initbelief"
+      ]
+    },
+    {
+      "name": "argsort skips the heapsort depth limit",
+      "outcome": "survived",
+      "note": "Equivalent on every case here. The depth limit is `2*floor(log2 n)` and median-of-three quicksort only exceeds it on inputs built to defeat the pivot choice; a probability vector, uniform or not, is not one. The fallback is ported because NumPy has it and a future adversarial input would need it, not because anything reaches it today.",
+      "surfaces": [
+        "npsum",
+        "argsort",
+        "propose",
+        "filter",
+        "rejuvenate",
+        "maxent",
+        "reservoir",
+        "toplegal",
+        "initbelief"
+      ]
+    },
+    {
+      "name": "ESS normalizes before squaring, not after",
+      "outcome": "survived",
+      "note": "",
+      "surfaces": [
+        "filter",
+        "rejuvenate",
+        "maxent",
+        "reservoir",
+        "initbelief"
+      ]
+    },
+    {
+      "name": "normalize_weights keeps negative weights",
+      "outcome": "survived",
+      "note": "Equivalent mutant. Every caller filters first: `filter_step`, `recover_belief` and `replace_from_belief` all pass a set already restricted to `weight > 0`, and the two reconstruction paths build their particles at `1/n`. So a negative weight never reaches the clamp. The Python clamps for the same belt-and-braces reason and the redundancy is ported, not introduced.",
+      "surfaces": [
+        "filter",
+        "rejuvenate",
+        "maxent",
+        "reservoir",
+        "initbelief"
+      ]
+    },
+    {
+      "name": "resample uses np.sum where the Python uses the builtin",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "filter",
+        "rejuvenate",
+        "maxent",
+        "reservoir",
+        "initbelief"
+      ]
+    },
+    {
+      "name": "ESS threshold compared with a strict inequality",
+      "outcome": "survived",
+      "note": "Unreachable, and provably so for the equal-weight case. `maybe_resample` only ever sees a set `filter_step` has already padded to `n_particles`, so its weights are `1/n` and its ESS is exactly `n` \u2014 against a threshold of `n/2`. Reaching equality needs `k >= n_particles` surviving particles whose ESS is exactly `n_particles/2`, which equal weights make impossible (ESS would be `k >= n_particles`) and unequal weights make an exact float coincidence. The boundary is copied from the Python either way.",
+      "surfaces": [
+        "filter",
+        "rejuvenate",
+        "maxent",
+        "reservoir",
+        "initbelief"
+      ]
+    },
+    {
+      "name": "a refuted particle is downweighted, not killed",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "filter",
+        "rejuvenate",
+        "maxent",
+        "reservoir",
+        "initbelief"
+      ]
+    },
+    {
+      "name": "a refuted particle advances anyway",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "filter",
+        "rejuvenate",
+        "maxent",
+        "reservoir",
+        "initbelief"
+      ]
+    },
+    {
+      "name": "history keeps the newest frames from the wrong end",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "filter",
+        "rejuvenate",
+        "maxent",
+        "reservoir",
+        "initbelief"
+      ]
+    },
+    {
+      "name": "the initial prior ignores the separation distance",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "filter",
+        "rejuvenate",
+        "maxent",
+        "reservoir",
+        "initbelief"
+      ]
+    },
+    {
+      "name": "the initial prior offers cells we can see",
+      "outcome": "survived",
+      "note": "Equivalent on any observation the engine can emit. A visible cell is typed plain, mountain, castle or general \u2014 never `TYPE_FOG` \u2014 and the very next test drops everything that is not `TYPE_FOG`. So the vision check is redundant with the type check unless the frame is hand-built, which the M2 crafted-memory pairs show is a real class of case but not one a first frame belongs to. Both checks are in the Python.",
+      "surfaces": [
+        "filter",
+        "rejuvenate",
+        "maxent",
+        "reservoir",
+        "initbelief"
+      ]
+    },
+    {
+      "name": "the uniform proposal is not uniform",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "propose",
+        "rejuvenate",
+        "maxent",
+        "toplegal"
+      ]
+    },
+    {
+      "name": "the proposal key ignores the previous action",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "propose",
+        "rejuvenate",
+        "maxent",
+        "toplegal"
+      ]
+    },
+    {
+      "name": "the masked softmax shifts by the unmasked maximum",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "propose",
+        "rejuvenate",
+        "maxent",
+        "toplegal"
+      ]
+    },
+    {
+      "name": "the masked softmax normalizes over illegal mass too",
+      "outcome": "survived",
+      "note": "Equivalent because the clip underflows, the same way the network's `f32::MIN` fill does. An illegal logit is set to -1e9 before the shift, so `exp(-1e9 - peak)` is exactly zero and contributes nothing to the denominator. The explicit zero stays because it makes 'illegal means zero' a property of the code rather than of float underflow.",
+      "surfaces": [
+        "propose",
+        "rejuvenate",
+        "maxent",
+        "toplegal"
+      ]
+    },
+    {
+      "name": "the softmax denominator is a plain loop",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "propose",
+        "rejuvenate",
+        "maxent",
+        "toplegal"
+      ]
+    },
+    {
+      "name": "top_legal_actions drops the pass it leads with",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "propose",
+        "rejuvenate",
+        "maxent",
+        "toplegal"
+      ]
+    },
+    {
+      "name": "top_legal_actions returns k, not k plus pass",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "propose",
+        "rejuvenate",
+        "maxent",
+        "toplegal"
+      ]
+    },
+    {
+      "name": "vision-changing compares the enemy's sight, not ours",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "rejuvenate",
+        "maxent"
+      ]
+    },
+    {
+      "name": "rejuvenation accepts a history it never verified",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "rejuvenate",
+        "maxent"
+      ]
+    },
+    {
+      "name": "the replay beam keeps its worst branches",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "rejuvenate",
+        "maxent"
+      ]
+    },
+    {
+      "name": "the acceptance weight has no floor",
+      "outcome": "survived",
+      "note": "Unreachable on the deployed path, and deliberately kept for the other one. Every candidate rejuvenation replays comes from the particle's own legal mask, and under the uniform proposal every legal action carries `1/n` \u2014 never zero. The floor binds only under the policy proposal, where a softmax can underflow an improbable-but-real action to zero and silently zero a history that explains every observation. `use_policy_proposal` is false today; the floor is what M7 would need if it were not.",
+      "surfaces": [
+        "rejuvenate",
+        "maxent"
+      ]
+    },
+    {
+      "name": "the replay budget is counted per turn, not per transition",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "rejuvenate",
+        "maxent"
+      ]
+    },
+    {
+      "name": "the reconstruction spreads the army unevenly",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "rejuvenate",
+        "maxent"
+      ]
+    },
+    {
+      "name": "the reconstruction skips its observation check",
+      "outcome": "survived",
+      "note": "Reachable in principle, unreachable from the corpus, and named here rather than crafted. `_hidden_cells` only offers cells the seat cannot see, so enemy land placed there stays invisible \u2014 *unless* the same reconstruction also places our own hidden land next to it, which would give us vision of a cell the real frame showed as fog. That needs `need_own_land > 0`, meaning Morpheus holds land it cannot see, which happens in no frame of the M0 corpus. The check is the guard for the case; a crafted frame that forces it is the obvious next addition if the branch ever matters.",
+      "surfaces": [
+        "rejuvenate",
+        "maxent"
+      ]
+    },
+    {
+      "name": "a reconstruction is not marked collapsed",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "rejuvenate",
+        "maxent"
+      ]
+    },
+    {
+      "name": "structure fog over proven ground reads as mountain",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "rejuvenate",
+        "maxent"
+      ]
+    },
+    {
+      "name": "the reservoir admits at the arriving weight",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "reservoir"
+      ]
+    },
+    {
+      "name": "Algorithm R accepts everything",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "reservoir"
+      ]
+    },
+    {
+      "name": "replace_from_belief ignores the belief's own count",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "reservoir"
+      ]
+    },
+    {
+      "name": "self widening floor",
+      "outcome": "caught",
+      "note": "the floor keeps the root from locking its average strategy onto pass",
+      "surfaces": [
+        "matrix"
+      ]
+    },
+    {
+      "name": "widening cap",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "matrix"
+      ]
+    },
+    {
+      "name": "exploration epsilon floor",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "matrix"
+      ]
+    },
+    {
+      "name": "regret matching clips negatives",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "matrix"
+      ]
+    },
+    {
+      "name": "regret matching plus clips at zero",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "matrix"
+      ]
+    },
+    {
+      "name": "the mixed strategy blends the prior back in",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "matrix"
+      ]
+    },
+    {
+      "name": "unvisited joint entries take first-play urgency",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "matrix"
+      ]
+    },
+    {
+      "name": "the dot product reduces pairwise, as numpy does",
+      "outcome": "caught",
+      "note": "measured 1 ulp against Accelerate: the surface's tolerance may absorb it",
+      "surfaces": [
+        "matrix"
+      ]
+    },
+    {
+      "name": "the root selector drops actions the live prior zeroed",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "matrix"
+      ]
+    },
+    {
+      "name": "the root selector breaks ties by visits then prior",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "matrix"
+      ]
+    },
+    {
+      "name": "pass is illegal when anything else is playable",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "pre-contact ban on stacking onto own structures",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the garrison floor is threat-aware",
+      "outcome": "caught",
+      "note": "the static floor guards fog rushes; the threat term guards a visible stack",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the garrison floor exempts a winning capture",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "a half-split leaves ceil(a/2) on the general",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the castle anchor yields to a general threat",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the castle anchor lets combat moves through",
+      "outcome": "survived",
+      "note": "unreachable by construction, and M6 is where that was established rather than assumed. The anchor's exemption asks whether a move off the savings site lands on an enemy cell \u2014 but `castle_build_site` rejects any candidate within `CASTLE_SAFE_ENEMY_DIST` (4) Manhattan of a visible enemy cell, and an adjacent cell is at distance 1. Both functions read the same observation, so a site with an enemy neighbour is not a site. The branch is dead in the Python too; it is ported because the day the safe distance changes is the day it stops being dead.",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the build site must cost exactly the base price",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the build site keeps its distance from visible enemies",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the build site is sticky on an existing pile",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "a threat that ties still counts",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "reinforcement must arrive before the threat",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the kill march refuses to price a fogged cell",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the kill march pays for the garrison's growth",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the kill march prefers collecting own armies",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "an enemy take needs a surplus to score as one",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "border chew is damped once the general is known",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the hunt bonus only rewards progress",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "deathtouch outranks the surplus gate",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the savings catchment overrides the front assembly",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "commitment hysteresis only amplifies positive scores",
+      "outcome": "survived",
+      "note": "equivalent by arithmetic: scores are clamped non-negative, so the only value the guard excludes is zero and 0 * 1.5 is zero. The guard is documentation of intent, and the Python writes it the same way.",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the blend centres by the geometric mean before clipping",
+      "outcome": "caught",
+      "note": "without centring every action saturates the clip and the term is constant",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the blend clip bounds the nudge",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the prior floor stops the blend resurrecting a network zero",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "unscored actions sit at the bottom of the clip range",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "an underpowered general capture is not forced",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the biggest capture wins, first on a tie",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "a tie in the kill/defence race goes to the kill",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "forced defence needs an imminent threat",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the tithe yields to an enemy take",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the garrison release stands down during a threat",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the garrison release needs the release factor",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the release picks the highest-prior direction",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "a reverse onto enemy land is not oscillation",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "a reverse that unlocks vision is not oscillation",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the oscillation window is the last eight moves",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the redirect skips own-land retreats",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "mandatory actions come before the policy order",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the candidate order is a stable sort on the prior",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "frontier and attack lists rank by source army",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "pass is mandatory only when it is alone",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the reveal grid ignores cells we already own",
+      "outcome": "survived",
+      "note": "equivalent: owning a cell makes its whole 3x3 box visible, so the invisible count there is already zero and the early return only saves the work. The Python skips for the same reason.",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "path progress punishes leaving the goal component",
+      "outcome": "survived",
+      "note": "unreachable on a legal move: a destination is adjacent to a reachable source, so it is reachable too unless it is mountain or structure-fog - which the legal mask already refuses. Only a hand-built field with an isolated cell could tell.",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the seek goals prefer enemy land over the posterior",
+      "outcome": "caught",
+      "note": "enemy land is what keeps incursions near home scored as progress",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the believed general is the weighted mode",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the assembly point is the frontmost own cell",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the movable-stack exclusion drops the floored general",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "playmask",
+        "candidates",
+        "planners",
+        "shaping",
+        "constrain"
+      ]
+    },
+    {
+      "name": "the highest-prior fallback respects the mask",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "runtime",
+        "search"
+      ]
+    },
+    {
+      "name": "the degradation path prefers a non-pass fallback",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "runtime",
+        "search"
+      ]
+    },
+    {
+      "name": "the nearest-rank p99 rounds the rank up",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "runtime",
+        "search"
+      ]
+    },
+    {
+      "name": "eviction protects the table just installed",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "search",
+        "evict"
+      ]
+    },
+    {
+      "name": "eviction spares pinned tables",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "search",
+        "evict"
+      ]
+    },
+    {
+      "name": "retention weighs touch count as well as recency",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "search",
+        "evict"
+      ]
+    },
+    {
+      "name": "eviction takes the first minimum",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "search",
+        "evict"
+      ]
+    },
+    {
+      "name": "widening an enemy column keeps the existing statistics",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "search",
+        "evict"
+      ]
+    },
+    {
+      "name": "widening self renormalizes the candidate prior",
+      "outcome": "survived",
+      "note": "equivalent: `widen_self` is only ever called from `expand_self_candidates`, which finishes by calling `refresh_self_priors` and overwriting the whole vector from the live network prior. Measured by re-running the oracle with the normalization deleted: 0 of 43 search setups differ.",
+      "surfaces": [
+        "search",
+        "evict"
+      ]
+    },
+    {
+      "name": "refresh_self_priors rebuilds mass from the full network prior",
+      "outcome": "caught",
+      "note": "without it, newly legal expands get prior 0 and the search locks onto pass",
+      "surfaces": [
+        "search",
+        "evict"
+      ]
+    },
+    {
+      "name": "the enemy-hash cache is keyed on the reservoir version",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "search",
+        "evict"
+      ]
+    },
+    {
+      "name": "marginal visits skip tables of the wrong width",
+      "outcome": "survived",
+      "note": "unreachable, and the reason is the next mutation. A table's width can never lag its node's candidate count: `widen_self` pads every table it has, and `get_or_create_enemy_table` pads on install. Measured over the search setups: 0 lagging tables in 43 marginal aggregations and 680 backups. The two guards are redundant with each other, which is why deleting either alone is invisible.",
+      "surfaces": [
+        "search",
+        "evict"
+      ]
+    },
+    {
+      "name": "backup pads every table to the current candidate width",
+      "outcome": "survived",
+      "note": "unreachable for the reason above: nothing ever arrives at a backup under-wide, because widening and installation both pad. Kept because it is the guard that makes that true if either of the others changes.",
+      "surfaces": [
+        "search",
+        "evict"
+      ]
+    },
+    {
+      "name": "selection stops at an unexpanded node",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "search"
+      ]
+    },
+    {
+      "name": "freeze_widening actually freezes widening",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "search"
+      ]
+    },
+    {
+      "name": "the cross-turn prior cache installs without a network call",
+      "outcome": "survived",
+      "note": "only a slower path, unless it also changes the draw sequence",
+      "surfaces": [
+        "search"
+      ]
+    },
+    {
+      "name": "a child's memory folds forward from the root's, not the parent's",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "search"
+      ]
+    },
+    {
+      "name": "an arriving particle is admitted to the child reservoir",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "search"
+      ]
+    },
+    {
+      "name": "a new child arrives at weight 1, not the parent's",
+      "outcome": "survived",
+      "note": "equivalent: `ParticleReservoir::admit` rebuilds the arriving particle at weight 1.0 whatever it was handed \u2014 measured, 198 of 647 admits in the search setups pass a weight that is not 1 and none of them survives the call. The only other consumer is the one-particle belief a leaf evaluation builds, whose weights are normalized.",
+      "surfaces": [
+        "search"
+      ]
+    },
+    {
+      "name": "a terminal leaf takes the seat's own result",
+      "outcome": "survived",
+      "note": "unobservable: this branch tests the state at the *top* of the descent, which a transition can never produce \u2014 a finishing transition returns from the branch below it \u2014 so it fires only on a root particle that was already finished, at depth 0, where the path has no edges and `backup_path` writes nothing. Measured: 24 firings in the search setups, all with an empty edge list.",
+      "surfaces": [
+        "search"
+      ]
+    },
+    {
+      "name": "a drawn finish scores zero, not a loss",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "search"
+      ]
+    },
+    {
+      "name": "backup walks the path from leaf to root",
+      "outcome": "survived",
+      "note": "the node statistics are per-edge, so the order may be unobservable",
+      "surfaces": [
+        "search"
+      ]
+    },
+    {
+      "name": "a leaf evaluation expands the node it stopped at",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "search"
+      ]
+    },
+    {
+      "name": "the root prior drives widening at the root",
+      "outcome": "survived",
+      "note": "equivalent: the two branches hold the same vector. `ensure_root` sets `last_root_prior` and calls `expand_self_candidates` with the same prior, which caches it on the node, and `reuse_or_reset` does the same on a reused child. Measured over 742 selections in the search setups: they never differ.",
+      "surfaces": [
+        "search"
+      ]
+    },
+    {
+      "name": "the turn's history advances by one turn",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "sequence"
+      ]
+    },
+    {
+      "name": "the owner grid widens from the owner grid",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "sequence"
+      ]
+    },
+    {
+      "name": "the temporal input's two halves are army then land",
+      "outcome": "caught",
+      "note": "",
+      "surfaces": [
+        "sequence"
+      ]
+    }
+  ]
+}

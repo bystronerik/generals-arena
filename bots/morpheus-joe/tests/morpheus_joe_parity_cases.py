@@ -4060,16 +4060,27 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--smoke", action="store_true", help="use the committed slice")
     parser.add_argument("--limit", type=int, default=0, help="cap heavy frames")
     parser.add_argument("--pairs", type=int, default=12, help="action pairs per state")
+    # The twenty-eight kinds this harness still owns, which is
+    # `test_morpheus_joe_parity_tier1.KINDS`. N1 retired `tensor`, `net`,
+    # `prior`, `summary` and `decide` from `build_cases` and left them on this
+    # list, so a bare run — the one `tools/mutation_check.py` makes for any
+    # mutation that maps to "all surfaces" — died on `unknown kind 'tensor'`
+    # and took the mutation gate with it. Found and fixed at N2.
+    #
+    # `sequence` is deliberately **not** here. Every kind on this list is
+    # checked against Python morpheus; `sequence` is checked against joe's own
+    # recorded corpus, so it runs from `tests/test_morpheus_joe_bridge.py`
+    # instead and `mutation_check.py` dispatches it there.
     parser.add_argument(
         "--kinds",
         nargs="*",
         default=[
             "transition", "order", "observe", "mask", "cost",
-            "memory", "hash", "tensor", "symmetry", "net", "prior",
-            "npsum", "argsort", "summary", "propose", "filter",
+            "memory", "hash", "symmetry",
+            "npsum", "argsort", "propose", "filter",
             "rejuvenate", "maxent", "reservoir", "toplegal", "initbelief",
             "matrix", "runtime", "evict", "playmask", "candidates", "planners",
-            "shaping", "constrain", "search", "decide",
+            "shaping", "constrain", "search",
         ],
     )
     args = parser.parse_args(argv)

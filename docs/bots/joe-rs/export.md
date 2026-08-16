@@ -80,6 +80,10 @@ cargo build --release --manifest-path bots/morpheus-joe/Cargo.toml
 # morpheus-joe also copies joe-rs's *source* byte for byte, which is how its
 # forward pass inherits this corpus's proof. Both copies are asserted here:
 .venv/bin/pytest tests/test_joe_source_fanout.py
+# And morpheus-joe's observation bridge is checked against THIS corpus — the
+# per-turn `all_aug_hash` digests, not a corpus of its own — so a rebuild
+# re-gates it too. Its wire-replay gate reads the same games' .out.log.
+.venv/bin/pytest bots/morpheus-joe/tests -m morpheus
 ```
 
 Nothing detects a skipped sync at play time — a downstream bot would load the
@@ -117,3 +121,13 @@ the committed smoke fixture is a slice of them, so both go stale the moment
 joe's weights change. A stale smoke fixture is the dangerous one: it is
 committed, so a clean checkout would compare the new binary against the old
 oracle's recorded replies.
+
+**A capture or wire-replay mismatch is not always a weights problem.** joe's
+repetition penalty (`agent.py`, 2026-08-16) is a research feature that joe-rs
+deliberately does not carry, so deployed joe and joe-rs emit different moves
+on repeated cells *by design*. `capture_fixtures.py` mirrors the penalty only
+to check the `.out.log`; joe-rs is graded on the unpenalised `.npz` surfaces.
+Before chasing a mismatch as a port bug, read
+[parity.md](parity.md#what-parity-covers-the-network-not-joes-research-layer)
+— on the step-29000 rebuild this looked exactly like a conversion fault and
+was not one.

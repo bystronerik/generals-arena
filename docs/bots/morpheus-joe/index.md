@@ -5,8 +5,9 @@ weights, unretrained. The plan, the gates and the kill criteria are
 [joe-net-plan.md](../morpheus-rs/joe-net-plan.md); this page is what exists on
 disk and how to run it.
 
-Status: **N1 done 2026-08-16. The net is loaded and not consulted.** N2 (the
-observation bridge) has not started.
+Status: **N2 done 2026-08-16. The net decides; the search does not.** N3 (the
+channel remap, the value decode, and the evaluator that hands both to the
+search) has not started.
 
 ## What it is right now
 
@@ -16,16 +17,21 @@ three arms in **one** rating round, and a baseline that exists only in git
 history cannot be an arm. The fork doubles as the rollback point: undoing all
 of this is `git rm -r bots/morpheus-joe/`.
 
-At N1 the seat resolves its artifact, verifies the digest, schema-checks it,
-loads 8,556,250 parameters, warms one forward — and then decides through the
-network-free `ShapedUniformEvaluator`. It plays legal, finishing games and it
-plays them badly. **Any rating from this build is meaningless**, and the bot is
-deliberately not registered in `data/bot_versions/` for that reason; the first
+At N2 the seat resolves its artifact, verifies the digest, schema-checks it,
+loads 8,556,250 parameters, warms one forward — and then plays **joe's argmax**
+every turn through the [observation bridge](bridge.md). `RuntimeController` is
+constructed and never called. That is the phase, not an oversight: with no
+search in the way, the bot's replies must be byte-equal to joe's over a whole
+recorded game, which localizes a bridge bug before N3 can hide one.
+
+So a rating from this build would measure **joe-rs with a slower launcher**,
+and the bot stays deliberately unregistered in `data/bot_versions/`; the first
 registration belongs to the phase that first measures something.
 
-Measured on the dev host (arm64 macOS): load 131 ms, warmup 15 ms, first
-decision 0.3 ms, and a gate match against `cm_expander` that truncated at turn
-1200 with two castles built.
+Measured on the dev host (arm64 macOS) against joe's **step-23500**
+checkpoint: load 127 ms, warmup 15 ms, a decision in 15.5 ms — which is the
+forward and almost nothing else — and a gate match against `cm_expander` won on
+turn 304 by capturing the general.
 
 ## The crate layout, and the one thing that is unusual about it
 
@@ -56,7 +62,8 @@ The reason it is a separate crate rather than files dropped into
 opens with `use crate::io::wire::{Observation, ...}` and joe's `Observation`
 carries `i32` grids where morpheus's carries `u8`. A crate boundary gives joe's
 files joe's `crate::` root and leaves morpheus's alone. The cost is one
-widening adapter at the seam, which N2 writes.
+widening adapter at the seam, and N2 wrote it: it is a widening loop and
+nothing else, in [`nn/bridge.rs`](bridge.md).
 
 ## The weights
 
@@ -90,9 +97,28 @@ content hash and **voids any rating contrast that spans it**.
 written against a 3,970-long `f32` logit vector, which is what N3's remap
 produces, and it is oracle-checked code whose oracle is now retired.
 
-Twenty-eight parity surfaces survive, all against Python morpheus, none
+**Twenty-six** parity surfaces survive, all against Python morpheus, none
 involving a network. They run in 6.3 s against the old 11.4 s — the three
-`torch.jit.load` calls were most of the difference.
+`torch.jit.load` calls were most of the difference. (N1's page and code
+comments said twenty-eight, down from thirty-three; N2 counted the dispatch
+tables and it is twenty-six, down from thirty-one. Corrected in the code.)
+
+## What N2 added
+
+| new | what it is |
+| --- | --- |
+| `nn/bridge.rs` | morpheus's frame into joe's `AugState` — [bridge.md](bridge.md) |
+| parity surface `sequence` | the twenty-seventh, and the first checked against **joe's** recorded corpus rather than Python morpheus |
+| `tests/test_morpheus_joe_bridge.py` | that surface over three whole games: tensor digests, final state, temporal input, and Q10 |
+| `tests/test_morpheus_joe_wire_replay.py` | the whole binary against joe's recorded replies |
+| 3 mutations under `nn/bridge.rs` | 3/3 caught, in the fork's first full pass: 118/140, no unexplained survivor |
+
+N2 also fixed two things N1 left. `morpheus_joe_parity_cases.py`'s CLI default
+`--kinds` list still named the five retired kinds, so a bare run died on
+`unknown kind 'tensor'` — and that is the run `tools/mutation_check.py` makes
+for every mutation mapped to "all surfaces", so the mutation gate was red for
+anything outside the narrow map. And `crates/core/Cargo.toml` gained the
+`joenet` path dependency, which is where the bridge lives.
 
 ## Running it
 
@@ -125,7 +151,11 @@ The absolute `PYTHON` in the matchup is load-bearing: a relative path silently
 - **`COST_COMPONENTS` still lists `belief_tensor` and `enemy_prior_batch`.**
   That list is a wire format shared with the `runtime` parity surface and the
   trace schema, so retiring a component is a change with its own gate.
-- **The network has no mutation coverage** until N3 plants the four mutations
-  for the remap, the pass collapse, the bin→scalar dot and the value sign.
+- **The network itself has no mutation coverage** until N3 plants the four
+  mutations for the remap, the pass collapse, the bin→scalar dot and the value
+  sign. The bridge that feeds it has three, all caught.
+- **The search does not run.** The controller, the belief filter and the
+  tactics layer are all constructed and none of them is consulted; the reply is
+  joe's argmax. N3 is what turns them back on.
 - **`resident_memory_target_mb` is a leftover** (Q12), trivially safe against
   the 2 GB cap and still wrong.

@@ -11,11 +11,17 @@
 //!
 //! What stays is [`head`]: the arithmetic *between* the network and the
 //! search, which is action-space logic rather than learned weights and which
-//! §7.2 keeps unchanged across the port.
+//! §7.2 keeps unchanged across the port. N2 adds [`bridge`]: the arithmetic
+//! *before* it, turning morpheus's frame into the 39-channel input joe's
+//! forward expects. Between them they are the whole of what this directory is
+//! now — a network the crate calls but does not contain.
 //!
 //! This directory therefore no longer holds any float the parity harness has a
 //! tolerance for. The two non-zero tolerances that used to live here went with
 //! the Torch oracle; joe's forward is proved transitively instead, by
-//! byte-identity against a corpus joe-rs already carries (§8.2).
+//! byte-identity against a corpus joe-rs already carries (§8.2), and the
+//! bridge is proved **bit-exactly** against that same corpus by the `sequence`
+//! surface.
 
+pub mod bridge;
 pub mod head;
