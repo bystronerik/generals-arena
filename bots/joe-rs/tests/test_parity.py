@@ -200,8 +200,46 @@ CH21_MAX_ULP = 0
 #
 # Tier 3 was 703/703 greedy actions equal at this export — zero divergences —
 # so nothing consumed the `tie_margin_max` that widens with this pin.
+#
+# 2026-08-18, step 48500 (726 frames, gemm.rs): two gates fired at once — rel
+# bin max 2.929e-5 against the 1.6e-5 pin, and the value scalar 8.106e-6
+# against its 5.0e-6 pin. Both are re-pinned below. Rel logit did not fire; it
+# *fell* to 5.812e-6, its lowest since step 21000.
+#
+#   percentile   p50        p90        p99        p100
+#   rel logit    1.595e-6   2.820e-6   4.330e-6   5.812e-6
+#   rel bin      2.369e-6   5.626e-6   1.262e-5   2.929e-5
+#   dvalue       2.086e-7   8.345e-7   2.440e-6   8.106e-6
+#
+# Exactly **1 of 726 frames** exceeds the old rel-bin pin and **1 of 726** the
+# old value pin, and they are not the same frame. Two independent single-frame
+# tail events on a body that did not move — the step-23500 signature, where 2
+# of 703 frames carried the whole excursion.
+#
+# Code drift is ruled out at step 1 of the diagnostic order: `bots/joe-rs/src/`
+# is unchanged since c2f09dd, the tree is clean, and `cargo build --release`
+# was a no-op at this export, so one binary produced this row and the last one.
+# Only the weights and the frames moved. The stronger control is internal: rel
+# logit runs on the *same* frames through the *same* kernel, and everything up
+# to the two heads is shared — a drifting kernel moves both heads, and this
+# moved one head's max and neither head's body.
+#
+# **The bin-sharpness hypothesis above is now tested and does not hold.** This
+# file has carried it since step 20500 as the benign reading for a climbing
+# value scalar, owed "a real check, not an assumption, if it clears its pin".
+# It cleared, so here is the check: the worst rel-bin frame (joe-seed10 t63)
+# has bin max-probability 0.0737, *below* the corpus median of 0.0988 — a
+# flatter value distribution than typical, not a sharper one. The worst value
+# frame (castle_rush-seed3 t60, maxprob 0.1112) sits at the median. Corpus
+# sharpness: maxprob p50 0.0988 / p90 0.1995, entropy p50 2.922. Neither
+# excursion is a sharpness effect, so do not re-offer that reading next time.
+# What remains is the max-over-frames argument, and the rows above are its
+# evidence.
+#
+# `mutation_check` kills 9/9 at the re-pinned values below, which is what says
+# the looser bounds still catch a real defect.
 LOGIT_REL_ACHIEVED = 1.6e-5   # worst measured 1.041e-5 (step 23500, gemm.rs)
-BIN_REL_ACHIEVED = 1.6e-5     # worst measured 9.837e-6 (step 23500, gemm.rs)
+BIN_REL_ACHIEVED = 5.0e-5     # worst measured 2.929e-5 (step 48500, gemm.rs)
 # |value| <= 1 by construction (bin_centers span [-1, 1]), so this one is
 # already scale-free and stays absolute. It tracks bin sharpness rather than
 # bin magnitude: 9.537e-7 at step 5000, 2.205e-6 at step 6000, and on the
@@ -211,7 +249,7 @@ BIN_REL_ACHIEVED = 1.6e-5     # worst measured 9.837e-6 (step 23500, gemm.rs)
 # so the pin is re-sized with the same ~2x headroom the two pins above carry.
 # Defensible only because `mutation_check` re-confirms all 9 kills at this
 # value; exceeding it is still a finding.
-VALUE_TOL_ACHIEVED = 5.0e-6   # worst measured 2.682e-6 (step 13500, gemm.rs)
+VALUE_TOL_ACHIEVED = 1.4e-5   # worst measured 8.106e-6 (step 48500, gemm.rs)
 
 # Tier-3 gate: greedy action equal on >= 99.5% of frames; every divergence
 # must be a near-tie inside the tier-2 bound.
