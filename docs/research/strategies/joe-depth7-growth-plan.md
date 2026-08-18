@@ -172,5 +172,26 @@ changes both raw strength and simulation count in opposite directions.
 
 ## 10. Run log
 
-Fill in during execution: base run name, base checkpoint step + SHAs, new
-run name, surgery date, parity check output, launch instance id.
+- Base run: `joe-M-vast-20260813-0213`, global step 50000, curriculum
+  stage 4, last eval wr 0.990, engine `9e3b9d13cca5`.
+- Base checkpoint SHAs: full `a704e8d8d747d35bc139f05a497425ac45f126b2d7
+  692972f4fc7da9c3815e3a` (102,713,664 B), EMA `900e0e4322ec58eb8b59a6fc
+  a6f3fa518c48225ad683cfc3aa4c1f91222aa1cf` (34,237,800 B).
+- New run: `joe-M7-vast-20260818-1741`. Surgery 2026-08-18 via
+  `scripts/joe_grow_depth.py`.
+- Parity: exact logit/value equality on 64 masked inputs per lineage
+  (train + EMA), production bf16. Parameters 8,556,250 → 11,514,586.
+- Local seeded smoke: resume line `global step 0, curriculum stage 0`;
+  step-0 eval 508W/0L/4D (99%) greedy vs random — equal to the base
+  run's last eval, confirming function preservation end-to-end. 2
+  iterations completed at LR 2.0e-5.
+- R2 seeded and verified (`resolve_latest` returns the step-0 set)
+  before launch. Launch: adopted instance 47615917 (H100 SXM),
+  2026-08-18 ~17:50 CEST.
+- First boot crashed at deserialization: the adopted instance's ckpt_dir
+  still held the base run's `config.yaml`, and `vast_boot` preferred the
+  local file, so the depth-7 seed hit a depth-5 template. The crash came
+  before any M7 checkpoint upload; the R2 seed stayed intact. Fixed the
+  same day: `vast_boot.fetch_config` now always downloads the run's
+  config from R2. Relaunched with `launch --force --instance-id
+  47615917` at ~18:15 CEST.
