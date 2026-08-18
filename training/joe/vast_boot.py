@@ -73,6 +73,22 @@ def _upload_log(store, run_name, log_path, boot_id):
     store.upload_run_file(run_name, rel, log_path)
 
 
+def fetch_config(store, run_name, ckpt_dir):
+    """Always fetch the run's ``config.yaml`` from R2; return its path.
+
+    The launch upload is authoritative. The local file must never win: an
+    adopted instance's ckpt_dir can hold another run's ``config.yaml``
+    (``main.run`` writes one there), and a stale config builds the wrong
+    network template. Measured 2026-08-18: the joe-M7 step-0 seed crashed
+    at deserialization against a depth-5 template read from the base run's
+    leftover config. A missing R2 config fails loudly instead of falling
+    back to whatever is on disk.
+    """
+    cfg_path = os.path.join(ckpt_dir, "config.yaml")
+    store.download_run_file(run_name, "config.yaml", cfg_path)
+    return cfg_path
+
+
 def main(argv=None):
     argv = argv if argv is not None else sys.argv[1:]
     del argv  # parameterized only by env vars (vast plan §3)
@@ -112,9 +128,7 @@ def main(argv=None):
     else:
         print("No latest.json; fresh start", flush=True)
 
-    cfg_path = os.path.join(ckpt_dir, "config.yaml")
-    if not os.path.exists(cfg_path):
-        store.download_run_file(run_name, "config.yaml", cfg_path)
+    cfg_path = fetch_config(store, run_name, ckpt_dir)
 
     heartbeat = _IntervalUploader(
         lambda: store.put_heartbeat(run_name, instance_id),

@@ -348,3 +348,28 @@ def test_lease_fresh_other_instance_refuses():
                          now=now)
     assert reason is not None
     assert "b" in reason
+
+
+def test_fetch_config_overwrites_stale_local_file(store, tmp_path):
+    """Adopted-instance regression (2026-08-18): the ckpt_dir held the
+    previous run's config.yaml, the local file won, and the depth-7 seed
+    crashed against a depth-5 template. R2 must always win."""
+    from training.joe.vast_boot import fetch_config
+
+    (tmp_path / "config.yaml").write_text("run_name: joe-old\ndepth: 5\n")
+    remote = tmp_path / "remote-config.yaml"
+    remote.write_text("run_name: joe-new\ndepth: 7\n")
+    store.upload_run_file("joe-new", "config.yaml", str(remote))
+
+    path = fetch_config(store, "joe-new", str(tmp_path))
+    assert path == str(tmp_path / "config.yaml")
+    assert "depth: 7" in (tmp_path / "config.yaml").read_text()
+
+
+def test_fetch_config_fails_loudly_when_r2_has_none(store, tmp_path):
+    """No silent fallback to whatever config.yaml is on disk."""
+    from training.joe.vast_boot import fetch_config
+
+    (tmp_path / "config.yaml").write_text("run_name: joe-stale\n")
+    with pytest.raises(FileNotFoundError):
+        fetch_config(store, "joe-unlaunched", str(tmp_path))
