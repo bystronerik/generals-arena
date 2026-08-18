@@ -81,9 +81,9 @@ SHA-256 over the bot's source closure, computed by
 `arena/records/fingerprint.py`:
 
 - every file in `bots/<id>/`, excluding `__pycache__`, `*.pyc`, and `probe.py`;
-- every module under `bots/` it imports, transitively — this crosses bot
-  directories, so `proteus` covers `aegis`, `blitz`, `boom` and `metro`, and
-  every bot covers `_common/wire.py`;
+- every module under `bots/` it imports, transitively — this can cross bot
+  directories, though no bot in `bots/` imports another one today, and every
+  bot covers `_common/wire.py`;
 - shell `source` targets, so `cm_*` bots cover `_common/cm_run.sh`.
 
 Imports that do not resolve under `bots/` (stdlib, `jax`, `generals`) are
@@ -111,7 +111,7 @@ unreadable closure into one rated entity.
 Inspect a roster:
 
 ```bash
-python -m arena.records.fingerprint --files proteus cm_random
+python -m arena.records.fingerprint --files aegis cm_random
 ```
 
 Map a hash back to source:

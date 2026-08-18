@@ -53,11 +53,11 @@ DEFAULT_FIXTURE = (
     REPO / "bots" / "morpheus-rs" / "tests" / "fixtures" / "parity-smoke.jsonl.gz"
 )
 
-# Varied panel per rewrite-plan §5: the rating anchor, two research bots, and
+# Varied panel per rewrite-plan §5: the rating anchor, one research bot, and
 # two heuristics whose play forces different phases (castle economy, expansion
 # pressure). Seats alternate across the schedule so neither side's opening is
 # over-represented in the corpus.
-DEFAULT_PANEL = ("cm_expander", "macaria", "sosipolis", "castle_builder", "metro")
+DEFAULT_PANEL = ("cm_expander", "macaria", "castle_builder", "metro")
 
 # The `deployment.json` components, in the order the shipped table lists them.
 COMPONENTS = (

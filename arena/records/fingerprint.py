@@ -9,10 +9,11 @@ identity, and `arena/records/registry.py` is what maps it back to source.
 
 The hash here covers exactly the files a bot's behaviour depends on: every file
 in its own directory, plus every module under `bots/` it imports, transitively.
-That closure crosses bot directories — `bots/proteus/agent.py` imports
-`aegis.agent`, `blitz.agent`, `boom.agent` and `metro.agent`, so editing any of
-those changes proteus's hash. Every bot pulls in `_common/wire.py` via its
-`main.py`; the heuristics also pull in `_common/strategy_common.py` and friends.
+That closure can cross bot directories: a bot that imports another bot's
+`agent` module takes that bot's source into its own hash. No bot in `bots/`
+does so today — proteus, which dispatched to four of them, was removed on
+2026-08-18. Every bot pulls in `_common/wire.py` via its `main.py`; the
+heuristics also pull in `_common/strategy_common.py` and friends.
 
 Imports that do not resolve under `bots/` (stdlib, `jax`, `generals`) are
 outside the closure: pinning third-party versions is the lockfile's job.

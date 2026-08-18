@@ -1048,7 +1048,8 @@ mismatch *and* a `depth: 6` manifest, which is the gate's "refuses a schema
 mismatch" in the two shapes that can actually occur. The 28 surfaces are green
 in **6.3 s**, against 11.4 s before — the retired Torch oracle was most of it.
 The gate match against `cm_expander` truncated at turn 1200, a normal end, with
-two castles built. Page: [morpheus-joe](../morpheus-joe/index.md).
+two castles built. Page: `docs/bots/morpheus-joe/index.md` (removed with the
+bot on 2026-08-18).
 
 **Seven things N1 found that this plan did not say.** None changes a decision;
 all seven change what a later phase will find.
@@ -1137,7 +1138,8 @@ games the binary's replies are byte-equal to Python joe's, turn for turn. The
 gate match against `cm_expander` ended normally, and this time by winning: the
 enemy general fell on turn 304, because the seat is now playing joe. Startup is
 load 127 ms / warmup 15 ms, a decision is 15.5 ms, and the default suite holds
-at 13.7 s warm. Page: [bridge.md](../morpheus-joe/bridge.md).
+at 13.7 s warm. Page: `docs/bots/morpheus-joe/bridge.md` (removed with the
+bot on 2026-08-18).
 
 **All of it was measured on the step-23500 checkpoint**, and joe was re-exported
 to step 29000 later the same day. The two gates answer that differently, which

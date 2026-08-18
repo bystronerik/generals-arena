@@ -86,21 +86,13 @@ mv data/joe/joe-rs-parity/games data/joe/joe-rs-parity/games.step<OLD>
 .venv/bin/python bots/joe-rs/tools/make_smoke_fixture.py   # committed fixture
 .venv/bin/pytest bots/joe-rs/tests/ -m joe
 .venv/bin/python bots/joe-rs/tools/mutation_check.py
-# Two bots downstream now: joe -> joe-rs -> {unclejoe, morpheus-joe}. Both
-# track joe-rs's converted artifact, not joe's .eqx, because the joe-rs vs
-# unclejoe contrast has to isolate the tactics layer and the joe-rs vs
-# morpheus-joe contrast the search stack, and neither isolates anything
-# unless the arms run identical weights. One script walks both.
+# One bot downstream: joe -> joe-rs -> unclejoe. It tracks joe-rs's converted
+# artifact, not joe's .eqx, because the joe-rs vs unclejoe contrast has to
+# isolate the tactics layer, and it isolates nothing unless the arms run
+# identical weights.
 .venv/bin/python scripts/joe_artifact_fanout.py
 cargo build --release --manifest-path bots/unclejoe/Cargo.toml
-cargo build --release --manifest-path bots/morpheus-joe/Cargo.toml
-# morpheus-joe also copies joe-rs's *source* byte for byte, which is how its
-# forward pass inherits this corpus's proof. Both copies are asserted here:
 .venv/bin/pytest tests/test_joe_source_fanout.py
-# And morpheus-joe's observation bridge is checked against THIS corpus — the
-# per-turn `all_aug_hash` digests, not a corpus of its own — so a rebuild
-# re-gates it too. Its wire-replay gate reads the same games' .out.log.
-.venv/bin/pytest bots/morpheus-joe/tests -m morpheus
 ```
 
 Nothing detects a skipped sync at play time — a downstream bot would load the
@@ -110,15 +102,18 @@ the weights through a temporary file, which makes a *partial* sync (manifest
 copied, weights not) fail loudly instead of playing. `--check` answers "is
 every downstream current?" without writing, and `--bot <name>` narrows it to
 one. `bots/unclejoe/tools/sync_artifact.py` still does unclejoe alone and is
-unchanged. A sync forks the downstream bot's content hash, exactly as a
+unchanged.
+
+`morpheus-joe` was a second downstream bot, carrying both the weights and a
+byte-identical copy of `bots/joe-rs/src/`. It was removed on 2026-08-18, so the
+fan-out and the source-identity assertion have one subject less. A sync forks the downstream bot's content hash, exactly as a
 re-conversion forks joe-rs's; the registry records it.
 
 **The checklist is not the mechanism.** Discipline is what failed here twice,
 so `tests/test_joe_source_fanout.py` runs in the default suite and turns a
 skipped step into a red result: it compares every downstream manifest's digest
-against joe-rs's, checks each manifest against the bytes beside it, and asserts
-that morpheus-joe's eleven copied source files are byte-identical to joe-rs's.
-It costs milliseconds. Note the consequence for a measurement round: a sync
+against joe-rs's and checks each manifest against the bytes beside it. It costs
+milliseconds. Note the consequence for a measurement round: a sync
 between two rounds of the same contrast **voids both**, because the arms are
 then different programs (joe-net-plan §8.7, §9).
 

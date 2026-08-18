@@ -51,7 +51,6 @@ NEW_BOTS = [
     "boom",
     "metro",
     "aegis",
-    "proteus",
 ]
 
 BASELINE_BOTS = ["smoke", "expand_plus", "castle_builder", "general_hunter"]

@@ -50,7 +50,7 @@ BASELINE = MEASUREMENTS / "morpheus-rs-baseline.json"
 # The M0 panel, unchanged: the rating anchor, two research bots, and two
 # heuristics that force different phases. Changing it would compare two
 # different sets of games rather than two bots.
-DEFAULT_PANEL = ("cm_expander", "macaria", "sosipolis", "castle_builder", "metro")
+DEFAULT_PANEL = ("cm_expander", "macaria", "castle_builder", "metro")
 
 COMPONENTS = (
     "particle_transitions",

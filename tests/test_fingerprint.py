@@ -48,19 +48,6 @@ def test_closure_follows_transitive_shared_imports():
     assert "_common/strategy_common.py" in names
 
 
-def test_closure_crosses_bot_directories():
-    """proteus dispatches to other bots; editing them changes proteus."""
-    names = closure_names("proteus")
-    for dependency in ("blitz", "boom"):
-        assert f"{dependency}/agent.py" in names, dependency
-    # Dropped from the counter map, so no longer in the closure: a core
-    # proteus cannot select must not be able to fork proteus's hash.
-    for dropped in ("aegis", "metro"):
-        assert f"{dropped}/agent.py" not in names, dropped
-    assert "proteus/switcher.py" in names
-    assert "proteus/classifier.py" in names
-
-
 def test_closure_follows_shell_source_directives():
     """cm_* launchers `source` a shared body no AST walk would find."""
     assert "_common/cm_run.sh" in closure_names("cm_random")
@@ -75,10 +62,10 @@ def test_closure_stops_at_third_party_imports():
 
 def test_unrelated_bots_have_different_hashes():
     hashes = bot_content_hashes(
-        [BOTS_DIR / name / "run.sh" for name in ("smoke", "aegis", "proteus")]
+        [BOTS_DIR / name / "run.sh" for name in ("smoke", "aegis", "blitz")]
     )
     assert len(set(hashes.values())) == 3
-    assert set(hashes) == {"smoke", "aegis", "proteus"}
+    assert set(hashes) == {"smoke", "aegis", "blitz"}
 
 
 def test_missing_bot_dir_raises_rather_than_returning_a_sentinel():
@@ -92,8 +79,8 @@ def test_missing_bot_dir_raises_rather_than_returning_a_sentinel():
     [
         ("_common/wire.py", ("smoke", "aegis", "cm_random"), ()),
         ("_common/tactics.py", ("aegis",), ("smoke",)),
-        ("blitz/agent.py", ("blitz", "proteus"), ("smoke", "aegis")),
-        ("_common/cm_adapter.py", ("cm_random",), ("smoke", "aegis", "proteus")),
+        ("blitz/agent.py", ("blitz",), ("smoke", "aegis")),
+        ("_common/cm_adapter.py", ("cm_random",), ("smoke", "aegis")),
     ],
 )
 def test_edit_propagates_to_exactly_the_dependents(
@@ -141,15 +128,14 @@ def test_probe_is_absent_from_a_real_closure():
     """
     A probe is arena-owned introspection; it never plays, so it never hashes.
 
-    proteus alone is the whole invariant on one closure walk: it carries a
-    probe *and* cross-imports blitz and boom, each of which carries one too —
-    so this covers the cross-directory leak, not just the bot's own
-    directory.
+    aegis carries a probe and walks a multi-file closure into `_common`, so
+    this covers a real walk rather than the bot's own directory alone. No bot
+    cross-imports another bot's directory now that proteus is gone, so the
+    cross-bot leak this once also covered has no subject left in `bots/`.
     """
-    assert (BOTS_DIR / "proteus" / "probe.py").is_file()
-    assert (BOTS_DIR / "boom" / "probe.py").is_file()
-    names = closure_names("proteus")
-    assert "boom/agent.py" in names  # the cross-import is live
+    assert (BOTS_DIR / "aegis" / "probe.py").is_file()
+    names = closure_names("aegis")
+    assert "_common/oppmodel.py" in names  # the walk left the bot's directory
     assert not any(name.endswith("probe.py") for name in names)
 
 
@@ -206,14 +192,14 @@ def test_bot_local_tests_dir_does_not_move_the_hash(sandbox):
     )
 
 
-def test_sosipolis_tests_stay_out_of_the_live_closure():
+def test_morpheus_tests_stay_out_of_the_live_closure():
     """Real bots/<name>/tests/ must not enter the hashed source closure."""
-    tests_dir = BOTS_DIR / "sosipolis" / "tests"
-    assert tests_dir.is_dir(), "sosipolis tests/ is the live fixture for this guard"
-    names = closure_names("sosipolis")
+    tests_dir = BOTS_DIR / "morpheus" / "tests"
+    assert tests_dir.is_dir(), "morpheus tests/ is the live fixture for this guard"
+    names = closure_names("morpheus")
     assert not any("tests" in name.split("/") for name in names)
-    assert bot_content_hash(BOTS_DIR / "sosipolis" / "run.sh") == content_hash_for_dir(
-        BOTS_DIR / "sosipolis"
+    assert bot_content_hash(BOTS_DIR / "morpheus" / "run.sh") == content_hash_for_dir(
+        BOTS_DIR / "morpheus"
     )
 
 

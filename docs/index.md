@@ -64,9 +64,7 @@ Small topic files for the Generals Arena research repo.
 - [boom](bots/boom.md) — fast-expand economy with an endgame latch (migrated from generals-bot)
 - [metro](bots/metro.md) — castle network + mandatory pressure waves (migrated from generals-bot)
 - [aegis](bots/aegis.md) — turtle + event-driven counterattack (migrated from generals-bot)
-- [proteus](bots/proteus.md) — adaptive switcher over blitz/boom/metro/aegis (migrated from generals-bot)
 - [macaria](bots/macaria.md) — vendored blitz core + a scoped tactical search
-- [sosipolis](bots/sosipolis.md) — dual-mode MCTS general search with pocket skip and section priors
 - [morpheus](bots/morpheus/index.md) — RL policy/value network + belief-aware simultaneous MCTS
 - [morpheus-rs rewrite plan](bots/morpheus-rs/rewrite-plan.md) — Rust sibling of morpheus: milestones, gates, risks
 - [morpheus-rs parity corpus](bots/morpheus-rs/parity-corpus.md) — recorded frames and RNG streams the Rust port is checked against
@@ -82,8 +80,6 @@ Small topic files for the Generals Arena research repo.
 - [morpheus-rs M8 submission](research/measurements/morpheus-rs-m8-submission.md) — the audited archives, the intake selfcheck, and why a green smoke test proved nothing
 - [joe-net port plan](bots/morpheus-rs/joe-net-plan.md) — joe's frozen network under morpheus's search: the fork, what belief loses, and the gates
 - [joe-net N0](research/measurements/joe-net-n0.md) — the forward-only cost, the forward budget by consumer, and what the real controller does at a 21 ms forward
-- [morpheus-joe](bots/morpheus-joe/index.md) — the fork that runs joe's frozen net under morpheus's search: crate layout, the byte-identity rule, and what N1 deleted
-- [morpheus-joe observation bridge](bots/morpheus-joe/bridge.md) — morpheus's frame into joe's `AugState`: the widening, the zero penalties, and the two gates that prove it
 
 ## Arena
 
@@ -107,7 +103,7 @@ Small topic files for the Generals Arena research repo.
 - [optimize the existing four bots](research/strategies/optimize-existing.md) — root causes and `Parameter revision 1`
 - [tournament plan](research/strategies/tournament-plan.md) — seed grid, staging, metrics, and the round 2 schedule
 - [diversity constraints](research/strategies/diversity-constraints.md) — hard rules that keep the roster from converging
-- [sosipolis strategy](research/strategies/sosipolis.md) — dual-mode MCTS find-and-strike research bot
+- [sosipolis strategy](research/strategies/sosipolis.md) — dual-mode MCTS find-and-strike research bot (bot removed 2026-08-18; spec kept as a record)
 - [Kubic behavior (merged)](research/strategies/kubic-behavior-spec.md) — reverse-engineered leaderboard bot; defense present-but-rare
 - [human 95/100 plan](research/strategies/human-95-plan.md) — remote goal: 95 wins in 100 logged games against humans on classic generals.io
 - [top leaderboard loss analysis](research/measurements/leaderboard-top-loss-analysis.md) — how Kubic, bca, and thor lose: the grind, the punch, and the blind stall (per-player profiles linked inside)

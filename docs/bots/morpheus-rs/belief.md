@@ -9,16 +9,14 @@ The measurement that justified porting this first:
 [`morpheus-rs-belief-bench.md`](../../research/measurements/morpheus-rs-belief-bench.md).
 How it is proved equal: [`parity-harness.md`](parity-harness.md).
 
-**This page describes morpheus-rs, which the joe-net port never edits.** The
-fork `bots/morpheus-joe/` runs the same filter with its network coupling cut in
-both directions: `summarize_belief` and the eight belief planes are deleted
+**This page describes morpheus-rs, which the joe-net port never edited.** The
+fork `bots/morpheus-joe/` — removed on 2026-08-18 — ran the same filter with
+its network coupling cut in both directions: `summarize_belief` and the eight belief planes are deleted
 because joe's patch embedding cannot take them without retraining, and the
 policy proposal is deleted because joe's net would need a hypothesized enemy
 `AugState` that nothing in the belief reconstructs. Everything else here —
 particles, the likelihood, recovery, the reservoir, the injected RNG, the two
-NumPy behaviours — is unchanged there, and its parity surfaces still run.
-See [joe-net-plan §3](joe-net-plan.md) and
-[morpheus-joe](../morpheus-joe/index.md).
+NumPy behaviours — was unchanged there. See [joe-net-plan §3](joe-net-plan.md).
 
 ## What the filter is
 

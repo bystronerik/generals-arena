@@ -76,8 +76,8 @@ from RL, and its matrix integrates fog particles and simultaneous actions.
 ### Migrated strategy bots
 
 `blitz`, `boom`, `metro`, and `aegis` provide fixed strategic programs.
-`proteus` selects among those programs. Morpheus does not copy those programs
-or use a mode classifier over them.
+`proteus` selected among those programs until it was removed on 2026-08-18.
+Morpheus does not copy those programs or use a mode classifier over them.
 
 ## Source test
 

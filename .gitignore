@@ -100,20 +100,6 @@ bots/morpheus-*/
 !bots/morpheus-rs/
 bots/morpheus-rs/target/
 bots/morpheus-rs/vendor/
-
-# morpheus-joe is the same kind of thing: a fork of morpheus-rs with its own
-# lineage, running joe's frozen network (docs/bots/morpheus-rs/joe-net-plan.md
-# §0). Carve it out too.
-!bots/morpheus-joe/
-bots/morpheus-joe/target/
-bots/morpheus-joe/vendor/
-# Its weights follow joe-rs's and unclejoe's rule, one more hop along the chain
-# joe -> joe-rs -> {unclejoe, morpheus-joe}: byte-copied by
-# scripts/joe_artifact_fanout.py, pinned by the committed manifest.json
-# (safetensors_sha256), re-creatable on any checkout that has joe-rs's. The
-# content hash still covers the .safetensors, so a resync forks the rating
-# identity.
-bots/morpheus-joe/artifact/*.safetensors
 # The minifier is a dev-time helper crate with its own build output. Its
 # sources are committed; what it compiles to is not.
 tools/rust-minify/target/

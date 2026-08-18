@@ -67,16 +67,6 @@ def test_unknown_bot_is_refused(tmp_path):
         write_bundle("does_not_exist", tmp_path / "x.zip")
 
 
-def test_proteus_bundle_carries_cross_imported_bots():
-    # Member arcnames are exactly what write_bundle zips; skipping the build
-    # keeps the closure-crossing case cheap.
-    names = {arcname for _, arcname in bundle_members("proteus")}
-    for bot in ("blitz", "boom"):
-        assert f"bots/{bot}/agent.py" in names
-    for dropped in ("aegis", "metro"):
-        assert f"bots/{dropped}/agent.py" not in names
-
-
 def test_bundles_are_deterministic(tmp_path):
     a = write_bundle("smoke", tmp_path / "a.zip").zip_path.read_bytes()
     b = write_bundle("smoke", tmp_path / "b.zip").zip_path.read_bytes()
@@ -262,14 +252,14 @@ def test_a_probe_beside_the_agent_stays_out_of_the_bundle():
 
 
 def test_bot_local_tests_stay_out_of_the_bundle():
-    """sosipolis ships a real tests/; the submission zip must omit it."""
-    assert (BOTS_DIR / "sosipolis" / "tests").is_dir()
-    names = {arcname for _, arcname in bundle_members("sosipolis")}
+    """morpheus ships a real tests/; the submission zip must omit it."""
+    assert (BOTS_DIR / "morpheus" / "tests").is_dir()
+    names = {arcname for _, arcname in bundle_members("morpheus")}
     assert not any(
-        arcname == "bots/sosipolis/tests"
-        or arcname.startswith("bots/sosipolis/tests/")
+        arcname == "bots/morpheus/tests"
+        or arcname.startswith("bots/morpheus/tests/")
         for arcname in names
     )
     # Bundle membership is the hashed closure (minus run.sh); keep that link tight.
-    assert "bots/sosipolis/brain.py" in names
-    assert "bots/sosipolis/probe.py" not in names
+    assert "bots/morpheus/agent.py" in names
+    assert "bots/morpheus/probe.py" not in names

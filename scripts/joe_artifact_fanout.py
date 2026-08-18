@@ -3,15 +3,13 @@
 
     python scripts/joe_artifact_fanout.py --check      # report, write nothing
     python scripts/joe_artifact_fanout.py              # sync every downstream
-    python scripts/joe_artifact_fanout.py --bot morpheus-joe
+    python scripts/joe_artifact_fanout.py --bot unclejoe
 
-The weights fan out along `joe -> joe-rs -> {unclejoe, morpheus-joe}`. Only
-joe-rs converts; the forks **track joe-rs**, one hop down, and never read joe's
-`.eqx`. The reason is the measurement, not tidiness: the joe-rs / unclejoe
-contrast is supposed to isolate the tactics layer and the joe-rs /
-morpheus-joe contrast the search stack, and either one only isolates anything
-if both arms run byte-identical weights rather than weights from the same
-checkpoint.
+The weights fan out along `joe -> joe-rs -> unclejoe`. Only joe-rs converts;
+the fork **tracks joe-rs**, one hop down, and never reads joe's `.eqx`. The
+reason is the measurement, not tidiness: the joe-rs / unclejoe contrast is
+supposed to isolate the tactics layer, and it only isolates anything if both
+arms run byte-identical weights rather than weights from the same checkpoint.
 
 Nothing detects a skipped sync at play time — a seat with older weights loads,
 plays, and looks healthy — so this script's job is to make the *failure* of
@@ -48,7 +46,7 @@ SOURCE = REPO / "bots" / "joe-rs" / "artifact"
 
 # Every bot that carries a copy of joe-rs's weights. Adding a fork here and to
 # `tests/test_joe_source_fanout.py` is the whole registration step.
-DOWNSTREAM = ("unclejoe", "morpheus-joe")
+DOWNSTREAM = ("unclejoe",)
 
 MEMBERS = ("model.safetensors", "manifest.json")
 

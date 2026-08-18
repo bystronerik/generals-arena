@@ -17,8 +17,7 @@
     "Members come from the current competition pool under bots/.",
     "Roles cover the decision-rule panel needs: anchor, rating span, heuristics, research.",
     "castle_builder supplies castle-build coverage for later curriculum and belief work.",
-    "classic_duel, remote, and scraped ResBot games stay out.",
-    "sosipolis content_hash is the current checkout; rating evidence cites the most-played registered lineage head."
+    "classic_duel, remote, and scraped ResBot games stay out."
   ],
   "members": [
     {
@@ -74,16 +73,6 @@
       "decisive_games": 723,
       "rated_games": 728,
       "evidence_entity": "macaria@5760b30723e4"
-    },
-    {
-      "bot_id": "sosipolis",
-      "content_hash": "e8d618ef7dc6",
-      "role": "research",
-      "rating": 2034.5,
-      "decisive_games": 245,
-      "rated_games": 250,
-      "evidence_entity": "sosipolis@1efe9ed58fc9",
-      "evidence_note": "Rating and decisive counts come from the most-played registered lineage head; the panel records the current content_hash."
     }
   ]
 }

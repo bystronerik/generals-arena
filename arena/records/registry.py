@@ -261,7 +261,7 @@ def _anchor_closure(
     commit objects alone.
     """
     # Batched through stdin: one subprocess per stage rather than per file, so
-    # the cost does not grow with closure size (proteus pulls in 20+ files).
+    # the cost does not grow with closure size (morpheus pulls in 20+ files).
     written = _git(
         ["hash-object", "-w", "--stdin-paths"],
         repo_root=repo_root,

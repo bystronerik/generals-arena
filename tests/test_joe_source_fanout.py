@@ -1,45 +1,29 @@
 """
-Joe's net fans out to two other bots. Do the copies still say what joe-rs says?
+Joe's net fans out to another bot. Does the copy still say what joe-rs says?
 
-Only joe-rs converts joe's `.eqx` checkpoint. Everything downstream — the
-weights and, for `morpheus-joe`, the source files that read them — is a copy,
+Only joe-rs converts joe's `.eqx` checkpoint. Everything downstream is a copy,
 and a copy that silently falls behind is the failure mode this file exists for.
-A seat carrying last month's weights, or a "fixed" copy of `gemm.rs`, loads,
-plays, and looks perfectly healthy. Nothing at play time can tell.
-
-Two things are checked, for two different reasons.
+A seat carrying last month's weights loads, plays, and looks perfectly healthy.
+Nothing at play time can tell.
 
 **The weights** (`joe-net-plan.md` §8.7). The measurement is what forces this:
-the joe-rs / unclejoe contrast is supposed to isolate the tactics layer, and
-the joe-rs / morpheus-joe contrast the search stack. Neither isolates anything
-unless both arms run **byte-identical** weights rather than weights from the
-same checkpoint. The repo has been caught out here twice, which is why the
-check is a test and not a line in a checklist —
+the joe-rs / unclejoe contrast is supposed to isolate the tactics layer, and it
+isolates nothing unless both arms run **byte-identical** weights rather than
+weights from the same checkpoint. The repo has been caught out here twice,
+which is why the check is a test and not a line in a checklist —
 `scripts/joe_artifact_fanout.py` is how you fix a red result, not how you
 notice one.
 
-**The source** (§8.2). `bots/morpheus-joe/crates/joenet/src/` is a
-byte-identical copy of `bots/joe-rs/src/`, and that identity *is* the fork's
-parity argument for its forward pass: joe-rs already carries a JAX-oracle
-corpus proving its forward matches joe to pinned relative bounds (2.331e-6
-logit, 2.244e-6 bin; 731/731 frames of decision parity; 4,760 turns of
-byte-equal wire replay), and rebuilding that corpus for a third bot buys
-nothing. Equal files plus a green joe-rs corpus means the fork's forward pass
-is joe's forward pass. Unequal files mean the argument is void, and this test
-names the file that broke it.
+This file once also checked source identity, for `morpheus-joe`: that fork
+carried a byte-identical copy of `bots/joe-rs/src/`, and the copy *was* its
+parity argument for the forward pass. The fork was removed on 2026-08-18, so
+the check has no subject. `unclejoe` carries the same copies and was
+deliberately never checked for source identity — it is under active
+development, and gating someone else's working tree on a fork's argument would
+be the wrong coupling. Its weights are checked, because those are shared.
 
-The consequence is a rule rather than a preference: **the fork may not
-"improve" those files.** A change lands in joe-rs first and is re-copied down.
-Batching the leaf forwards (§5.2) is the concrete case, and it is scoped as
-upstream work for exactly this reason.
-
-`unclejoe` carries the same copies and is deliberately **not** checked for
-source identity here — it is under active development, and gating someone
-else's working tree on this fork's argument would be the wrong coupling. Its
-weights are checked, because those are shared.
-
-Cheap by construction: eleven `sha256` calls over ~1,900 lines and four small
-JSON reads, well inside the 15 s suite budget (AGENTS.md).
+Cheap by construction: a few `sha256` calls and two small JSON reads, well
+inside the 15 s suite budget (AGENTS.md).
 """
 from __future__ import annotations
 
@@ -53,25 +37,7 @@ REPO = Path(__file__).resolve().parents[1]
 JOE_RS = REPO / "bots" / "joe-rs"
 
 # Every bot carrying a copy of joe-rs's weights.
-WEIGHT_FORKS = ("unclejoe", "morpheus-joe")
-
-# The files `bots/morpheus-joe/crates/joenet/src/` copies from
-# `bots/joe-rs/src/`. The plan names five — `nn/{net,gemm,safetensors}.rs`,
-# `board/obs.rs`, `xla_math.rs`; the fork copies the modules around them too,
-# so the whole subtree is one copy and not five files inside a rewrite.
-JOENET_SOURCES = (
-    "xla_math.rs",
-    "io/mod.rs",
-    "io/json.rs",
-    "io/wire.rs",
-    "board/mod.rs",
-    "board/action.rs",
-    "board/obs.rs",
-    "nn/mod.rs",
-    "nn/gemm.rs",
-    "nn/net.rs",
-    "nn/safetensors.rs",
-)
+WEIGHT_FORKS = ("unclejoe",)
 
 
 def sha256(path: Path) -> str:
@@ -87,28 +53,6 @@ def manifest_sha(bot: str) -> str | None:
     if not manifest.is_file():
         return None
     return json.loads(manifest.read_text()).get("safetensors_sha256")
-
-
-@pytest.mark.parametrize("name", JOENET_SOURCES)
-def test_the_fork_carries_joes_source_byte_for_byte(name):
-    """
-    §8.2. A failure here does not mean "a file drifted"; it means the fork's
-    forward pass is no longer covered by any corpus.
-    """
-    upstream = JOE_RS / "src" / name
-    copy = REPO / "bots" / "morpheus-joe" / "crates" / "joenet" / "src" / name
-    assert upstream.is_file(), f"{upstream} is missing; joe-rs is the source of truth"
-    assert copy.is_file(), (
-        f"{copy} is missing. `crates/joenet/src/` is a copy of joe-rs's tree; "
-        "re-copy the file rather than writing one."
-    )
-    assert sha256(copy) == sha256(upstream), (
-        f"{name} differs between bots/joe-rs/src/ and the fork's copy. The fork's "
-        "forward pass is proved *transitively* — by being byte-identical to the "
-        "one joe-rs's JAX-oracle corpus covers — so this failure voids that "
-        "proof. Land the change in joe-rs, re-run its parity gate "
-        "(`pytest -m joe bots/joe-rs`), then re-copy down."
-    )
 
 
 @pytest.mark.parametrize("bot", WEIGHT_FORKS)

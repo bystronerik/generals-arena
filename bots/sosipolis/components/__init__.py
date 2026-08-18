@@ -1,1 +1,0 @@
-# Sosipolis components package.
