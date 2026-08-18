@@ -25,6 +25,12 @@ The blocks are pre-norm residual (`x = x + attn(norm(x))`,
 weights **and biases** are zero is an exact identity. Note the zeroed
 sublayer outputs are exact zeros even under bf16 (`x + 0 == x` bitwise), so
 the parity check can run with the production `use_bf16` setting.
+Measured 2026-08-18: the identity holds bitwise only per-op — jitting the
+two nets compiles different-depth programs whose fusion shifts bf16
+rounding in the *shared* layers by an ulp. `assert_forward_parity`
+therefore runs un-jitted (vmapped eager), which executes the identical
+primitive sequence for the shared layers in both nets. Same lesson as
+joe-rs: do not chase XLA bit-exactness across different compiled programs.
 
 - Insertion: `[L0, L1, NEW, L2, L3, NEW, L4]` — interleaved, a judgment
   call; identity-at-init makes the placement low-stakes.

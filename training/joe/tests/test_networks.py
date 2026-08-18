@@ -134,6 +134,8 @@ def test_tier_parameter_counts():
     tiers = {
         "S": (dict(depth=4, embed_dim=352, n_head=8, ff_factor=2), 5_087_930),
         "M": (dict(depth=5, embed_dim=384, n_head=8, ff_factor=3), 8_556_250),
+        # M grown to depth 7 (growth plan §2): +2 blocks x 1,479,168 params.
+        "M7": (dict(depth=7, embed_dim=384, n_head=8, ff_factor=3), 11_514_586),
     }
     for _tier, (spec, expected) in tiers.items():
         net = HistoryTransformer(grid_size=P, pad_to=P, patch_size=3, **spec,

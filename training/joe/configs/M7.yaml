@@ -1,0 +1,94 @@
+# M7 — depth-7 growth continuation of the base M run (2026-08-18).
+# docs/research/strategies/joe-depth7-growth-plan.md. Everything is M.yaml
+# verbatim except: depth 7, num_iters 20000, and the section-3 continuation
+# settings (LR cap 2e-5, entropy continued at 0.006, single-stage
+# curriculum, seed 46) — each commented at the key it changes.
+# The run starts from a fabricated step-0 checkpoint set seeded by
+# scripts/joe_grow_depth.py, never from random init: seed R2 and verify
+# resolve_latest BEFORE the first launch (plan section 4).
+run_name: joe-M7
+
+# ---- Environment: GeneralsEnv(mode="competition") numbers ----
+# Identical to M.yaml; the drift test pins these against the mode preset.
+pad_to: 21                    # competition preset; with patch 3: 7x7 = 49 patch tokens
+min_grid_size: 18             # each side drawn independently in [18, 21]
+max_grid_size: 21
+truncation: 1200              # competition draw turn (preset), not the released 1024
+mountain_density_min: 0.24    # released M's flat 0.21 not adopted — preset range wins
+mountain_density_max: 0.26
+build_castles: true           # castles are built, not captured — 10th per-cell
+                              # action, build mask, build-cost obs channel (plan §4)
+deathtouch_turn: 800          # env-internal; the timestep channel carries the regime change
+
+pool_size: 200000
+reset_pool_every: 20
+
+# ---- Curriculum ----
+# Single stage equal to the competition preset (growth plan §3): the grown
+# run must not re-climb the ladder, and one stage keeps the fabricated
+# curriculum_stage 0 valid on every resume and makes the win-gate moot.
+curriculum:
+  - min_generals_distance: 17
+    max_generals_distance: null   # preset leaves the max unset
+
+# ---- Network (M grown to depth 7; everything else unchanged) ----
+network: history_transformer
+depth: 7                      # growth plan §2: 2 identity blocks spliced in
+embed_dim: 384
+n_head: 8
+ff_factor: 3
+patch_size: 3
+
+ema_decay: 0.999              # EMA is the deployment policy (paper: +~30 Elo)
+
+# ---- Rollout ----
+num_envs: 2048
+num_steps: 256
+num_iters: 20000              # growth plan §1: ~20k continuation iterations
+minibatch_size: 2048
+seed: 46                      # growth plan §3: fresh rollout randomness
+
+# ---- PPO ----
+num_epochs: 1
+gamma: 1.0
+gae_lambda: 0.9
+clip_eps: 0.2
+max_grad_norm: 0.267
+vf_coef: 0.5
+target_kl: 0.02
+adv_top_frac: 0.25
+
+# ---- Entropy ----
+# Growth plan §3: continue the base run's value (~0.0058 at it=50k) instead
+# of restarting at 0.05, which would deliberately noise a converged policy.
+ent_schedule: power_law
+ent_coef_start: 0.006
+ent_power: 0.2
+ent_coef_min: 0.001
+
+# ---- Learning rate ----
+# Growth plan §3: same power law, cap 2e-5 — ~10k iters flat at 2e-5 to
+# adapt the new blocks, then decay toward the 5e-6 floor. The base run's
+# floor is too slow to recruit new capacity; a fresh 1e-4 risks destroying
+# the policy. target_kl 0.02 stays as the guard; the LR-too-hot fallback
+# is a relaunch with lr_power_law_max 1e-5 (plan §6).
+lr_schedule: power_law
+lr_power_law_numerator: 0.5
+lr_power_law_exponent: 1.1
+lr_power_law_min: 5e-6
+lr_power_law_max: 2e-5
+
+# ---- Value loss: categorical HL-Gauss ----
+value_loss: ce
+num_bins: 128
+v_min: -1.0
+v_max: 1.0
+hl_sigma: 0.04                # NOT the released config.py default 0.75
+
+# ---- Eval / checkpoints ----
+eval_every: 50
+eval_games: 512
+ckpt_every: 500
+save_every: 500
+
+use_bf16: true
