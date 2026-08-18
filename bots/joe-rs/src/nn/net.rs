@@ -1,7 +1,7 @@
 //! The HistoryTransformer forward pass, dependency-free (port-plan §9, R1).
 //!
 //! Single sample, fixed shapes: 39×21×21 obs → 49 patch tokens of 351 →
-//! 52 tokens × 384 through five pre-norm blocks (MHSA 8 heads / head_dim 48,
+//! 52 tokens × 384 through seven pre-norm blocks (MHSA 8 heads / head_dim 48,
 //! then 384→1152 SiLU→384) → policy head (49×90, unpatchified to 10×21×21
 //! masked logits) and value head (128 bins dotted with the exported
 //! `bin_centers`). Deployment is float32 everywhere — the checkpoint's
@@ -35,7 +35,7 @@ use crate::nn::safetensors::SafeTensors;
 
 pub const TENSOR_SCHEMA: &str = "joe-net-v1";
 pub const EMBED: usize = 384;
-pub const DEPTH: usize = 5;
+pub const DEPTH: usize = 7;
 pub const N_HEAD: usize = 8;
 pub const HEAD_DIM: usize = EMBED / N_HEAD; // 48
 pub const PATCH: usize = 3;

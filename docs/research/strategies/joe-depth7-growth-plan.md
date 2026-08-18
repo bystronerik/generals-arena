@@ -188,6 +188,21 @@ changes both raw strength and simulation count in opposite directions.
 - R2 seeded and verified (`resolve_latest` returns the step-0 set)
   before launch. Launch: adopted instance 47615917 (H100 SXM),
   2026-08-18 ~17:50 CEST.
+- Gate 1 (joe-rs depth handling), 2026-08-18: **hardcoded, as section 7
+  anticipated.** Four sites: `DEPTH` in `src/nn/net.rs` of both joe-rs and
+  unclejoe, and `EXPECTED_LEAVES`/`EXPECTED_PARAMS` in `quantize_artifact.py`
+  and `convert_artifact.py` (plus a `range(5)` in the converter's name
+  schema). All bumped to depth 7 / 132 leaves / 11,514,586 params. They stay
+  pinned rather than derived from the manifest: the pins are what refused the
+  depth-7 artifact at every stage instead of mis-loading it, so a tier change
+  is a deliberate edit. Step-1500 fan-out done: joe-rs and unclejoe both on
+  safetensors b82e8e5aa6e4. Parity 11/11, `mutation_check` 9/9 including both
+  net.rs mutants on the edited file.
+- Gate 2 (CPU latency), 2026-08-18: **passes.** dev arm64 p99 32.14 ms over
+  1,838 turns, against a 150 ms move budget and J3's 50 ms target; 1.34x the
+  depth-5 p99, matching the predicted ~+40%. Details in
+  [joe-rs/latency.md](../../bots/joe-rs/latency.md). Modal x86 confirmation
+  still owed before a rated round.
 - First boot crashed at deserialization: the adopted instance's ckpt_dir
   still held the base run's `config.yaml`, and `vast_boot` preferred the
   local file, so the depth-7 seed hit a depth-5 template. The crash came

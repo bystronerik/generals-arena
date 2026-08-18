@@ -21,8 +21,12 @@ trusts — then names each leaf from its pytree path.
 Checks, all refusing to write on failure:
 
 1. `weights_sha256` of the source `.eqx` matches joe's manifest.
-2. Exactly 100 tensors with the `joe-net-v1` names/shapes, all float32,
-   summing to 8,556,250 parameters (= the manifest's `n_params`).
+2. Exactly 132 tensors with the `joe-net-v1` names/shapes, all float32,
+   summing to 11,514,586 parameters (= the manifest's `n_params`). These two
+   numbers are the depth-7 `M7` tier; the depth-5 `M` tier was 100 /
+   8,556,250. They are pinned rather than read from the manifest so a
+   mis-shaped artifact still refuses, and a tier change is a deliberate edit
+   here plus `DEPTH` in `src/nn/net.rs` (both crates).
 3. Round-trip: the written safetensors reloads bit-exact against the
    deserialised leaves.
 

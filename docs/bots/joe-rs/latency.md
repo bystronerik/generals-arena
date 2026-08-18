@@ -28,6 +28,26 @@ generations differ between runs.
 | Modal x86, 1 core | 21.4 ms | 22.3 ms | 23.7 ms | 34.5 ms | 164 ms |
 | dev arm64 (M-series, unpinned) | 22.2 ms | 22.9 ms | 24.0 ms | 29.0 ms | 62 ms |
 
+## Results (2026-08-18, depth 7 / tier M7)
+
+The lineage grew from depth 5 to depth 7 (`joe-M7-vast-20260818-1741`), which
+is growth-plan §7's gate 2: the grown net is training-only if the turn budget
+breaks. It does not break.
+
+| host | p50 | p90 | p99 | max | startup |
+| --- | --- | --- | --- | --- | --- |
+| dev arm64 (M-series, unpinned) | 31.15 ms | 31.39 ms | 32.14 ms | 47.89 ms | 73.5 ms |
+
+1,838 turns of the M7 `synthetic-long.in.log`. Against the depth-5 arm64 row
+above: p50 1.40x, p99 1.34x — the growth plan predicted ~+40% forward cost and
+that is what arrived. p99 is 21% of the 150 ms move budget and 64% of J3's
+50 ms target; R1's 75 ms tripwire is not near. Startup grew 62 -> 73.5 ms on a
+35% larger artifact.
+
+Not yet measured on Modal x86 one core, which is the authoritative host and ran
+slightly *faster* than this arm64 dev box at depth 5 (p50 21.4 vs 22.2 ms).
+Run `scripts/joe_rs_modal_bench.py` to confirm before a rated round.
+
 Raw record: `docs/research/measurements/joe-rs-latency-modal.json`.
 The container built the crate from source in 12.4 s — the same build a
 sandbox intake would run, against 71–131 s for the old 93-crate graph.

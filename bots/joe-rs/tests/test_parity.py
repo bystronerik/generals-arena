@@ -271,6 +271,32 @@ CH21_MAX_ULP = 0
 # frame in this corpus is new, which is the usual reason the maxima move.
 #
 # `mutation_check` kills 9/9 at these pins.
+#
+# 2026-08-18, joe-M7 step 1500 (726 frames, gemm.rs): **the first depth-7
+# corpus.** The lineage moved from tier M (depth 5, 8,556,250 params) to tier
+# M7 (depth 7, 11,514,586) by function-preserving layer insertion — a new run,
+# joe-M7-vast-20260818-1741, not a continuation of the step numbering above.
+# `DEPTH` in src/nn/net.rs went 5 -> 7 in both crates, and the leaf/param pins
+# in the two export tools went 100/8,556,250 -> 132/11,514,586.
+#
+# All three pins hold, with more headroom than base-M had:
+#
+#   percentile   p50        p90        p99        p100      pin used
+#   rel logit    1.517e-6   2.858e-6   5.066e-6   7.077e-6   44%
+#   rel bin      2.400e-6   5.694e-6   1.102e-5   1.570e-5   31%
+#   dvalue       2.384e-7   9.537e-7   2.385e-6   6.102e-6   44%
+#
+# Every maximum *fell* against step 50000 (9.098e-6, 3.284e-5, 9.060e-6) even
+# though two more blocks accumulate more float error. Do not read that as the
+# port being "more correct": these maxima track activation scale and frame
+# population, and both changed. The correctness evidence is tier 1 bit-exact,
+# tier 3 decision agreement, and `mutation_check` 9/9 — which matters more
+# than usual at this export, because `net.rs` was edited. Both net.rs mutants
+# (`qk-proj-swap`, `softmax-scale`) were killed on the edited file.
+#
+# What a mis-wired block 5 or 6 would have looked like: not a pin a few
+# percent over, but tier 1 or tier 3 failing outright. A transformer block
+# that loads the wrong weights does not produce a near-miss.
 LOGIT_REL_ACHIEVED = 1.6e-5   # worst measured 1.041e-5 (step 23500, gemm.rs)
 BIN_REL_ACHIEVED = 5.0e-5     # worst measured 3.284e-5 (step 50000, gemm.rs)
 # |value| <= 1 by construction (bin_centers span [-1, 1]), so this one is

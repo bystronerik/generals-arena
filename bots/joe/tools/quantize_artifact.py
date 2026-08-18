@@ -19,7 +19,7 @@ Checks, in order, refusing to write on any failure:
 2. The manifest does not already carry ``quantized`` (no double rounding —
    idempotent in effect, but a second run means a confused pipeline).
 3. The tree deserialises into the exact deployment template that
-   ``bots/joe/agent.py`` builds: 100 float32 leaves, 8,556,250 parameters.
+   ``bots/joe/agent.py`` builds: 132 float32 leaves, 11,514,586 parameters.
 4. The original ``.eqx`` is backed up (default ``data/joe/``) before the
    in-place replace, and the replace goes through a temporary file.
 
@@ -43,8 +43,8 @@ JOE_DIR = Path(__file__).resolve().parent.parent
 REPO = JOE_DIR.parents[1]
 BACKUP_DIR = REPO / "data" / "joe"
 
-EXPECTED_LEAVES = 100
-EXPECTED_PARAMS = 8_556_250
+EXPECTED_LEAVES = 132
+EXPECTED_PARAMS = 11_514_586
 
 sys.path.insert(0, str(JOE_DIR))
 

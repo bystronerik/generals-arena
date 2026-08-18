@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "weights": "ema.eqx",
-  "weights_sha256": "c18f1a6d087def82db066d1a9042c971376792e75f8b04356d43bcbd79709437",
-  "weights_size": 34237800,
-  "n_params": 8556250,
+  "weights_sha256": "484417c870372ce1444fba92b3001b06b1c42f762c22dd4a1b8f23688f2e43c8",
+  "weights_size": 46075240,
+  "n_params": 11514586,
   "network": {
     "network": "history_transformer",
     "pad_to": 21,
     "history_size": 7,
-    "depth": 5,
+    "depth": 7,
     "embed_dim": 384,
     "n_head": 8,
     "ff_factor": 3,
@@ -20,18 +20,18 @@
   },
   "checkpoint": {
     "source": "r2",
-    "r2_key": "joe/joe-M-vast-20260813-0213/checkpoints/joe-M-vast-20260813-0213_ema_50000.eqx",
-    "run_name": "joe-M-vast-20260813-0213",
-    "global_step": 50000,
-    "curriculum_stage": 4,
-    "last_eval_wr": 0.990234375,
+    "r2_key": "joe/joe-M7-vast-20260818-1741/checkpoints/joe-M7-vast-20260818-1741_ema_1500.eqx",
+    "run_name": "joe-M7-vast-20260818-1741",
+    "global_step": 1500,
+    "curriculum_stage": 0,
+    "last_eval_wr": 0.99609375,
     "engine_sha": "9e3b9d13cca51caa1bb07db48bb85c9e90ce0462"
   },
-  "exported_at": 1787065836.312664,
-  "pre_quantization_weights_sha256": "900e0e4322ec58eb8b59a6fca6f3fa518c48225ad683cfc3aa4c1f91222aa1cf",
+  "exported_at": 1787090993.473548,
+  "pre_quantization_weights_sha256": "26f4b06154de8d747e23ea530218f43c0648ac69c3a912b686227cf8fdf884c9",
   "quantized": "f16",
   "tensor_schema": "joe-net-v1",
   "safetensors": "model.safetensors",
-  "safetensors_sha256": "3be7675ca5a4c69b75248425da6bdb67eba4b81e556369c2e814b0e0bdd105c2",
-  "safetensors_size": 34235272
+  "safetensors_sha256": "b82e8e5aa6e4dccd83595a23e43e04719ac8746d5b2de9a3f43f033ceb9fcfb1",
+  "safetensors_size": 46072016
 }

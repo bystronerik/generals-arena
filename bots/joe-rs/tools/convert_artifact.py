@@ -9,7 +9,7 @@ without also breaking the deployed Python bot (port-plan §3, R2).
 Checks, in order, refusing to write on any failure:
 
 1. ``manifest.json``'s ``weights_sha256`` matches the ``.eqx`` file.
-2. The flattened tree has exactly 100 array leaves, 8,556,250 parameters.
+2. The flattened tree has exactly 132 array leaves, 11,514,586 parameters.
 3. Every derived dotted name and shape matches the joe-net-v1 schema.
 4. Round-trip: the written safetensors reloads bit-exact against the
    deserialised leaves.
@@ -31,8 +31,13 @@ JOE_RS_DIR = Path(__file__).resolve().parent.parent
 JOE_DIR = JOE_RS_DIR.parent / "joe"
 TENSOR_SCHEMA = "joe-net-v1"
 
-EXPECTED_LEAVES = 100
-EXPECTED_PARAMS = 8_556_250
+# Depth of the shipped tier: M7 (depth 7). Pinned here, not read from the
+# manifest, for the same reason as the two counts below — a mis-shaped
+# artifact must refuse rather than convert. Changing tier means editing
+# these three plus `DEPTH` in `src/nn/net.rs` of both Rust crates.
+DEPTH = 7
+EXPECTED_LEAVES = 132
+EXPECTED_PARAMS = 11_514_586
 
 sys.path.insert(0, str(JOE_DIR))
 
@@ -74,7 +79,7 @@ def expected_schema() -> dict:
         schema[f"temporal_encoder.{side}_l1.bias"] = (512,)
         schema[f"temporal_encoder.{side}_l2.weight"] = (384, 512)
         schema[f"temporal_encoder.{side}_l2.bias"] = (384,)
-    for i in range(5):
+    for i in range(DEPTH):
         pre = f"transformer_layers.{i}"
         schema[f"{pre}.norm1.weight"] = (384,)
         schema[f"{pre}.norm1.bias"] = (384,)
