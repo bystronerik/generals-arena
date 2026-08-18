@@ -39,11 +39,19 @@ class FakeS3Client:
         self.objects = {}   # key -> (bytes, metadata)
         self.put_order = []
         self.fail_after_puts = None
+        self.fail_keys = set()
+        self.body_types = []
+        self.on_put = None  # a concurrent writer, firing inside the PUT
 
     def put_object(self, Bucket, Key, Body, Metadata=None):
         if self.fail_after_puts is not None and \
                 len(self.put_order) >= self.fail_after_puts:
             raise IOError("injected network failure")
+        if Key in self.fail_keys:
+            raise IOError(f"injected failure for {Key}")
+        if self.on_put is not None:
+            self.on_put(Key, Body)
+        self.body_types.append(type(Body))
         data = Body.read() if hasattr(Body, "read") else Body
         self.objects[Key] = (data, dict(Metadata or {}))
         self.put_order.append(Key)
@@ -239,6 +247,45 @@ def test_uploader_failure_retries_next_checkpoint(store, tmp_path, capsys):
     uploader()
     uploader.wait()
     assert store.resolve_latest("joe-x")["state"]["global_step"] == 100
+
+
+def test_run_file_body_is_a_snapshot_not_a_live_handle(store, tmp_path):
+    # The logger appends a row while the PUT is in flight. botocore fixes
+    # Content-Length when it prepares the request but streams a handle to
+    # EOF, so a live handle sends more bytes than the header promises and
+    # R2 answers IncompleteBody (measured 2026-08-18: it cost the joe-M7
+    # step-500 checkpoint). A bytes snapshot cannot outrun its own length.
+    path = tmp_path / "metrics.jsonl"
+    path.write_text('{"step": 1}\n')
+    snapshot = path.read_bytes()
+    store.client.on_put = lambda key, body: path.write_text(
+        path.read_text() + '{"step": 2}\n')
+
+    store.upload_run_file("joe-x", "logs/metrics.jsonl", str(path))
+
+    data, _ = store.client.objects["joe/joe-x/logs/metrics.jsonl"]
+    assert data == snapshot
+    assert store.client.body_types == [bytes]
+    assert path.read_bytes() != snapshot   # the writer really did append
+
+
+def test_run_log_failure_does_not_cost_the_checkpoint(store, tmp_path,
+                                                      capsys):
+    # Stage order: the checkpoint set goes first and each stage catches its
+    # own failure. Measured 2026-08-18: metrics.jsonl raised before the
+    # joe-M7 step-500 blobs were attempted, so R2 went from step 0 to 1000.
+    (tmp_path / "metrics.jsonl").write_text('{"step": 1}\n')
+    make_ckpt_dir(tmp_path, "joe-x", 500)
+    uploader = CheckpointUploader(store, str(tmp_path), "joe-x")
+    store.client.fail_keys = {"joe/joe-x/logs/metrics.jsonl"}
+
+    uploader()
+    uploader.wait()
+
+    assert store.resolve_latest("joe-x")["state"]["global_step"] == 500
+    assert uploader() == 500
+    uploader.wait()
+    assert "R2 upload failed (run logs" in capsys.readouterr().out
 
 
 def test_uploader_returns_the_confirmed_step(store, tmp_path):

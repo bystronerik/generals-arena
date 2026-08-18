@@ -251,9 +251,20 @@ class R2Store:
     # -- run files, launch pointer, and lease --
 
     def upload_run_file(self, run_name, rel, local_path):
-        """Whole-file PUT of a small mutable run file (logs, manifest)."""
+        """Whole-file PUT of a small mutable run file (logs, manifest).
+
+        The body is a bytes snapshot, never the open handle. These files
+        are appended to while the upload runs — the logger flushes a
+        metrics row per iteration, and the boot script tees the train log
+        — and botocore fixes ``Content-Length`` when it prepares the
+        request but then streams a handle to EOF. A write that lands
+        mid-send makes the body outrun the header, and R2 rejects the whole
+        PUT with ``IncompleteBody``. Measured 2026-08-18: that error on a
+        68 MB ``metrics.jsonl`` cost the joe-M7 step-500 checkpoint.
+        """
         with open(local_path, "rb") as f:
-            self._put_bytes(self.key(run_name, *rel.split("/")), f)
+            data = f.read()
+        self._put_bytes(self.key(run_name, *rel.split("/")), data)
 
     def download_run_file(self, run_name, rel, dest_path):
         return self.download_file(self.key(run_name, *rel.split("/")), dest_path)
@@ -323,6 +334,10 @@ class CheckpointUploader:
     thread — the training loop never blocks on the network, and an upload
     that raises is swallowed so R2 can never stop training.
 
+    The stages are independent and the checkpoint set goes first: each
+    stage catches its own failure, so an upload of a log can never discard
+    the durable state.
+
     A failed upload prints loudly and ``latest.json`` keeps pointing at the
     last verified set. The next checkpoint re-reads ``state.json`` and
     uploads whatever it names *then*, so recovery skips the missed step
@@ -367,29 +382,50 @@ class CheckpointUploader:
             if os.path.exists(path):
                 self.store.upload_run_file(self.run_name, rel, path)
 
-    def _upload_once(self):
+    def _stage(self, what, fn):
+        """Run one upload stage; report a failure and continue.
+
+        Each stage stands alone so a broken one cannot skip the stages
+        behind it. Measured 2026-08-18: ``metrics.jsonl`` failed with
+        ``IncompleteBody`` before the joe-M7 step-500 blobs were attempted,
+        and that step never reached the bucket.
+        """
         try:
-            if not self._start_files_done:
-                self._upload_run_files(RUN_START_FILES)
-                self._start_files_done = True
-            self._upload_run_files(MUTABLE_RUN_FILES)
-
-            state = read_state(self.ckpt_dir)
-            if state is not None and \
-                    state["global_step"] > self._uploaded_step:
-                self.store.upload_checkpoint(self.ckpt_dir, state)
-                self._uploaded_step = state["global_step"]
-
-            # Terminal artifacts (written once, just before the final hook)
-            for suffix in ("final.eqx", "ema_final.eqx"):
-                path = os.path.join(self.ckpt_dir,
-                                    f"{self.run_name}_{suffix}")
-                if os.path.exists(path):
-                    self.store.upload_file(
-                        self.store.key(self.run_name, "checkpoints",
-                                       os.path.basename(path)), path)
+            fn()
+            return True
         except Exception:
-            print(f"R2 upload failed (will retry on the next checkpoint); "
-                  f"latest.json still points at step {self._uploaded_step}",
-                  flush=True)
+            print(f"R2 upload failed ({what}; will retry on the next "
+                  f"checkpoint); latest.json still points at step "
+                  f"{self._uploaded_step}", flush=True)
             traceback.print_exc()
+            return False
+
+    def _upload_checkpoint_set(self):
+        state = read_state(self.ckpt_dir)
+        if state is None or state["global_step"] <= self._uploaded_step:
+            return
+        self.store.upload_checkpoint(self.ckpt_dir, state)
+        self._uploaded_step = state["global_step"]
+
+    def _upload_terminal_artifacts(self):
+        """The two ``*_final.eqx`` files, written just before the last hook."""
+        for suffix in ("final.eqx", "ema_final.eqx"):
+            path = os.path.join(self.ckpt_dir, f"{self.run_name}_{suffix}")
+            if os.path.exists(path):
+                self.store.upload_file(
+                    self.store.key(self.run_name, "checkpoints",
+                                   os.path.basename(path)), path)
+
+    def _upload_start_files(self):
+        self._upload_run_files(RUN_START_FILES)
+        self._start_files_done = True
+
+    def _upload_once(self):
+        # Durable state first, logs last: a checkpoint set is the only
+        # thing a resume needs, so nothing cheaper may stand in front of it.
+        self._stage("checkpoint", self._upload_checkpoint_set)
+        self._stage("final artifacts", self._upload_terminal_artifacts)
+        if not self._start_files_done:
+            self._stage("start files", self._upload_start_files)
+        self._stage("run logs",
+                    lambda: self._upload_run_files(MUTABLE_RUN_FILES))
