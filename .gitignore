@@ -62,12 +62,6 @@ bots/joe/artifact/*.eqx
 bots/joe-rs/artifact/*.safetensors
 bots/joe-rs/target/
 
-# joe-rs-f16 is the frozen f16 decision arm (docs/arena/decision-rule.md:
-# both arms in one round). Same artifact rule as joe-rs; the copy is
-# temporary and goes away after the f16 contrast is decided.
-bots/joe-rs-f16/artifact/*.safetensors
-bots/joe-rs-f16/target/
-
 # unclejoe forked joe-rs, and its weights follow the same rule one hop
 # further along: byte-copied from joe-rs's artifact by
 # bots/unclejoe/tools/sync_artifact.py, pinned by the committed manifest.json
