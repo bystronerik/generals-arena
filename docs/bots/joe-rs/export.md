@@ -49,6 +49,22 @@ then run the converter. The content hash covers `model.safetensors`, so a
 re-conversion forks joe-rs's rating identity — intended behavior, same as a
 joe re-export.
 
+## Quantization
+
+Since 2026-08-18 the lineage is f16-in-f32: after fetching a new `.eqx`
+from R2, `bots/joe/tools/quantize_artifact.py` rounds every weight through
+IEEE f16 **before anything downstream runs**. The values stay float32 on
+disk; only their precision changes. The `.eqx` is the single quantization
+point — joe loads it directly, the converter below reads the same rounded
+leaves, and the fan-out copies the resulting bytes — so no loader rounds at
+run time and there is one rounding implementation in the repo.
+
+Joe's manifest records the step: `quantized: "f16"`,
+`pre_quantization_weights_sha256` (the R2 f32 original), and
+`weights_sha256` moves to the rounded bytes. The tool refuses to run twice.
+Evidence for the change: 3,544 rated games, regression excluded in two
+rounds ([measurement](../../research/measurements/joe-rs-f16-quantization.md)).
+
 ## After a joe re-export
 
 The converter alone is not the whole job. joe-rs tracks joe's artifact only
@@ -56,6 +72,7 @@ because someone re-runs this sequence; skipping it leaves the two bots
 playing different networks while the docs claim otherwise.
 
 ```bash
+.venv/bin/python bots/joe/tools/quantize_artifact.py     # f16 first, always
 .venv/bin/python bots/joe-rs/tools/convert_artifact.py
 export PATH="$HOME/.cargo/bin:$PATH"          # cargo is off the default PATH
 cargo build --release --manifest-path bots/joe-rs/Cargo.toml
