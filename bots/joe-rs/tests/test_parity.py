@@ -238,18 +238,53 @@ CH21_MAX_ULP = 0
 #
 # `mutation_check` kills 9/9 at the re-pinned values below, which is what says
 # the looser bounds still catch a real defect.
+#
+# 2026-08-18, step 50000 (726 frames, gemm.rs): the first independent test of
+# the re-pin above, and it holds. **0 of 726 frames exceed any of the three
+# pins.** Rel logit max 9.098e-6 (57% of pin), rel bin 3.284e-5 (66%), value
+# 9.060e-6 (65%).
+#
+#   percentile   p50        p90        p99        p100
+#   rel logit    1.656e-6   2.833e-6   4.505e-6   9.098e-6
+#   rel bin      2.457e-6   5.869e-6   1.140e-5   3.284e-5
+#   dvalue       2.384e-7   8.941e-7   3.114e-6   9.060e-6
+#
+# Read this next to the step-48500 row: both maxima that fired there rose
+# another ~12% here (rel bin 2.929e-5 -> 3.284e-5, value 8.106e-6 ->
+# 9.060e-6) on an entirely new frame population. So the step-48500 excursion
+# was not a one-off spike — the level of these two maxima genuinely sits
+# higher than it did through step 29000, and the re-pin absorbed the move
+# rather than merely surviving one bad corpus. Headroom is now ~1.5x, not the
+# ~1.7x it was set at. If a third export puts rel bin over ~4e-5, re-pinning
+# again on the same argument stops being defensible: at that point read the
+# p50/p99 rows, and if the *body* has moved with the max, treat it as a
+# finding rather than corpus composition.
+#
+# The bin-sharpness refutation reproduces independently. The worst rel-bin
+# frame (general_hunter-seed5 t155) has maxprob 0.0960 against a corpus median
+# of 0.0962 — exactly median, neither sharp nor flat. Two corpora now agree
+# that sharpness does not select these frames.
+#
+# Corpus note: this checkpoint plays materially longer games (14-game total
+# 4,397 -> 5,567 turns, 1.27x) and joe-seed11 truncated at 1,200 as a draw
+# instead of winning at 748, so `synthetic-long` doubled to 2,280 turns. Every
+# frame in this corpus is new, which is the usual reason the maxima move.
+#
+# `mutation_check` kills 9/9 at these pins.
 LOGIT_REL_ACHIEVED = 1.6e-5   # worst measured 1.041e-5 (step 23500, gemm.rs)
-BIN_REL_ACHIEVED = 5.0e-5     # worst measured 2.929e-5 (step 48500, gemm.rs)
+BIN_REL_ACHIEVED = 5.0e-5     # worst measured 3.284e-5 (step 50000, gemm.rs)
 # |value| <= 1 by construction (bin_centers span [-1, 1]), so this one is
-# already scale-free and stays absolute. It tracks bin sharpness rather than
-# bin magnitude: 9.537e-7 at step 5000, 2.205e-6 at step 6000, and on the
+# already scale-free and stays absolute. It was long read as tracking bin
+# sharpness rather than bin magnitude — the step-48500 and step-50000 rows
+# below both refute that, so treat the history here as measurements, not as
+# an explanation: 9.537e-7 at step 5000, 2.205e-6 at step 6000, and on the
 # identical-frame A/B 1.520e-6 (step 10000) / 1.669e-6 (step 13500) under
 # candle. The gemm.rs kernel measured 2.682e-6 on the same corpus — over the
 # old 2.5e-6 pin by 7%, which is the kernel's different rounding, not drift —
 # so the pin is re-sized with the same ~2x headroom the two pins above carry.
 # Defensible only because `mutation_check` re-confirms all 9 kills at this
 # value; exceeding it is still a finding.
-VALUE_TOL_ACHIEVED = 1.4e-5   # worst measured 8.106e-6 (step 48500, gemm.rs)
+VALUE_TOL_ACHIEVED = 1.4e-5   # worst measured 9.060e-6 (step 50000, gemm.rs)
 
 # Tier-3 gate: greedy action equal on >= 99.5% of frames; every divergence
 # must be a near-tie inside the tier-2 bound.
