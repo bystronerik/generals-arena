@@ -5,7 +5,8 @@ The second half of N2's gate, and the one that admits no interpretation. Each
 corpus game's `.in.log` is exactly what the engine sent Python joe; piping it
 to `morpheus-joe` in wire mode runs the shipped path — morpheus's stdio parse,
 the observation bridge, joe's forward, joe's greedy decode, joe's pass clamp —
-and stdout must match Python joe's recorded replies turn for turn.
+and stdout must match the JAX oracle's unpenalised action (`all_action` in
+the capture) turn for turn. Not the `.out.log`: see `games()` below.
 
 Why this is worth 20 seconds a run: at N2 the fork has exactly one job, to feed
 joe's network what joe's network expects, and every remaining difference
@@ -55,18 +56,41 @@ GAMES_WANTED = 3
 
 
 def games() -> list[tuple[Path, Path]]:
-    """`(input log, recorded replies)` pairs, corpus first, else the slice."""
+    """`(input log, oracle capture)` pairs, corpus first, else the slice.
+
+    The reference is the `.npz`'s `all_action`, **not** the `.out.log` —
+    the same rule as `bots/joe-rs/tests/test_wire_replay.py`, for the same
+    reason. Since 2026-08-16 Python joe applies a repetition penalty before
+    its argmax (`bots/joe/agent.py`), a selection layer this N2 fork
+    deliberately does not carry: it wears joe's *network*, not joe's
+    research layer. The `.out.log` records the penalised program; grading
+    against it fails the fork for a difference it is meant to have.
+    `all_action` is the same oracle, unpenalised, for every turn.
+    """
     for directory in (CORPUS, SMOKE):
         if not directory.is_dir():
             continue
         found = []
         for in_log in sorted(directory.glob("*.in.log")):
-            out_log = in_log.parent / f"{in_log.name.removesuffix('.in.log')}.out.log"
-            if out_log.is_file():
-                found.append((in_log, out_log))
+            npz = in_log.parent / f"{in_log.name.removesuffix('.in.log')}.npz"
+            if npz.is_file():
+                found.append((in_log, npz))
         if found:
             return found[:GAMES_WANTED]
     return []
+
+
+def _oracle_replies(npz_path: Path) -> list[str]:
+    """The unpenalised oracle action per turn, after agent.py's pass clamp."""
+    import numpy as np
+
+    with np.load(npz_path) as z:
+        actions = z["all_action"]
+    replies = []
+    for row in actions:
+        p, r, c, d, s = (int(x) for x in row)
+        replies.append("1 0 0 0 0" if p == 1 else f"{p} {r} {c} {d} {s}")
+    return replies
 
 
 def test_every_reply_is_the_reply_joe_recorded():
@@ -76,11 +100,11 @@ def test_every_reply_is_the_reply_joe_recorded():
             f"`cargo build --release --manifest-path {BOT_DIR}/Cargo.toml`")
     pairs = games()
     if not pairs:
-        pytest.skip(f"no recorded games with reply logs under {CORPUS} or {SMOKE}")
+        pytest.skip(f"no recorded games with oracle captures under {CORPUS} or {SMOKE}")
 
     total = 0
-    for in_log, out_log in pairs:
-        want = out_log.read_text().splitlines()
+    for in_log, npz_path in pairs:
+        want = _oracle_replies(npz_path)
         proc = subprocess.run(
             [str(BINARY)],
             input=in_log.read_bytes(),

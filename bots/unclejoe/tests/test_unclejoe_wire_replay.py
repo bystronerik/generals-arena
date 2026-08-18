@@ -12,9 +12,10 @@ the way joe-rs does, and that is what this test checks.
 Each corpus game's `.in.log` is exactly what the engine sent Python joe;
 piping it to `unclejoe` in wire mode exercises the shipped path — stdio parse,
 state accumulation under the bot's *own* state, forward, greedy decode, and
-the pass clamp — and the stdout must match Python joe's recorded replies turn
-for turn. The frames are fixed, so a flipped action desynchronizes nothing and
-every turn stays comparable.
+the pass clamp — and the stdout must match the JAX oracle's unpenalised
+action (`all_action` in the capture) turn for turn: see `recorded_games()`.
+The frames are fixed, so a flipped action desynchronizes nothing and every
+turn stays comparable.
 
 The corpus is joe-rs's, at `data/joe/joe-rs-parity/games`, and is read
 **read-only**: producing it stays with joe-rs. A checkout without it falls
@@ -42,11 +43,16 @@ pytestmark = pytest.mark.unclejoe
 
 
 def recorded_games() -> list[Path]:
-    """`.in.log` files with a recorded `.out.log` beside them.
+    """`.in.log` files with an oracle capture (`.npz`) beside them.
 
-    Full corpus when present, else the committed smoke slice. A game the
-    capture left without replies is skipped rather than compared against
-    nothing — the synthetic long log is one of those.
+    Full corpus when present, else the committed smoke slice.
+
+    The reference is the capture's `all_action`, **not** the `.out.log` —
+    the same rule as `bots/joe-rs/tests/test_wire_replay.py`, for the same
+    reason. Since 2026-08-16 Python joe applies a repetition penalty before
+    its argmax (`bots/joe/agent.py`); with `UNCLEJOE_TACTICS=0` this test
+    asks for the plain network path, which the unpenalised oracle records
+    for every turn. The `.out.log` records the penalised program.
     """
     for directory in (CORPUS, SMOKE):
         games = [
@@ -60,7 +66,20 @@ def recorded_games() -> list[Path]:
 
 
 def replies_for(in_log: Path) -> Path:
-    return in_log.parent / (in_log.name.removesuffix(".in.log") + ".out.log")
+    return in_log.parent / (in_log.name.removesuffix(".in.log") + ".npz")
+
+
+def oracle_replies(npz_path: Path) -> list[str]:
+    """The unpenalised oracle action per turn, after agent.py's pass clamp."""
+    import numpy as np
+
+    with np.load(npz_path) as z:
+        actions = z["all_action"]
+    return [
+        "1 0 0 0 0" if int(row[0]) == 1
+        else " ".join(str(int(x)) for x in row)
+        for row in actions
+    ]
 
 
 def test_wire_replay_matches_recorded_replies():
@@ -73,7 +92,7 @@ def test_wire_replay_matches_recorded_replies():
     total_turns = 0
     for in_log in games:
         frames = in_log.read_bytes()
-        want = replies_for(in_log).read_text().splitlines()
+        want = oracle_replies(replies_for(in_log))
 
         proc = subprocess.run(
             [str(BINARY)], input=frames, capture_output=True,
