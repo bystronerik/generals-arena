@@ -66,6 +66,40 @@ def make_optimizer(cfg):
     )
 
 
+def load_ref_network(cfg: Config, ckpt_dir: str):
+    """Load the frozen-reference eval net, or None when not configured.
+
+    ``eval_ref_checkpoint`` / ``eval_ref_config`` are relative to
+    ``ckpt_dir``. A configured-but-missing file raises: a silently absent
+    reference would drop the eval_ref curve without any log evidence.
+    """
+    if not cfg.eval_ref_checkpoint:
+        return None
+    ref_path = os.path.join(ckpt_dir, cfg.eval_ref_checkpoint)
+    if not os.path.exists(ref_path):
+        raise FileNotFoundError(
+            f"eval_ref_checkpoint is set but {ref_path} does not exist; "
+            "seed the reference files before launch")
+    ref_cfg = cfg
+    if cfg.eval_ref_config:
+        ref_cfg_path = os.path.join(ckpt_dir, cfg.eval_ref_config)
+        if not os.path.exists(ref_cfg_path):
+            raise FileNotFoundError(
+                f"eval_ref_config is set but {ref_cfg_path} does not exist; "
+                "seed the reference files before launch")
+        ref_cfg = Config.from_yaml(ref_cfg_path)
+        if ref_cfg.pad_to != cfg.pad_to:
+            raise ValueError(
+                f"Reference pad_to {ref_cfg.pad_to} != run pad_to "
+                f"{cfg.pad_to}; the eval env cannot serve both")
+    template = build_network(ref_cfg, jrandom.PRNGKey(0))
+    ref_network = eqx.tree_deserialise_leaves(ref_path, template)
+    n_params = sum(x.size for x in jax.tree.leaves(
+        eqx.filter(ref_network, eqx.is_array)))
+    print(f"Eval reference: {ref_path} ({n_params:,} params)", flush=True)
+    return ref_network
+
+
 def run(cfg: Config, ckpt_dir: str, engine_sha: str | None = None,
         on_checkpoint=None, env_factory=None):
     """Build the network and optimizer, write the run manifest, train.
@@ -135,6 +169,8 @@ def run(cfg: Config, ckpt_dir: str, engine_sha: str | None = None,
     n_params = sum(x.size for x in jax.tree.leaves(params))
     print(f"Parameters: {n_params:,}", flush=True)
 
+    ref_network = load_ref_network(cfg, ckpt_dir)
+
     os.makedirs(ckpt_dir, exist_ok=True)
     manifest = {
         "run_name": cfg.run_name,
@@ -161,7 +197,8 @@ def run(cfg: Config, ckpt_dir: str, engine_sha: str | None = None,
         cfg, network, optimizer, opt_state, logger, key, bundle,
         ckpt_dir, engine_sha, on_checkpoint=on_checkpoint,
         env_factory=env_factory, start_step=start_step,
-        start_stage=start_stage, start_eval_wr=start_eval_wr)
+        start_stage=start_stage, start_eval_wr=start_eval_wr,
+        ref_network=ref_network)
 
     logger.finish()
     final_path = os.path.join(ckpt_dir, f"{cfg.run_name}_final.eqx")

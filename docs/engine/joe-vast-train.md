@@ -170,3 +170,32 @@ On every boot (including a same-machine resume after an outbid):
 
 The training loop is the same loop Modal calls. The only difference is
 the checkpoint hook and where the files live.
+
+## Frozen-reference eval
+
+The in-training eval against a random opponent saturates early and then
+carries no strength signal. Two config keys add a second eval on the same
+`eval_every` cadence: the EMA net plays a frozen snapshot, greedy on both
+seats. The result is logged as `eval_ref/*` in `metrics.jsonl` and printed
+as a `REF EVAL` line. It gates nothing: the curriculum still advances on
+the vs-random win rate, and `state.json` does not change shape.
+
+```yaml
+eval_ref_checkpoint: ref/joe-M_ema_final.eqx   # network-only .eqx
+eval_ref_config: ref/config.yaml               # the reference's architecture
+```
+
+Both paths are relative to the checkpoint dir. `eval_ref_config` names the
+reference's own config when its architecture differs from the run's;
+leave it empty when the shapes match. Seed both objects into the run's R2
+prefix before launch:
+
+```python
+store.upload_run_file("joe-M7F4", "ref/joe-M_ema_final.eqx", local_path)
+store.upload_run_file("joe-M7F4", "ref/config.yaml", local_cfg_path)
+```
+
+`vast_boot` downloads them after `config.yaml`; a missing object stops the
+boot loudly. `prune_checkpoints` never touches `ref/` files. To change the
+reference mid-run, replace the objects under `ref/` and relaunch — the
+config records which reference produced which stretch of the curve.

@@ -30,7 +30,7 @@ from training.joe.config import CurriculumStage
 from training.joe.env import make_competition_env, preset_min_generals_distance
 from training.joe.state import (check_curriculum_stage, prune_checkpoints,
                                 write_state)
-from training.joe.train.evaluations import periodic_eval
+from training.joe.train.evaluations import periodic_eval, should_eval
 from training.joe.train.rollout_selfplay import collect_rollout
 
 
@@ -277,7 +277,7 @@ def _replicate(tree, num_devices):
 
 def train(cfg, network, optimizer, opt_state, logger, key, bundle,
           ckpt_dir, engine_sha, on_checkpoint=None, env_factory=None,
-          start_step=0, start_stage=0, start_eval_wr=0.0):
+          start_step=0, start_stage=0, start_eval_wr=0.0, ref_network=None):
     """Main PPO training loop with multi-GPU data parallelism via pmap.
 
     ``env_factory(min_generals_distance, max_generals_distance, pool_size)``
@@ -287,6 +287,10 @@ def train(cfg, network, optimizer, opt_state, logger, key, bundle,
     run: the loop runs the global steps ``start_step..num_iters``, so
     ``num_iters`` is the run's total target, and checkpoint names,
     schedules, and cadences all use the global step.
+
+    ``ref_network`` is an optional frozen reference net; when given, every
+    eval also plays the EMA net against it (greedy both seats) and logs
+    ``eval_ref/*``. It gates nothing and never enters a checkpoint.
     """
     if env_factory is None:
         env_factory = make_competition_env
@@ -431,9 +435,16 @@ def train(cfg, network, optimizer, opt_state, logger, key, bundle,
         on_last_stage = current_stage_idx >= len(stages) - 1
         eval_freq = cfg.eval_every_after if (cfg.eval_every_after and on_last_stage) \
             else cfg.eval_every
+        # The frozen-reference eval plays the EMA net (the deployment
+        # policy); combine it only on eval iters — a pytree rebuild, no
+        # device copies.
+        ema_net_for_eval = None
+        if ref_network is not None and should_eval(it, eval_freq):
+            ema_net_for_eval = eqx.combine(ema_params, static)
         eval_ran, last_eval_wr, key = periodic_eval(
             it, cfg, eval_freq, network, eval_env, eval_pool, single_state,
-            augment_fn, greedy_fn, logger, key, last_eval_wr)
+            augment_fn, greedy_fn, logger, key, last_eval_wr,
+            ema_network=ema_net_for_eval, ref_network=ref_network)
 
         t0 = time.time()
 

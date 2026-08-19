@@ -108,6 +108,12 @@ class Config:
     eval_every: int = 50
     eval_every_after: int = 0  # eval frequency on the last stage (0 = same)
     eval_games: int = 512
+    # Frozen-reference eval: EMA net (greedy) vs a frozen snapshot (greedy),
+    # logged as eval_ref/* on the same cadence. Both paths are relative to
+    # the checkpoint dir; empty disables the eval. The config file names the
+    # reference's architecture when it differs from this run's.
+    eval_ref_checkpoint: str = ""  # network-only .eqx (an EMA snapshot)
+    eval_ref_config: str = ""      # YAML for the reference architecture
     ckpt_every: int = 500      # EMA-only checkpoint cadence
     save_every: int = 500      # full (network + optimizer + EMA) cadence
     debug: bool = False

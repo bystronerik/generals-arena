@@ -153,6 +153,15 @@ def main(argv=None):
               f"overriding to {run_name!r}", flush=True)
         object.__setattr__(cfg, "run_name", run_name)
 
+    # Frozen-reference eval files (ckpt_dir-relative). A missing R2 object
+    # raises FileNotFoundError here — the config asked for a reference, so
+    # starting without one would silently drop the eval_ref curve.
+    for rel in (cfg.eval_ref_checkpoint, cfg.eval_ref_config):
+        if rel:
+            dest = os.path.join(ckpt_dir, rel)
+            store.download_run_file(run_name, rel, dest)
+            print(f"Fetched eval reference file {rel}", flush=True)
+
     uploader = CheckpointUploader(store, ckpt_dir, run_name)
     engine_sha = launch.get("engine_sha") or None
     try:
