@@ -78,6 +78,22 @@ set, fresh optimizer — all exactly as the depth plan sections 3–4.
 | `training/joe/tests/test_grow.py` | Tiny-dims FF-graft cases: preservation within tolerance + argmax equality, zeroed-column placement, fresh-row independence, EMA path; inside the 15 s budget |
 | This doc | The spec |
 
+**As built, 2026-08-19 (procedure step 1).** `scripts/joe_grow_depth.py` is
+generalized in place, not duplicated: `--op {depth,ff}` selects the graft,
+the default target config follows the op (`M7.yaml` / `M7F4.yaml`), and
+`--expect-params 13581658` makes the step-3 parameter check a refusal
+rather than a reading. `assert_forward_parity` takes `atol=None` (bitwise,
+depth) or a float (bitwise-first, then tolerance + argmax, ff) and returns
+the run-log numbers. `M7F4.yaml` carries `ent_coef_start: 0.0013` — the
+step-~2000 value of the M7 schedule `0.006 / (step + 1) ** 0.2`; recompute
+it from the confirmed stop step of procedure step 2 before the surgery.
+
+Pre-surgery local check at production dims (fresh-init nets, depth 7,
+ff×3 → ff×4): parameters 11,514,586 → 13,581,658 and 132 leaves exactly as
+section 2 predicts, and parity came out **bitwise** on this host despite
+the shape change. The tolerance path stays as the documented fallback —
+the real surgery runs on other hardware, where the tiling may differ.
+
 ## 5. Procedure
 
 1. **Implement + tests** while the M7 run keeps training (each extra

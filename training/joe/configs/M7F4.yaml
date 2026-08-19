@@ -1,0 +1,101 @@
+# M7F4 — ff x4 growth continuation of the M7 depth-7 run (2026-08-19).
+# docs/research/strategies/joe-ff4-growth-plan.md. Everything is M7.yaml
+# verbatim except: ff_factor 4, and the section-3 continuation settings
+# (entropy continued from the M7 stop step, seed 47) — each commented at
+# the key it changes. The LR block is unchanged: M7 is stopped inside its
+# flat 2e-5 phase, so a plain continuation keeps the same cap.
+# The run starts from a fabricated step-0 checkpoint set seeded by
+# scripts/joe_grow_depth.py --op ff, never from random init: seed R2 and
+# verify resolve_latest BEFORE the first launch (plan section 5, step 4).
+run_name: joe-M7F4
+
+# ---- Environment: GeneralsEnv(mode="competition") numbers ----
+# Identical to M.yaml; the drift test pins these against the mode preset.
+pad_to: 21                    # competition preset; with patch 3: 7x7 = 49 patch tokens
+min_grid_size: 18             # each side drawn independently in [18, 21]
+max_grid_size: 21
+truncation: 1200              # competition draw turn (preset), not the released 1024
+mountain_density_min: 0.24    # released M's flat 0.21 not adopted — preset range wins
+mountain_density_max: 0.26
+build_castles: true           # castles are built, not captured — 10th per-cell
+                              # action, build mask, build-cost obs channel (plan §4)
+deathtouch_turn: 800          # env-internal; the timestep channel carries the regime change
+
+pool_size: 200000
+reset_pool_every: 20
+
+# ---- Curriculum ----
+# Single stage equal to the competition preset (ff4 plan §3): the grown
+# run must not re-climb the ladder, and one stage keeps the fabricated
+# curriculum_stage 0 valid on every resume and makes the win-gate moot.
+curriculum:
+  - min_generals_distance: 17
+    max_generals_distance: null   # preset leaves the max unset
+
+# ---- Network (M7 grown to ff x4; everything else unchanged) ----
+network: history_transformer
+depth: 7                      # unchanged: M7's spliced depth is kept
+embed_dim: 384
+n_head: 8
+ff_factor: 4                  # ff4 plan §2: 1152 -> 1536 hidden units per
+                              # block, 11,514,586 -> 13,581,658 parameters
+patch_size: 3
+
+ema_decay: 0.999              # EMA is the deployment policy (paper: +~30 Elo)
+
+# ---- Rollout ----
+num_envs: 2048
+num_steps: 256
+num_iters: 20000              # ff4 plan §3: same ~20k adaptation budget,
+                              # shared by the young depth blocks and the
+                              # new FF units
+minibatch_size: 2048
+seed: 47                      # ff4 plan §3: fresh rollout randomness
+
+# ---- PPO ----
+num_epochs: 1
+gamma: 1.0
+gae_lambda: 0.9
+clip_eps: 0.2
+max_grad_norm: 0.267
+vf_coef: 0.5
+target_kl: 0.02
+adv_top_frac: 0.25
+
+# ---- Entropy ----
+# ff4 plan §3: plain continuation, as M7 continued the base run's 0.0058.
+# The value is the M7 run's own ent_coef at the step it is stopped at:
+# 0.006 / (stop_step + 1) ** 0.2, floored at 0.001. 0.0013 is the value at
+# step ~2000. Recompute it from the final confirmed step that procedure
+# step 2 records, and set it here before the surgery.
+ent_schedule: power_law
+ent_coef_start: 0.0013
+ent_power: 0.2
+ent_coef_min: 0.001
+
+# ---- Learning rate ----
+# ff4 plan §3: unchanged from M7. M7 is stopped inside its flat 2e-5
+# phase, so the continuation keeps the same cap — ~10k iters flat at 2e-5
+# to recruit the new FF units, then decay toward the 5e-6 floor.
+# target_kl 0.02 stays as the guard; the LR-too-hot fallback is a relaunch
+# with lr_power_law_max 1e-5 (plan §5, step 6).
+lr_schedule: power_law
+lr_power_law_numerator: 0.5
+lr_power_law_exponent: 1.1
+lr_power_law_min: 5e-6
+lr_power_law_max: 2e-5
+
+# ---- Value loss: categorical HL-Gauss ----
+value_loss: ce
+num_bins: 128
+v_min: -1.0
+v_max: 1.0
+hl_sigma: 0.04                # NOT the released config.py default 0.75
+
+# ---- Eval / checkpoints ----
+eval_every: 50
+eval_games: 512
+ckpt_every: 500
+save_every: 500
+
+use_bf16: true
