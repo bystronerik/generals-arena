@@ -1,9 +1,9 @@
 # M7F4 — ff x4 growth continuation of the M7 depth-7 run (2026-08-19).
 # docs/research/strategies/joe-ff4-growth-plan.md. Everything is M7.yaml
 # verbatim except: ff_factor 4, the section-3 continuation settings
-# (entropy continued from the M7 stop step, seed 47), and num_epochs 2
-# (2026-08-19, literature-backed sample reuse; see the key) — each
-# commented at the key it changes. The LR block is unchanged: M7 is stopped inside its
+# (entropy continued from the M7 stop step, seed 47), and the 2026-08-19
+# LR cap raise to 3e-5 (the num_epochs 2 test of the same day is
+# reverted; see the keys) — each commented at the key it changes. The LR block is unchanged: M7 is stopped inside its
 # flat 2e-5 phase, so a plain continuation keeps the same cap.
 # The run starts from a fabricated step-0 checkpoint set seeded by
 # scripts/joe_grow_depth.py --op ff, never from random init: seed R2 and
@@ -54,12 +54,12 @@ minibatch_size: 2048
 seed: 47                      # ff4 plan §3: fresh rollout randomness
 
 # ---- PPO ----
-num_epochs: 2                 # 2026-08-19: two passes over the filtered
-                              # batch. The target_kl guard is live from
-                              # this change on: it skips epoch 2 when the
-                              # epoch-1 KL exceeds 0.02. Expected cost
-                              # ~+50% per iteration. Fallback: num_epochs
-                              # 1 with adv_top_frac 0.5.
+num_epochs: 1                 # 2026-08-19: tested at 2 for iters
+                              # 1500-2500. The ref eval stayed flat and
+                              # checkpoint weight deltas grew by ~sqrt(2),
+                              # not 2x: the second pass added diffusion,
+                              # not learning. Reverted; the +38% iteration
+                              # cost bought nothing.
 gamma: 1.0
 gae_lambda: 0.9
 clip_eps: 0.2
@@ -80,16 +80,19 @@ ent_power: 0.2
 ent_coef_min: 0.001
 
 # ---- Learning rate ----
-# ff4 plan §3: unchanged from M7. M7 is stopped inside its flat 2e-5
-# phase, so the continuation keeps the same cap — ~10k iters flat at 2e-5
-# to recruit the new FF units, then decay toward the 5e-6 floor.
-# target_kl 0.02 stays as the guard; the LR-too-hot fallback is a relaunch
-# with lr_power_law_max 1e-5 (plan §5, step 6).
+# 2026-08-19: cap raised 2e-5 -> 3e-5 from step 2500 (clock compression;
+# GPU cost weighted over risk). Checkpoint inspection at steps 0-2000
+# shows the spliced depth blocks at ~10% of mature scale and the new FF
+# units at ~5%, both recruiting on a compounding trend; the higher cap
+# buys ~1.5x faster recruitment at ~1.5x drift on the annealed mature
+# weights. Flat at 3e-5 until ~7k iters, then decay to the 5e-6 floor.
+# Watch KL (~0.015 expected), clip (~0.15), and entropy; the fallback is
+# a relaunch at cap 2e-5 (plan §5 step 6 named 1e-5 for the hot case).
 lr_schedule: power_law
 lr_power_law_numerator: 0.5
 lr_power_law_exponent: 1.1
 lr_power_law_min: 5e-6
-lr_power_law_max: 2e-5
+lr_power_law_max: 3e-5
 
 # ---- Value loss: categorical HL-Gauss ----
 value_loss: ce
@@ -109,8 +112,8 @@ eval_ref_checkpoint: ref/joe-M_ema_final.eqx
 eval_ref_config: ref/config.yaml
 ckpt_every: 500
 save_every: 500
-debug: true                   # 2026-08-19: logs epochs_used — the KL-guard
-                              # firing rate is a primary readout for the
-                              # num_epochs 2 change. Revert with it.
+debug: true                   # 2026-08-19: extra KL/ratio metrics are the
+                              # guardrails for the 3e-5 LR cap. Revert
+                              # when the cap question is settled.
 
 use_bf16: true
