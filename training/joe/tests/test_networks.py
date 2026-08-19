@@ -136,6 +136,10 @@ def test_tier_parameter_counts():
         "M": (dict(depth=5, embed_dim=384, n_head=8, ff_factor=3), 8_556_250),
         # M grown to depth 7 (growth plan §2): +2 blocks x 1,479,168 params.
         "M7": (dict(depth=7, embed_dim=384, n_head=8, ff_factor=3), 11_514_586),
+        # M7 grown to ff x4 (ff4 growth plan §2): the graft widens existing
+        # tensors rather than adding blocks, so the leaf count is unchanged
+        # and the per-block cost goes 1,479,168 -> 1,774,464.
+        "M7F4": (dict(depth=7, embed_dim=384, n_head=8, ff_factor=4), 13_581_658),
     }
     for _tier, (spec, expected) in tiers.items():
         net = HistoryTransformer(grid_size=P, pad_to=P, patch_size=3, **spec,

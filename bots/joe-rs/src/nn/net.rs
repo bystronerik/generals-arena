@@ -2,7 +2,7 @@
 //!
 //! Single sample, fixed shapes: 39×21×21 obs → 49 patch tokens of 351 →
 //! 52 tokens × 384 through seven pre-norm blocks (MHSA 8 heads / head_dim 48,
-//! then 384→1152 SiLU→384) → policy head (49×90, unpatchified to 10×21×21
+//! then 384→1536 SiLU→384) → policy head (49×90, unpatchified to 10×21×21
 //! masked logits) and value head (128 bins dotted with the exported
 //! `bin_centers`). Deployment is float32 everywhere — the checkpoint's
 //! `use_bf16` was already off in the Python sibling.
@@ -44,7 +44,7 @@ pub const N_PATCHES: usize = GRID_PATCHES * GRID_PATCHES; // 49
 pub const PATCH_DIM: usize = N_CHANNELS * PATCH * PATCH; // 351
 pub const N_TOKENS: usize = N_PATCHES + 3; // value + 2 temporal + patches
 pub const NUM_BINS: usize = 128;
-pub const FF_DIM: usize = 1152;
+pub const FF_DIM: usize = 1536;
 pub const POLICY_OUT: usize = N_ACTION_CHANNELS * PATCH * PATCH; // 90
 pub const N_LOGITS: usize = N_ACTION_CHANNELS * CELLS; // 4410
 const TEMPORAL_HIDDEN: usize = 512;
@@ -142,7 +142,7 @@ struct Scratch {
     v: Vec<f32>,            // (52, 384)
     ctx: Vec<f32>,          // (52, 384) — attention context, head-major columns
     proj: Vec<f32>,         // (52, 384) — out-proj / ff2 output before residual
-    ff: Vec<f32>,           // (52, 1152)
+    ff: Vec<f32>,           // (52, 1536)
     scores: Vec<f32>,       // (52, 52) — one head at a time
     hist: Vec<f32>,         // (2, 512) — scaled temporal windows
     hidden: Vec<f32>,       // (512,) — temporal MLP hidden
@@ -257,7 +257,7 @@ impl Net {
             ("depth", DEPTH as i64),
             ("embed_dim", EMBED as i64),
             ("n_head", N_HEAD as i64),
-            ("ff_factor", 3),
+            ("ff_factor", 4),
             ("patch_size", PATCH as i64),
             ("num_bins", NUM_BINS as i64),
         ] {

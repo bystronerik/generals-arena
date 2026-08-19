@@ -9,7 +9,7 @@ without also breaking the deployed Python bot (port-plan §3, R2).
 Checks, in order, refusing to write on any failure:
 
 1. ``manifest.json``'s ``weights_sha256`` matches the ``.eqx`` file.
-2. The flattened tree has exactly 132 array leaves, 11,514,586 parameters.
+2. The flattened tree has exactly 132 array leaves, 13,581,658 parameters.
 3. Every derived dotted name and shape matches the joe-net-v1 schema.
 4. Round-trip: the written safetensors reloads bit-exact against the
    deserialised leaves.
@@ -36,8 +36,9 @@ TENSOR_SCHEMA = "joe-net-v1"
 # artifact must refuse rather than convert. Changing tier means editing
 # these three plus `DEPTH` in `src/nn/net.rs` of both Rust crates.
 DEPTH = 7
+FF_DIM = 1536  # embed 384 x ff_factor 4 (tier M7F4; was 1152 at ff x3)
 EXPECTED_LEAVES = 132
-EXPECTED_PARAMS = 11_514_586
+EXPECTED_PARAMS = 13_581_658
 
 sys.path.insert(0, str(JOE_DIR))
 
@@ -88,9 +89,9 @@ def expected_schema() -> dict:
             schema[f"{pre}.attn.{proj}.bias"] = (384,)
         schema[f"{pre}.norm2.weight"] = (384,)
         schema[f"{pre}.norm2.bias"] = (384,)
-        schema[f"{pre}.ff_linear1.weight"] = (1152, 384)
-        schema[f"{pre}.ff_linear1.bias"] = (1152,)
-        schema[f"{pre}.ff_linear2.weight"] = (384, 1152)
+        schema[f"{pre}.ff_linear1.weight"] = (FF_DIM, 384)
+        schema[f"{pre}.ff_linear1.bias"] = (FF_DIM,)
+        schema[f"{pre}.ff_linear2.weight"] = (384, FF_DIM)
         schema[f"{pre}.ff_linear2.bias"] = (384,)
     return schema
 

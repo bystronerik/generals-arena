@@ -22,11 +22,14 @@ Checks, all refusing to write on failure:
 
 1. `weights_sha256` of the source `.eqx` matches joe's manifest.
 2. Exactly 132 tensors with the `joe-net-v1` names/shapes, all float32,
-   summing to 11,514,586 parameters (= the manifest's `n_params`). These two
-   numbers are the depth-7 `M7` tier; the depth-5 `M` tier was 100 /
-   8,556,250. They are pinned rather than read from the manifest so a
+   summing to 13,581,658 parameters (= the manifest's `n_params`). Those are
+   the `M7F4` tier (depth 7, ff x4). Earlier tiers: `M7` (depth 7, ff x3) was
+   132 / 11,514,586, and `M` (depth 5, ff x3) was 100 / 8,556,250 — note the
+   leaf count is unchanged by an ff graft, which only widens existing
+   tensors. The numbers are pinned rather than read from the manifest so a
    mis-shaped artifact still refuses, and a tier change is a deliberate edit
-   here plus `DEPTH` in `src/nn/net.rs` (both crates).
+   here plus, in both Rust crates' `src/nn/net.rs`, `DEPTH`, `FF_DIM`, and
+   the `ff_factor` entry of the manifest cross-check.
 3. Round-trip: the written safetensors reloads bit-exact against the
    deserialised leaves.
 

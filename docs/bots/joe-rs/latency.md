@@ -38,6 +38,28 @@ breaks. It does not break.
 | --- | --- | --- | --- | --- | --- |
 | dev arm64 (M-series, unpinned) | 31.15 ms | 31.39 ms | 32.14 ms | 47.89 ms | 73.5 ms |
 
+## Results (2026-08-19, ff x4 / tier M7F4)
+
+The feed-forward width grew from x3 to x4 (`joe-M7F4-vast-20260819-0207`).
+The ff4 growth plan §6.2 had already cleared the shape on Modal x86 against a
+synthetic artifact; this row is the confirmation on the real exported one.
+
+| host | p50 | p90 | p99 | max | startup |
+| --- | --- | --- | --- | --- | --- |
+| dev arm64 (M-series, unpinned) | 36.65 ms | 36.76 ms | 37.87 ms | 69.87 ms | 84.4 ms |
+
+2,400 turns of the M7F4 `synthetic-long.in.log`. p99 37.87 ms lands within 2%
+of the 37.2 ms the plan predicted for this host, so the real artifact behaves
+as the synthetic one did: 25% of the 150 ms move budget, 76% of J3's 50 ms
+target, tripwire 75 ms untouched. Against ff x3 on the same host, p99 32.14 ->
+37.87 ms (1.18x), matching the predicted ~+20% forward.
+
+The `max` of 69.87 ms is the one number worth watching: it is the largest
+single-turn figure this bot has recorded, and it sits at 93% of the 75 ms
+tripwire. p50 and p99 are 2 ms apart, so this is one outlier turn on an
+unpinned dev box rather than a shifted distribution — the Modal x86 run in the
+plan saw max 46.1 ms. Re-read it there before treating it as real.
+
 1,838 turns of the M7 `synthetic-long.in.log`. Against the depth-5 arm64 row
 above: p50 1.40x, p99 1.34x — the growth plan predicted ~+40% forward cost and
 that is what arrived. p99 is 21% of the 150 ms move budget and 64% of J3's

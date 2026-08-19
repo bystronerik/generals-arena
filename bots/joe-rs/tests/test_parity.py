@@ -297,6 +297,31 @@ CH21_MAX_ULP = 0
 # What a mis-wired block 5 or 6 would have looked like: not a pin a few
 # percent over, but tier 1 or tier 3 failing outright. A transformer block
 # that loads the wrong weights does not produce a near-miss.
+#
+# 2026-08-19, joe-M7F4 step 1500 (714 frames, gemm.rs): **the first ff x4
+# corpus.** Tier M7F4 grafts the feed-forward width from x3 to x4 on top of
+# depth 7 — again a new run (joe-M7F4-vast-20260819-0207), not a continuation
+# of the step numbering above. An ff graft widens existing tensors instead of
+# adding blocks, so `EXPECTED_LEAVES` stays 132 while params go 11,514,586 ->
+# 13,581,658; `FF_DIM` went 1152 -> 1536 and the manifest cross-check
+# `ff_factor` 3 -> 4, in both crates.
+#
+# All three pins hold:
+#
+#   percentile   p50        p90        p99        p100      pin used
+#   rel logit    1.645e-6   3.009e-6   5.132e-6   7.833e-6   49%
+#   rel bin      2.238e-6   5.607e-6   1.204e-5   2.162e-5   43%
+#   dvalue       1.788e-7   9.343e-7   2.363e-6   4.888e-6   35%
+#
+# Against the depth-7 row above the bodies are flat (rel bin p50 2.400e-6 ->
+# 2.238e-6) and only the rel-bin max moved, 1.570e-5 -> 2.162e-5, still 43% of
+# pin. A wider FF is more accumulation per block, so a small rise there is
+# what to expect; the flat body is what says it is accumulation and not a
+# port fault.
+#
+# `mutation_check` 9/9 again, and again both net.rs mutants were killed on the
+# edited file — the same argument as the depth port: a mis-shaped FF fails
+# tier 1 or tier 3 outright, never by tens of percent.
 LOGIT_REL_ACHIEVED = 1.6e-5   # worst measured 1.041e-5 (step 23500, gemm.rs)
 BIN_REL_ACHIEVED = 5.0e-5     # worst measured 3.284e-5 (step 50000, gemm.rs)
 # |value| <= 1 by construction (bin_centers span [-1, 1]), so this one is

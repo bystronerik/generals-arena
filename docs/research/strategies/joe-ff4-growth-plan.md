@@ -187,6 +187,24 @@ its own round.
 
 ## 9. Run log
 
+- Export gate 1 (pinned shape sites), 2026-08-19: **done.** `FF_DIM 1152 ->
+  1536` and the manifest cross-check `ff_factor 3 -> 4` in both crates;
+  `EXPECTED_PARAMS -> 13,581,658` in `quantize_artifact.py` and
+  `convert_artifact.py`; the converter's FF dims now read a module-level
+  `FF_DIM = 1536` instead of literals; `EXPECTED_LEAVES` stays 132 as section
+  2 predicted. Added the `M7F4` row to `test_tier_parameter_counts`, which
+  covered S/M/M7 only. Full fan-out done: joe-rs and unclejoe both on
+  safetensors ba3f7da75793. Parity 11/11 over a rebuilt 15-member corpus,
+  `mutation_check` 9/9 including both net.rs mutants on the edited file, tier-2
+  pins unmoved (worst 43% of pin).
+- Export gate 2 (latency) confirmed on the real artifact, 2026-08-19: dev
+  arm64 p99 **37.87 ms** over 2,400 turns, within 2% of the 37.2 ms this host
+  was predicted to show. Details in
+  [joe-rs/latency.md](../../bots/joe-rs/latency.md).
+- Note for section 7: joe-rs now carries M7F4, so the depth-7 arm the primary
+  contrast needs is no longer live. It is reconstructible — the M7 f32 original
+  is `data/joe/ema.f32.26f4b06154de.eqx` and f16 rounding is deterministic.
+
 - **M7 stop (procedure step 2), 2026-08-19 ~02:03 CEST.** `kill -INT` on
   the `vast_boot` pid; the process left through its `finally`
   (`vast_boot finished` in the log), `nvidia-smi --query-compute-apps`
