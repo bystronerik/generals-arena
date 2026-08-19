@@ -1,8 +1,9 @@
 # M7F4 — ff x4 growth continuation of the M7 depth-7 run (2026-08-19).
 # docs/research/strategies/joe-ff4-growth-plan.md. Everything is M7.yaml
-# verbatim except: ff_factor 4, and the section-3 continuation settings
-# (entropy continued from the M7 stop step, seed 47) — each commented at
-# the key it changes. The LR block is unchanged: M7 is stopped inside its
+# verbatim except: ff_factor 4, the section-3 continuation settings
+# (entropy continued from the M7 stop step, seed 47), and num_epochs 2
+# (2026-08-19, literature-backed sample reuse; see the key) — each
+# commented at the key it changes. The LR block is unchanged: M7 is stopped inside its
 # flat 2e-5 phase, so a plain continuation keeps the same cap.
 # The run starts from a fabricated step-0 checkpoint set seeded by
 # scripts/joe_grow_depth.py --op ff, never from random init: seed R2 and
@@ -53,7 +54,12 @@ minibatch_size: 2048
 seed: 47                      # ff4 plan §3: fresh rollout randomness
 
 # ---- PPO ----
-num_epochs: 1
+num_epochs: 2                 # 2026-08-19: two passes over the filtered
+                              # batch. The target_kl guard is live from
+                              # this change on: it skips epoch 2 when the
+                              # epoch-1 KL exceeds 0.02. Expected cost
+                              # ~+50% per iteration. Fallback: num_epochs
+                              # 1 with adv_top_frac 0.5.
 gamma: 1.0
 gae_lambda: 0.9
 clip_eps: 0.2
@@ -103,5 +109,8 @@ eval_ref_checkpoint: ref/joe-M_ema_final.eqx
 eval_ref_config: ref/config.yaml
 ckpt_every: 500
 save_every: 500
+debug: true                   # 2026-08-19: logs epochs_used — the KL-guard
+                              # firing rate is a primary readout for the
+                              # num_epochs 2 change. Revert with it.
 
 use_bf16: true
