@@ -268,3 +268,38 @@ its own round.
   digit — loss 1.6982 / 1.6825 / 1.6792, KL 0.0158 / 0.0167 / 0.0152,
   GNorm 92.88 / 55.50 / 61.96 — the values the first launch logged before
   it died. Dropping a Python reference moves no number.
+- **Procedure step 6 verdict, iterations 0–210 after the relaunch.** The
+  run cleared every pool refresh (20, 40, …, 200) with no allocator
+  warning, no stall, and a flat 12.86 s/iteration — versus M7's 12.05 s,
+  so the ff×4 graft costs ~7% wall clock per iteration, not the ~20% the
+  forward-cost estimate of section 6 implied. The OOM fix holds.
+- **KL and clip are flat**: KL min 0.0085, mean 0.0155, max 0.0270; clip
+  fraction 0.07–0.12, mean 0.10. Both sit in M7's band (M7 ran KL
+  0.0115–0.0229). No LR-too-hot signature appeared, so the cap-1e-5
+  fallback of procedure step 6 was not used.
+- **`target_kl: 0.02` is inert in this config**, and this is a lineage
+  property, not an M7F4 one: `num_epochs` is 1, so the `target_kl` break
+  in `train/ppo.py` leaves a loop that ends after one pass anyway. 26 of
+  210 iterations logged KL above 0.02 with nothing to catch them. The LR
+  cap is the only real guard on this recipe.
+- **Greedy eval vs random (512 games)** at iterations 0/49/99/149/199:
+  508 / 511 / 508 / 510 / 501 wins, and **zero losses at every point**.
+  The seed level holds. Note the eval saturates near 100% and so detects
+  a collapse, not a small regression; the section 7 arena contrast stays
+  the only real claim.
+- **Self-play behaviour oscillates**, and this is the one M7F4-specific
+  signal. Castles, draw rate, and episode length rise together and then
+  relax on a ~30–40 iteration cycle: castles 0.52–7.58 (mean 2.12), draws
+  1–35% (mean 8.3), eplen 377–790. M7's depth graft never left 0.4–3.2
+  castles or 12% draws through 2000 steps. The 501/512 eval at iteration
+  199 fell in a castle-heavy phase and its shortfall is 11 draws, not one
+  loss — the eval tracks the phase rather than a regression. Watch
+  whether the amplitude grows.
+- **Do not read the per-iteration W/L/D split as strength.** Both seats
+  run the same net (`collect_rollout` takes a single `net`), so the split
+  is symmetric by construction, and episode length grows against a fixed
+  256-step rollout window — inside an excursion the completed-episode
+  count falls from ~1250 to ~760 and the percentages are computed over a
+  shrinking, early-ending subset. Read the eval instead.
+- gnorm runs 42–335 (mean 129) against M7's 60–120. It is the pre-clip
+  norm and `max_grad_norm` is 0.267, so both runs are scaled down hard.
