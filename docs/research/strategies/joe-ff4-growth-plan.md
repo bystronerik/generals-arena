@@ -187,6 +187,84 @@ its own round.
 
 ## 9. Run log
 
-Fill in during execution: M7 stop step + seed set SHAs, new run name,
-surgery date, parity numbers (max Δlogit, Δvalue, argmax agreement), launch
-instance id, step-0 eval.
+- **M7 stop (procedure step 2), 2026-08-19 ~02:03 CEST.** `kill -INT` on
+  the `vast_boot` pid; the process left through its `finally`
+  (`vast_boot finished` in the log), `nvidia-smi --query-compute-apps`
+  came back empty, and the instance stayed up. Final confirmed step
+  **2000**, curriculum stage 0, last eval wr 0.994140625, engine
+  `9e3b9d13cca5`. The local log had reached iter 2092, so 92 unconfirmed
+  iterations were discarded — the cost the procedure accepts for stopping
+  just after a checkpoint. Waiting for the step-2500 checkpoint instead
+  would have bought 500 depth-only iterations for ~83 minutes of H100
+  time.
+- **Seed set SHAs**: full `4bb4b4e54fb0e0b32f959d00b9bbf975d415695aae51f4
+  8236b9cf73d38a5e4e` (138,225,984 B), EMA `a8ce1b89d134de2a1c3ab0a38d6cc
+  2f09fb9adf046c11679ace26646581cd364` (46,075,240 B).
+- **Entropy recomputed** from the confirmed stop step, as section 4 asks:
+  `0.006 / (2000 + 1) ** 0.2 = 0.0013119`, and the trainer logged
+  0.0013120 at step 2000. `M7F4.yaml` already carried
+  `ent_coef_start: 0.0013`, so no edit was needed.
+- **New run**: `joe-M7F4-vast-20260819-0207`. Surgery 2026-08-19 via
+  `scripts/joe_grow_depth.py --op ff --expect-params 13581658`.
+- **Parity: bitwise**, both lineages, 64 masked inputs each — max abs
+  diff 0 for logits, value, and value_aux; argmax agreement 1.0000. The
+  tolerance path of section 2 was not exercised. This does **not** retire
+  it: the surgery runs on the same local host as the pre-surgery check of
+  section 4, so this is the same tiling, not a second one. Parameters
+  11,514,586 → 13,581,658, the count `--expect-params` demands.
+- **Local seeded smoke**: resume line `global step 0, curriculum stage 0`
+  and `Parameters: 13,581,658`; step-0 eval 509W/0L/3D (99%) greedy vs
+  random over 512 games — equal to the M7 run's last eval, so function
+  preservation holds end-to-end; 2 iterations completed at LR 2.0e-5.
+- R2 seeded and verified (`resolve_latest` returns the step-0 set) before
+  the launch.
+- **Launch**: adopted instance 47615917 (H100 SXM), 2026-08-19 ~02:07
+  CEST, `launch --tier M7F4 --instance-id 47615917`. Code tarball
+  `4b3e3e54d687…` packed from a clean tree; the instance's
+  `repo/.joe-code-sha` `cd16281075…` equals `launch.json`'s
+  `code_sha256`. Boot log tail: `Lease acquired`, `Restoring checkpoint
+  set at global step 0, curriculum stage 0`, `Parameters: 13,581,658`,
+  `Devices (1): [CudaDevice(id=0)]`. The fetched `config.yaml` shows
+  `depth: 7`, `ff_factor: 4`, `seed: 47`, `num_iters: 20000`,
+  `ent_coef_start: 0.0013`, `lr_power_law_max: 2.0e-05`.
+- **Hardening (procedure step 5)**: the M7 run's `instance.json` now
+  records an empty instance id, so `_instance_ids_for_run` no longer
+  names 47615917 for that run; the relabel closed the label match at the
+  same time. The M7 checkpoints and state are untouched.
+- **Step-0 eval on the instance**: 508W/0L/4D (99%) greedy vs random over
+  512 games — the seed's level, no dip. It is one game away from the M7
+  number because the eval key and the map pool differ per run; the local
+  smoke is the exact-equality check.
+- **First launch OOM (procedure step 6), 2026-08-19.** The run completed
+  20 iterations at a steady 12.86 s and then died inside `it=20`, the
+  first `reset_pool_every` boundary. The BFC allocator refused a
+  12.94 GiB request. JAX surfaced the error at the next blocking read
+  (`float(metrics["approx_kl"][0])` in `train/ppo.py`), so the traceback
+  line is not the cause. The allocator warning came about 40 minutes
+  after the iteration-20 line — the run stalled before it failed. No
+  checkpoint existed yet (`ckpt_every` 500), so R2 still held only the
+  verified step-0 seed and the relaunch gave up only those 20 iterations.
+- **Cause**: two allocations stack at the refresh. `train/ppo.py` bound
+  the new 200k-map pool before it dropped the old `pool` and `pool_rep`,
+  and JAX preallocates 75% of the card — the M7 trainer measured
+  61,452 MiB of an 81,559 MiB H100, so ~20 GiB never entered the arena.
+  ff×3 fits with the transient double pool; ff×4 does not. Every joe run
+  carried the double pool; only the wider net made it fatal.
+- **Fix, both numerically inert.** `scripts/joe_vast_onstart.sh` exports
+  `XLA_PYTHON_CLIENT_MEM_FRACTION=0.92`, set after the
+  `/etc/environment` copy so it stays scoped to the trainer;
+  `train/ppo.py` releases the old pool and its replica before it builds
+  the new ones. No PPO, environment, or network knob moves, so the
+  section 7 contrast against the depth-7 bot holds. `pytest -q`: 525
+  passed in 13.7 s.
+- **Relaunch**: `launch --tier M7F4 --instance-id 47615917 --force` onto
+  the same instance. Code `4b3e3e54d687…-dirty-88d9b61b7456`; the
+  instance's `.joe-code-sha 88d9b61b7456…` and
+  `XLA_PYTHON_CLIENT_MEM_FRACTION=0.92` confirmed in the trainer's own
+  environment. The arena is now 75,168 MiB, up from 61,452 MiB — more
+  headroom than the 12.94 GiB that failed.
+- **The fix is inert, measured, not assumed**: the relaunch reproduced
+  the step-0 eval (508W/0L/4D) and iterations 6, 7, and 8 to every logged
+  digit — loss 1.6982 / 1.6825 / 1.6792, KL 0.0158 / 0.0167 / 0.0152,
+  GNorm 92.88 / 55.50 / 61.96 — the values the first launch logged before
+  it died. Dropping a Python reference moves no number.

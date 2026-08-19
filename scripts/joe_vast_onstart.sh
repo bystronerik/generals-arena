@@ -234,6 +234,15 @@ cd "${REPO_DIR}"
 echo "installing competition-module (editable, no deps)"
 "${PYTHON}" -m pip install -e "${REPO_DIR}/competition-module" --no-deps
 
+# JAX preallocates 75% of the card by default, so ~20 GiB of an 80 GiB
+# H100 stayed idle while the BFC arena ran out. Measured 2026-08-19: the
+# ff x4 net (joe-M7F4) died at its first pool refresh on a 12.94 GiB
+# allocation while the process held 61,452 MiB of 81,559 MiB. The knob
+# changes the arena size only; it does not touch the training recipe.
+# Set after the /etc/environment copy above, so it stays scoped to the
+# trainer instead of leaking into every later SSH session.
+export XLA_PYTHON_CLIENT_MEM_FRACTION="${XLA_PYTHON_CLIENT_MEM_FRACTION:-0.92}"
+
 put_boot starting_train
 echo "starting training.joe.vast_boot"
 exec "${PYTHON}" -m training.joe.vast_boot

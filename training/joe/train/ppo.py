@@ -464,6 +464,13 @@ def train(cfg, network, optimizer, opt_state, logger, key, bundle,
         # Periodic pool refresh for map diversity (pool is traced — no recompile)
         if cfg.reset_pool_every > 0 and it > 0 and it % cfg.reset_pool_every == 0:
             key, pool_key = jrandom.split(key)
+            # Release the old pool and its replica before the new ones are
+            # built. Rebinding alone keeps both generations live across the
+            # call, and that transient double allocation is what exhausted
+            # the BFC arena at the first refresh of the ff x4 net
+            # (joe-M7F4, 2026-08-19). Dropping the references is
+            # numerically inert: the next two lines rebind both names.
+            pool = pool_rep = None
             pool, _ = env.reset(pool_key)
             pool_rep = _replicate(pool, num_devices)
 
