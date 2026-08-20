@@ -1,0 +1,188 @@
+{
+  "bot_id": "unclejoe",
+  "steps": [
+    {
+      "at": "2026-08-20T13:55:47Z",
+      "content_hash": "cd0706604c28",
+      "seq": 1
+    }
+  ],
+  "version": 1,
+  "versions": [
+    {
+      "closure_ref": "refs/bot-versions/cd0706604c28",
+      "closure_tree": "c61d1886d790916fa422d9642880104ff748ab71",
+      "content_hash": "cd0706604c28",
+      "files": [
+        {
+          "blob": "a0c89260a153bb9b5aa70bea3b8c9900a0377f6a",
+          "path": "bots/unclejoe/.cargo/config.toml",
+          "sha256": "070c62350674ebb7dc151ff3047ee2f16cfd6bf9a00b934cf537ff5aff53674a"
+        },
+        {
+          "blob": "7cf81c1eac8fa6673624621c5877ec6fc821f49b",
+          "path": "bots/unclejoe/Cargo.lock",
+          "sha256": "5f58e154d7b37e1194c4d5de83ca72b06446c4ae89c6ade305eab6eae62cbb83"
+        },
+        {
+          "blob": "0d94830b8e303f14107486ece58c90d1f4a93a25",
+          "path": "bots/unclejoe/Cargo.toml",
+          "sha256": "93097f234a22bc1eee54330b1bf139bf05bcecda6b3189fb36e72a538e420663"
+        },
+        {
+          "blob": "975dffff804dbfde94bb2d4ca72562ee66859d99",
+          "path": "bots/unclejoe/artifact/manifest.json",
+          "sha256": "04e73ea51f17874cdb8dd2555eea2da4a72a6f0caedebf3ad3ec115ff0a46ba6"
+        },
+        {
+          "blob": "8889d22e95b7ca62905cda5766d56332b7ed6fc1",
+          "path": "bots/unclejoe/artifact/model.safetensors",
+          "sha256": "ba3f7da757936035521bbe747736696c11d1209fe2855f157bb9b87a73b37991"
+        },
+        {
+          "blob": "03db0bde23089152c68de71f8f19ed1ef037c911",
+          "path": "bots/unclejoe/run.sh",
+          "sha256": "0267352dedd670d35618f73ba1d1b0c05002c1bbb8d952bb5d8f1e323f9a916c"
+        },
+        {
+          "blob": "f827fe55a31954be2c5d9ac6d9bb21655fa38e30",
+          "path": "bots/unclejoe/rust-toolchain.toml",
+          "sha256": "436dd7bc962fef2cd92375e062fb55eacc270c2c73d1adfd693422b8da497aee"
+        },
+        {
+          "blob": "520b3fc49ff1ce4c9fc18d84798d35c90156ade6",
+          "path": "bots/unclejoe/src/board/action.rs",
+          "sha256": "5462bdc3231d593783c9986bbaebcc98cbd7c5f44766be113f5715ef6695b605"
+        },
+        {
+          "blob": "47d4d3cfa6f78b613c5b920c8ce72b753cc7322d",
+          "path": "bots/unclejoe/src/board/memory.rs",
+          "sha256": "cc3574aa9a6938add9e833db7817e4ba4e6f78a9ed9bfe9d468cb0950226d7ee"
+        },
+        {
+          "blob": "b8928bab99934d5dbdcb6c94a109ba8520b962ed",
+          "path": "bots/unclejoe/src/board/mod.rs",
+          "sha256": "09a4674169593b28c8508b80538f0307593e8bdfd107f4667c47a19833a4c72f"
+        },
+        {
+          "blob": "6c3c2013235552234cb84ceec1980fde6e5e7508",
+          "path": "bots/unclejoe/src/board/obs.rs",
+          "sha256": "358a0284ddb4bb6acd0260932b2f38dad8d07974463301b9482fe92c089ff6f8"
+        },
+        {
+          "blob": "25ed176e08925ecc3c46e57853d68dfec1f09177",
+          "path": "bots/unclejoe/src/io/json.rs",
+          "sha256": "095853debeb1d1ec1a3742f956300e94cec20b48f930fb5f1e0c07d53dedf368"
+        },
+        {
+          "blob": "ab2df14aaf642026835cd600a67328a7988f36e3",
+          "path": "bots/unclejoe/src/io/mod.rs",
+          "sha256": "f21064f653a674dfcd13027234a5574b1cb953b69ffd199cceec34ceda4a1428"
+        },
+        {
+          "blob": "671ca774c868f8fce85af05303dc5bb1742a6085",
+          "path": "bots/unclejoe/src/io/wire.rs",
+          "sha256": "a720abb8e66d87a7f96dd22f20299cd8772a7a2fcbc8542222a000ff295a66b7"
+        },
+        {
+          "blob": "ec2561c01972e4d840e875fbb68d0112702c8ffd",
+          "path": "bots/unclejoe/src/main.rs",
+          "sha256": "a4ef14aa1e512001e6dd616fd28c1623d060d742a99587b4ede51eec083fb73f"
+        },
+        {
+          "blob": "f8b2ed72996694ae5559f3149d3e27266b1a48d6",
+          "path": "bots/unclejoe/src/nn/gemm.rs",
+          "sha256": "e9feaff0b25128a633ec2661b06958f5aef049da0ad9df3c64fdddbaa6eba336"
+        },
+        {
+          "blob": "0cdf3342a3224e5fb5de8c2d5a42d9636b53a3d8",
+          "path": "bots/unclejoe/src/nn/mod.rs",
+          "sha256": "e7460c6095e595ef7a23301fab63e83aabf040725b5d162fb42f505a63d21a8d"
+        },
+        {
+          "blob": "95c59199337be3dc706764fcc4fcf883f3120e30",
+          "path": "bots/unclejoe/src/nn/net.rs",
+          "sha256": "20782ab57b54a0c9bfba1d4a19d5a228a72ab9dcacdbabd20e887573fe77467a"
+        },
+        {
+          "blob": "582e3a4f478b2329731a735190ee62cbb06e8524",
+          "path": "bots/unclejoe/src/nn/safetensors.rs",
+          "sha256": "71971d5b793b4f9060080f09e0453ba0f9be3c676e7e136891ea666a9b5e1f6c"
+        },
+        {
+          "blob": "e36becb9b585af4a4eefcdf941edd59d10193bdc",
+          "path": "bots/unclejoe/src/search/afterstate.rs",
+          "sha256": "4a8cba6c19657dcd36cf211b85ffa088b54180a865bbb0d032c34614df4105fd"
+        },
+        {
+          "blob": "1978d921059f0d9b21ee7660d212f3e2a6aecbc5",
+          "path": "bots/unclejoe/src/search/fixtures.rs",
+          "sha256": "f66545afb9ecba37ce4febfcaa30e2d3aadee260ffb852e5232d067dee2cc9e0"
+        },
+        {
+          "blob": "6790c962d71ef30aa2433f54d944bb2a35099533",
+          "path": "bots/unclejoe/src/search/minimax.rs",
+          "sha256": "ba026dd53f6f963ce2377a4500a1ff64983ddc17a599aa49f0c6f6302c2e375e"
+        },
+        {
+          "blob": "2b347959dc49f799424f258e94a86fe796cfacd7",
+          "path": "bots/unclejoe/src/search/mod.rs",
+          "sha256": "7c75f7acdd0f31f0073ccb7c22a67f41e73aaf437051c66b3f3cab5d9fe5bea3"
+        },
+        {
+          "blob": "a08c6f66005fc90ee79082d36a70058eb68cb9e3",
+          "path": "bots/unclejoe/src/search/sim.rs",
+          "sha256": "d259592b38e789379b8686f0086c40c3b640f13e690d26fe40faddbeaa1bd831"
+        },
+        {
+          "blob": "0085b28e6f8db85681c75f26be0e82667233418c",
+          "path": "bots/unclejoe/src/tactics/common/fixtures.rs",
+          "sha256": "07b3ab87be4abacfdbdc836a6c57f82b79432ccaffb91387bcd5a41df3860c70"
+        },
+        {
+          "blob": "22e6fbab0eb71a36b6a278780acf444b2b82b615",
+          "path": "bots/unclejoe/src/tactics/common/frame.rs",
+          "sha256": "28f7055e3d936387c6c2d63c2baecea3ff6ddeb43eea04c101dc7912d91bd2c9"
+        },
+        {
+          "blob": "05fb2f27f036a2640e9a3258b14b540f2ecf84c8",
+          "path": "bots/unclejoe/src/tactics/common/mod.rs",
+          "sha256": "35d17839a6a538e9bd71c0c743173043610dde2d2719f43ec28421e52b10fc4b"
+        },
+        {
+          "blob": "52e5de8117c6388036fff276af9e470d3689dcf1",
+          "path": "bots/unclejoe/src/tactics/common/reach.rs",
+          "sha256": "91c264ceea16cde516feb0ea034a4aef7921d581d00891abbf9930438bb74767"
+        },
+        {
+          "blob": "d92ba9f1fd81d802c47ae9604b8650c2418bda2c",
+          "path": "bots/unclejoe/src/tactics/defense.rs",
+          "sha256": "7d2d1e9d6535dbb057c71be97fb7ed5e89a252dcb6c76fa12e24aac2f5c7245d"
+        },
+        {
+          "blob": "ca13f966947d43874c19bc2ae922c82340e08016",
+          "path": "bots/unclejoe/src/tactics/filters.rs",
+          "sha256": "3ae2a1c6bbb5ee9ed00b67ba18a6cdfd8deecf42c129cc0df73c82e127568917"
+        },
+        {
+          "blob": "25d1e3fbff114ebef5c88a8e01dcda08d9c96aec",
+          "path": "bots/unclejoe/src/tactics/kill.rs",
+          "sha256": "3f900fd8d7e888a27997a2d54aecd8998a9e39274d01b906d379a7cd129414bd"
+        },
+        {
+          "blob": "7f6f0b9f521b8ccf6180786f140be466ccb8cd27",
+          "path": "bots/unclejoe/src/tactics/mod.rs",
+          "sha256": "18b9ac9d1c15e1af0d9a64e4f7281368091bcaef42445d4b638da32c6c6f94b9"
+        },
+        {
+          "blob": "c25fe8589fd610805353e7fdca9c0ede164a2166",
+          "path": "bots/unclejoe/src/xla_math.rs",
+          "sha256": "8a14034b1dfeb0782b000a17183df4baad84b3b321ebfe79fb69772f5e904805"
+        }
+      ],
+      "first_seen_at": "2026-08-20T13:55:47Z",
+      "git_commit": "e4e509d60a4a8931cdf6808262e18b02b4311536",
+      "git_dirty": false
+    }
+  ]
+}
