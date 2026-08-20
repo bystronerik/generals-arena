@@ -77,16 +77,24 @@ impl LayerNorm {
         for r in 0..rows {
             let row = &x[r * EMBED..(r + 1) * EMBED];
             let out = &mut y[r * EMBED..(r + 1) * EMBED];
-            let mut sum = 0f32;
-            for v in row {
-                sum += v;
+            // EMBED = 384 = 48 x 8: eight accumulator lanes so the
+            // reductions vectorize instead of serializing on add latency.
+            let mut lanes = [0f32; 8];
+            for chunk in row.chunks_exact(8) {
+                for (l, v) in chunk.iter().enumerate() {
+                    lanes[l] += v;
+                }
             }
+            let sum: f32 = lanes.iter().sum();
             let mean = sum / EMBED as f32;
-            let mut var_sum = 0f32;
-            for v in row {
-                let d = v - mean;
-                var_sum += d * d;
+            let mut vlanes = [0f32; 8];
+            for chunk in row.chunks_exact(8) {
+                for (l, v) in chunk.iter().enumerate() {
+                    let d = v - mean;
+                    vlanes[l] = d.mul_add(d, vlanes[l]);
+                }
             }
+            let var_sum: f32 = vlanes.iter().sum();
             let denom = (var_sum / EMBED as f32 + 1e-5).sqrt();
             for j in 0..EMBED {
                 out[j] = (row[j] - mean) / denom * self.weight[j] + self.bias[j];
@@ -95,10 +103,33 @@ impl LayerNorm {
     }
 }
 
+/// Vectorizable exp: Cephes-style range reduction and a 6th-order
+/// polynomial, max relative error ~7.6e-8 on [-4, 4], clamped to the finite
+/// range. Replaces libm `expf`, whose call blocks vectorization of every
+/// loop it sits in.
+#[inline]
+fn exp_poly(x: f32) -> f32 {
+    const LOG2E: f32 = 1.442_695_04;
+    const LN2_HI: f32 = 0.693_359_375;
+    const LN2_LO: f32 = -2.121_944_4e-4;
+    let x = x.clamp(-87.3, 88.7);
+    let kf = (x * LOG2E).round();
+    let r = kf.mul_add(-LN2_HI, x);
+    let r = kf.mul_add(-LN2_LO, r);
+    let mut p = 1.987_569_1e-4f32;
+    p = p.mul_add(r, 1.398_199_9e-3);
+    p = p.mul_add(r, 8.333_452e-3);
+    p = p.mul_add(r, 4.166_579_5e-2);
+    p = p.mul_add(r, 1.666_666_6e-1);
+    p = p.mul_add(r, 0.5);
+    p = p.mul_add(r * r, r) + 1.0;
+    f32::from_bits(((p.to_bits() as i32) + ((kf as i32) << 23)) as u32)
+}
+
 /// `x * sigmoid(x)`, in candle's f32 form `v / (1 + exp(-v))`.
 fn silu_in_place(values: &mut [f32]) {
     for v in values.iter_mut() {
-        *v /= 1.0 + (-*v).exp();
+        *v /= 1.0 + exp_poly(-*v);
     }
 }
 
@@ -112,7 +143,7 @@ fn softmax_in_place(row: &mut [f32]) {
     }
     let mut sum = 0f32;
     for v in row.iter_mut() {
-        *v = (*v - max).exp();
+        *v = exp_poly(*v - max);
         sum += *v;
     }
     for v in row.iter_mut() {
@@ -144,6 +175,12 @@ struct Scratch {
     proj: Vec<f32>,         // (52, 384) — out-proj / ff2 output before residual
     ff: Vec<f32>,           // (52, 1536)
     scores: Vec<f32>,       // (52, 52) — one head at a time
+    qh: Vec<f32>,           // (52, 48) — one head's Q, packed contiguous
+    kt: Vec<f32>,           // (48, 52) — one head's K, transposed for gemm
+    vh: Vec<f32>,           // (52, 48) — one head's V, packed contiguous
+    ch: Vec<f32>,           // (52, 48) — one head's context before scatter
+    zero_tokens: Vec<f32>,  // (52,) zero bias for the score gemm
+    zero_head: Vec<f32>,    // (48,) zero bias for the context gemm
     hist: Vec<f32>,         // (2, 512) — scaled temporal windows
     hidden: Vec<f32>,       // (512,) — temporal MLP hidden
     tokens: Vec<f32>,       // (2, 384) — temporal tokens
@@ -163,6 +200,12 @@ impl Scratch {
             proj: vec![0.0; N_TOKENS * EMBED],
             ff: vec![0.0; N_TOKENS * FF_DIM],
             scores: vec![0.0; N_TOKENS * N_TOKENS],
+            qh: vec![0.0; N_TOKENS * HEAD_DIM],
+            kt: vec![0.0; HEAD_DIM * N_TOKENS],
+            vh: vec![0.0; N_TOKENS * HEAD_DIM],
+            ch: vec![0.0; N_TOKENS * HEAD_DIM],
+            zero_tokens: vec![0.0; N_TOKENS],
+            zero_head: vec![0.0; HEAD_DIM],
             hist: vec![0.0; 2 * TEMPORAL_WINDOW],
             hidden: vec![0.0; TEMPORAL_HIDDEN],
             tokens: vec![0.0; 2 * EMBED],
@@ -350,6 +393,12 @@ impl Net {
             proj,
             ff,
             scores,
+            qh,
+            kt,
+            vh,
+            ch,
+            zero_tokens,
+            zero_head,
             hist,
             hidden,
             tokens,
@@ -412,38 +461,30 @@ impl Net {
             block.v.forward_into(N_TOKENS, normed, v);
             for h in 0..N_HEAD {
                 let off = h * HEAD_DIM;
+                // Pack the head — Q and V rows contiguous, K transposed to
+                // the (k, n) layout gemm_bias streams — then run QK^T and
+                // the context product through the GEMM kernel. ~30 KB of
+                // copies against two register-tiled GEMM calls.
                 for i in 0..N_TOKENS {
-                    let qrow: &[f32; HEAD_DIM] = q[i * EMBED + off..].first_chunk().unwrap();
-                    for jt in 0..N_TOKENS {
-                        let krow: &[f32; HEAD_DIM] =
-                            k[jt * EMBED + off..].first_chunk().unwrap();
-                        // Eight parallel accumulator lanes so the reduction
-                        // vectorizes; a single serial chain of 48 FMAs would
-                        // bottleneck on FMA latency.
-                        let mut lanes = [0f32; 8];
-                        for (qc, kc) in qrow.chunks_exact(8).zip(krow.chunks_exact(8)) {
-                            for l in 0..8 {
-                                lanes[l] = qc[l].mul_add(kc[l], lanes[l]);
-                            }
-                        }
-                        let dot: f32 = lanes.iter().sum();
-                        scores[i * N_TOKENS + jt] = dot * inv_scale;
+                    qh[i * HEAD_DIM..(i + 1) * HEAD_DIM]
+                        .copy_from_slice(&q[i * EMBED + off..i * EMBED + off + HEAD_DIM]);
+                    vh[i * HEAD_DIM..(i + 1) * HEAD_DIM]
+                        .copy_from_slice(&v[i * EMBED + off..i * EMBED + off + HEAD_DIM]);
+                    for d in 0..HEAD_DIM {
+                        kt[d * N_TOKENS + i] = k[i * EMBED + off + d];
                     }
+                }
+                gemm_bias(N_TOKENS, HEAD_DIM, N_TOKENS, qh, kt, zero_tokens, scores);
+                for s in scores.iter_mut() {
+                    *s *= inv_scale;
                 }
                 for i in 0..N_TOKENS {
                     softmax_in_place(&mut scores[i * N_TOKENS..(i + 1) * N_TOKENS]);
                 }
+                gemm_bias(N_TOKENS, N_TOKENS, HEAD_DIM, scores, vh, zero_head, ch);
                 for i in 0..N_TOKENS {
-                    let mut acc = [0f32; HEAD_DIM];
-                    for jt in 0..N_TOKENS {
-                        let w = scores[i * N_TOKENS + jt];
-                        let vrow: &[f32; HEAD_DIM] =
-                            v[jt * EMBED + off..].first_chunk().unwrap();
-                        for d in 0..HEAD_DIM {
-                            acc[d] = w.mul_add(vrow[d], acc[d]);
-                        }
-                    }
-                    ctx[i * EMBED + off..i * EMBED + off + HEAD_DIM].copy_from_slice(&acc);
+                    ctx[i * EMBED + off..i * EMBED + off + HEAD_DIM]
+                        .copy_from_slice(&ch[i * HEAD_DIM..(i + 1) * HEAD_DIM]);
                 }
             }
             block.out.forward_into(N_TOKENS, ctx, proj);

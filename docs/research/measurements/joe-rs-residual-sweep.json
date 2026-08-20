@@ -1,0 +1,31 @@
+{
+  "date": "2026-08-20",
+  "modal_x86_one_container_interleaved": {
+    "pristine_bench_1": "turns 2400 startup_ms 299.9 p50 24.01 p90 25.37 p99 26.31 max 26.78",
+    "fastexp_bench_1": "turns 2400 startup_ms 118.3 p50 23.50 p90 24.37 p99 25.83 max 26.09",
+    "laneln_bench_1": "turns 2400 startup_ms 120.9 p50 23.45 p90 24.47 p99 24.96 max 27.50",
+    "packattn_bench_1": "turns 2400 startup_ms 122.0 p50 22.37 p90 24.08 p99 25.20 max 27.51",
+    "combined_bench_1": "turns 2400 startup_ms 118.6 p50 21.09 p90 21.46 p99 22.98 max 26.84",
+    "pristine_bench_2": "turns 2400 startup_ms 121.7 p50 25.15 p90 26.54 p99 26.71 max 28.04",
+    "fastexp_bench_2": "turns 2400 startup_ms 120.8 p50 23.20 p90 24.34 p99 24.45 max 25.10",
+    "laneln_bench_2": "turns 2400 startup_ms 120.1 p50 23.62 p90 24.64 p99 24.74 max 24.86",
+    "packattn_bench_2": "turns 2400 startup_ms 112.5 p50 21.76 p90 22.14 p99 23.16 max 23.29",
+    "combined_bench_2": "turns 2400 startup_ms 117.4 p50 21.26 p90 22.11 p99 22.24 max 22.46"
+  },
+  "divergence_vs_pristine_both_arches": {
+    "reply_diffs": "0/2400 for every variant on x86 and on arm64",
+    "max_value_delta": 0.0001,
+    "note": "value delta equals the stderr print resolution"
+  },
+  "arm64_dev_box_p50_ms": {
+    "pristine": 36.51,
+    "fastexp": 36.22,
+    "laneln": 35.92,
+    "packattn": 35.48,
+    "combined": 34.55
+  },
+  "gates_on_combined": {
+    "parity": "11 passed in 306.88s (pytest -m joe, bots/joe-rs/tests)",
+    "verification_match": "win by general capture, turn 261, seed 0 vs aegis (identical to pristine)"
+  }
+}
