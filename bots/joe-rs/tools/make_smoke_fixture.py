@@ -11,7 +11,12 @@ Usage: .venv/bin/python bots/joe-rs/tools/make_smoke_fixture.py [--game NAME]
 import argparse
 from pathlib import Path
 
-from capture_fixtures import CORPUS, capture_game, parse_in_log
+from capture_fixtures import (
+    CORPUS,
+    capture_game,
+    parse_in_log,
+    record_selection_goldens,
+)
 
 FIXTURES = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
 
@@ -41,6 +46,10 @@ def main() -> None:
     npz = FIXTURES / f"{name}.npz"
     npz.unlink(missing_ok=True)
     capture_game(name, FIXTURES, stride_target=args.stride)
+    # The committed slice carries its own wire-replay golden too, so the
+    # mutation checker's smoke scope grades the full played path on a clean
+    # checkout. Needs the release binary (selection-plan S1).
+    record_selection_goldens(FIXTURES)
 
     _, _, _, frames = parse_in_log(FIXTURES / f"{name}.in.log")
     assert len(frames) == args.turns

@@ -91,6 +91,38 @@ MUTATIONS = [
         "",
         "the pass action is masked out",
     ),
+    # Selection-plan S1 plants. All four are killed by the crate's unit
+    # tests in `board/select.rs` — the corpus cannot see them: a turn-blind
+    # seed still varies with the board, a masked logit already carries −1e9,
+    # and the sign/scale of the noise only shows in the draw's distribution.
+    (
+        "select-turn-blind",
+        "board/select.rs",
+        "let seed = splitmix64(digest ^ (turn as u32 as u64).wrapping_mul(TURN_SALT));",
+        "let seed = splitmix64(digest);",
+        "the draw ignores the turn, so a revisited position repeats its noise",
+    ),
+    (
+        "select-masked-noise",
+        "board/select.rs",
+        "if penalty != 0.0 {\n            continue;\n        }",
+        "let _ = penalty;",
+        "noise reaches masked entries, so an illegal action can be lifted",
+    ),
+    (
+        "select-temperature-scale",
+        "board/select.rs",
+        "score += t * gumbel(seed, i);",
+        "score += gumbel(seed, i);",
+        "the noise ignores the temperature",
+    ),
+    (
+        "select-noise-sign",
+        "board/select.rs",
+        "score += t * gumbel(seed, i);",
+        "score -= t * gumbel(seed, i);",
+        "subtracted noise samples a distribution that is not softmax(logits/T)",
+    ),
 ]
 
 PYTEST = [".venv/bin/pytest", "bots/joe-rs/tests/", "-m", "joe", "-q", "-x"]

@@ -100,7 +100,15 @@ S1 makes it deterministic.
 
 ## Candidates
 
-### S1 — deterministic Gumbel selection (recommended)
+### S1 — deterministic Gumbel selection (recommended; implemented 2026-08-20)
+
+**Status: shipped.** `src/board/select.rs`; knob `JOE_RS_TEMPERATURE`
+(default 1, `≤ 0` restores the plain argmax); harness changes from the
+"File and tooling impact" table all landed (self-golden reference, four
+mutation plants, [parity.md](parity.md) grading row). At T = 1 the played
+move departs from the old argmax on 12.9% of corpus turns. The smoke
+decision stays a move (`selfcheck ok`, verified once as required below).
+Still open: the diagnostic-grid T shortlist and the rated round.
 
 The Gumbel-max trick: `argmax_i(logits_i + T · G_i)` with i.i.d. standard
 Gumbel noise `G_i = −ln(−ln u_i)` is an **exact** sample from

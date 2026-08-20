@@ -1,6 +1,6 @@
 """Capture the joe-rs parity corpus from the Python joe bot (port-plan §6).
 
-Two phases:
+Three phases:
 
 1. **Play** (`--play`): run real `--mode competition` matchup games with the
    deployed `bots/joe/run.sh` seat wrapped in a `tee`, recording the exact
@@ -11,12 +11,18 @@ Two phases:
    and dump per-turn surfaces to a `.npz`. The recomputed greedy replies are
    cross-checked against the recorded `.out.log`; any mismatch means the
    capture path diverged from deployment and the tool aborts.
+3. **Self-golden** (`--selection-golden`): run the joe-rs release binary in
+   wire mode over every `.in.log` and record its own replies as
+   `<name>.joe-rs.log` — the reference `tests/test_wire_replay.py` grades
+   the full played path against (selection-plan S1). Build the release
+   binary first; the recording pins the default temperature.
 
 Corpus layout (`data/joe/joe-rs-parity/`, gitignored):
     games/<name>.in.log     wire text joe received (handshake + frames)
     games/<name>.out.log    wire text joe sent (one action line per turn)
     games/<name>.npz        per-turn surfaces (see `capture_game`)
     games/<name>.json       opponent, seed, outcome
+    games/<name>.joe-rs.log joe-rs's own replies (the wire-replay golden)
 
 Every turn stores the FNV-1a-64 hash of the augmented tensor's f32 bits (the
 sequence surface's currency) plus the action; a stratified sample of turns
@@ -322,16 +328,55 @@ def capture_game(name: str, out_dir: Path, stride_target: int = 40) -> None:
           f"-> {npz_path.name} ({npz_path.stat().st_size // 1024} KiB)")
 
 
+def record_selection_goldens(out_dir: Path) -> None:
+    """Record the joe-rs binary's own wire replies for every recorded game.
+
+    Since the selection layer shipped (selection-plan S1), neither sibling
+    predicts the played move: the unpenalised oracle argmax (`all_action`)
+    diverges wherever the Gumbel noise flips a near-tie, and the `.out.log`
+    records deployed joe's penalised program. The full played path is
+    therefore graded against the binary's **own** replies. Selection is a
+    deterministic function of the frame stream, so this file is byte-stable
+    until the network or the selection layer changes on purpose — and both
+    changes regenerate it here, alongside the other fixtures.
+    """
+    binary = REPO / "bots" / "joe-rs" / "target" / "release" / "joe-rs"
+    if not binary.is_file():
+        raise SystemExit(f"no release binary at {binary}; build joe-rs first")
+    # A deliberately minimal environment: a JOE_RS_TEMPERATURE leaking in
+    # from the caller's shell would silently record a non-default golden.
+    env = {"JOE_RS_ARTIFACT": str(REPO / "bots" / "joe-rs" / "artifact"),
+           "PATH": "/usr/bin:/bin"}
+    for in_log in sorted(out_dir.glob("*.in.log")):
+        name = in_log.name.removesuffix(".in.log")
+        proc = subprocess.run([str(binary)], input=in_log.read_bytes(),
+                              capture_output=True, env=env)
+        if proc.returncode != 0:
+            raise SystemExit(f"{name}: joe-rs exited {proc.returncode}:\n"
+                             f"{proc.stderr.decode()[-2000:]}")
+        text = proc.stdout.decode()
+        replies = text.splitlines()
+        assert replies, f"{name}: joe-rs sent no replies"
+        for t, line in enumerate(replies):
+            fields = line.split()
+            assert len(fields) == 5 and all(f.isdigit() for f in fields), \
+                f"{name} turn {t}: malformed reply {line!r}"
+        (out_dir / f"{name}.joe-rs.log").write_text(text)
+        print(f"[golden] {name}: {len(replies)} replies -> {name}.joe-rs.log")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--play", action="store_true", help="play the corpus games")
     parser.add_argument("--capture", action="store_true", help="replay logs into npz")
+    parser.add_argument("--selection-golden", action="store_true",
+                        help="record joe-rs's own replies as the wire-replay golden")
     parser.add_argument("--out", type=Path, default=CORPUS / "games")
     parser.add_argument("--game", nargs=2, action="append", metavar=("OPP", "SEED"),
                         help="extra (opponent, seed) game; replaces the default list")
     args = parser.parse_args()
-    if not (args.play or args.capture):
-        parser.error("pass --play and/or --capture")
+    if not (args.play or args.capture or args.selection_golden):
+        parser.error("pass --play, --capture, and/or --selection-golden")
 
     if args.play:
         games = ([(o, int(s)) for o, s in args.game] if args.game else DEFAULT_GAMES)
@@ -339,6 +384,8 @@ def main() -> None:
     if args.capture:
         for path in sorted(args.out.glob("*.in.log")):
             capture_game(path.name.removesuffix(".in.log"), args.out)
+    if args.selection_golden:
+        record_selection_goldens(args.out)
 
 
 if __name__ == "__main__":

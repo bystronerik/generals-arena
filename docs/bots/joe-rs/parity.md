@@ -5,29 +5,41 @@ proof is itself checked. Tiers follow port-plan §6; both morpheus-rs rules
 apply: *replay proves agreement, mutation proves the proof*, and *loose
 float tolerances cannot see precision bugs*.
 
-## What parity covers: the network, not joe's research layer
+## What parity covers: the network, not the selection layer
 
-**joe-rs ports joe's network path. It does not port joe's selection layer.**
+**joe-rs ports joe's network path. Selection above the network is joe-rs's
+own design, not a port.**
 
 Since 2026-08-16 `bots/joe/agent.py` applies a **repetition penalty** before
 its argmax: a decayed count of the cells joe moved from, subtracted from
 those cells' action logits (`REPEAT_PENALTY = 2.0`, `REPEAT_DECAY = 0.90`,
-commit `1f550ad`). It exists to break an argmax limit cycle. It is a
-**research feature of joe alone** and is deliberately absent from joe-rs,
-which still emits `argmax(logits)`.
+commit `1f550ad`). It exists to break an argmax limit cycle. Since
+2026-08-20 joe-rs answers the same problem with **deterministic Gumbel
+selection** instead (`src/board/select.rs`, selection-plan S1): an exact
+sample of `softmax(logits / T)` whose noise is hashed from `(board digest,
+turn, action index)`, so the binary stays a pure function of the game.
+`JOE_RS_TEMPERATURE` sets T (default 1; 0 restores the plain argmax).
+Neither bot's selection is a spec for the other; the divergence is
+deliberate and documented in [selection-plan.md](selection-plan.md).
 
-So the two bots emit different moves on repeated cells, by design. The
-consequence for this harness is specific and easy to trip over:
+So the two bots emit different moves, by design. The consequence for this
+harness is specific and easy to trip over:
 
 | reference | what it is | who is graded on it |
 | --- | --- | --- |
-| `.npz` surfaces, incl. `all_action` | the **unpenalised** JAX oracle | joe-rs — every tier, and `test_wire_replay.py` |
+| `.npz` surfaces, incl. `all_action` | the **unpenalised** JAX oracle | joe-rs's network — every tier of `test_parity.py` |
+| `<name>.joe-rs.log` | joe-rs's **own** recorded replies (Gumbel, default T) | joe-rs's full played path — `test_wire_replay.py` |
 | `.out.log` | what **deployed joe** actually replied, penalised | nobody grades joe-rs on this |
 
-`test_wire_replay.py` therefore compares the binary against the `.npz`'s
-`all_action`, **not** against the `.out.log`. Grading joe-rs on the
-`.out.log` fails it for a difference it is supposed to have — that is what
-happened on the step-29000 rebuild, at `aegis-seed0` turn 57.
+`test_wire_replay.py` therefore compares the binary's whole stdout, byte for
+byte, against its own self-golden (`capture_fixtures.py
+--selection-golden`): selection is deterministic, so an unexplained change
+anywhere in the played path still fails, while no sibling is ever the
+reference. Grading joe-rs on the `.out.log` fails it for a difference it is
+supposed to have — that is what happened on the step-29000 rebuild, at
+`aegis-seed0` turn 57 — and since S1 shipped the same is true of the
+oracle's `all_action` argmax, which the noise deliberately departs from on
+near-ties (12.9% of corpus turns at T = 1).
 
 The `.out.log` still earns its keep: `capture_fixtures.py` mirrors the
 penalty (importing both constants from `agent.py`, never copying them) purely
@@ -52,11 +64,18 @@ import follows it; if it is ever ported to joe-rs, this whole section and
   per-turn surfaces to `.npz`. Every recomputed reply is asserted equal to
   the recorded one, so the capture path is pinned to deployment.
 
-**The corpus is keyed to the network.** The `.npz` surfaces are the JAX
-oracle's outputs for specific weights, so a joe re-export invalidates them:
-re-run both phases (and `make_smoke_fixture.py`) after
+A third phase, **self-golden** (`--selection-golden`), runs the joe-rs
+release binary over every `.in.log` and records its replies as
+`<name>.joe-rs.log` — the wire-replay reference since selection-plan S1.
+`make_smoke_fixture.py` records one for the committed smoke slice too.
+
+**The corpus is keyed to the network — and the goldens to the selection
+layer as well.** The `.npz` surfaces are the JAX oracle's outputs for
+specific weights, so a joe re-export invalidates them: re-run both phases
+(and `make_smoke_fixture.py`, and `--selection-golden`) after
 `convert_artifact.py`, or the drivers compare a new binary against an old
-oracle. The corpus was rebuilt for step 13500 on 2026-08-14.
+oracle. A deliberate selection change regenerates the goldens alone. The
+corpus was rebuilt for step 13500 on 2026-08-14.
 
 `synthetic-long` is the longest corpus game's frames played twice through
 the state machine — at step 13500, castle_rush-seed3 doubled to **1,602
@@ -114,11 +133,12 @@ input state.
 - **Tier 3, decision**: greedy action equal on **731/731 sampled frames
   (100%)** (gate: ≥ 99.5% with tie-margin enumeration — none needed; the
   tie-margin bound is the relative tier-2 bound put back on the corpus's own
-  logit scale), and `test_wire_replay.py` runs the real binary in wire mode
-  over every recorded game: **14 games, 4,760 turns, every reply byte-equal**
-  to Python joe's recorded replies, under the bot's own accumulated state.
-  (The turn count fell from 5,693 at step 5000 because the stronger network
-  wins sooner, not because coverage shrank — the game count is the same.)
+  logit scale). The `decide` surface is the network's greedy argmax and
+  stays graded against the oracle; the *played* decision adds Gumbel noise
+  on top (S1) and is graded by `test_wire_replay.py` against the self-golden
+  instead: the real binary in wire mode over every recorded game, **15
+  streams (14 games + synthetic-long), 8,985 replies, whole stdout
+  byte-equal**, under the bot's own accumulated state.
 
 ## Synthetic fixtures
 
@@ -132,16 +152,19 @@ in `src/board/action.rs`.
 
 ## Mutation pass
 
-`tools/mutation_check.py`: 9 planted bugs — history-roll direction,
+`tools/mutation_check.py`: 13 planted bugs — history-roll direction,
 seen-accumulation OR, pad-mountain rule, a divide-by-50 site, the channel-21
 counter, the R2 q/k-proj swap, softmax scale, argmax tie-break, pass-channel
-mask — each must make the harness fail. Baseline must pass first, on the
-fast `mutation` profile (same float semantics; Rust does not reassociate).
-**9/9 killed** (2026-08-14, re-run against step 6000 and the relative tier-2
-gate — the check is what proves the relative bound did not buy portability
-by giving up detection power). The tie-break kill comes from the crate's unit
-tests, which the checker runs alongside the parity drivers: an exact logit
-tie never occurs in real frames, so no fixture can see that flip.
+mask, and four in the selection layer (turn-blind hash, noise on masked
+entries, temperature ignored, noise sign) — each must make the harness fail.
+Baseline must pass first, on the fast `mutation` profile (same float
+semantics; Rust does not reassociate). **13/13 killed** (2026-08-20). The
+tie-break and all four selection kills come from the crate's unit tests,
+which the checker runs alongside the parity drivers: an exact logit tie
+never occurs in real frames, and the corpus cannot see the selection plants
+either — a turn-blind seed still varies with the board, a masked logit
+already carries −1e9, and the noise's sign and scale only show in the
+draw's distribution, which `select.rs`'s frequency test pins to softmax.
 
 ## Running it
 
@@ -150,3 +173,12 @@ cargo build --release --manifest-path bots/joe-rs/Cargo.toml
 .venv/bin/pytest bots/joe-rs/tests/ -m joe          # full corpus if present
 .venv/bin/python bots/joe-rs/tools/mutation_check.py
 ```
+
+After a deliberate selection or network change, regenerate the wire-replay
+goldens before the suite:
+
+```bash
+.venv/bin/python bots/joe-rs/tools/capture_fixtures.py --selection-golden
+```
+
+(and `make_smoke_fixture.py` for the committed smoke slice's golden).

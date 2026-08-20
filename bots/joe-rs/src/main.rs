@@ -2,9 +2,14 @@
 //!
 //! Wire mode (no arguments): the competition stdio seat. Per turn: parse the
 //! frame, rebuild the 14-channel raw tensor, build cost + masks, augment to
-//! 39 channels with the persistent state, one float32 forward pass, greedy
-//! argmax — exactly what the Python sibling's `agent.py` does. No search, no
-//! sampling; joe is deterministic at play time.
+//! 39 channels with the persistent state, one float32 forward pass, then
+//! deterministic Gumbel selection over the masked logits (`board::select`,
+//! selection-plan S1): an exact sample of `softmax(logits / T)` whose noise
+//! is hashed from the frame, so the bot stays a pure function of the game.
+//! `JOE_RS_TEMPERATURE` sets T (default 1 — the distribution training
+//! sampled; 0 restores the plain argmax). The Python sibling argmaxes
+//! penalised logits instead; the divergence is deliberate
+//! (docs/bots/joe-rs/selection-plan.md).
 //!
 //! `joe-rs parity <surface>` runs one ported surface over fixture cases
 //! (see `parity.rs`); `pytest` in `tests/` drives it against the Python
@@ -59,12 +64,13 @@ use std::panic::{self, AssertUnwindSafe};
 use std::path::PathBuf;
 use std::time::Instant;
 
-use crate::board::action::{argmax, decode_action};
+use crate::board::action::decode_action;
 use crate::board::obs::{
     augment_obs, build_cost_from_raw, compute_build_mask_from_raw, compute_valid_move_mask,
     frame_to_raw, normalize_observations, prepare_action_mask, AugScratch, AugState, CELLS,
     N_ACTION_CHANNELS, N_CHANNELS, PAD, TEMPORAL_WINDOW,
 };
+use crate::board::select::{board_digest, select_action};
 use crate::io::wire::{
     read_handshake, read_observation, write_action, Action, Observation, PASS, TYPE_FOG,
     TYPE_GENERAL, TYPE_PLAIN,
@@ -184,6 +190,9 @@ struct Seat {
     net: Net,
     h: usize,
     w: usize,
+    /// Selection temperature (selection-plan S1). 1 replays the distribution
+    /// PPO trained under; 0 or less restores the plain argmax.
+    temperature: f32,
     state: AugState,
     next_state: AugState,
     scratch: AugScratch,
@@ -205,10 +214,28 @@ impl Seat {
         let net = Net::load(&artifact_dir())?;
         let load_ms = load.elapsed().as_secs_f64() * 1e3;
 
+        // The S1 knob, read once — a per-turn getenv would put a syscall on
+        // the move path. A malformed value is loud but not fatal: a seat
+        // that refuses to construct forfeits by passing every turn, which
+        // costs more than playing the default temperature does.
+        let temperature = match std::env::var("JOE_RS_TEMPERATURE") {
+            Err(_) => 1.0,
+            Ok(raw) => match raw.trim().parse::<f32>() {
+                Ok(t) if t.is_finite() => t,
+                _ => {
+                    eprintln!(
+                        "[joe-rs] JOE_RS_TEMPERATURE {raw:?} is not a finite number; using 1"
+                    );
+                    1.0
+                }
+            },
+        };
+
         let seat = Self {
             net,
             h,
             w,
+            temperature,
             state: AugState::zeros(),
             next_state: AugState::zeros(),
             scratch: AugScratch::new(),
@@ -228,7 +255,10 @@ impl Seat {
             .forward(&seat.aug, &seat.penalties, &seat.temporal)
             .map_err(|e| format!("warmup forward: {e}"))?;
         let warmup_ms = warm.elapsed().as_secs_f64() * 1e3;
-        eprintln!("[joe-rs] load {load_ms:.1} ms, warmup {warmup_ms:.1} ms");
+        eprintln!(
+            "[joe-rs] load {load_ms:.1} ms, warmup {warmup_ms:.1} ms, temperature {}",
+            seat.temperature
+        );
         Ok(seat)
     }
 
@@ -284,7 +314,16 @@ impl Seat {
         clock.mark(S_MASK);
         let fwd = self.net.forward(&self.aug, &self.penalties, &self.temporal)?;
         clock.mark(S_FORWARD);
-        let a = decode_action(argmax(&fwd.logits));
+        // Selection (plan S1) joins `decode`: both turn the network's answer
+        // into the reply, and together they still cost microseconds.
+        let idx = select_action(
+            &fwd.logits,
+            &self.penalties,
+            obs.turn,
+            board_digest(obs),
+            self.temperature,
+        );
+        let a = decode_action(idx);
         clock.mark(S_DECODE);
         // Free eval telemetry (port-plan §5): v1 play ignores the value.
         // Timed on its own because it is an unbuffered write per turn, and it
@@ -638,6 +677,9 @@ fn run_selfcheck() -> ! {
     match Seat::new(PAD, PAD) {
         Ok(mut seat) => {
             say("startup_ms", format!("{:.3}", began.elapsed().as_secs_f64() * 1e3));
+            // The selection knob, so a judge-side log or a round arm's
+            // registration can be checked without reading the environment.
+            say("temperature", format!("{}", seat.temperature));
             let text = selfcheck_input();
             let mut reader = std::io::Cursor::new(text.as_bytes());
             let mut obs = Observation::with_dims(PAD, PAD);

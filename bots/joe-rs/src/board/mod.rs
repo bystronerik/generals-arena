@@ -3,7 +3,9 @@
 //! `obs` is the port of the joe bot's observation pipeline — raw tensor,
 //! build cost, masks, the 39-channel augment, normalize — and `action` is the
 //! codec over the 10-channel head that turns a flat logit index back into an
-//! engine action.
+//! engine action. `select` is the played selection layer — deterministic
+//! Gumbel noise over the masked logits (selection-plan S1) — and the one
+//! stage of the move path that is joe-rs's own design rather than a port.
 //!
 //! **joe never simulates the board.** There is no `transition` here and there
 //! should not be one: the competition engine runs the game and sends a fogged
@@ -18,3 +20,4 @@
 
 pub mod action;
 pub mod obs;
+pub mod select;
