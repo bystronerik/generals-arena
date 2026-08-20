@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "weights": "ema.eqx",
-  "weights_sha256": "d5ac965156085c4289f6268fbb99e4b3ea67ae466f97c2c97eaf1f65ab93d9db",
+  "weights_sha256": "194b03860ef0c45fc2e808dce2394189e57ebc921a35a305bc893fb7bf635cdd",
   "weights_size": 54343528,
   "n_params": 13581658,
   "network": {
@@ -27,5 +27,7 @@
     "last_eval_wr": 0.9921875,
     "engine_sha": "9e3b9d13cca51caa1bb07db48bb85c9e90ce0462"
   },
-  "exported_at": 1787256506.3847182
+  "exported_at": 1787256506.3847182,
+  "pre_quantization_weights_sha256": "d5ac965156085c4289f6268fbb99e4b3ea67ae466f97c2c97eaf1f65ab93d9db",
+  "quantized": "f16"
 }
