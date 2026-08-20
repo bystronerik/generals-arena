@@ -111,7 +111,11 @@ S1 makes it deterministic.
 mutation plants, [parity.md](parity.md) grading row). At T = 1 the played
 move departs from the old argmax on 12.9% of corpus turns. The smoke
 decision stays a move (`selfcheck ok`, verified once as required below).
-Still open: the diagnostic-grid T shortlist and the rated round.
+Rated round `s1-gumbel-r1` (2026-08-20/21, vs the same network's argmax
+after joe dropped its penalty): **+3.78 ± 10.69, proven flat** —
+[joe-selection-s1](../../research/measurements/joe-selection-s1.md). T = 1
+stands; the T shortlist is moot unless the pending r2 replication
+disagrees.
 
 The Gumbel-max trick: `argmax_i(logits_i + T · G_i)` with i.i.d. standard
 Gumbel noise `G_i = −ln(−ln u_i)` is an **exact** sample from
