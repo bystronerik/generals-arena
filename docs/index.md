@@ -41,6 +41,7 @@ Small topic files for the Generals Arena research repo.
 - [joe-rs refactor](bots/joe-rs/refactor-plan.md) — the flat module list into io/board/nn subdirectories: the grouping, the pure-move rule, and the blast radius
 - [joe-rs latency](bots/joe-rs/latency.md) — full-path percentiles on one x86 core; why candle stays
 - [joe-rs packaging](bots/joe-rs/packaging.md) — J5 plan: the shared Rust packager, the measured zip budget, and what a submission still needs
+- [joe-rs move selection](bots/joe-rs/selection-plan.md) — S1 deterministic Gumbel selection (shipped 2026-08-20, T knob, self-golden harness), the anti-repetition design space, and the parked S2/S3 candidates
 - [joe-rs A/B sanity](research/measurements/joe-rs-ab-sanity.md) — matched arms vs the panel: 100 identical game pairs, verdict `no change`
 - [joe argmax limit cycle](research/measurements/joe-argmax-limit-cycle.md) — why joe walks a stack around its own castle: PPO sampled, deployment takes the argmax, and the escape never had to be learned; plus the repetition penalty that now ships and what it does **not** establish
 - [unclejoe fork plan](bots/unclejoe/fork-plan.md) — the joe-rs fork: copy strategy, own rating identity, and the U1 equality proof (built 2026-08-15)

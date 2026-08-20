@@ -90,7 +90,8 @@ mv data/joe/joe-rs-parity/games data/joe/joe-rs-parity/games.step<OLD>
 .venv/bin/python bots/joe-rs/tools/capture_fixtures.py --play
 .venv/bin/python bots/joe-rs/tools/make_synthetic_long.py  # needs the logs
 .venv/bin/python bots/joe-rs/tools/capture_fixtures.py --capture
-.venv/bin/python bots/joe-rs/tools/make_smoke_fixture.py   # committed fixture
+.venv/bin/python bots/joe-rs/tools/capture_fixtures.py --selection-golden
+.venv/bin/python bots/joe-rs/tools/make_smoke_fixture.py   # committed fixture + golden
 .venv/bin/pytest bots/joe-rs/tests/ -m joe
 .venv/bin/python bots/joe-rs/tools/mutation_check.py
 # One bot downstream: joe -> joe-rs -> unclejoe. It tracks joe-rs's converted
@@ -133,20 +134,24 @@ Expect the tier-2 relative pins in `tests/test_parity.py` to need
 re-measuring. They are a max over frames, so they do not transfer between
 corpora — a rebuilt corpus can exceed them with a checkpoint that passed
 before. Re-pin from the printed `[tier2]` line, then re-run
-`mutation_check.py`: 9/9 killed is what makes a looser pin defensible.
+`mutation_check.py`: 13/13 killed is what makes a looser pin defensible.
 
 The `.npz` surfaces are the JAX oracle's outputs for particular weights, and
 the committed smoke fixture is a slice of them, so both go stale the moment
-joe's weights change. A stale smoke fixture is the dangerous one: it is
-committed, so a clean checkout would compare the new binary against the old
-oracle's recorded replies.
+joe's weights change. The `<name>.joe-rs.log` self-goldens are the binary's
+own replies for particular weights *and* a particular selection layer
+(selection-plan S1), so they go stale on either change —
+`--selection-golden` rebuilds them, and `make_smoke_fixture.py` records the
+committed slice's. A stale committed fixture is the dangerous kind: a clean
+checkout would compare the new binary against the old recorded replies.
 
 **A capture or wire-replay mismatch is not always a weights problem.** joe's
 repetition penalty (`agent.py`, 2026-08-16) is a research feature that joe-rs
-deliberately does not carry, so deployed joe and joe-rs emit different moves
-on repeated cells *by design*. `capture_fixtures.py` mirrors the penalty only
-to check the `.out.log`; joe-rs is graded on the unpenalised `.npz` surfaces.
-Before chasing a mismatch as a port bug, read
-[parity.md](parity.md#what-parity-covers-the-network-not-joes-research-layer)
+deliberately does not carry; joe-rs plays its own Gumbel selection instead
+(2026-08-20), so the two bots emit different moves *by design*.
+`capture_fixtures.py` mirrors the penalty only to check the `.out.log`;
+joe-rs's network is graded on the unpenalised `.npz` surfaces and its played
+path on its own goldens. Before chasing a mismatch as a port bug, read
+[parity.md](parity.md#what-parity-covers-the-network-not-the-selection-layer)
 — on the step-29000 rebuild this looked exactly like a conversion fault and
 was not one.
