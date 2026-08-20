@@ -13,12 +13,14 @@ Two standing facts frame everything here:
    cause of the castle limit cycle
    ([joe-argmax-limit-cycle](../../research/measurements/joe-argmax-limit-cycle.md)).
 2. **joe-rs deliberately omits Python joe's repetition penalty**
-   (`REPEAT_PENALTY = 2.0`, `REPEAT_DECAY = 0.90` in `bots/joe/agent.py`
-   since 2026-08-16). This plan does **not** port that penalty — the Python
-   implementation is treated as one measured data point, not as a spec (see
-   S1's design-space review). The sibling divergence therefore **stays
-   deliberate and widens**: joe-rs gets its own selection layer, and the
-   parity boundary moves to the network output for every candidate (see
+   (`REPEAT_PENALTY = 2.0`, `REPEAT_DECAY = 0.90` in `bots/joe/agent.py`,
+   2026-08-16 to 2026-08-20). This plan does **not** port that penalty — the
+   Python implementation is treated as one measured data point, not as a spec
+   (see S1's design-space review). Python joe then removed it and went back to
+   the plain argmax, which does not change this plan: the review stands on the
+   diagnostic's numbers, not on what the sibling ships. The sibling divergence
+   **stays deliberate and widens**: joe-rs gets its own selection layer, and
+   the parity boundary moves to the network output for every candidate (see
    "Parity stance", once, below).
 
 Out of scope, all candidates: the stdio protocol, the export/artifact
@@ -71,18 +73,19 @@ remembers** (nothing / cells acted from / exact actions / board recurrence),
 **when it intervenes** (always-on vs detector-gated), and **how** (logit
 penalty / hard veto / restored randomness).
 
-Python joe's penalty is (cells-acted-from, always-on, logit penalty). Judged
-on the diagnostic's own numbers, it is a weak point in the space:
+Python joe's penalty was (cells-acted-from, always-on, logit penalty). Judged
+on the diagnostic's own numbers, it is a weak point in the space — and joe
+removed it on 2026-08-20 for these same reasons:
 
-- **Always-on distortion.** It perturbs the policy on every revisit, cycle
+- **Always-on distortion.** It perturbed the policy on every revisit, cycle
   or not — and the diagnostic measured cycling *increase* under it
   (14.0% → 18.1% of turns; longest span 17 → 29). The win came from cycling
   at positive value instead of negative. It works, but not by the stated
   mechanism — a bad foundation to copy.
-- **Unprincipled constants.** 2.0/0.90 are admitted guesses; outcomes are
+- **Unprincipled constants.** 2.0/0.90 were admitted guesses; outcomes are
   non-monotone in them (2.0 and 4.0 win, 3.0 loses on the diagnosed seed),
-  and `agent.py` itself forbids hand-tuning them.
-- **Granularity.** It penalises a cell's whole 10-channel action column,
+  and no round ever fitted them.
+- **Granularity.** It penalised a cell's whole 10-channel action column,
   builds included, because the bot recently *left* that cell.
 
 Other points considered and set aside: **exact-board-recurrence memory**
@@ -230,11 +233,11 @@ scope for this bot.
 
 ## Parity stance (one policy for every candidate)
 
-Nothing is ported, so the `.out.log` (deployed joe's penalised replies)
-never becomes joe-rs's reference and the sibling divergence stays
-deliberate. One harness policy covers S1–S3:
+Nothing is ported, so the `.out.log` (deployed joe's own replies) never
+becomes joe-rs's reference and the sibling divergence stays deliberate. One
+harness policy covers S1–S3:
 
-- **The graded contract stays the network**: tiers 1–2 and the unpenalised
+- **The graded contract stays the network**: tiers 1–2 and the
   `decide`/`forward`/`sequence` surfaces against the `.npz` oracle —
   unchanged, since no candidate touches `src/nn/`.
 - **The full played path gets a joe-rs self-golden**: the binary's own
@@ -308,8 +311,9 @@ the frozen baseline hash.
 
 ## Standing-divergence ledger (fact 2 resolved)
 
-joe-rs and deployed joe diverge on wire replays today (penalty omitted) and
-diverge **more** after any candidate here ships. The divergence is
+joe-rs and deployed joe diverge on wire replays today (Gumbel selection
+against joe's plain argmax) and diverge **more** after any candidate here
+ships. The divergence is
 deliberate, permanent under this plan, and documented in
 [parity.md](parity.md); the graded boundary is the network output, and the
 full-path reference is joe-rs's own golden, never the sibling's.

@@ -10,26 +10,27 @@ float tolerances cannot see precision bugs*.
 **joe-rs ports joe's network path. Selection above the network is joe-rs's
 own design, not a port.**
 
-Since 2026-08-16 `bots/joe/agent.py` applies a **repetition penalty** before
-its argmax: a decayed count of the cells joe moved from, subtracted from
-those cells' action logits (`REPEAT_PENALTY = 2.0`, `REPEAT_DECAY = 0.90`,
-commit `1f550ad`). It exists to break an argmax limit cycle. Since
-2026-08-20 joe-rs answers the same problem with **deterministic Gumbel
-selection** instead (`src/board/select.rs`, selection-plan S1): an exact
-sample of `softmax(logits / T)` whose noise is hashed from `(board digest,
-turn, action index)`, so the binary stays a pure function of the game.
-`JOE_RS_TEMPERATURE` sets T (default 1; 0 restores the plain argmax).
-Neither bot's selection is a spec for the other; the divergence is
-deliberate and documented in [selection-plan.md](selection-plan.md).
+`bots/joe/agent.py` takes the plain argmax of the network's masked logits.
+(It applied a **repetition penalty** first between 2026-08-16 and
+2026-08-20, commit `1f550ad`; that came out again — see
+[joe-argmax-limit-cycle](../../research/measurements/joe-argmax-limit-cycle.md).)
+Since 2026-08-20 joe-rs answers the limit cycle the penalty was written
+against with **deterministic Gumbel selection** (`src/board/select.rs`,
+selection-plan S1): an exact sample of `softmax(logits / T)` whose noise is
+hashed from `(board digest, turn, action index)`, so the binary stays a pure
+function of the game. `JOE_RS_TEMPERATURE` sets T (default 1; 0 restores the
+plain argmax). Neither bot's selection is a spec for the other; the
+divergence is deliberate and documented in
+[selection-plan.md](selection-plan.md).
 
 So the two bots emit different moves, by design. The consequence for this
 harness is specific and easy to trip over:
 
 | reference | what it is | who is graded on it |
 | --- | --- | --- |
-| `.npz` surfaces, incl. `all_action` | the **unpenalised** JAX oracle | joe-rs's network — every tier of `test_parity.py` |
+| `.npz` surfaces, incl. `all_action` | the JAX oracle: network out, greedy argmax | joe-rs's network — every tier of `test_parity.py` |
 | `<name>.joe-rs.log` | joe-rs's **own** recorded replies (Gumbel, default T) | joe-rs's full played path — `test_wire_replay.py` |
-| `.out.log` | what **deployed joe** actually replied, penalised | nobody grades joe-rs on this |
+| `.out.log` | what **deployed joe** actually replied | nobody grades joe-rs on this |
 
 `test_wire_replay.py` therefore compares the binary's whole stdout, byte for
 byte, against its own self-golden (`capture_fixtures.py
@@ -41,13 +42,14 @@ supposed to have — that is what happened on the step-29000 rebuild, at
 oracle's `all_action` argmax, which the noise deliberately departs from on
 near-ties (12.9% of corpus turns at T = 1).
 
-The `.out.log` still earns its keep: `capture_fixtures.py` mirrors the
-penalty (importing both constants from `agent.py`, never copying them) purely
-to recompute the penalised action and assert it against the recorded reply.
-That keeps the recorded games honest about the deployed path while leaving
-every surface joe-rs sees unpenalised. If the penalty is ever retuned, the
-import follows it; if it is ever ported to joe-rs, this whole section and
-`test_wire_replay.py`'s reference both have to change.
+The `.out.log` still earns its keep: `capture_fixtures.py` asserts the
+recomputed reply against the recorded one, turn for turn, which keeps the
+recorded games honest about the deployed path. Python joe plays the argmax,
+so that check now compares the capture with itself. It has one operational
+edge: **the logs must come from the current joe.** A corpus recorded before
+joe's selection last changed — the penalty removal on 2026-08-20 is the most
+recent such change — fails the check on every turn the old program differed.
+Re-play those games; do not debug the capture.
 
 ## Corpus
 

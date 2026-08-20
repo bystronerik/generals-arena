@@ -43,7 +43,7 @@ Small topic files for the Generals Arena research repo.
 - [joe-rs packaging](bots/joe-rs/packaging.md) — J5 plan: the shared Rust packager, the measured zip budget, and what a submission still needs
 - [joe-rs move selection](bots/joe-rs/selection-plan.md) — S1 deterministic Gumbel selection (shipped 2026-08-20, T knob, self-golden harness), the anti-repetition design space, and the parked S2/S3 candidates
 - [joe-rs A/B sanity](research/measurements/joe-rs-ab-sanity.md) — matched arms vs the panel: 100 identical game pairs, verdict `no change`
-- [joe argmax limit cycle](research/measurements/joe-argmax-limit-cycle.md) — why joe walks a stack around its own castle: PPO sampled, deployment takes the argmax, and the escape never had to be learned; plus the repetition penalty that now ships and what it does **not** establish
+- [joe argmax limit cycle](research/measurements/joe-argmax-limit-cycle.md) — why joe walks a stack around its own castle: PPO sampled, deployment takes the argmax, and the escape never had to be learned; plus the repetition penalty that shipped for four days and what it never established
 - [unclejoe fork plan](bots/unclejoe/fork-plan.md) — the joe-rs fork: copy strategy, own rating identity, and the U1 equality proof (built 2026-08-15)
 - [unclejoe tactics plan](bots/unclejoe/tactics-plan.md) — the layer on top of the fork: proof-gated override, castle/refutation filters, afterstate value re-rank, full-budget clock plan
 - [unclejoe shadow measurements](bots/unclejoe/shadow.md) — what the layer would have done while it did nothing: trigger rates (U2), what the proofs proved (U3), and U4's **no-go** on the value re-rank

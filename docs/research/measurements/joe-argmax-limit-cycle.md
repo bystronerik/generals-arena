@@ -225,23 +225,33 @@ to +0.815), and seed 0 built two and won at turn 288. The castle is the
 *occasion*, not the cause; removing it would forfeit real value and leave the
 argmax/sampling mismatch in place to resurface elsewhere.
 
-## Implemented: remedy 3, the repetition penalty (2026-08-16)
+## Tried and removed: remedy 3, the repetition penalty (2026-08-16 to 2026-08-20)
 
-Joe now keeps a decayed per-cell count of the cells it moved *from*
-(`REPEAT_PENALTY = 2.0`, `REPEAT_DECAY = 0.90`) and subtracts it from every
-action logit at those cells before the argmax. No randomness: joe stays a
+Joe kept a decayed per-cell count of the cells it moved *from*
+(`REPEAT_PENALTY = 2.0`, `REPEAT_DECAY = 0.90`) and subtracted it from every
+action logit at those cells before the argmax. No randomness: joe stayed a
 deterministic function of the game. Builds and passes carry no cell, so neither
-accumulates.
+accumulated.
 
-**The mechanism is proven, at unit level.** `test_repetition_penalty_breaks_a_
-frozen_board` replays one mid-game frame forever. The network settles on a
+**Commit `1f550ad` added it. It was removed on 2026-08-20**, and joe is the
+plain network path again: one forward pass, one argmax over the masked head.
+The reason is the "What is not established" list below, which the penalty never
+cleared — no measurement round, two unfitted constants, and a *rise* in the
+symptom it was written against. Work on the limit cycle moved to the Rust
+sibling, which answers it with deterministic Gumbel selection
+([selection-plan](../../bots/joe-rs/selection-plan.md) S1) and reviews this
+penalty as one point in the design space. The numbers below stay on the record
+as what one arm of one grid did.
+
+**The mechanism was proven, at unit level.** `test_repetition_penalty_breaks_a_
+frozen_board` replayed one mid-game frame forever. The network settles on a
 single action and returns it for 22 of 24 turns — the limit cycle in its purest
-form — and the penalty breaks it. That is a controlled demonstration; everything
-below is not.
+form — and the penalty broke it. That was a controlled demonstration; the rest
+of this section is not. The test came out with the penalty.
 
 **Outcomes on the 10-game grid** (seeds 0-4 × both seats, macaria):
 
-| | Baseline | With penalty |
+| | Baseline (and today) | With penalty |
 | --- | ---: | ---: |
 | Wins | 9/10 | **10/10** |
 | Mean turns | 340 | 368 |
@@ -282,7 +292,7 @@ while the economy compounds is not the failure that was diagnosed.
   system into a luckier trajectory" are not distinguishable at this sample size.
   The unit test settles the mechanism; only a round can settle the outcome.
 
-Latency is unaffected — the penalty is one array subtract inside the existing
+Latency was unaffected — the penalty was one array subtract inside the existing
 jit. Local full-path percentiles over 2 games: p50 5.5 ms, p99 9.5 ms, max
 13.7 ms, against a 150 ms budget.
 
@@ -291,19 +301,17 @@ jit. Local full-path percentiles over 2 games: p50 5.5 ms, p99 9.5 ms, max
 - `bots/joe/probe.py` — top-5 decoded logits, top1−top2 margin, softmax entropy,
   p(top-1), value head, logit-vector hash, move/build mask sizes, cell revisits,
   detected cycle period.
-- `bots/joe/agent.py` — the jitted `step` closure now returns the logits, value,
+- `bots/joe/agent.py` — the jitted `step` closure returns the logits, value,
   and both masks alongside the action so the probe has something to read. The
   action is the same argmax of the same logits; `pytest -m joe
   bots/joe/tests/test_wire_fidelity.py` passes, including
   `test_agent_matches_training_eval_path`, which pins the greedy action to the
   training path. **This forks joe's content hash and therefore its rating
   identity**, as accepted in the task.
-- `arena/records/telemetry_schema.py` — twelve `joe_*` keys declared.
-  `joe_top5`, `joe_margin_milli` and `joe_entropy_milli` describe the network's
-  raw preference, before the penalty. `joe_cycle_period` and
-  `joe_cell_revisits` describe the action joe **played**, after it — reading
-  those two off the raw argmax would report whether the network cycles while the
-  penalty was busy making sure the bot does not.
+- `arena/records/telemetry_schema.py` — ten `joe_*` keys declared. Every one of
+  them reads the network's own preference and the action joe played, which are
+  the same action again since the penalty came out. (The penalty added two more
+  keys, `joe_reppen_overrode` and `joe_visit_peak_milli`; both went with it.)
 - `scripts/inspect_joe_{oscillation,confinement,window,castle_pull,frontier}.py`
   — the read side.
 

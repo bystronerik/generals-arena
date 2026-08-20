@@ -223,7 +223,7 @@ def test_agent_matches_training_eval_path(deps):
 
     env = deps.small_env()
     agent = deps.Agent(player_id=0, H=10, W=10)
-    ref = {"st": deps.train_nets.init_obs_state(int(arch["pad_to"])), "n": 0}
+    ref = {"st": deps.train_nets.init_obs_state(int(arch["pad_to"]))}
 
     def check(state, t):
         obs = deps.get_observation(state, 0)
@@ -243,84 +243,6 @@ def test_agent_matches_training_eval_path(deps):
             want = (1, 0, 0, 0, 0)
 
         got = agent.act(deps.wire_roundtrip(obs))
-
-        # The inference stack is pinned on the *unpenalised* logits: whatever
-        # the repetition penalty does to the selection, the network the bot runs
-        # must still be the network training ran, fed the same tensor.
-        assert int(jnp.argmax(agent.logits)) == int(jnp.argmax(
-            deps.train_transformer.HistoryTransformer._forward(
-                ref_net, aug, move, build, temporal)[0])), (
-            f"step {t}: the bot's logits disagree with the training path")
-
-        # The emitted action may differ from the greedy one only when the
-        # penalty says so, and never on the first move, where visits are zero.
-        if not bool(agent.overrode):
-            assert got == want, f"step {t}: agent {got} != training path {want}"
-        else:
-            ref["n"] += 1
-        if t == 0:
-            assert not bool(agent.overrode), "first move must be the raw argmax"
+        assert got == want, f"step {t}: agent {got} != training path {want}"
 
     deps.play(env, num_steps=15, on_state=check)
-
-
-# ---- 4. The repetition penalty ----
-
-
-@pytest.mark.skipif(not (ARTIFACT_DIR / "ema.eqx").exists(),
-                    reason="no exported artifact (scripts/joe_export_bot.py)")
-def test_repetition_penalty_breaks_a_frozen_board(deps):
-    """A board that never changes must not produce an action that never changes.
-
-    This is the limit cycle in its purest form: the network is a deterministic
-    function of the observation, so replaying one frame forever pins the raw
-    argmax to a single action. Only the visit counter can break it, which makes
-    this a direct test of the fix rather than of the policy.
-    """
-    jnp, np = deps.jnp, deps.np
-    from collections import Counter
-
-    # Replay one mid-game frame, not the opening: on turn 0 joe holds a single
-    # army and can only pass, and pass carries no cell, so by design it never
-    # accumulates a penalty and this test would pass while measuring nothing.
-    env = deps.small_env()
-    frame = {}
-    deps.play(env, num_steps=40, on_state=lambda state, t: frame.__setitem__(
-        "f", deps.wire_roundtrip(deps.get_observation(state, 0))))
-
-    agent = deps.Agent(player_id=0, H=10, W=10)
-    assert agent.act(frame["f"]) is not None
-    assert not bool(agent.overrode), "a fresh agent must take the raw argmax"
-
-    raw, emitted, overrides = [], [], 0
-    for _ in range(24):
-        emitted.append(agent.act(frame["f"]))
-        raw.append(int(jnp.argmax(agent.logits)))
-        overrides += int(bool(agent.overrode))
-
-    # The frame never changes, so the network settles on one preferred action
-    # and keeps returning it. That fixed preference is the thing to break; if it
-    # is absent this fixture has stopped reproducing the pathology.
-    choice, repeats = Counter(raw).most_common(1)[0]
-    assert repeats >= 10, (
-        f"the network did not settle on a frozen board ({repeats}/24 repeats); "
-        f"this fixture no longer reproduces the limit cycle")
-
-    assert overrides > 0, (
-        "the penalty never fired on a frozen board: joe would still cycle")
-    stuck = sum(1 for i, a in zip(raw, emitted)
-                if i == choice and a == emitted[raw.index(choice)])
-    assert stuck < repeats, (
-        f"joe emitted the frozen action {stuck} times while the network asked "
-        f"for it {repeats} times: the penalty did not break the repeat")
-    assert len(set(emitted)) > 1, (
-        "joe emitted a single action on every turn of a frozen board")
-
-    # The penalty must stay bounded, or a long game could eventually push a
-    # legal action below the -1e9 the masks use for illegal ones. Repeated
-    # +1-then-decay is geometric, so it can never pass 1 / (1 - decay).
-    from agent import REPEAT_DECAY, REPEAT_PENALTY
-    cap = 1.0 / (1.0 - REPEAT_DECAY)
-    peak = float(np.asarray(agent.visits).max())
-    assert peak <= cap, f"visit count {peak} passed the geometric bound {cap}"
-    assert REPEAT_PENALTY * cap < 1e6, "penalty could reach the mask sentinel"

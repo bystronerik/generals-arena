@@ -90,12 +90,7 @@ def extras(agent) -> dict:
     nz = probs[probs > 0]
     entropy = float(-(nz * np.log(nz)).sum())
 
-    # Cycle and revisit series track the action joe **played**, which is the
-    # penalised argmax, not the raw one the top-5 describes. Reading them off
-    # `joe_top5` would report whether the *network* cycles while the repetition
-    # penalty was busy making sure the *bot* does not — the opposite of the
-    # question these two keys exist to answer.
-    d1, r1, c1 = _decode(int(np.asarray(agent.action_idx)), pad_to)
+    d1, r1, c1 = _decode(top[0][0], pad_to)
     _recent_cells.append((r1, c1))
     _recent_actions.append((d1, r1, c1))
     del _recent_cells[:-_WINDOW], _recent_actions[:-_WINDOW]
@@ -120,13 +115,6 @@ def extras(agent) -> dict:
             logits.tobytes(), digest_size=8).hexdigest(),
         "joe_move_cells": int(move_mask.sum()),
         "joe_build_cells": int(build_mask.sum()),
-        # The repetition penalty: whether it moved the decision this turn, and
-        # how much penalty has piled up on the worst cell. Reported as a pair
-        # for the same reason macaria reports (searched, overrode) — "never
-        # fired" and "fired and agreed" are different faults with one symptom.
-        "joe_reppen_overrode": 1 if bool(agent.overrode) else 0,
-        "joe_visit_peak_milli": round(
-            float(np.asarray(agent.visits).max()) * 1000),
         # How many of the last _WINDOW turns already acted from this same cell.
         "joe_cell_revisits": _recent_cells[:-1].count((r1, c1)),
         "joe_cycle_period": _cycle_period(_recent_actions),

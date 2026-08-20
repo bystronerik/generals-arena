@@ -7,8 +7,8 @@
 //! selection-plan S1): an exact sample of `softmax(logits / T)` whose noise
 //! is hashed from the frame, so the bot stays a pure function of the game.
 //! `JOE_RS_TEMPERATURE` sets T (default 1 — the distribution training
-//! sampled; 0 restores the plain argmax). The Python sibling argmaxes
-//! penalised logits instead; the divergence is deliberate
+//! sampled; 0 restores the plain argmax). The Python sibling takes the plain
+//! argmax; the divergence is deliberate
 //! (docs/bots/joe-rs/selection-plan.md).
 //!
 //! `joe-rs parity <surface>` runs one ported surface over fixture cases

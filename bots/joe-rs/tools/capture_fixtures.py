@@ -10,7 +10,9 @@ Three phases:
    the deployed bot runs, under `eqx.filter_jit` like the deployed step —
    and dump per-turn surfaces to a `.npz`. The recomputed greedy replies are
    cross-checked against the recorded `.out.log`; any mismatch means the
-   capture path diverged from deployment and the tool aborts.
+   capture path diverged from deployment and the tool aborts. The logs must
+   come from the current `bots/joe`: a corpus recorded before joe's selection
+   last changed fails this check. Re-play such a corpus, do not debug it.
 3. **Self-golden** (`--selection-golden`): run the joe-rs release binary in
    wire mode over every `.in.log` and record its own replies as
    `<name>.joe-rs.log` — the reference `tests/test_wire_replay.py` grades
@@ -160,13 +162,9 @@ def capture_game(name: str, out_dir: Path, stride_target: int = 40) -> None:
     import jax.random as jrandom
 
     from _common.wire import Observation
-    # The two penalty constants are imported, never copied: this file has to
-    # reproduce agent.py's emitted move exactly, and a second literal here
-    # would drift the moment either is retuned.
-    from agent import REPEAT_DECAY, REPEAT_PENALTY, frame_to_raw
+    from agent import frame_to_raw
     from joe_net import HistoryTransformer
     from joe_obs import (
-        N_ACTION_CHANNELS,
         augment_obs,
         build_cost_from_raw,
         compute_build_mask_from_raw,
@@ -191,19 +189,14 @@ def capture_game(name: str, out_dir: Path, stride_target: int = 40) -> None:
     pad_to = int(arch["pad_to"])
 
     @eqx.filter_jit
-    def capture_step(net, raw, obs_state, visits):
+    def capture_step(net, raw, obs_state):
         """agent.py::step with every intermediate returned.
 
-        Every surface here is the **unpenalised** network path, because that
-        is what joe-rs ports. joe's repetition penalty (agent.py, added
-        2026-08-16) is a research layer on top of the net, deliberately left
-        out of the port, so grading the Rust binary against a penalised
-        oracle would fail it for a difference it is supposed to have.
-
-        `penalised_action` is the one exception. It is not stored in the
-        .npz and joe-rs never sees it; it exists only so the recorded
-        .out.log still cross-checks this capture against the deployed path.
-        Without it the assertion below would compare two different programs.
+        Python joe is the plain network path again: one forward pass, then the
+        argmax of its logits. (A repetition penalty sat between those two
+        steps from 2026-08-16 to 2026-08-20; it is gone.) So `action` is both
+        what joe-rs is graded against and what the deployed bot replied, and
+        the `.out.log` cross-check below compares one program with itself.
         """
         cost = build_cost_from_raw(raw)
         aug, new_state = augment_obs(raw, cost, obs_state)
@@ -215,20 +208,9 @@ def capture_game(name: str, out_dir: Path, stride_target: int = 40) -> None:
         idx = jnp.argmax(logits)
         action = decode_action(idx, pad_to)
 
-        # agent.py::step, from the penalty to the decayed count, mirrored.
-        penalised = (logits.reshape(N_ACTION_CHANNELS, pad_to, pad_to)
-                     - REPEAT_PENALTY * visits[None, :, :]).reshape(-1)
-        p_idx = jnp.argmax(penalised)
-        cells = pad_to * pad_to
-        channel, position = p_idx // cells, p_idx % cells
-        row, col = position // pad_to, position % pad_to
-        new_visits = (visits * REPEAT_DECAY).at[row, col].add(
-            jnp.where(channel < 8, 1.0, 0.0))
-
         return dict(cost=cost, aug=aug, move=move, build=build, temporal=temporal,
                     logits=logits, value=value, value_bins=value_bins,
-                    idx=idx, action=action,
-                    penalised_action=decode_action(p_idx, pad_to)), new_state, new_visits
+                    idx=idx, action=action), new_state
 
     player_id, H, W, frames = parse_in_log(out_dir / f"{name}.in.log")
     out_log = out_dir / f"{name}.out.log"
@@ -252,9 +234,6 @@ def capture_game(name: str, out_dir: Path, stride_target: int = 40) -> None:
 
     state = init_obs_state(int(arch["pad_to"]))
     state_fields = state._fields
-    # agent.py drops the warm-up compile's counts, so a real game starts from
-    # zeros here too — which is why joe's first move is the plain argmax.
-    visits = jnp.zeros((pad_to, pad_to), dtype=jnp.float32)
 
     all_hash = np.zeros(T, dtype=np.int64)
     all_action = np.zeros((T, 5), dtype=np.int32)
@@ -275,7 +254,7 @@ def capture_game(name: str, out_dir: Path, stride_target: int = 40) -> None:
         if t in sampled:
             for k, v in zip(state_fields, state):
                 state_in_frames[f"state_{k}"].append(np.asarray(v))
-        outs, state, visits = capture_step(net, raw, state, visits)
+        outs, state = capture_step(net, raw, state)
 
         aug_np = np.asarray(outs["aug"], dtype=np.float32)
         all_hash[t] = aug_hash(aug_np)
@@ -286,13 +265,11 @@ def capture_game(name: str, out_dir: Path, stride_target: int = 40) -> None:
 
         # The deployed reply (after agent.py's pass clamp) must match what
         # the live game recorded, or this capture is not the deployed path.
-        # This is the *penalised* action: the .out.log was recorded by the
-        # deployed joe, which applies the penalty. The surfaces above stay
-        # unpenalised — joe-rs is graded on the net, not on joe's research
-        # layer — so these two deliberately differ on repeated cells.
+        # A whole game of mismatches usually means the logs are older than the
+        # bot: re-play them (delete the game and run --play) before reading it
+        # as a capture bug.
         if replies is not None:
-            p, r, c, d, s = (int(x) for x in
-                             np.asarray(outs["penalised_action"], dtype=np.int32))
+            p, r, c, d, s = (int(x) for x in action)
             reply = (1, 0, 0, 0, 0) if p == 1 else (p, r, c, d, s)
             recorded = tuple(int(x) for x in replies[t].split())
             assert reply == recorded, \
@@ -331,11 +308,10 @@ def capture_game(name: str, out_dir: Path, stride_target: int = 40) -> None:
 def record_selection_goldens(out_dir: Path) -> None:
     """Record the joe-rs binary's own wire replies for every recorded game.
 
-    Since the selection layer shipped (selection-plan S1), neither sibling
-    predicts the played move: the unpenalised oracle argmax (`all_action`)
-    diverges wherever the Gumbel noise flips a near-tie, and the `.out.log`
-    records deployed joe's penalised program. The full played path is
-    therefore graded against the binary's **own** replies. Selection is a
+    Since the selection layer shipped (selection-plan S1), the oracle does not
+    predict the played move: the argmax (`all_action`, which deployed joe also
+    plays) diverges wherever the Gumbel noise flips a near-tie. The full played
+    path is therefore graded against the binary's **own** replies. Selection is a
     deterministic function of the frame stream, so this file is byte-stable
     until the network or the selection layer changes on purpose — and both
     changes regenerate it here, alongside the other fixtures.

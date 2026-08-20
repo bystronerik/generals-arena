@@ -4,11 +4,10 @@ recorded games, against its own recorded replies (selection-plan S1).
 Each corpus game's `.in.log` is exactly what the engine sent Python joe;
 piping it to `joe-rs` in wire mode exercises the shipped path — stdio parse,
 state accumulation under the bot's *own* state, forward, Gumbel selection,
-and the pass clamp. Since the selection layer shipped, no sibling predicts
-the played move: the unpenalised oracle argmax (`all_action`) diverges
-wherever the noise flips a near-tie, and deployed joe's `.out.log` records
-the penalised program joe-rs deliberately is not. The reference is therefore
-the binary's **own** replies, recorded by `capture_fixtures.py
+and the pass clamp. Since the selection layer shipped, the oracle does not
+predict the played move: the greedy argmax (`all_action`, which Python joe
+plays) diverges wherever the noise flips a near-tie. The reference is
+therefore the binary's **own** replies, recorded by `capture_fixtures.py
 --selection-golden` as `<name>.joe-rs.log`.
 
 Selection is a deterministic function of the frame stream, so the whole

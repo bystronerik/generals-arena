@@ -145,13 +145,12 @@ own replies for particular weights *and* a particular selection layer
 committed slice's. A stale committed fixture is the dangerous kind: a clean
 checkout would compare the new binary against the old recorded replies.
 
-**A capture or wire-replay mismatch is not always a weights problem.** joe's
-repetition penalty (`agent.py`, 2026-08-16) is a research feature that joe-rs
-deliberately does not carry; joe-rs plays its own Gumbel selection instead
-(2026-08-20), so the two bots emit different moves *by design*.
-`capture_fixtures.py` mirrors the penalty only to check the `.out.log`;
-joe-rs's network is graded on the unpenalised `.npz` surfaces and its played
-path on its own goldens. Before chasing a mismatch as a port bug, read
+**A capture or wire-replay mismatch is not always a weights problem.** joe-rs
+plays its own Gumbel selection (2026-08-20) while Python joe takes the plain
+argmax, so the two bots emit different moves *by design*. joe-rs's network is
+graded on the `.npz` surfaces and its played path on its own goldens. Before
+chasing a mismatch as a port bug, read
 [parity.md](parity.md#what-parity-covers-the-network-not-the-selection-layer)
 — on the step-29000 rebuild this looked exactly like a conversion fault and
-was not one.
+was not one. A `.out.log` mismatch inside `capture_fixtures.py` has one more
+cause: logs older than joe's current selection layer. Re-play them.
