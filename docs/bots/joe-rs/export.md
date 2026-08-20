@@ -62,9 +62,9 @@ Since 2026-08-18 the lineage is f16-in-f32: after fetching a new `.eqx`
 from R2, `bots/joe/tools/quantize_artifact.py` rounds every weight through
 IEEE f16 **before anything downstream runs**. The values stay float32 on
 disk; only their precision changes. The `.eqx` is the single quantization
-point — joe loads it directly, the converter below reads the same rounded
-leaves, and the fan-out copies the resulting bytes — so no loader rounds at
-run time and there is one rounding implementation in the repo.
+point — joe loads it directly and the converter below reads the same rounded
+leaves — so no loader rounds at run time and there is one rounding
+implementation in the repo.
 
 Joe's manifest records the step: `quantized: "f16"`,
 `pre_quantization_weights_sha256` (the R2 f32 original), and
@@ -94,36 +94,26 @@ mv data/joe/joe-rs-parity/games data/joe/joe-rs-parity/games.step<OLD>
 .venv/bin/python bots/joe-rs/tools/make_smoke_fixture.py   # committed fixture + golden
 .venv/bin/pytest bots/joe-rs/tests/ -m joe
 .venv/bin/python bots/joe-rs/tools/mutation_check.py
-# One bot downstream: joe -> joe-rs -> unclejoe. It tracks joe-rs's converted
-# artifact, not joe's .eqx, because the joe-rs vs unclejoe contrast has to
-# isolate the tactics layer, and it isolates nothing unless the arms run
-# identical weights.
-.venv/bin/python scripts/joe_artifact_fanout.py
-cargo build --release --manifest-path bots/unclejoe/Cargo.toml
-.venv/bin/pytest tests/test_joe_source_fanout.py
+.venv/bin/pytest tests/test_joe_artifact_manifest.py
 ```
 
-Nothing detects a skipped sync at play time — a downstream bot would load the
-older weights, play, and look healthy — so the step belongs here or nowhere.
-`joe_artifact_fanout.py` verifies `safetensors_sha256` on both sides and writes
-the weights through a temporary file, which makes a *partial* sync (manifest
-copied, weights not) fail loudly instead of playing. `--check` answers "is
-every downstream current?" without writing, and `--bot <name>` narrows it to
-one. `bots/unclejoe/tools/sync_artifact.py` still does unclejoe alone and is
-unchanged.
-
-`morpheus-joe` was a second downstream bot, carrying both the weights and a
-byte-identical copy of `bots/joe-rs/src/`. It was removed on 2026-08-18, so the
-fan-out and the source-identity assertion have one subject less. A sync forks the downstream bot's content hash, exactly as a
-re-conversion forks joe-rs's; the registry records it.
-
-**The checklist is not the mechanism.** Discipline is what failed here twice,
-so `tests/test_joe_source_fanout.py` runs in the default suite and turns a
-skipped step into a red result: it compares every downstream manifest's digest
-against joe-rs's and checks each manifest against the bytes beside it. It costs
-milliseconds. Note the consequence for a measurement round: a sync
+**No bot is downstream of joe-rs any more.** Two forks carried a byte copy of
+these weights and both are gone: `morpheus-joe` on 2026-08-18, `unclejoe` on
+2026-08-20. With them went the copy tool `scripts/joe_artifact_fanout.py` and
+the staleness comparison it fed. Nothing detects a stale copy at play time — a
+downstream bot loads the older weights, plays, and looks healthy — so a new
+fork restores the tool, the checklist line, and the test, and reads
+`joe-net-plan` §8.7 first. A sync forks the downstream bot's content hash,
+exactly as a re-conversion forks joe-rs's; the registry records it, and a sync
 between two rounds of the same contrast **voids both**, because the arms are
 then different programs (joe-net-plan §8.7, §9).
+
+**The checklist is not the mechanism.** Discipline is what failed here twice,
+so `tests/test_joe_artifact_manifest.py` runs in the default suite and turns a
+skipped step into a red result. What survives the forks is the half that a
+digest comparison could never see anyway: it checks joe-rs's own manifest
+against the bytes beside it, which catches a manifest that landed before its
+weights or beside a truncated file. It costs milliseconds.
 
 `--play` and `--capture` are split so `make_synthetic_long.py` can run
 between them: it needs the natural games' `.in.log` files to pick the

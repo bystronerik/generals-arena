@@ -1,5 +1,11 @@
 # unclejoe shadow measurements
 
+> **The bot was removed on 2026-08-20.** `bots/unclejoe/`, `fork-plan.md`, and
+> `tactics-plan.md` exist only in git history from that date, so the links to
+> those two pages below are dead on disk. This page stays because it is the
+> evidence of rounds that ran: read it as a record, not as a description of a
+> bot in the tree.
+
 What the tactics layer *would* have done, measured while it did nothing. The
 milestones that end in a shadow report write their sections here:
 [tactics-plan.md](tactics-plan.md) §7 — U2 (triggers) below, U3 (what the

@@ -924,6 +924,14 @@ into morpheus-rs's content hash ([packaging.md](packaging.md)). The fork's
 
 ### 8.7 Artifact fan-out: the fifth surface
 
+> Written while two forks carried a byte copy of joe-rs's weights. Both are
+> gone — `morpheus-joe` on 2026-08-18, `unclejoe` on 2026-08-20 — and with
+> `unclejoe` went `bots/unclejoe/tools/sync_artifact.py` and the shared
+> `scripts/joe_artifact_fanout.py` this section asked for, which was built and
+> is in git history. A joe re-export now staleens three things, not four. The
+> reasoning below is unchanged and applies to the next fork that carries a
+> copy; only the file names have to come back.
+
 A joe re-export already silently staleens four things (`joe-rs`'s
 safetensors, the JAX parity corpus, the committed smoke fixture, and
 unclejoe's byte copy). `bots/morpheus-joe/artifact/` is the fifth.
@@ -1147,7 +1155,8 @@ is worth knowing before N3 reads them: `sequence` is weight-independent — the
 augmented tensor is a function of the frames alone — so a rebuilt corpus
 re-gates it and it still passes. The wire replay compares *decisions*, so it
 goes red until `scripts/joe_artifact_fanout.py` puts both bots on one
-checkpoint. That is R6 working, not a flake.
+checkpoint (that script was removed on 2026-08-20 with the last downstream
+bot; see §8.7). That is R6 working, not a flake.
 
 **Four things N2 found that this plan did not say.**
 

@@ -1,9 +1,0 @@
-# Pinned to the competition sandbox's toolchain (port-plan §1): rustc/cargo
-# 1.97 stable, no network. This file never ships in a submission zip — the
-# sandbox has no toolchain manager, and an unexpected pin fails the offline
-# build (the morpheus-rs §15 trap).
-[toolchain]
-channel = "1.97.1"
-components = ["rustfmt", "clippy"]
-targets = ["x86_64-unknown-linux-musl"]
-profile = "minimal"

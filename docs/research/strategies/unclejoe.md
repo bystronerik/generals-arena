@@ -1,5 +1,11 @@
 # unclejoe — joe-rs's network, with the whole turn budget spent on top of it
 
+> **The bot was removed on 2026-08-20.** `bots/unclejoe/`,
+> `bots/unclejoe/fork-plan.md`, and `bots/unclejoe/tactics-plan.md` exist only
+> in git history from that date, so the links to those two pages below are dead
+> on disk. This spec stays as the record of what the bot claimed and what the
+> shadow measurements tested.
+
 Spec, written before the tactics code; revised 2026-08-15 after a design
 review changed the goal from "override rarely, finish early" to "spend the
 whole 150 ms turn budget". Bot: `bots/unclejoe/`. Substrate and milestone U1:
