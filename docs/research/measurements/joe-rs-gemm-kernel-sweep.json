@@ -1,0 +1,41 @@
+{
+  "date": "2026-08-20",
+  "method": "all contrasts are same-host and in-run; Modal fleet generations differ run to run, so cross-run absolute numbers are not comparable",
+  "microbench_sweep": {
+    "host": "Modal x86 1 core, gVisor, rustc 1.97.1 --edition 2021 -O -C target-cpu=x86-64-v3",
+    "shapes": "the depth-7 / ff x4 graph GEMMs, per-forward call counts, min-of-3 timing",
+    "bit_identical_to_baseline": true,
+    "gemm_ms_per_forward": {
+      "baseline_safe_mr4": 33.25,
+      "safe_mr5": 45.87,
+      "safe_mr6": 46.23,
+      "safe_mr8": 56.42,
+      "avx2_mr4": 23.59,
+      "avx2_mr6": 23.83,
+      "avx2_mr8": 45.24
+    }
+  },
+  "e2e_contrast_run_1_slow_host": {
+    "order": "pristine then patched, one round",
+    "pristine_bench": "turns 2400 startup_ms 516.1 p50 77.13 p90 88.28 p99 101.10 max 132.49",
+    "patched_bench": "turns 2400 startup_ms 238.0 p50 50.11 p90 57.17 p99 64.97 max 95.99",
+    "replies_identical": true
+  },
+  "e2e_contrast_run_2_fast_host": {
+    "order": "interleaved A/B/A/B",
+    "pristine_bench_1": "turns 2400 startup_ms 140.0 p50 29.14 p90 31.05 p99 31.39 max 36.94",
+    "patched_bench_1": "turns 2400 startup_ms 112.2 p50 23.53 p90 25.05 p99 25.78 max 32.19",
+    "pristine_bench_2": "turns 2400 startup_ms 127.9 p50 29.50 p90 30.63 p99 31.30 max 33.47",
+    "patched_bench_2": "turns 2400 startup_ms 116.7 p50 24.05 p90 24.97 p99 25.58 max 28.32",
+    "replies_identical": true
+  },
+  "m7f4_baseline_standalone_run": {
+    "source": "joe-rs-latency-modal.json, scripts/joe_rs_modal_bench.py",
+    "bench_stdout": "turns 2400 startup_ms 222.3 p50 46.49 p90 49.66 p99 52.43 max 60.68"
+  },
+  "arm64_dev_box": {
+    "pristine_p50_ms": 36.51,
+    "patched_p50_ms": 36.51,
+    "note": "portable path unchanged; the avx module compiles out on aarch64"
+  }
+}

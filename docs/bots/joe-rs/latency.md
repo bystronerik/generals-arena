@@ -66,13 +66,36 @@ that is what arrived. p99 is 21% of the 150 ms move budget and 64% of J3's
 50 ms target; R1's 75 ms tripwire is not near. Startup grew 62 -> 73.5 ms on a
 35% larger artifact.
 
-Not yet measured on Modal x86 one core, which is the authoritative host and ran
-slightly *faster* than this arm64 dev box at depth 5 (p50 21.4 vs 22.2 ms).
-Run `scripts/joe_rs_modal_bench.py` to confirm before a rated round.
+Measured on Modal x86 on 2026-08-20 — see the next section.
+
+## Results (2026-08-20, M7F4 on Modal x86 + the AVX2 kernel)
+
+The M7F4 re-baseline on Modal x86 one core:
+
+| host | p50 | p90 | p99 | max | startup |
+| --- | --- | --- | --- | --- | --- |
+| Modal x86, 1 core | 46.49 ms | 49.66 ms | 52.43 ms | 60.68 ms | 222 ms |
+
+p99 52.43 ms passed J3's 50 ms target for the first time, which prompted a
+GEMM kernel sweep the same day. The adopted result is an AVX2+FMA
+intrinsics tile path in `gemm.rs`, runtime-detected, bit-identical to the
+portable kernel (replies over the full `synthetic-long` stream are
+byte-identical). Same-host interleaved contrast: **1.23×** end-to-end on a
+fast fleet generation (29.3 -> 23.8 ms p50), **1.54×** on a slow one
+(77.1 -> 50.1 ms). Sweep table, method, and the safe-tile dead end:
+[joe-rs-gemm-kernel-sweep](../../research/measurements/joe-rs-gemm-kernel-sweep.md).
+
+**Fleet variance caveat, now measured:** identical pristine code hit 29.1,
+46.5, and 77.1 ms p50 across three Modal runs on one day. A cross-run
+delta measures the fleet, not the code — only same-host in-run contrasts
+are trustworthy, and every single-number row in this file carries that
+uncertainty. The arm64 dev box is unaffected by the kernel change
+(36.51 ms p50 before and after; the portable path is untouched).
 
 Raw record: `docs/research/measurements/joe-rs-latency-modal.json`.
-The container built the crate from source in 12.4 s — the same build a
-sandbox intake would run, against 71–131 s for the old 93-crate graph.
+The container built the crate from source in 12.4 s at depth 5 (12.6 s at
+M7F4) — the same build a sandbox intake would run, against 71–131 s for
+the old 93-crate graph.
 
 ## Where the move goes (2026-08-16)
 
