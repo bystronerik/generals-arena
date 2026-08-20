@@ -73,6 +73,10 @@ _SKIP_DIRS = {
     "tools",
 }
 _SKIP_SUFFIXES = {".pyc", ".pyo"}
+# Filesystem-browser droppings, not source: a Finder visit writes .DS_Store
+# into the bot directory and would fork the rating identity without one
+# byte of play code moving.
+_SKIP_FILES = {".DS_Store", "Thumbs.db"}
 
 # Per-turn introspection, loaded only by `arena.instrument.runner`. Outside the
 # closure, so probe edits move no hash and no bundle.
@@ -87,7 +91,7 @@ _SHELL_REF_RE = re.compile(r"[\w./-]*?([\w-]+/[\w.-]+\.(?:sh|py))")
 def _is_source(path: Path) -> bool:
     if path.suffix in _SKIP_SUFFIXES:
         return False
-    if path.name == PROBE_FILENAME:
+    if path.name == PROBE_FILENAME or path.name in _SKIP_FILES:
         return False
     return not any(part in _SKIP_DIRS for part in path.parts)
 

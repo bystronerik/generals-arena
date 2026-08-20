@@ -192,6 +192,20 @@ def test_bot_local_tests_dir_does_not_move_the_hash(sandbox):
     )
 
 
+def test_os_junk_files_do_not_move_the_hash(sandbox):
+    """A Finder visit drops .DS_Store into the bot directory; browser
+    droppings are not source and must not fork the rating identity. Found
+    live: the first post-S1 joe-rs registration hashed one in."""
+    fingerprint, root = sandbox
+    before = fingerprint.content_hash_for_dir(root / "one")
+
+    (root / "one" / ".DS_Store").write_bytes(b"\x00\x01junk")
+    assert fingerprint.content_hash_for_dir(root / "one") == before
+    assert not any(
+        p.name == ".DS_Store" for p in fingerprint.bot_source_closure(root / "one")
+    )
+
+
 def test_morpheus_tests_stay_out_of_the_live_closure():
     """Real bots/<name>/tests/ must not enter the hashed source closure."""
     tests_dir = BOTS_DIR / "morpheus" / "tests"
