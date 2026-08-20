@@ -85,6 +85,18 @@ fast fleet generation (29.3 -> 23.8 ms p50), **1.54×** on a slow one
 (77.1 -> 50.1 ms). Sweep table, method, and the safe-tile dead end:
 [joe-rs-gemm-kernel-sweep](../../research/measurements/joe-rs-gemm-kernel-sweep.md).
 
+Two follow-up sweeps landed the same day, each same-host interleaved
+against the then-current HEAD. The residual sweep (polynomial exp,
+lane-split LayerNorm, attention through the GEMM kernel) measured 1.16×:
+[joe-rs-residual-sweep](../../research/measurements/joe-rs-residual-sweep.md).
+The packed-B sweep (strip-major weights and attention panels; f16 weights
+tried and refuted; a noalias trap found and fixed) measured **1.58–1.72×**
+across two host generations — p50 29.5 → 17.0 ms on the final tree, arm64
+34.55 → 26.64 ms, replies byte-identical throughout:
+[joe-rs-packed-b-sweep](../../research/measurements/joe-rs-packed-b-sweep.md).
+Compounded, the day is ~2.3–2.5×: the 46.49 ms morning baseline lands at
+17–20 ms, or 7–8 forwards per 150 ms move.
+
 **Fleet variance caveat, now measured:** identical pristine code hit 29.1,
 46.5, and 77.1 ms p50 across three Modal runs on one day. A cross-run
 delta measures the fleet, not the code — only same-host in-run contrasts

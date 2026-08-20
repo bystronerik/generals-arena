@@ -30,7 +30,7 @@ use std::path::Path;
 
 use crate::board::obs::{CELLS, N_ACTION_CHANNELS, N_CHANNELS, PAD, TEMPORAL_WINDOW};
 use crate::io::json;
-use crate::nn::gemm::gemm_bias;
+use crate::nn::gemm::{gemm_bias, PackedB};
 use crate::nn::safetensors::SafeTensors;
 
 pub const TENSOR_SCHEMA: &str = "joe-net-v1";
@@ -50,16 +50,14 @@ pub const N_LOGITS: usize = N_ACTION_CHANNELS * CELLS; // 4410
 const TEMPORAL_HIDDEN: usize = 512;
 
 struct Linear {
-    weight_t: Vec<f32>, // (in, out) — transposed once at load
-    bias: Vec<f32>,     // (out,)
-    in_dim: usize,
-    out_dim: usize,
+    weights: PackedB, // (in, out), strip-major — packed once at load
+    bias: Vec<f32>,   // (out,)
 }
 
 impl Linear {
     /// `y = x @ W^T + b` on a (rows, in) matrix into a (rows, out) buffer.
     fn forward_into(&self, rows: usize, x: &[f32], y: &mut [f32]) {
-        gemm_bias(rows, self.in_dim, self.out_dim, x, &self.weight_t, &self.bias, y);
+        gemm_bias(rows, x, &self.weights, &self.bias, y);
     }
 }
 
@@ -176,8 +174,8 @@ struct Scratch {
     ff: Vec<f32>,           // (52, 1536)
     scores: Vec<f32>,       // (52, 52) — one head at a time
     qh: Vec<f32>,           // (52, 48) — one head's Q, packed contiguous
-    kt: Vec<f32>,           // (48, 52) — one head's K, transposed for gemm
-    vh: Vec<f32>,           // (52, 48) — one head's V, packed contiguous
+    kt: PackedB,            // (48, 52) — one head's K, strip-major for gemm
+    vh: PackedB,            // (52, 48) — one head's V, strip-major for gemm
     ch: Vec<f32>,           // (52, 48) — one head's context before scatter
     zero_tokens: Vec<f32>,  // (52,) zero bias for the score gemm
     zero_head: Vec<f32>,    // (48,) zero bias for the context gemm
@@ -201,8 +199,8 @@ impl Scratch {
             ff: vec![0.0; N_TOKENS * FF_DIM],
             scores: vec![0.0; N_TOKENS * N_TOKENS],
             qh: vec![0.0; N_TOKENS * HEAD_DIM],
-            kt: vec![0.0; HEAD_DIM * N_TOKENS],
-            vh: vec![0.0; N_TOKENS * HEAD_DIM],
+            kt: PackedB::zeroed(HEAD_DIM, N_TOKENS),
+            vh: PackedB::zeroed(N_TOKENS, HEAD_DIM),
             ch: vec![0.0; N_TOKENS * HEAD_DIM],
             zero_tokens: vec![0.0; N_TOKENS],
             zero_head: vec![0.0; HEAD_DIM],
@@ -263,13 +261,13 @@ fn take_linear(
 ) -> Result<Linear, String> {
     let weight = take(tensors, &format!("{prefix}.weight"), &[out_dim, in_dim])?;
     let bias = take(tensors, &format!("{prefix}.bias"), &[out_dim])?;
-    let mut weight_t = vec![0f32; in_dim * out_dim];
+    let mut weights = PackedB::zeroed(in_dim, out_dim);
     for o in 0..out_dim {
         for i in 0..in_dim {
-            weight_t[i * out_dim + o] = weight[o * in_dim + i];
+            weights.set(i, o, weight[o * in_dim + i]);
         }
     }
-    Ok(Linear { weight_t, bias, in_dim, out_dim })
+    Ok(Linear { weights, bias })
 }
 
 fn take_norm(tensors: &mut Tensors, prefix: &str) -> Result<LayerNorm, String> {
@@ -461,27 +459,24 @@ impl Net {
             block.v.forward_into(N_TOKENS, normed, v);
             for h in 0..N_HEAD {
                 let off = h * HEAD_DIM;
-                // Pack the head — Q and V rows contiguous, K transposed to
-                // the (k, n) layout gemm_bias streams — then run QK^T and
+                // Pack the head — Q rows contiguous, K and V into the
+                // strip-major panels gemm_bias streams — then run QK^T and
                 // the context product through the GEMM kernel. ~30 KB of
                 // copies against two register-tiled GEMM calls.
                 for i in 0..N_TOKENS {
                     qh[i * HEAD_DIM..(i + 1) * HEAD_DIM]
                         .copy_from_slice(&q[i * EMBED + off..i * EMBED + off + HEAD_DIM]);
-                    vh[i * HEAD_DIM..(i + 1) * HEAD_DIM]
-                        .copy_from_slice(&v[i * EMBED + off..i * EMBED + off + HEAD_DIM]);
-                    for d in 0..HEAD_DIM {
-                        kt[d * N_TOKENS + i] = k[i * EMBED + off + d];
-                    }
+                    vh.fill_row(i, &v[i * EMBED + off..i * EMBED + off + HEAD_DIM]);
+                    kt.fill_col(i, &k[i * EMBED + off..i * EMBED + off + HEAD_DIM]);
                 }
-                gemm_bias(N_TOKENS, HEAD_DIM, N_TOKENS, qh, kt, zero_tokens, scores);
+                gemm_bias(N_TOKENS, qh, kt, zero_tokens, scores);
                 for s in scores.iter_mut() {
                     *s *= inv_scale;
                 }
                 for i in 0..N_TOKENS {
                     softmax_in_place(&mut scores[i * N_TOKENS..(i + 1) * N_TOKENS]);
                 }
-                gemm_bias(N_TOKENS, N_TOKENS, HEAD_DIM, scores, vh, zero_head, ch);
+                gemm_bias(N_TOKENS, scores, vh, zero_head, ch);
                 for i in 0..N_TOKENS {
                     ctx[i * EMBED + off..i * EMBED + off + HEAD_DIM]
                         .copy_from_slice(&ch[i * HEAD_DIM..(i + 1) * HEAD_DIM]);

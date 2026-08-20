@@ -1,0 +1,49 @@
+{
+  "date": "2026-08-20",
+  "microbench_modal_x86": {
+    "note": "GEMM ms/forward over the exact graph shapes, min-of-3, one process; all variants bit-identical (B pre-rounded through f16 so the f16 variant is comparable)",
+    "shipped_avx2_row_major": 29.89,
+    "packed_f32_avx2": 18.0,
+    "packed_f16_avx2": 18.65,
+    "packed_f32_safe_x86": 45.68,
+    "per_shape_packed_f32": {
+      "embedder_49x351x384": 0.179,
+      "qkvo_52x384x384_x28": 5.673,
+      "ff1_52x384x1536_x7": 5.854,
+      "ff2_52x1536x384_x7": 6.059
+    }
+  },
+  "microbench_arm64": {
+    "shipped_safe_row_major": 26.3,
+    "packed_f32_safe": 23.48
+  },
+  "noalias_trap": {
+    "packed_data_behind_struct_ref_neon_e2e_p50_ms": 175.16,
+    "packed_data_as_slice_param_neon_e2e_p50_ms": 26.64,
+    "bisect": "identical kernel body, (52,384,384): 1.959 ms behind &PackedB vs 0.303 ms behind &[f32]",
+    "rule": "slice parameters carry LLVM noalias; a Vec data pointer loaded through a struct reference does not"
+  },
+  "e2e_modal_x86_same_container_abab_final_tree": {
+    "pristine_bench_1": "turns 2400 startup_ms 158.9 p50 29.48 p90 31.20 p99 34.83 max 60.99",
+    "packed_bench_1": "turns 2400 startup_ms 107.4 p50 16.98 p90 18.28 p99 19.07 max 25.97",
+    "pristine_bench_2": "turns 2400 startup_ms 140.7 p50 29.53 p90 33.35 p99 59.24 max 160.44",
+    "packed_bench_2": "turns 2400 startup_ms 109.0 p50 17.34 p90 18.32 p99 25.51 max 62.60",
+    "replies_identical": true
+  },
+  "e2e_modal_x86_pre_noalias_fix_tree": {
+    "pristine_p50": [31.28, 31.39],
+    "packed_p50": [19.74, 19.91],
+    "replies_identical": true,
+    "note": "the intrinsics path is unaffected by the noalias trap, so these x86 numbers were valid"
+  },
+  "arm64_e2e": {
+    "pre_change_p50": 34.55,
+    "packed_final_p50": 26.64,
+    "load_ms": "packing replaced the load-time transpose; bench startup 84 -> 67 ms"
+  },
+  "gates": {
+    "crate_tests": "21 passed",
+    "reply_identity": "byte-identical to the pre-change binary over synthetic-long, arm64 and Modal x86",
+    "verification_match": "win by general capture, turn 261, seed 0 vs aegis (identical game)"
+  }
+}
