@@ -90,6 +90,37 @@ a per-group LR on young parameters would mostly diffuse as well.
 Decision: run the ff4 plan's 20k-iteration budget at the plan's settings
 (1 epoch, cap 2e-5). Track adaptation with the recruitment gauge at
 ~2k-step intervals (read-only, no relaunch) and judge strength by arena
-export contrasts at the r-checkpoints, not by the in-run eval. Blocks 2/5
-roughly doubled their recruitment gauge every ~3k steps so far; if that
-compounding holds, meaningful scale lands inside the budget.
+export contrasts at the r-checkpoints, not by the in-run eval.
+
+## Post-revert follow-up (steps 4000-8000, plan settings)
+
+The run went back to 1 epoch / cap 2e-5 at step 4000 and was observed
+read-only to step 8025. The patience decision is holding up:
+
+- **Ref eval climbs monotonically.** 10-eval chunk means since the
+  revert: 45.0, 45.2, 45.9, 46.7, 47.2, 47.4, 47.5, 48.1 %. Eight
+  non-decreasing windows (~±0.7 pp noise each) — a real slope of
+  ~+0.35…+0.5 pp per 500 iters. It first recovered a small post-3e-5
+  dip, then passed the pre-bench band center. At this slope the eval
+  exits the historical 44-50 % band near step 10-11k, where the LR cap
+  stops binding and decay begins.
+- **Recruitment stays linear — the earlier "compounding" read was
+  diffusion-inflated.** Clean per-500-step paces hold steady from 4000
+  to 8000: blk5 attn.out +0.0009, blk2 +0.0004, ff ×4 columns +0.0004.
+  Levels at 8000: blk5 0.0326 (~22 % of mature scale), blk2 0.0205
+  (~16 %), ff columns ~0.0133 (~11 %).
+- **The threshold heuristic got one confirmation.** blk5 crossed ~20 %
+  of mature scale over the same stretch (≈ steps 6-7k) where the eval
+  slope turned positive — the strongest young component coming online
+  is the best available explanation for the climb.
+- Revised timeline: blk2 reaches ~20 % near step 12-15k (its pace
+  halved from the early phase), ff columns ~20 % beyond 13k, both into
+  the decaying-LR half. Gains are back-loaded and gradual; no
+  inflection is coming per the gauge.
+
+Health throughout: KL 0.014-0.017, entropy 0.34 → 0.30 on schedule,
+draws back to 2-4 % after two brief excursions, 12.86 s/iter.
+
+Open next step: arena-export contrast at an r-checkpoint (6000 and 8000
+full sets are in R2) to convert the in-run climb into a rated,
+same-round strength measurement.
