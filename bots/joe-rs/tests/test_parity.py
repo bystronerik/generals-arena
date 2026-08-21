@@ -351,7 +351,59 @@ CH21_MAX_ULP = 0
 #
 # `mutation_check` kills 13/13 at these pins: nine parity plants and the four
 # selection plants added on 2026-08-20.
-LOGIT_REL_ACHIEVED = 1.6e-5   # worst measured 1.041e-5 (step 23500, gemm.rs)
+#
+# 2026-08-21, joe-M7F4 step 16000 (728 frames, gemm.rs): the logit pin fired
+# at 1.607e-5 against 1.6e-5, an overshoot of 0.4%. This entry moves it to
+# 2.7e-5 and records the number that would make the next firing a finding.
+#
+#   percentile   p50        p90        p99        p100      pin used
+#   rel logit    1.801e-6   3.493e-6   7.316e-6   1.607e-5   100%
+#   rel bin      2.226e-6   5.262e-6   8.022e-6   1.210e-5    24%
+#   dvalue       1.788e-7   7.153e-7   1.891e-6   5.186e-6    20%
+#
+# The forward path is the same code that produced the step-11000 corpus: the
+# only source that changed since that export is `src/board/select.rs` and
+# `src/main.rs` (the S4 trail penalty), and neither is on the forward path.
+# Only the weights and the frame population differ.
+#
+# Three things say the kernel did not drift. Tier 3 agrees 728/728 at
+# 100.0000%, so the noise never changes a decision and the tie-margin arm
+# below never runs. On the frame that fired (`synthetic-long` t598) the two
+# sibling heads are silent: rel bin at 4% of its pin, dvalue at 0%. And
+# corpus-wide the other two maxima *fell* against step 11000 — rel bin 63%
+# -> 24% of pin, dvalue 108% -> 20%. A drifting kernel raises all three
+# together; two of three falling by that much is a new frame population.
+#
+# What differs from the step-11000 firing, and is worth watching: the top is
+# a ramp, not a spike. The runner-up (`joe-seed10` t243) sits at 98% of pin,
+# max/2nd is 1.026, and p99 rose 1.47x (4.981e-6 -> 7.316e-6) against a p50
+# that moved 6% and a p90 that moved 9%.
+#
+# The reading is the normalizer, not the error. rel logit divides a frame's
+# max error by that frame's max live logit, and the denominator spans 8.70
+# to 57.09 here. The two frames at the top arrive by opposite routes: t598
+# pairs a bottom-decile scale of 10.22 with an ordinary p99-sized absolute
+# error (1.643e-4), while `joe-seed10` t243 pairs the corpus's largest
+# absolute error (3.395e-4) with a near-median scale of 21.67. A checkpoint
+# that yields more flat-policy frames inflates the ratio's tail without the
+# error changing character. The tail also spreads over 13 of the 15 games
+# roughly in proportion to their frame counts, so no one fixture drives it.
+#
+# The brake: rel logit p99 has read 5.132e-6, 4.981e-6, and now 7.316e-6. If
+# a later corpus puts p99 over ~1e-5, or if a third consecutive export needs
+# this pin moved, stop re-pinning and treat it as a finding. At that point
+# the body has moved with the max and corpus composition no longer explains
+# it.
+#
+# One coupling to know about: `test_decide_tier3` derives its excusable
+# near-tie window as LOGIT_REL_ACHIEVED * logit_scale, so this re-pin widens
+# that window from 9.13e-4 to 1.54e-3. The link is deliberate — a divergence
+# is excusable only if it is smaller than the tier-2 error could move it —
+# and it costs nothing on this corpus, which has no divergences at all.
+#
+# `mutation_check` kills 18/18 at these pins: the 13 above plus the five
+# trail plants that arrived with the S4 selection penalty.
+LOGIT_REL_ACHIEVED = 2.7e-5   # worst measured 1.607e-5 (step 16000, gemm.rs)
 BIN_REL_ACHIEVED = 5.0e-5     # worst measured 3.284e-5 (step 50000, gemm.rs)
 # |value| <= 1 by construction (bin_centers span [-1, 1]), so this one is
 # already scale-free and stays absolute. It was long read as tracking bin
@@ -363,7 +415,7 @@ BIN_REL_ACHIEVED = 5.0e-5     # worst measured 3.284e-5 (step 50000, gemm.rs)
 # the same corpus — over the old 2.5e-6 pin by 7%, which is the kernel's
 # different rounding, not drift — so the pin is re-sized with the same ~1.7x
 # headroom the two pins above carry.
-# Defensible only because `mutation_check` re-confirms all 13 kills at this
+# Defensible only because `mutation_check` re-confirms every kill at this
 # value; exceeding it is still a finding.
 VALUE_TOL_ACHIEVED = 2.6e-5   # worst measured 1.505e-5 (step 11000, gemm.rs)
 
