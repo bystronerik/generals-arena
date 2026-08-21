@@ -162,7 +162,18 @@ deviation). Zero distortion outside detected confinement, which is exactly
 the property the Python penalty lacks. Costs: two detector constants that
 have to be fitted, and a rule bolted onto a pure policy. Latency ~µs.
 
-### S3 — depth-1 value re-rank (parked behind two gates)
+### S3 — depth-1 value re-rank (killed at Gate 1, 2026-08-21)
+
+**Status: dead.** Gate 1 ran offline over the step-10000 corpus
+(`tools/s3_gate1.py`, 5,632 turns) and hit the kill criterion:
+[joe-s3-gate1](../../research/measurements/joe-s3-gate1.md). 68.7% of
+near-tie top-2 pairs fabricate byte-identical successors (half/full
+twins), the rest carry a median value gap (0.0033) below the median
+fabrication error (0.0037), and p90 fabrication error is 2.6× the p90
+move-to-move value movement. The value head does not discriminate
+adjacent moves — the plan's own suspicion, now measured. Gate 2 never
+needed to run; no game was spent. The original design follows for the
+record.
 
 Today the value head is computed every turn and discarded on stderr. S3
 spends measured headroom to use it. Per turn: take the top-k masked
@@ -230,10 +241,19 @@ scope for this bot.
 
 1. **S1 now.** Shortlist T on the unrated diagnostic grid; then a rated
    round with two T arms against the frozen baseline.
+   *(Done: shipped 2026-08-20; round `s1-gumbel-r1` proven flat, T = 1
+   stands — r2 replication pending.)*
 2. **S2 only if** S1's round verdict shows the cost lands on decisive play.
+   *(Dead: no such cost shown.)*
 3. **S3 behind its two gates**, cheapest variant (margin-gated) first, and
    only if S1/S2 leave losses on the table that a one-step value could have
-   refused.
+   refused. *(Dead: killed at Gate 1, 2026-08-21 —
+   [joe-s3-gate1](../../research/measurements/joe-s3-gate1.md).)*
+
+**The selection layer is complete: S1 Gumbel T = 1 is the end state of
+this plan.** Any future value-guided selection needs a value head trained
+to discriminate adjacent moves, which is a training project, not a
+selection-layer change.
 
 ## Parity stance (one policy for every candidate)
 
