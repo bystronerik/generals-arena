@@ -8,8 +8,8 @@
 //! is hashed from the frame, so the bot stays a pure function of the game.
 //! `JOE_RS_TEMPERATURE` sets T (default 1 — the distribution training
 //! sampled; 0 restores the plain argmax), and the S4 trail penalty
-//! (`JOE_RS_NOUNDO`, default 6) taxes moves that re-enter the stack's
-//! recent trail. The Python sibling takes the plain argmax; the divergence
+//! (`JOE_RS_NOUNDO`, default 0, which is off) taxes moves that re-enter
+//! the stack's recent trail. The Python sibling takes the plain argmax; the divergence
 //! is deliberate (docs/bots/joe-rs/selection-plan.md).
 //!
 //! `joe-rs parity <surface>` runs one ported surface over fixture cases
@@ -241,12 +241,12 @@ impl Seat {
         // S4's knobs, same parsing posture as the temperature: loud on a
         // malformed value, never fatal.
         let noundo = match std::env::var("JOE_RS_NOUNDO") {
-            Err(_) => 6.0,
+            Err(_) => 0.0,
             Ok(raw) => match raw.trim().parse::<f32>() {
                 Ok(v) if v.is_finite() && v >= 0.0 => v,
                 _ => {
-                    eprintln!("[joe-rs] JOE_RS_NOUNDO {raw:?} is not a finite non-negative number; using 6");
-                    6.0
+                    eprintln!("[joe-rs] JOE_RS_NOUNDO {raw:?} is not a finite non-negative number; using 0");
+                    0.0
                 }
             },
         };

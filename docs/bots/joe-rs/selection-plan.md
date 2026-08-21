@@ -260,7 +260,8 @@ preference oscillating at ~1.9-logit margins, measured on the seed-1
 diagnostic — has its own spec and knob outside this plan: **S4, the
 one-turn soft no-undo penalty**
 ([joe-rs-noundo](../../research/strategies/joe-rs-noundo.md),
-`JOE_RS_NOUNDO`, default 6 since 2026-08-21 after round `s4-trail-r1`).
+`JOE_RS_NOUNDO`, default 0 since 2026-08-21 — round `s4-trail-r1`
+proved flat, so the penalty ships off and δ=6 is opt-in).
 
 ## Parity stance (one policy for every candidate)
 

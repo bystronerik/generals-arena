@@ -58,8 +58,11 @@ draw).
 
 ## Knobs and sizing
 
-`JOE_RS_NOUNDO` (δ, f32, **default 6 since 2026-08-21**; 0 turns it off)
-and `JOE_RS_NOUNDO_WINDOW` (K, usize, default 8, 0 disables the memory). δ must beat the measured
+`JOE_RS_NOUNDO` (δ, f32, **default 0 since 2026-08-21 — the penalty is
+off unless a caller sets it**) and `JOE_RS_NOUNDO_WINDOW` (K, usize,
+default 8, 0 disables the memory). The default moved 0 -> 6 -> 0 inside
+2026-08-21: `s4-trail-r1` proved flat and r2 is still owed, so the shipped
+program is the δ=0 bot again and δ=6 is what a caller opts into. δ must beat the measured
 ~1.9-logit return margins; the grids shortlisted δ = 6 (δ = 4 still shuffled). K = 8
 covers the observed period-2/4 orbits with margin; K = 1 degenerates to
 (a slightly stronger form of) the v1 arc penalty. Per the repo rule no
