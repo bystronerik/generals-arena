@@ -110,8 +110,11 @@ trajectory (18.1% revisit) — its tax sits below some of the measured
 return margins.
 
 Single games are chaotic in these knobs (the repo's standing warning), so
-the grid shortlists only; strength needs the rated round — δ = 6 and
-δ = 4 are the two arms it should carry. Latency is unchanged (`bench`
+the grid shortlists only; strength needs the rated round. **Round
+`s4-trail-r1` ran (2026-08-21): both arms proven flat against the δ = 0
+baseline — [joe-s4-trail-round](../measurements/joe-s4-trail-round.md) —
+so the behavioral gains are free; the default flips to δ = 6 after the
+r2 replication.** Latency is unchanged (`bench`
 p50 26.65 ms with the penalty on, vs the 26.2–26.6 ms reference — the
 tax touches at most 8 × K logit entries).
 
