@@ -123,6 +123,45 @@ MUTATIONS = [
         "score -= t * gumbel(seed, i);",
         "subtracted noise samples a distribution that is not softmax(logits/T)",
     ),
+    # S4 trail plants (docs/research/strategies/joe-rs-noundo.md), killed
+    # by the crate's unit tests: the penalty must tax exactly the moves
+    # landing on trail cells, the ring must hold the whole window, and the
+    # sign must be a tax.
+    (
+        "trail-approach",
+        "board/select.rs",
+        "let (sr, sc) = (r as i32 - dr, c as i32 - dc);",
+        "let (sr, sc) = (r as i32 + dr, c as i32 + dc);",
+        "the penalty lands on moves leaving the trail cell, not entering it",
+    ),
+    (
+        "trail-window",
+        "board/select.rs",
+        "self.cells.push(cell);\n        if self.cells.len() > self.cap {\n            self.cells.remove(0);\n        }",
+        "self.cells.clear();\n        self.cells.push(cell);",
+        "the ring remembers one source, so a period-4 circle closes untaxed",
+    ),
+    (
+        "trail-sign",
+        "board/select.rs",
+        "logits[d * CELLS + src] -= delta;",
+        "logits[d * CELLS + src] += delta;",
+        "the penalty rewards re-entering the trail instead of taxing it",
+    ),
+    (
+        "trail-ownership",
+        "board/select.rs",
+        "if r < h && c < w && raw[CH_OWNED * h * w + r * w + c] != 0.0 && !taxed.contains(&(r, c)) {",
+        "if r < h && c < w && !taxed.contains(&(r, c)) {",
+        "a trail cell the enemy captured stays taxed, so the retake is throttled",
+    ),
+    (
+        "trail-exemption",
+        "board/select.rs",
+        "let mut has_free_exit = false;",
+        "let mut has_free_exit = true;",
+        "a stack encircled by hills has its only way out taxed",
+    ),
 ]
 
 PYTEST = [".venv/bin/pytest", "bots/joe-rs/tests/", "-m", "joe", "-q", "-x"]

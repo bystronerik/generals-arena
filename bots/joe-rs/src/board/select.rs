@@ -24,7 +24,127 @@
 //! same reason `nn` carries its own `exp` and `xla_math` its own `log1p`.
 
 use crate::board::action::argmax;
+use crate::board::obs::{CELLS, CH_MOUNTAINS, CH_OWNED, PAD};
 use crate::io::wire::Observation;
+
+/// The wire directions, in the head's channel order: up, down, left, right.
+const MOVE_DIRS: [(i32, i32); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+
+/// The moving stack's recent departure cells, newest last — the memory the
+/// S4 trail penalty reads (docs/research/strategies/joe-rs-noundo.md).
+///
+/// A ring of the last `cap` move *sources*. A pass or a build pushes
+/// nothing and clears nothing: a pause does not forgive a circle, and a
+/// circuit resumed after a build is still a circuit. `cap` 0 disables the
+/// memory entirely.
+pub struct Trail {
+    cells: Vec<(usize, usize)>,
+    cap: usize,
+}
+
+impl Trail {
+    pub fn new(cap: usize) -> Self {
+        Self { cells: Vec::with_capacity(cap), cap }
+    }
+
+    pub fn push(&mut self, cell: (usize, usize)) {
+        if self.cap == 0 {
+            return;
+        }
+        self.cells.push(cell);
+        if self.cells.len() > self.cap {
+            self.cells.remove(0);
+        }
+    }
+
+    pub fn cells(&self) -> &[(usize, usize)] {
+        &self.cells
+    }
+
+    pub fn cap(&self) -> usize {
+        self.cap
+    }
+}
+
+/// The S4 soft anti-circuit penalty: subtract `delta` from every move that
+/// would LAND on a cell the stack recently departed **and still owns** —
+/// all four approach directions, full and half channels — for as long as
+/// the cell stays in the trail window.
+///
+/// Why this shape: the measured oscillation is the argmax itself preferring
+/// the return leg at a ~1.9-logit median margin, and taxing only the exact
+/// inverse arc displaced the walk into period-4 circles (observed on the
+/// seed-1 diagnostic). Any circuit of period ≤ window must land on its own
+/// trail, while a forward march never does — so the tax detects a forming
+/// circle at its closing move, with zero detector lag, and leaves
+/// non-revisiting play untouched.
+///
+/// Two guards are load-bearing, each with a unit test and a plant:
+///
+/// * **Ownership** — departing always leaves army behind, so a trail cell
+///   stays ours unless the enemy takes it, and **retaking a lost cell is
+///   combat, not shuffling**. The tax lifts the moment `raw`'s owned
+///   channel drops, so the retake fights at full logit.
+/// * **Encirclement** — a source whose every other passable exit is also
+///   taxed trail (mountains, the board edge, or trail on all remaining
+///   sides) has only the step back. **The only way out is never taxed**,
+///   so a stack boxed in by hills retreats at full logit instead of
+///   dithering against a flat tax for a whole window.
+///
+/// A twice-departed cell is taxed once, not stacked — stacking is the
+/// counter semantics the removed Python penalty was criticised for. Masked
+/// entries may be taxed too — harmless, legality is the mask's call and
+/// −1e9 stays −1e9 for every practical `delta`.
+pub fn apply_trail_penalty(
+    logits: &mut [f32],
+    trail: &[(usize, usize)],
+    delta: f32,
+    raw: &[f32],
+    h: usize,
+    w: usize,
+) {
+    if delta <= 0.0 {
+        return;
+    }
+    // The taxed set: still-owned trail cells, deduped.
+    let mut taxed: Vec<(usize, usize)> = Vec::with_capacity(trail.len());
+    for &(r, c) in trail {
+        if r < h && c < w && raw[CH_OWNED * h * w + r * w + c] != 0.0 && !taxed.contains(&(r, c)) {
+            taxed.push((r, c));
+        }
+    }
+    for &(r, c) in &taxed {
+        for (d, &(dr, dc)) in MOVE_DIRS.iter().enumerate() {
+            let (sr, sc) = (r as i32 - dr, c as i32 - dc);
+            // A source outside the board can never legally move; skip it.
+            if sr < 0 || sr >= h as i32 || sc < 0 || sc >= w as i32 {
+                continue;
+            }
+            let mut has_free_exit = false;
+            for &(er, ec) in &MOVE_DIRS {
+                let (nr, nc) = (sr + er, sc + ec);
+                if nr < 0 || nr >= h as i32 || nc < 0 || nc >= w as i32 {
+                    continue;
+                }
+                let (nru, ncu) = (nr as usize, nc as usize);
+                if raw[CH_MOUNTAINS * h * w + nru * w + ncu] != 0.0 {
+                    continue;
+                }
+                if taxed.contains(&(nru, ncu)) {
+                    continue;
+                }
+                has_free_exit = true;
+                break;
+            }
+            if !has_free_exit {
+                continue;
+            }
+            let src = sr as usize * PAD + sc as usize;
+            logits[d * CELLS + src] -= delta;
+            logits[(d + 4) * CELLS + src] -= delta;
+        }
+    }
+}
 
 /// splitmix64's golden-ratio increment, reused to fold the turn into the
 /// per-turn seed.
@@ -145,6 +265,14 @@ mod tests {
         vec![0.0; n]
     }
 
+    /// A full-pad board raw where every cell is ours (h = w = PAD, so board
+    /// and pad coordinates coincide).
+    fn owned_raw() -> Vec<f32> {
+        let mut raw = vec![0.0f32; 14 * CELLS];
+        raw[CH_OWNED * CELLS..(CH_OWNED + 1) * CELLS].fill(1.0);
+        raw
+    }
+
     #[test]
     fn select_is_deterministic() {
         let logits: Vec<f32> = (0..64).map(|i| (i % 7) as f32 * 0.3).collect();
@@ -246,6 +374,121 @@ mod tests {
         assert_eq!(board_digest(&a), board_digest(&b));
         b.army_grid[4] = 8;
         assert_ne!(board_digest(&a), board_digest(&b));
+    }
+
+    /// Kills the `trail-approach` and `trail-sign` plants: with one trail
+    /// cell, the penalty must land on exactly the eight entries that move
+    /// INTO it (four approach sources × full/half), with a minus sign, and
+    /// nowhere else.
+    #[test]
+    fn trail_taxes_exactly_the_landing_arcs() {
+        let mut logits = vec![0.0f32; 10 * CELLS];
+        apply_trail_penalty(&mut logits, &[(5, 6)], 2.0, &owned_raw(), PAD, PAD);
+        let mut expected = std::collections::HashSet::new();
+        for (d, (dr, dc)) in [(-1i32, 0i32), (1, 0), (0, -1), (0, 1)].iter().enumerate() {
+            let src = (5 - dr) as usize * PAD + (6 - dc) as usize;
+            expected.insert(d * CELLS + src);
+            expected.insert((d + 4) * CELLS + src);
+        }
+        for (i, &v) in logits.iter().enumerate() {
+            if expected.contains(&i) {
+                assert_eq!(v, -2.0, "index {i} must carry the penalty");
+            } else {
+                assert_eq!(v, 0.0, "index {i} must stay untouched");
+            }
+        }
+    }
+
+    /// A twice-departed cell is taxed once — stacking would be the counter
+    /// semantics the removed Python penalty was criticised for.
+    #[test]
+    fn a_twice_departed_cell_is_taxed_once() {
+        let mut logits = vec![0.0f32; 10 * CELLS];
+        apply_trail_penalty(&mut logits, &[(5, 6), (7, 7), (5, 6)], 2.0, &owned_raw(), PAD, PAD);
+        assert_eq!(logits[0 * CELLS + 6 * PAD + 6], -2.0); // UP into (5,6)
+    }
+
+    /// Kills the `trail-ownership` plant, and pins the retake rule: a trail
+    /// cell the enemy has captured is combat ground, not shuffle ground —
+    /// landing on it must fight at full logit while a still-owned trail
+    /// cell stays taxed.
+    #[test]
+    fn a_lost_trail_cell_is_free_to_retake() {
+        let mut raw = owned_raw();
+        raw[CH_OWNED * CELLS + 5 * PAD + 6] = 0.0; // the enemy took (5,6)
+        let mut logits = vec![0.0f32; 10 * CELLS];
+        apply_trail_penalty(&mut logits, &[(5, 6), (7, 7)], 2.0, &raw, PAD, PAD);
+        assert_eq!(logits[0 * CELLS + 6 * PAD + 6], 0.0, "retake of (5,6) must be free");
+        assert_eq!(logits[0 * CELLS + 8 * PAD + 7], -2.0, "owned (7,7) stays taxed");
+    }
+
+    /// Kills the `trail-exemption` plant, and pins the encirclement rule:
+    /// a source boxed in by mountains, with the trail cell as its only
+    /// passable exit, steps back at full logit — the only way out is never
+    /// taxed. An open source approaching the same trail cell stays taxed.
+    #[test]
+    fn an_encircled_step_back_stays_free() {
+        let mut raw = owned_raw();
+        // Source (5,5): mountains above, below, and to the left; the only
+        // exit is RIGHT into the trail cell (5,6).
+        for (mr, mc) in [(4, 5), (6, 5), (5, 4)] {
+            raw[CH_MOUNTAINS * CELLS + mr * PAD + mc] = 1.0;
+        }
+        let mut logits = vec![0.0f32; 10 * CELLS];
+        apply_trail_penalty(&mut logits, &[(5, 6)], 2.0, &raw, PAD, PAD);
+        let boxed_src = 5 * PAD + 5;
+        assert_eq!(logits[3 * CELLS + boxed_src], 0.0, "the only way out must be free");
+        assert_eq!(logits[7 * CELLS + boxed_src], 0.0, "the half variant too");
+        let open_src = 6 * PAD + 6; // approaches (5,6) from below, exits free
+        assert_eq!(logits[0 * CELLS + open_src], -2.0, "an open approach stays taxed");
+    }
+
+    /// Kills the `trail-window` plant: the ring must hold every recent
+    /// source, or a period-4 circle's closing move goes untaxed. Walk the
+    /// square (5,5)→(5,6)→(6,6)→(6,5) and check the close back onto (5,5)
+    /// is taxed while a fresh outward move is not.
+    #[test]
+    fn a_four_step_circle_is_taxed_at_the_close() {
+        let mut trail = Trail::new(8);
+        for cell in [(5, 5), (5, 6), (6, 6), (6, 5)] {
+            trail.push(cell);
+        }
+        assert_eq!(trail.cells().len(), 4);
+        let mut logits = vec![0.0f32; 10 * CELLS];
+        apply_trail_penalty(&mut logits, trail.cells(), 2.0, &owned_raw(), PAD, PAD);
+        // Closing move: UP (dir 0) from (6,5) into (5,5) — taxed.
+        assert_eq!(logits[0 * CELLS + 6 * PAD + 5], -2.0);
+        // Fresh outward move: DOWN (dir 1) from (6,5) into (7,5) — free.
+        assert_eq!(logits[1 * CELLS + 6 * PAD + 5], 0.0);
+    }
+
+    #[test]
+    fn the_ring_forgets_only_the_oldest() {
+        let mut trail = Trail::new(2);
+        trail.push((1, 1));
+        trail.push((2, 2));
+        trail.push((3, 3));
+        assert_eq!(trail.cells(), &[(2, 2), (3, 3)]);
+        assert_eq!(Trail::new(0).cells().len(), 0);
+        let mut off = Trail::new(0);
+        off.push((1, 1));
+        assert_eq!(off.cells().len(), 0);
+    }
+
+    /// The sizing property end to end: a taxed return leg loses a margin
+    /// smaller than delta (T = 0 makes it exact), delta 0 restores it.
+    #[test]
+    fn a_taxed_return_loses_the_near_margin() {
+        let ret = 2 * CELLS + 5 * PAD + 6; // LEFT from (5,6) into (5,5)
+        let alt = 3 * CELLS + 5 * PAD + 6; // RIGHT from (5,6), fresh ground
+        let mask = open(10 * CELLS);
+        for (delta, want) in [(2.0f32, alt), (0.0, ret)] {
+            let mut logits = vec![-5.0f32; 10 * CELLS];
+            logits[ret] = 0.5;
+            logits[alt] = 0.0;
+            apply_trail_penalty(&mut logits, &[(5, 5)], delta, &owned_raw(), PAD, PAD);
+            assert_eq!(select_action(&logits, &mask, 7, 9, 0.0), want);
+        }
     }
 
     #[test]

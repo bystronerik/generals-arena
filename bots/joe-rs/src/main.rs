@@ -70,7 +70,7 @@ use crate::board::obs::{
     frame_to_raw, normalize_observations, prepare_action_mask, AugScratch, AugState, CELLS,
     N_ACTION_CHANNELS, N_CHANNELS, PAD, TEMPORAL_WINDOW,
 };
-use crate::board::select::{board_digest, select_action};
+use crate::board::select::{apply_trail_penalty, board_digest, select_action, Trail};
 use crate::io::wire::{
     read_handshake, read_observation, write_action, Action, Observation, PASS, TYPE_FOG,
     TYPE_GENERAL, TYPE_PLAIN,
@@ -193,6 +193,11 @@ struct Seat {
     /// Selection temperature (selection-plan S1). 1 replays the distribution
     /// PPO trained under; 0 or less restores the plain argmax.
     temperature: f32,
+    /// Soft trail penalty δ (S4, docs/research/strategies/joe-rs-noundo.md).
+    /// 0 = off, the shipped default until a rated round prices a value.
+    noundo: f32,
+    /// The last `JOE_RS_NOUNDO_WINDOW` move-source cells the penalty reads.
+    trail: Trail,
     state: AugState,
     next_state: AugState,
     scratch: AugScratch,
@@ -231,11 +236,36 @@ impl Seat {
             },
         };
 
+        // S4's knobs, same parsing posture as the temperature: loud on a
+        // malformed value, never fatal.
+        let noundo = match std::env::var("JOE_RS_NOUNDO") {
+            Err(_) => 0.0,
+            Ok(raw) => match raw.trim().parse::<f32>() {
+                Ok(v) if v.is_finite() && v >= 0.0 => v,
+                _ => {
+                    eprintln!("[joe-rs] JOE_RS_NOUNDO {raw:?} is not a finite non-negative number; using 0");
+                    0.0
+                }
+            },
+        };
+        let trail_window = match std::env::var("JOE_RS_NOUNDO_WINDOW") {
+            Err(_) => 8,
+            Ok(raw) => match raw.trim().parse::<usize>() {
+                Ok(v) if v <= 64 => v,
+                _ => {
+                    eprintln!("[joe-rs] JOE_RS_NOUNDO_WINDOW {raw:?} is not an integer in 0..=64; using 8");
+                    8
+                }
+            },
+        };
+
         let seat = Self {
             net,
             h,
             w,
             temperature,
+            noundo,
+            trail: Trail::new(trail_window),
             state: AugState::zeros(),
             next_state: AugState::zeros(),
             scratch: AugScratch::new(),
@@ -312,10 +342,20 @@ impl Seat {
         // The second half of joe's mask work, and the reason `mark` accumulates
         // rather than assigns: one stage, two places in the order.
         clock.mark(S_MASK);
-        let fwd = self.net.forward(&self.aug, &self.penalties, &self.temporal)?;
+        let mut fwd = self.net.forward(&self.aug, &self.penalties, &self.temporal)?;
         clock.mark(S_FORWARD);
-        // Selection (plan S1) joins `decode`: both turn the network's answer
-        // into the reply, and together they still cost microseconds.
+        // Selection (plan S1 + S4) joins `decode`: both turn the network's
+        // answer into the reply, and together they still cost microseconds.
+        if self.noundo > 0.0 {
+            apply_trail_penalty(
+                &mut fwd.logits,
+                self.trail.cells(),
+                self.noundo,
+                &self.raw,
+                self.h,
+                self.w,
+            );
+        }
         let idx = select_action(
             &fwd.logits,
             &self.penalties,
@@ -324,6 +364,13 @@ impl Seat {
             self.temperature,
         );
         let a = decode_action(idx);
+        // The departure memory the S4 penalty reads on later turns: a move
+        // records its source cell; a pass or a build departs nothing.
+        // Recorded before the pass clamp's early return, which never
+        // changes a move.
+        if a.pass_field == 0 {
+            self.trail.push((a.row as usize, a.col as usize));
+        }
         clock.mark(S_DECODE);
         // Free eval telemetry (port-plan §5): v1 play ignores the value.
         // Timed on its own because it is an unbuffered write per turn, and it
@@ -677,9 +724,11 @@ fn run_selfcheck() -> ! {
     match Seat::new(PAD, PAD) {
         Ok(mut seat) => {
             say("startup_ms", format!("{:.3}", began.elapsed().as_secs_f64() * 1e3));
-            // The selection knob, so a judge-side log or a round arm's
+            // The selection knobs, so a judge-side log or a round arm's
             // registration can be checked without reading the environment.
             say("temperature", format!("{}", seat.temperature));
+            say("noundo", format!("{}", seat.noundo));
+            say("noundo_window", format!("{}", seat.trail.cap()));
             let text = selfcheck_input();
             let mut reader = std::io::Cursor::new(text.as_bytes());
             let mut obs = Observation::with_dims(PAD, PAD);

@@ -154,11 +154,13 @@ in `src/board/action.rs`.
 
 ## Mutation pass
 
-`tools/mutation_check.py`: 13 planted bugs — history-roll direction,
+`tools/mutation_check.py`: 17 planted bugs — history-roll direction,
 seen-accumulation OR, pad-mountain rule, a divide-by-50 site, the channel-21
 counter, the R2 q/k-proj swap, softmax scale, argmax tie-break, pass-channel
-mask, and four in the selection layer (turn-blind hash, noise on masked
-entries, temperature ignored, noise sign) — each must make the harness fail.
+mask, four in the S1 selection layer (turn-blind hash, noise on masked
+entries, temperature ignored, noise sign), and five in the S4 trail
+penalty (approach side, ring window, sign, the retake ownership guard,
+the encirclement exemption) — each must make the harness fail.
 Baseline must pass first, on the fast `mutation` profile (same float
 semantics; Rust does not reassociate). **13/13 killed** (2026-08-20). The
 tie-break and all four selection kills come from the crate's unit tests,

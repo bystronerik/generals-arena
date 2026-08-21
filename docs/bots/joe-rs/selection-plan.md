@@ -255,6 +255,13 @@ this plan.** Any future value-guided selection needs a value head trained
 to discriminate adjacent moves, which is a training project, not a
 selection-layer change.
 
+*Post-plan follow-up (2026-08-21):* the S1 residual — the policy's own
+preference oscillating at ~1.9-logit margins, measured on the seed-1
+diagnostic — has its own spec and knob outside this plan: **S4, the
+one-turn soft no-undo penalty**
+([joe-rs-noundo](../../research/strategies/joe-rs-noundo.md),
+`JOE_RS_NOUNDO`, default 0 until rated).
+
 ## Parity stance (one policy for every candidate)
 
 Nothing is ported, so the `.out.log` (deployed joe's own replies) never
