@@ -7,9 +7,10 @@
 //! selection-plan S1): an exact sample of `softmax(logits / T)` whose noise
 //! is hashed from the frame, so the bot stays a pure function of the game.
 //! `JOE_RS_TEMPERATURE` sets T (default 1 — the distribution training
-//! sampled; 0 restores the plain argmax). The Python sibling takes the plain
-//! argmax; the divergence is deliberate
-//! (docs/bots/joe-rs/selection-plan.md).
+//! sampled; 0 restores the plain argmax), and the S4 trail penalty
+//! (`JOE_RS_NOUNDO`, default 6) taxes moves that re-enter the stack's
+//! recent trail. The Python sibling takes the plain argmax; the divergence
+//! is deliberate (docs/bots/joe-rs/selection-plan.md).
 //!
 //! `joe-rs parity <surface>` runs one ported surface over fixture cases
 //! (see `parity.rs`); `pytest` in `tests/` drives it against the Python
@@ -194,7 +195,8 @@ struct Seat {
     /// PPO trained under; 0 or less restores the plain argmax.
     temperature: f32,
     /// Soft trail penalty δ (S4, docs/research/strategies/joe-rs-noundo.md).
-    /// 0 = off, the shipped default until a rated round prices a value.
+    /// Default 6 since 2026-08-21 (round s4-trail-r1: proven flat on
+    /// strength, the circles gone); 0 turns it off.
     noundo: f32,
     /// The last `JOE_RS_NOUNDO_WINDOW` move-source cells the penalty reads.
     trail: Trail,
@@ -239,12 +241,12 @@ impl Seat {
         // S4's knobs, same parsing posture as the temperature: loud on a
         // malformed value, never fatal.
         let noundo = match std::env::var("JOE_RS_NOUNDO") {
-            Err(_) => 0.0,
+            Err(_) => 6.0,
             Ok(raw) => match raw.trim().parse::<f32>() {
                 Ok(v) if v.is_finite() && v >= 0.0 => v,
                 _ => {
-                    eprintln!("[joe-rs] JOE_RS_NOUNDO {raw:?} is not a finite non-negative number; using 0");
-                    0.0
+                    eprintln!("[joe-rs] JOE_RS_NOUNDO {raw:?} is not a finite non-negative number; using 6");
+                    6.0
                 }
             },
         };

@@ -58,9 +58,9 @@ draw).
 
 ## Knobs and sizing
 
-`JOE_RS_NOUNDO` (δ, f32, **default 0 = off**) and `JOE_RS_NOUNDO_WINDOW`
-(K, usize, default 8, 0 disables the memory). δ must beat the measured
-~1.9-logit return margins; the shortlist arms are δ = 2 and δ = 4. K = 8
+`JOE_RS_NOUNDO` (δ, f32, **default 6 since 2026-08-21**; 0 turns it off)
+and `JOE_RS_NOUNDO_WINDOW` (K, usize, default 8, 0 disables the memory). δ must beat the measured
+~1.9-logit return margins; the grids shortlisted δ = 6 (δ = 4 still shuffled). K = 8
 covers the observed period-2/4 orbits with margin; K = 1 degenerates to
 (a slightly stronger form of) the v1 arc penalty. Per the repo rule no
 constant ships by hand: the unrated diagnostic grid
@@ -113,8 +113,11 @@ Single games are chaotic in these knobs (the repo's standing warning), so
 the grid shortlists only; strength needs the rated round. **Round
 `s4-trail-r1` ran (2026-08-21): both arms proven flat against the δ = 0
 baseline — [joe-s4-trail-round](../measurements/joe-s4-trail-round.md) —
-so the behavioral gains are free; the default flips to δ = 6 after the
-r2 replication.** Latency is unchanged (`bench`
+so the behavioral gains are free. The default flipped to δ = 6 the same
+day by decision, ahead of the r2 replication the decision rule asks for;
+r2 stays owed and can still reverse it.** The self-goldens were
+regenerated for the new default; the frozen arm directories are deleted
+(their registry entries and stored games stay as evidence). Latency is unchanged (`bench`
 p50 26.65 ms with the penalty on, vs the 26.2–26.6 ms reference — the
 tax touches at most 8 × K logit entries).
 
@@ -122,8 +125,7 @@ tax touches at most 8 × K logit entries).
 
 - The bot stays a deterministic function of the frame stream (a bounded
   ring of its own past sources; replays and self-goldens reproduce byte
-  for byte). With the default off, shipped behavior and the recorded
-  goldens are unchanged.
+  for byte).
 - The network path, parity tiers, and the `decide` surface are untouched.
 - Escalation if the grid shows displacement into longer wander orbits
   (period > K): the S2 confinement detector — not a bigger δ, and not an

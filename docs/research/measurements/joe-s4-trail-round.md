@@ -70,6 +70,7 @@ decision this round was bought for.
 This is r1. A separately scheduled r2 — same arms, fresh round-seeds —
 is owed before these verdicts are final, and it doubles as the second
 look at the joe lean. No arm is deadline-driven, so the M6 fragility
-binds least here, but the rule stands. The frozen arm directories stay
-until the replication decision, then get deleted per the frozen-copy
-rule.
+binds least here, but the rule stands. By decision the default flipped to
+δ = 6 on 2026-08-21 ahead of r2, and the frozen arm directories were
+deleted; their registry entries and this round's stored games remain the
+evidence. r2 can still reverse the flip.
