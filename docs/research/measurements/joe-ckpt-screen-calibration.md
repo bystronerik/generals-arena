@@ -61,6 +61,14 @@ At 512 games the per-pair Elos read +43.0 (6000>5000) and +269.6
 (69.9 + 284.8 = 354.7) because they come from one joint fit, and the screen's
 did not because they came from three independent score rates.
 
+Quantified once the script started reporting goodness of fit: this
+three-node fit has **chi2/dof 15.8 on a single degree of freedom** — the
+triangle does not close. That is the same defect seen from the other side,
+and it is why the calibration verdict rests on the *model-free* head-to-head
+score rates above as much as on the fitted contrasts. A 3-checkpoint fit has
+no slack to absorb a strained triangle; the narrow-band production fits
+(0.72–0.92) do.
+
 The script now fits Bradley-Terry over the whole matrix
 (`bradley_terry()`, also re-runnable on a saved JSON via the `fit` entry
 point). Nothing downstream may chain per-pair Elo across hops — over a

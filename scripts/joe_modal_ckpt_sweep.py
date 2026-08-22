@@ -300,11 +300,31 @@ def bradley_terry(results: list[dict], anchor: int | None = None) -> dict:
     if anchor is not None and anchor in idx:
         theta = theta - theta[idx[anchor]]
 
+    # Goodness of fit. Bradley-Terry assumes one logistic scale; over a wide
+    # ladder that assumption breaks and the Elo magnitudes stop meaning what
+    # they say. Measured: chi2/dof ~0.8 on a narrow band, but 10.0 on a
+    # 22-checkpoint ladder spanning 1358 Elo. The ordering survived there,
+    # the numbers did not, so the fit has to report which case it is in.
+    chi2 = 0.0
+    resid = []
+    for r in results:
+        i, j = idx[r["a"]], idx[r["b"]]
+        nn = r["finished"]
+        p_obs = (r["wins"] + 0.5 * r["draws"]) / nn
+        p_fit = 1.0 / (1.0 + np.exp(-scale * (theta[i] - theta[j])))
+        var = max(p_fit * (1.0 - p_fit) / nn, 1e-12)
+        chi2 += (p_obs - p_fit) ** 2 / var
+        resid.append((p_obs - p_fit) * 400.0 / math.log(10.0) / 0.25)
+    dof = max(len(results) - n + 1, 1)
+
     order = sorted(range(n), key=lambda i: -theta[i])
     return {
         "anchor": anchor,
         "ratings": [{"step": ids[i], "elo": float(theta[i]),
                      "se": float(se[i])} for i in order],
+        "fit": {"chi2_per_dof": float(chi2 / dof),
+                "resid_elo_sd": float(np.std(resid)),
+                "resid_elo_max": float(np.max(np.abs(resid)))},
         "cov": cov.tolist(), "ids": ids,
     }
 
@@ -351,6 +371,11 @@ def _print_fit(bt: dict) -> None:
     print(f"\nBradley-Terry (anchor {bt['anchor'] or 'mean'}):")
     for row in bt["ratings"]:
         print(f"  step {row['step']:>6}  {row['elo']:+9.1f} ± {row['se']:.1f}")
+    f = bt.get("fit")
+    if f:
+        warn = "" if f["chi2_per_dof"] < 2.0 else "   <-- MISFIT: trust the order, not the Elo"
+        print(f"  fit: chi2/dof {f['chi2_per_dof']:.2f}, "
+              f"residual sd {f['resid_elo_sd']:.1f} Elo{warn}")
 
 
 @app.local_entrypoint()
@@ -421,3 +446,87 @@ def sweep(steps: str, pairs: str = "", run_name: str = DEFAULT_RUN,
           f"({games / tot:.1f} games/s overall)")
     _print_fit(out["bradley_terry"])
     print(f"wrote {dest.relative_to(REPO)}")
+
+
+# --------------------------------------------------------------------------
+# Client-independent path: deploy once, then spawn.
+#
+# `modal run` ties the app's life to the local process. `--detach` is not
+# enough -- a hard kill of the client still stopped a running sweep and threw
+# away an hour of H100 time. The durable path never holds the call at all:
+# `modal deploy` publishes the app, `launch` spawns a call server-side and
+# exits in seconds, and the sweep runs whether or not this machine is awake.
+#
+#   modal deploy scripts/joe_modal_ckpt_sweep.py          # once, after edits
+#   python scripts/joe_modal_ckpt_sweep.py launch --tag s2 --steps ...
+#   python scripts/joe_modal_ckpt_sweep.py status --tag s2
+#   modal run scripts/joe_modal_ckpt_sweep.py::collect --tag s2
+#
+# Re-launching the same --tag resumes from the pairs already on the Volume,
+# so an interrupted sweep costs only the pair it was mid-way through.
+# --------------------------------------------------------------------------
+
+APP_NAME = "joe-ckpt-sweep"
+
+
+def _volume_rows(tag: str) -> list[dict]:
+    try:
+        raw = b"".join(CKPT_VOL.read_file(f"results/{tag}.jsonl"))
+    except Exception:
+        return []
+    return [json.loads(ln) for ln in raw.decode().splitlines() if ln.strip()]
+
+
+def _main() -> None:
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    lp = sub.add_parser("launch", help="spawn a sweep on the deployed app")
+    lp.add_argument("--steps", required=True)
+    lp.add_argument("--tag", required=True)
+    lp.add_argument("--run-name", default=DEFAULT_RUN)
+    lp.add_argument("--pairs", default="")
+    lp.add_argument("--n-maps", type=int, default=1024)
+    lp.add_argument("--scan-steps", type=int, default=0)
+    lp.add_argument("--map-seed", type=int, default=20260821)
+    lp.add_argument("--pool-size", type=int, default=1024)
+
+    sp = sub.add_parser("status", help="pairs finished, read from the Volume")
+    sp.add_argument("--tag", required=True)
+
+    args = ap.parse_args()
+
+    if args.cmd == "status":
+        rows = _volume_rows(args.tag)
+        games = sum(r["games"] for r in rows)
+        print(f"{args.tag}: {len(rows)} pairs, {games:,} games on the volume")
+        for r in rows[-3:]:
+            print(f"  {r['a']} vs {r['b']}: {r['wins']}W {r['losses']}L "
+                  f"{r['draws']}D  elo {r['elo_a_minus_b']:+.1f}")
+        return
+
+    want = [int(s) for s in args.steps.split(",") if s.strip()]
+    if args.pairs:
+        plist = [[int(x) for x in p.split(":")] for p in args.pairs.split(",")]
+    else:
+        plist = [[a, b] for i, a in enumerate(want) for b in want[i + 1:]]
+    done = {(r["a"], r["b"]) for r in _volume_rows(args.tag)}
+    todo = [p for p in plist if tuple(p) not in done]
+
+    fn = modal.Function.from_name(APP_NAME, "sweep_remote")
+    call = fn.spawn(args.run_name, want, plist, args.n_maps,
+                    args.scan_steps or 1202, args.map_seed, args.pool_size,
+                    args.tag)
+    print(f"spawned {args.tag}: {len(todo)} pairs to play "
+          f"({len(done)} already on the volume), "
+          f"{2 * args.n_maps * len(todo):,} games")
+    print(f"  call id: {call.object_id}")
+    print(f"  progress: python {Path(__file__).name} status --tag {args.tag}")
+    print("  results:  modal run scripts/joe_modal_ckpt_sweep.py::collect "
+          f"--tag {args.tag}")
+
+
+if __name__ == "__main__":
+    _main()

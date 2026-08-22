@@ -44,6 +44,34 @@ The calibration re-check holds inside the larger fit: 5000→6000 **+65.4 ± 6.5
 5000→10000 **+322.8 ± 6.3** (arena +354.7 ± 33.7). All three inside the
 published intervals.
 
+## Correction (2026-08-22): this fit is misspecified — trust the order, not the Elo
+
+Added when the sweep script started reporting goodness of fit. **This stage-1
+fit has chi2/dof = 10.0** (residual sd 14.3 Elo, max 83.7). Bradley-Terry
+assumes one logistic scale, and a 22-checkpoint ladder spanning 1,358 Elo
+breaks that assumption. The three narrow-band fits in this series are fine by
+comparison: joe-M stage 2 is 0.92, the M7F4 stages are 0.81 and 0.72.
+
+What survives and what does not:
+
+- **The ordering survives.** A model-free Copeland ranking over the same 231
+  pairs reproduces the BT order exactly, except that it swaps 45000 and 47500
+  — a pair whose direct match is 0.497. Exactly **1 of 231 pairs** has the
+  later checkpoint losing its direct match, and it is that same near-tie. The
+  conclusion "step 50000 is strongest, and the curve is monotone" is
+  model-free and stands.
+- **The Elo magnitudes below do not.** The wide-gap values (step 2500 at
+  −1029.6) and the per-1k rate table are the parts the misfit distorts most,
+  because the residuals concentrate where the logistic curve is saturated.
+  Read the rate table as a shape — fast, decelerating, flat at the end — not
+  as calibrated Elo.
+- **The top-of-run conclusion was never resting on this fit.** It came from
+  [stage 2](joe-ckpt-s2-screen.md), chi2/dof 0.92, over a 39-Elo band.
+
+This is also the cleanest explanation for the cross-fit gap noted in stage 2
+(42500 → 50000 reads +24.9 here and +38.7 there): one of the two fits is
+misspecified, and it is this one.
+
 ## The rate decayed to nothing
 
 | Interval | Elo | per 1k iters |
