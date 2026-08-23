@@ -14,8 +14,8 @@ never produces a verdict, and its games never enter `data/games/` or
 
 ## 0. Answer (2026-08-22)
 
-**Step 50000**, the run's last checkpoint — tied with 49500 at 0.5 ± 3.0 Elo,
-with 49000 the next candidate 6.8 Elo back. The strength curve is monotone
+**Step 50000**, the run's last checkpoint — tied with 49500 at 1.2 ± 3.0 Elo,
+with 48500 the next candidate 5.5 Elo back. The strength curve is monotone
 across the whole run at both 2500- and 500-step granularity, and the
 improvement rate decayed to +1.9 Elo per 1k iterations at the end: the run
 converged rather than being cut short or degrading.
@@ -143,13 +143,13 @@ else. A job that dies at import looks exactly like one that is working.
 **The calibration gate — passed 2026-08-21.** The screen had to reproduce the
 contrasts the arena already rated, or stage 2 would not start. On 6,144 games
 over steps 5000/6000/10000, all three land inside the published intervals, and
-the widest span matches to 4.8 Elo:
+the widest span matches to 7.7 Elo:
 
 | Contrast | Screen | Arena (r4) | Arena CI₉₅ |
 | --- | ---: | ---: | --- |
-| 5000 → 6000 | +46.8 | +69.9 ± 29.1 | [+12.9, +126.8] |
-| 6000 → 10000 | +312.7 | +284.8 ± 29.0 | [+228.0, +341.7] |
-| 5000 → 10000 | +359.5 | +354.7 ± 33.7 | [+288.7, +420.7] |
+| 5000 → 6000 | +49.2 | +69.9 ± 29.1 | [+12.9, +126.8] |
+| 6000 → 10000 | +313.2 | +284.8 ± 29.0 | [+228.0, +341.7] |
+| 5000 → 10000 | +362.4 | +354.7 ± 33.7 | [+288.7, +420.7] |
 
 Full setup and the throughput numbers:
 [joe-ckpt-screen-calibration](../measurements/joe-ckpt-screen-calibration.md).
@@ -173,7 +173,7 @@ Ran: 22 checkpoints, 231 pairs, 236,544 games, 98 min.
 
 **Step 50000 is the strongest, and the curve is monotone at all 21 steps** —
 no degradation, no local peak at 2500 granularity. Only 47500 is
-indistinguishable from it (−4.6 ± 4.1); 45000 is already 3σ behind. The
+indistinguishable from it (−4.0 ± 4.1); 45000 is already 3σ behind. The
 improvement rate decayed from +145 Elo per 1k (step 3000–5000) to **+1.9 per
 1k** over the last 2,500 iterations: the run converged.
 
@@ -212,8 +212,8 @@ Ran: 13 checkpoints (44000–50000 at 500 granularity, 47000 not retained, plus
 42500 as a control), 78 pairs, 159,744 games, 64 min.
 [joe-ckpt-s2-screen](../measurements/joe-ckpt-s2-screen.md).
 
-**49500 (+18.2 ± 2.1) and 50000 (+17.7 ± 2.1) tie at 0.5 ± 3.0 Elo**; 49000 is
-next at −6.8. No local peak, no inversion above noise, nothing the 2500-step
+**49500 (+15.6 ± 2.0) and 50000 (+14.4 ± 2.0) tie at 1.2 ± 3.0 Elo**; 48500 is
+next at −5.5. No local peak, no inversion above noise, nothing the 2500-step
 grid had hidden. Six pairs overlapping stage 1 repeat to a mean 5.5 Elo.
 
 **This closes the plan's question. The strongest checkpoint of
@@ -225,7 +225,7 @@ last checkpoint either way, so it costs nothing to adopt.
 Stage 3 exists to confirm a screen winner in the arena. The screen's winner is
 step 50000 — which is also the run's last checkpoint, i.e. the default. There
 is no candidate to promote over it and no decision waiting on a rated round:
-the nearest rival is 4.6 Elo away, six times finer than the ±25 the arena can
+the nearest rival is 1.2 Elo away, six times finer than the ±25 the arena can
 buy in 4–6 h.
 
 An arena round here would answer a question worth asking only if it were

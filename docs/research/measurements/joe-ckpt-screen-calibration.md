@@ -1,5 +1,14 @@
 # Joe checkpoint screen — calibration against the rated rounds (2026-08-21)
 
+> **Corrected 2026-08-22.** Every Elo here was refitted after a draw-accounting
+> bug: ~1 % of games terminate with no winner (simultaneous death under
+> deathtouch), the screen's counter saw only truncation draws, and the fit
+> credited each unaccounted game to the pair's second entity — always the
+> later checkpoint in a step-ordered round-robin. Contrasts moved by up to
+> 4.6 Elo, all shrinking the later checkpoint's advantage. **No conclusion
+> changed.** Detail: [joe-m7f4-growth-recruitment](joe-m7f4-growth-recruitment.md).
+
+
 Stage-1 pilot of
 [joe-M-checkpoint-selection-plan](../strategies/joe-M-checkpoint-selection-plan.md).
 Before the screen is allowed to narrow 98 checkpoints, it has to reproduce
@@ -35,12 +44,12 @@ fitted arena numbers from [joe-r3](joe-r3-step6000.md) and
 
 | Contrast | Screen | Arena (r4) | Arena CI₉₅ | Inside |
 | --- | ---: | ---: | --- | :---: |
-| 5000 → 6000 | **+46.8** | +69.9 ± 29.1 | [+12.9, +126.8] | ✅ |
-| 6000 → 10000 (r4 primary) | **+312.7** | +284.8 ± 29.0 | [+228.0, +341.7] | ✅ |
-| 5000 → 10000 | **+359.5** | +354.7 ± 33.7 | [+288.7, +420.7] | ✅ |
+| 5000 → 6000 | **+49.2** | +69.9 ± 29.1 | [+12.9, +126.8] | ✅ |
+| 6000 → 10000 (r4 primary) | **+313.2** | +284.8 ± 29.0 | [+228.0, +341.7] | ✅ |
+| 5000 → 10000 | **+362.4** | +354.7 ± 33.7 | [+288.7, +420.7] | ✅ |
 
 The widest span — 5000 → 10000, where a broken instrument has the most room
-to disagree — matches to **4.8 Elo**. Screen SEs are 4.3–5.4 Elo against the
+to disagree — matches to **7.7 Elo**. Screen SEs are 4.3–5.4 Elo against the
 arena's ~30, on 2,048 games per pair against the arena's 120–200.
 
 Head-to-head records, screen vs arena, as decisive win-rates:
@@ -62,12 +71,12 @@ At 512 games the per-pair Elos read +43.0 (6000>5000) and +269.6
 did not because they came from three independent score rates.
 
 Quantified once the script started reporting goodness of fit: this
-three-node fit has **chi2/dof 15.8 on a single degree of freedom** — the
+three-node fit has **chi2/dof 14.4 on a single degree of freedom** — the
 triangle does not close. That is the same defect seen from the other side,
 and it is why the calibration verdict rests on the *model-free* head-to-head
 score rates above as much as on the fitted contrasts. A 3-checkpoint fit has
 no slack to absorb a strained triangle; the narrow-band production fits
-(0.72–0.92) do.
+(0.66–0.78) do.
 
 The script now fits Bradley-Terry over the whole matrix
 (`bradley_terry()`, also re-runnable on a saved JSON via the `fit` entry

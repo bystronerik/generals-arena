@@ -208,14 +208,23 @@ def sweep_remote(run_name: str, steps: list[int], pairs: list[list[int]],
             agg["draws"] += int(jnp.sum(drew))
         dt = time.time() - t0
         games = 2 * n_maps
-        w, l, d, fin_n = (agg["wins"], agg["losses"], agg["draws"],
-                          agg["finished"])
+        w, l, fin_n = agg["wins"], agg["losses"], agg["finished"]
+        # A game can terminate with no winner -- both generals fall on the
+        # same tick, which deathtouch makes reachable. The scan's own draw
+        # counter sees only truncation draws, so ~1% of games landed in no
+        # bucket and the fit silently credited every one of them to `b`.
+        # In a round-robin ordered by step that is a systematic ~3-5 Elo
+        # gift to the later checkpoint. Derive draws from the residual.
+        d = fin_n - w - l
+        d_trunc = agg["draws"]
         decisive = w + l
         score = (w + 0.5 * d) / fin_n if fin_n else float("nan")
         lo, hi = _wilson(w, decisive)
         row = {
             "a": a, "b": b, "games": games, "finished": fin_n,
             "wins": w, "losses": l, "draws": d,
+            "draws_truncation": d_trunc,
+            "draws_no_winner": d - d_trunc,
             "decisive": decisive,
             "decisive_win_rate": (w / decisive) if decisive else None,
             "decisive_ci95": [lo, hi],
@@ -269,7 +278,10 @@ def bradley_terry(results: list[dict], anchor: int | None = None) -> dict:
     N = np.zeros((n, n))   # games between i and j
     for r in results:
         i, j = idx[r["a"]], idx[r["b"]]
-        s_ij = r["wins"] + 0.5 * r["draws"]
+        # Never trust a stored draw count over the residual: an outcome that
+        # is neither a win nor a loss is a draw, whatever produced it.
+        draws = r["finished"] - r["wins"] - r["losses"]
+        s_ij = r["wins"] + 0.5 * draws
         S[i, j] += s_ij
         S[j, i] += r["finished"] - s_ij
         N[i, j] += r["finished"]

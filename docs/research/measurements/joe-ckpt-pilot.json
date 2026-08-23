@@ -21,22 +21,24 @@
    "finished": 512,
    "wins": 285,
    "losses": 220,
-   "draws": 5,
+   "draws": 7,
    "decisive": 505,
    "decisive_win_rate": 0.5643564356435643,
    "decisive_ci95": [
     0.5207847031895132,
     0.6069564248943541
    ],
-   "score_rate": 0.5615234375,
+   "score_rate": 0.5634765625,
    "elo_a_minus_b": 42.96860147452291,
    "elo_ci95": [
     14.451018745955988,
     75.48672460308717
    ],
-   "draw_rate": 0.009765625,
+   "draw_rate": 0.013671875,
    "seconds": 33.147833824157715,
-   "games_per_second": 15.445956520599575
+   "games_per_second": 15.445956520599575,
+   "draws_truncation": 5,
+   "draws_no_winner": 2
   },
   {
    "a": 10000,
@@ -45,22 +47,24 @@
    "finished": 512,
    "wins": 422,
    "losses": 88,
-   "draws": 1,
+   "draws": 2,
    "decisive": 510,
    "decisive_win_rate": 0.8274509803921568,
    "decisive_ci95": [
     0.7922398082511053,
     0.8577659522789879
    ],
-   "score_rate": 0.8251953125,
+   "score_rate": 0.826171875,
    "elo_a_minus_b": 269.6014711879196,
    "elo_ci95": [
     232.51772939258828,
     312.1460936566156
    ],
-   "draw_rate": 0.001953125,
+   "draw_rate": 0.00390625,
    "seconds": 11.961450338363647,
-   "games_per_second": 42.80417386827045
+   "games_per_second": 42.80417386827045,
+   "draws_truncation": 1,
+   "draws_no_winner": 1
   },
   {
    "a": 10000,

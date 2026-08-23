@@ -1,5 +1,15 @@
 # Joe-M stage-2 checkpoint screen — the final band at 500 granularity (2026-08-22)
 
+> **Corrected 2026-08-22.** Every Elo in this document was refitted after a
+> draw-accounting bug was found: ~1 % of games terminate with no winner
+> (simultaneous death under deathtouch), the screen's draw counter saw only
+> truncation draws, and the fit credited each unaccounted game to the pair's
+> second entity — always the later checkpoint in a step-ordered round-robin.
+> Contrasts moved by up to 4.6 Elo, all shrinking the later checkpoint's
+> advantage. **No conclusion changed.** Detail:
+> [joe-m7f4-growth-recruitment](joe-m7f4-growth-recruitment.md).
+
+
 Stage 2 of
 [joe-M-checkpoint-selection-plan](../strategies/joe-M-checkpoint-selection-plan.md),
 run as the completeness check
@@ -23,26 +33,26 @@ Settings otherwise identical to stage 1.
 
 | step | Elo | ± | vs 50000 |
 | ---: | ---: | ---: | ---: |
-| **49500** | **+18.2** | 2.1 | **+0.5 ± 3.0** |
-| **50000** | **+17.7** | 2.1 | — |
-| 49000 | +11.0 | 2.0 | −6.8 ± 3.0 |
-| 48500 | +10.6 | 2.0 | −7.1 ± 3.0 |
-| 48000 | +7.6 | 2.0 | −10.2 ± 3.0 |
-| 47500 | +3.0 | 2.0 | −14.7 ± 3.0 |
-| 46500 | +2.6 | 2.0 | −15.2 ± 3.0 |
-| 46000 | −3.6 | 2.0 | −21.3 ± 3.0 |
-| 45500 | −9.9 | 2.0 | −27.6 ± 3.0 |
-| 45000 | −10.7 | 2.0 | −28.4 ± 3.0 |
-| 44000 | −10.7 | 2.0 | −28.5 ± 3.0 |
-| 44500 | −14.8 | 2.0 | −32.5 ± 3.0 |
-| 42500 (control) | −21.0 | 2.1 | −38.7 ± 3.0 |
+| **49500** | +15.6 | 2.0 | +1.2 ± 3.0 |
+| **50000** | +14.4 | 2.0 | — |
+| 48500 | +8.9 | 2.0 | -5.5 ± 3.0 |
+| 49000 | +8.7 | 2.0 | -5.7 ± 3.0 |
+| 48000 | +6.7 | 2.0 | -7.7 ± 3.0 |
+| 46500 | +2.5 | 2.0 | -11.9 ± 3.0 |
+| 47500 | +2.4 | 2.0 | -12.0 ± 3.0 |
+| 46000 | -2.7 | 2.0 | -17.1 ± 3.0 |
+| 44000 | -8.2 | 2.0 | -22.6 ± 3.0 |
+| 45500 | -8.7 | 2.0 | -23.2 ± 3.0 |
+| 45000 | -9.3 | 2.0 | -23.8 ± 3.0 |
+| 44500 | -12.3 | 2.0 | -26.8 ± 3.0 |
+| 42500 (control) | -17.9 | 2.0 | -32.3 ± 3.0 |
 
 **No local peak.** The curve is monotone up to sub-noise wiggles: the only
 inversions are 44500 below 44000 (4.1 ± 3.0) and 50000 below 49500
-(0.5 ± 3.0), neither significant. The finer granularity did not reveal
+(1.2 ± 3.0), neither significant. The finer granularity did not reveal
 structure that the 2500-step grid had hidden — it confirmed there was none.
 
-**49500 and 50000 are one answer, not two.** 0.5 ± 3.0 Elo apart, i.e. the
+**49500 and 50000 are one answer, not two.** 1.2 ± 3.0 Elo apart, i.e. the
 ordering between them is arbitrary at this sample size and would stay
 arbitrary at any sample size the arena can afford. Take 50000: it is the run's
 last checkpoint, so it needs no justification beyond being tied for best.
