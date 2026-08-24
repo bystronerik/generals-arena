@@ -7,3 +7,6 @@
 [submodule "competition-scraper"]
 	path = competition-scraper
 	url = git@github.com:bystronerik/generals-scraper.git
+[submodule "average-joe"]
+	path = average-joe
+	url = git@github.com:strakam/AverageJoe.git
