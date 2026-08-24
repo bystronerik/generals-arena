@@ -79,7 +79,11 @@ def train_remote(cfg_dict: dict, engine_sha: str) -> dict:
     print(f"Checkpoints: {ckpt_dir}", flush=True)
     run(cfg, ckpt_dir, engine_sha=engine_sha, on_checkpoint=VOLUME.commit)
     VOLUME.commit()
-    return {"run_name": cfg.run_name, "ckpt_dir": ckpt_dir}
+    stats = jax.local_devices()[0].memory_stats() or {}
+    peak_gib = round(stats.get("peak_bytes_in_use", 0) / 2**30, 1)
+    print(f"Peak device memory: {peak_gib} GiB", flush=True)
+    return {"run_name": cfg.run_name, "ckpt_dir": ckpt_dir,
+            "peak_device_gib": peak_gib}
 
 
 def _local_engine_sha() -> str:
