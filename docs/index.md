@@ -27,6 +27,7 @@ Small topic files for the Generals Arena research repo.
 - [sprint replays](engine/sprint-replays.md) — whole generals.bot tournaments: the results asset, the blob layout, and the organizers' ruleset
 - [replay analysis](engine/replay-analysis.md) — `scripts/replay.py`: timeline, events, fog vs action, and flaw aggregates over scraped replays
 - [Joe vast.ai training](engine/joe-vast-train.md) — interruptible GPU runs; durable state in R2, not the Modal Volume
+- [Joe GCP training](engine/joe-gcp-train.md) — the same run on a Google Cloud G4 spot VM (RTX PRO 6000); same R2 state, no bidding, stopped-not-outbid preemptions
 - [Modal jobs](engine/modal-jobs.md) — how a remote job fails silently, the two import traps, and how to read the container's log
 
 ## Bots
