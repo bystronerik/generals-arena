@@ -50,7 +50,7 @@ def test_preset_key_set_is_known():
         assert preset[key] == val
 
 
-@pytest.mark.parametrize("tier", ["S", "M", "M7", "M7F4"])
+@pytest.mark.parametrize("tier", ["S", "M", "M7", "M7F4", "X16"])
 def test_config_env_matches_preset(tier):
     cfg = _load(tier)
     preset = _MODE_PRESETS["competition"]
@@ -64,7 +64,7 @@ def test_config_env_matches_preset(tier):
     assert cfg["deathtouch_turn"] == preset["deathtouch_turn"]
 
 
-@pytest.mark.parametrize("tier", ["S", "M", "M7", "M7F4"])
+@pytest.mark.parametrize("tier", ["S", "M", "M7", "M7F4", "X16"])
 def test_final_curriculum_stage_equals_preset(tier):
     cfg = _load(tier)
     final = cfg["curriculum"][-1]
@@ -75,7 +75,7 @@ def test_final_curriculum_stage_equals_preset(tier):
     assert "max_generals_distance" not in preset
 
 
-@pytest.mark.parametrize("tier", ["S", "M", "M7", "M7F4"])
+@pytest.mark.parametrize("tier", ["S", "M", "M7", "M7F4", "X16"])
 def test_network_matches_plan(tier):
     cfg = _load(tier)
     assert cfg["pad_to"] % cfg["patch_size"] == 0

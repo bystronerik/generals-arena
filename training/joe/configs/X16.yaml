@@ -1,0 +1,122 @@
+# X16 — depth-16 growth retrain of the M7F4 lineage (2026-08-25).
+# 29,551,834 parameters: M7F4 (depth 7, ff x4, embed 384) plus 9 spliced
+# identity blocks (grow_depth 7 -> 16, bitwise parity). Everything is
+# M7F4.yaml verbatim except the keys commented below.
+#
+# Two deliberate departures from the M7/M7F4 continuation recipe:
+#
+# 1. HOT SCHEDULE. The M7F4 continuation (LR cap 2e-5, entropy ~0.001)
+#    measurably failed to recruit grafted capacity: the ff x4 graft is
+#    worth 0 Elo after 20k iterations and would need ~250k more at that
+#    schedule (docs/research/measurements/joe-m7f4-growth-recruitment.md).
+#    This run is that doc's section-5 settling experiment: joe-M's own
+#    schedule (LR cap 1e-4, entropy restart), with target_kl 0.02 as the
+#    guard and the frozen-reference eval as the strength instrument.
+#    Expect an early eval_ref dip before the climb (M7F4 dipped -18.7 at
+#    its own 4k); checkpoints every 250 keep every recovery point.
+#
+# 2. num_steps 128, NOT the lineage's 256. The 29.55M net at 2048x256
+#    demands ~100 GiB and OOMs an 80 GB card; at 2048x128 it fits in
+#    52.3 GiB and costs only 8% per-sample over the params model
+#    (docs/research/measurements/joe-x16-pilots.md). An iteration is
+#    therefore HALF an M-lineage iteration (524,288 samples). Every
+#    per-iteration constant below is rescaled so the schedule tracks the
+#    same SAMPLE positions as joe-M's: power-law numerators multiply by
+#    2^exponent, cadences double.
+run_name: joe-X16
+
+# ---- Environment: GeneralsEnv(mode="competition") numbers ----
+# Identical to M7F4.yaml; the drift test pins these against the mode preset.
+pad_to: 21                    # competition preset; with patch 3: 7x7 = 49 patch tokens
+min_grid_size: 18             # each side drawn independently in [18, 21]
+max_grid_size: 21
+truncation: 1200              # competition draw turn (preset), not the released 1024
+mountain_density_min: 0.24    # released M's flat 0.21 not adopted — preset range wins
+mountain_density_max: 0.26
+build_castles: true           # castles are built, not captured — 10th per-cell
+                              # action, build mask, build-cost obs channel (plan §4)
+deathtouch_turn: 800          # env-internal; the timestep channel carries the regime change
+
+pool_size: 200000
+reset_pool_every: 20
+
+# ---- Curriculum ----
+# Single stage equal to the competition preset, as in M7/M7F4: a grown run
+# does not re-climb the ladder, and one stage keeps the fabricated
+# curriculum_stage 0 valid on every resume.
+curriculum:
+  - min_generals_distance: 17
+    max_generals_distance: null   # preset leaves the max unset
+
+# ---- Network (M7F4 grown to depth 16; everything else unchanged) ----
+network: history_transformer
+depth: 16                     # grow_depth 7 -> 16: 9 identity blocks,
+                              # 29,551,834 params (joe-x16-pilots.md)
+embed_dim: 384
+n_head: 8
+ff_factor: 4
+patch_size: 3
+
+ema_decay: 0.999              # EMA is the deployment policy (paper: +~30 Elo)
+
+# ---- Rollout ----
+num_envs: 2048
+num_steps: 128                # memory ceiling, see header note 2
+num_iters: 30000              # horizon only; the budget/window stops the run
+minibatch_size: 2048
+seed: 48                      # fresh rollout randomness for the new lineage
+
+# ---- PPO ----
+num_epochs: 1
+gamma: 1.0
+gae_lambda: 0.9
+clip_eps: 0.2
+max_grad_norm: 0.267
+vf_coef: 0.5
+target_kl: 0.02               # the guard on the hot schedule
+adv_top_frac: 0.25
+
+# ---- Entropy ----
+# Hot restart (header note 1), rescaled to half-size iterations: joe-M's
+# start/(t+1)^0.2 with start 0.05 tracks the same sample positions when
+# start is multiplied by 2^0.2 -> 0.057.
+ent_schedule: power_law
+ent_coef_start: 0.057
+ent_power: 0.2
+ent_coef_min: 0.001
+
+# ---- Learning rate ----
+# joe-M's clip(0.5 * t^-1.1, 5e-6, 1e-4) in T=256 iterations. In T=128
+# iterations the same sample schedule is clip(1.07 * t^-1.1, ...): the
+# numerator multiplies by 2^1.1, so the 1e-4 cap holds to iteration
+# ~4,600 (the same ~2.4B samples) and then decays identically.
+lr_schedule: power_law
+lr_power_law_numerator: 1.07
+lr_power_law_exponent: 1.1
+lr_power_law_min: 5e-6
+lr_power_law_max: 1e-4
+
+# ---- Value loss: categorical HL-Gauss ----
+value_loss: ce
+num_bins: 128
+v_min: -1.0
+v_max: 1.0
+hl_sigma: 0.04                # NOT the released config.py default 0.75
+
+# ---- Eval / checkpoints ----
+# eval_every 100 at T=128 = the lineage's 50 at T=256 (same sample
+# cadence); eval_games halved to 256 to trim the measured ~17% eval
+# overhead. The frozen reference is the M7F4 endpoint (step-20000 EMA),
+# greedy both seats — the recruitment experiment's strength instrument.
+# Seed both ref/ objects into R2 before launch (joe-gcp-train.md).
+eval_every: 100
+eval_games: 256
+eval_ref_checkpoint: ref/joe-M7F4_ema_final.eqx
+eval_ref_config: ref/config.yaml
+# 250 at T=128 = the lineage's 125 at T=256: tighter than the lineage's
+# 500 because a spot preemption costs everything since the last upload
+# (measured the hard way, joe-x16-pilots.md).
+ckpt_every: 250
+save_every: 250
+
+use_bf16: true
