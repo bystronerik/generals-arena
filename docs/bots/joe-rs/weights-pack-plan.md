@@ -37,6 +37,15 @@ If strict: lossless alone does not fit and the int8-FF fallback becomes
 the main path, gates and all. A probe submission of a >47.68 MiB,
 <50 MiB zip would settle the ambiguity empirically.
 
+**D2 RESOLVED 2026-08-25 — the cap is 50·2²⁰, not strict.** The probe
+happened for real: Erik submitted the unclejoe zip (47.86 MiB =
+50,189,332 B, over the strict 5·10⁷ reading by 0.18 MiB) and the judge
+accepted it, size and latency both. The enforced cap is therefore at
+least 50,189,332 B and consistent with the 50·2²⁰ reading. The lossless
+`f16p` + `rans0` path is the plan; the int8-FF fallback and its
+f16-precedent gates (Phase 3) are not needed. Evidence:
+[unclejoe export](../unclejoe/export.md#zip-size-and-the-d2-cap-ambiguity).
+
 ## 2. Format: `joe-net-v2` packed artifact
 
 The zip carries `model.packed` + the manifest; **`model.safetensors`

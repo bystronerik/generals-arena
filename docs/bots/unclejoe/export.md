@@ -75,9 +75,13 @@ excluded, sources minified) built at **50,189,332 B = 47.86 MiB**:
 - strict 5·10⁷ reading (50,000,000 B): **misses by 0.18 MiB** — the packed
   container alone is 50,152,349 B.
 
-That gap is decision **D2** in
-[weights-pack-plan.md](../joe-rs/weights-pack-plan.md) and stays open; the
-int8-FF fallback is not taken here. `build.sh` reconstructs the safetensors
+That gap was decision **D2** in
+[weights-pack-plan.md](../joe-rs/weights-pack-plan.md). **Resolved
+empirically 2026-08-25**: Erik submitted this exact zip and the judge
+accepted it. An accepted 50,189,332 B zip is over the strict 5·10⁷ reading,
+so the enforced cap is not the strict one — the `arena.bundle` 50·2²⁰
+reading (or at least this zip's size) is the real limit. The int8-FF
+fallback is dead; the lossless path is the path. `build.sh` reconstructs the safetensors
 at intake through `unclejoe unpack-artifact`, refusing on any digest
 mismatch.
 
@@ -103,3 +107,7 @@ competition fleet spans 29–77 ms p50 for *M7F4* code
 ([modal fleet variance](../joe-rs/latency.md)); a slow-generation x86 host
 roughly doubles these numbers, which still fits the budget but with a
 thinner margin — re-measure on Modal x86 before relying on headroom there.
+
+The 2026-08-25 submission of this exact bot passed the judge's latency
+limits, so the X16 tier is confirmed viable on real judge hardware — a
+pass/fail signal only; the judge reports no percentiles.

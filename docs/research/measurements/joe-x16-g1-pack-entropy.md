@@ -36,7 +36,13 @@ and an end-of-run re-measure is a formality, not a gate.
 
 ## What remains open
 
-Only D2, the cap reading. The lossless path lives in the 0.92-to-1.40 MiB
+Nothing. D2 was resolved empirically on 2026-08-25: the judge accepted
+the 50,189,332 B unclejoe zip, which is over the strict 5·10⁷ reading, so
+the enforced cap is the `arena.bundle` 50·2²⁰ reading (see the
+[weights pack plan](../../bots/joe-rs/weights-pack-plan.md) §1). The
+paragraph below stands as the state of play before that probe.
+
+Before the probe, only D2, the cap reading. The lossless path lives in the 0.92-to-1.40 MiB
 window between the two readings, and a follow-up entropy measurement
 (2026-08-25, [rans-plan.md](../../bots/joe-rs/rans-plan.md) §0) closed the
 last lossless escape: the best static-table rANS configuration reaches
