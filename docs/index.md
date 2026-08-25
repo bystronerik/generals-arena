@@ -56,7 +56,9 @@ Small topic files for the Generals Arena research repo.
 - [why M7F4 gained so little](research/measurements/joe-m7f4-growth-recruitment.md) — ablation: zeroing the whole ff ×4 graft costs **−1.1 ± 3.8 Elo**; the grafted units sit at 11 % of mature scale after the full budget, and would need ~250k more iterations at this schedule
 - [joe argmax limit cycle](research/measurements/joe-argmax-limit-cycle.md) — why joe walks a stack around its own castle: PPO sampled, deployment takes the argmax, and the escape never had to be learned; plus the repetition penalty that shipped for four days and what it never established
 - [joe X16 training pilots](research/measurements/joe-x16-pilots.md) — the 29.55M depth-16 shape priced for a $100/5-day run: OOMs an 80 GB card at the production shape, 37.6k samples/s at `num_steps 128`, pmap N=2 scales linearly and restores the full recipe on 2×96 GB; three outbids in an hour say measure market churn before committing
-- [unclejoe shadow measurements](bots/unclejoe/shadow.md) — what the layer would have done while it did nothing: trigger rates (U2), what the proofs proved (U3), and U4's **no-go** on the value re-rank (bot removed 2026-08-20)
+- [unclejoe](bots/unclejoe/index.md) — joe-rs fork playing the X16 network (depth 16, 29.55M params, own R2 export) at **pure argmax** (T = 0); the name's second life since 2026-08-25
+- [unclejoe export](bots/unclejoe/export.md) — the X16 export chain, artifact provenance (run/step/shas), zip size vs both cap readings, measured latency
+- [unclejoe shadow measurements](bots/unclejoe/shadow.md) — what the layer would have done while it did nothing: trigger rates (U2), what the proofs proved (U3), and U4's **no-go** on the value re-rank (the *previous* unclejoe, a tactics fork removed 2026-08-20)
 - [unclejoe strategy spec](research/strategies/unclejoe.md) — the two claims (provable moments, one-step improvement), triggers, caps, and what the joe-rs contrast had to show (bot removed 2026-08-20)
 - [smoke](bots/smoke.md) — stdio smoke test, not competitive
 - [expand_plus](bots/expand-plus.md) — greedy capture + BFS frontier march
