@@ -15,4 +15,8 @@
 
 pub mod gemm;
 pub mod net;
+// Not called from main yet: the rans0 decoder lands with `unpack-artifact`
+// in the pack plan's P3; its unit tests exercise it until then.
+#[allow(dead_code)]
+pub mod pack;
 pub mod safetensors;
