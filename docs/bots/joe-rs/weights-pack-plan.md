@@ -85,13 +85,14 @@ cap, reporting the packaging.md §2 table.
 
 ## 5. Phases and gates
 
-- **Phase 0 / G1 — measure before building.** Pull one X16 EMA from R2
-  (`joe/joe-X16-gcp-20260825/checkpoints/*_ema_*.eqx`, any step past the
-  early dip), f16-round it, and run the codec measurement from the
-  zip-budget doc on the real tensors. The 1.73 B/param is an M7F4
-  extrapolation; X16's nine freshly-grown blocks may compress
-  differently in either direction. G1 + D2 select the path:
-  lossless-only, or int8-FF fallback.
+- **Phase 0 / G1 — measure before building. DONE 2026-08-25**
+  ([joe-x16-g1-pack-entropy.md](../../research/measurements/joe-x16-g1-pack-entropy.md)):
+  the step-1750 EMA measures **1.72 B/param → 48.55 MiB**, per-block
+  rates uniform (no young-block effect; R1 resolved). With 0.05 MiB of
+  deflated source, `f16p` fits the 50·2²⁰ cap by 1.40 MiB and misses
+  the strict reading by 0.92 MiB — **only D2 selects the path now**:
+  lossless-only under the arena cap, int8-FF fallback (34.1 MiB) under
+  strict.
 - **Phase 1 / G2 — format + tools.** Pack tool, Rust unpacker, and a
   small synthetic fixture under `bots/joe-rs/tests/` (outside the
   content hash): pack in Python → unpack in Rust → bytes equal.
