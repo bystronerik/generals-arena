@@ -65,6 +65,16 @@ bots/joe-rs/artifact/*.safetensors
 bots/joe-rs/artifact/*.packed
 bots/joe-rs/target/
 
+# unclejoe follows both rules at once: its own .eqx (fetched from R2 by
+# scripts/joe_export_bot.py --out bots/unclejoe/artifact, X16 run) plus the
+# derived .safetensors and .packed, all pinned by the committed
+# manifest.json. The content hash covers all three, so an export or a
+# re-conversion forks the rating identity.
+bots/unclejoe/artifact/*.eqx
+bots/unclejoe/artifact/*.safetensors
+bots/unclejoe/artifact/*.packed
+bots/unclejoe/target/
+
 # The prebuilt x86_64 binary the submission ships instead of compiling at
 # intake. Derived: scripts/joe_rs_modal_static_build.py rebuilds it from the
 # committed sources on any checkout. It sits under tools/ so the content-hash

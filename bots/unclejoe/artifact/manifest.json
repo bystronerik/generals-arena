@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "weights": "ema.eqx",
+  "weights_sha256": "b354c17cbb62e2d4e79f267c2686c737b39d183b434c92414fc384191a81cca0",
+  "weights_size": 118242664,
+  "n_params": 29551834,
+  "network": {
+    "network": "history_transformer",
+    "pad_to": 21,
+    "history_size": 7,
+    "depth": 16,
+    "embed_dim": 384,
+    "n_head": 8,
+    "ff_factor": 4,
+    "patch_size": 3,
+    "value_loss": "ce",
+    "num_bins": 128,
+    "v_min": -1.0,
+    "v_max": 1.0
+  },
+  "checkpoint": {
+    "source": "r2",
+    "r2_key": "joe/joe-X16-gcp-20260825/checkpoints/joe-X16-gcp-20260825_ema_2500.eqx",
+    "run_name": "joe-X16-gcp-20260825",
+    "global_step": 2500,
+    "curriculum_stage": 0,
+    "last_eval_wr": 0.95703125,
+    "engine_sha": "9e3b9d13cca51caa1bb07db48bb85c9e90ce0462"
+  },
+  "exported_at": 1787680283.838806,
+  "pre_quantization_weights_sha256": "6a9265433474b8a46f375967913acca4e7b5ffe8a3f34b4a40e5c647b1079faa",
+  "quantized": "f16",
+  "tensor_schema": "joe-net-v1",
+  "safetensors": "model.safetensors",
+  "safetensors_sha256": "e12c235e2139dd2f84de076e59ffcc897e51f136847dac6cce431f378cf94d7b",
+  "safetensors_size": 118236472,
+  "pack_format": "joe-net-v2",
+  "packed": "model.packed",
+  "packed_sha256": "faa45fd269fc0f3db0bd088c3188a6ea9dbadb5a32908028bfd1b243f07632a6"
+}

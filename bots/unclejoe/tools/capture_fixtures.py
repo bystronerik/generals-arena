@@ -1,0 +1,380 @@
+"""Capture the unclejoe parity corpus (port-plan §6, forked from joe-rs).
+
+Two differences from the joe-rs original, both because unclejoe has its own
+weights lineage (the X16 run) and ships the plain argmax:
+
+- The **played seat is unclejoe itself** (`bots/unclejoe/run.sh` under the
+  tee), not Python joe — there is no deployed Python bot with these weights.
+- The **oracle is built from unclejoe's artifact**
+  (`bots/unclejoe/artifact/ema.eqx`, depth 16) through joe's *imported*
+  network code, and its greedy argmax is what the recorded `.out.log` must
+  reproduce: unclejoe plays T = 0, so the capture cross-check is meaningful
+  again (for joe-rs it compares Python joe with itself; do not copy that
+  reading here).
+
+Three phases:
+
+1. **Play** (`--play`): run real `--mode competition` matchup games with
+   `bots/unclejoe/run.sh` wrapped in a `tee`, recording the exact wire text
+   unclejoe saw (`.in.log`) and replied (`.out.log`).
+2. **Capture** (`--capture`): replay each recorded game's frames through the
+   *imported* `bots/joe/agent.py` / `joe_obs.py` functions under
+   `eqx.filter_jit`, with unclejoe's own weights, and dump per-turn surfaces
+   to a `.npz`. The recomputed greedy replies are cross-checked against the
+   recorded `.out.log`; a mismatch is either a genuine near-tie tier-3
+   divergence (rare — check the top-2 margin) or logs older than the
+   current binary/weights. Re-play a stale corpus, do not debug it.
+3. **Self-golden** (`--selection-golden`): run the unclejoe release binary in
+   wire mode over every `.in.log` and record its own replies as
+   `<name>.unclejoe.log` — the reference `tests/test_unclejoe_wire_replay.py` grades
+   the full played path against. At the shipped T = 0 these replies equal
+   the oracle's greedy `all_action` by design wherever tier 3 agrees.
+
+Corpus layout (`data/joe/unclejoe-parity/`, gitignored):
+    games/<name>.in.log     wire text unclejoe received (handshake + frames)
+    games/<name>.out.log    wire text unclejoe sent (one action line per turn)
+    games/<name>.npz        per-turn surfaces (see `capture_game`)
+    games/<name>.json       opponent, seed, outcome
+    games/<name>.unclejoe.log unclejoe's own replies (the wire-replay golden)
+
+Every turn stores the FNV-1a-64 hash of the augmented tensor's f32 bits (the
+sequence surface's currency) plus the action; a stratified sample of turns
+stores every full surface, including the input obs-state, for localization
+when a sequence check fails.
+
+Usage:
+    .venv/bin/python bots/unclejoe/tools/capture_fixtures.py --play --capture
+    .venv/bin/python bots/unclejoe/tools/capture_fixtures.py --capture   # logs exist
+"""
+import argparse
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import numpy as np
+
+REPO = Path(__file__).resolve().parent.parent.parent.parent
+BOT_DIR = REPO / "bots" / "unclejoe"
+JOE_DIR = REPO / "bots" / "joe"  # network *code* imports only; weights are ours
+CORPUS = REPO / "data" / "joe" / "unclejoe-parity"
+PAD = 21
+
+# Mixed opponents, mixed seeds (port-plan §6). The joe mirror is the long
+# game / truncation candidate: two identical nets stall each other, so the
+# corpus carries three of them.
+#
+# This list is the whole documented corpus (`docs/bots/joe-rs/parity.md`:
+# 14 games). Keep it that way. The last four used to be passed by hand as
+# `--game`, which made the documented re-export sequence — a bare
+# `--play --capture` — rebuild only the first ten and silently drop two of
+# the three joe mirrors. A corpus member that lives in a shell history is
+# not a corpus member.
+DEFAULT_GAMES = [
+    ("aegis", 0),
+    ("macaria", 1),
+    ("boom", 2),
+    ("castle_rush", 3),
+    ("cm_hunter", 4),
+    ("general_hunter", 5),
+    ("expand_plus", 6),
+    ("blitz", 7),
+    ("metro", 8),
+    ("joe", 9),
+    ("joe", 10),
+    ("joe", 11),
+    ("garrison", 12),
+    ("metro", 42),
+]
+
+sys.path.insert(0, str(JOE_DIR))
+sys.path.insert(0, str(REPO / "bots"))
+
+
+def aug_hash(arr: np.ndarray) -> np.int64:
+    """CRC-32 (zlib) over the little-endian f32 bytes — mirror of
+    `parity.rs::crc32`. Any single-bit difference in any turn's tensor flips
+    it, which is all the sequence check needs; localization then runs the
+    per-frame surfaces."""
+    import zlib
+
+    return np.int64(zlib.crc32(np.ascontiguousarray(arr, dtype="<f4").tobytes()))
+
+
+def play_games(games, out_dir: Path) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    python = REPO / ".venv" / "bin" / "python"
+    wrapper = out_dir / "_tee_joe.sh"
+    wrapper.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        'tee "$JOE_TEE_IN" | bash "$JOE_RUN_SH" | tee "$JOE_TEE_OUT"\n'
+    )
+    wrapper.chmod(0o755)
+
+    for opponent, seed in games:
+        name = f"{opponent}-seed{seed}"
+        in_log = out_dir / f"{name}.in.log"
+        if in_log.exists():
+            print(f"[capture] {name}: logs exist, skipping play")
+            continue
+        env = dict(os.environ)
+        env["PYTHON"] = str(python)
+        env["JOE_TEE_IN"] = str(in_log)
+        env["JOE_TEE_OUT"] = str(out_dir / f"{name}.out.log")
+        env["JOE_RUN_SH"] = str(BOT_DIR / "run.sh")
+        opp_run = REPO / "bots" / opponent / "run.sh"
+        print(f"[capture] playing unclejoe vs {opponent} (seed {seed})")
+        proc = subprocess.run(
+            [str(python), str(REPO / "competition-module" / "competition" / "matchup.py"),
+             str(wrapper), str(opp_run), "--mode", "competition", "--seed", str(seed)],
+            env=env, capture_output=True, text=True)
+        tail = "\n".join(proc.stdout.strip().splitlines()[-3:])
+        if proc.returncode != 0:
+            raise SystemExit(
+                f"matchup failed for {name}:\n{proc.stdout[-2000:]}\n{proc.stderr[-2000:]}")
+        outcome = "unknown"
+        for line in proc.stdout.splitlines():
+            if "captured the enemy general" in line or "truncated" in line:
+                outcome = line.strip()
+        (out_dir / f"{name}.json").write_text(json.dumps(
+            {"opponent": opponent, "seed": seed, "outcome": outcome}, indent=2) + "\n")
+        print(f"[capture]   {outcome}")
+
+
+def parse_in_log(path: Path):
+    """Handshake + per-turn frames, exactly as `_common/wire.py` reads them."""
+    lines = path.read_text().splitlines()
+    player_id, H, W = (int(x) for x in lines[0].split())
+    frames = []
+    pos = 1
+    frame_len = 1 + 3 * H
+    while pos < len(lines):
+        chunk = lines[pos:pos + frame_len]
+        if len(chunk) < frame_len:
+            break  # engine closed mid-frame — normal game end
+        scalars = [int(x) for x in chunk[0].split()]
+        grids = np.array(
+            [[int(x) for x in row.split()] for row in chunk[1:]],
+            dtype=np.int32).reshape(3, H, W)
+        frames.append((scalars, grids))
+        pos += frame_len
+    return player_id, H, W, frames
+
+
+def capture_game(name: str, out_dir: Path, stride_target: int = 40) -> None:
+    npz_path = out_dir / f"{name}.npz"
+    if npz_path.exists():
+        print(f"[capture] {name}: npz exists, skipping")
+        return
+
+    import equinox as eqx
+    import jax.numpy as jnp
+    import jax.random as jrandom
+
+    from _common.wire import Observation
+    from agent import frame_to_raw
+    from joe_net import HistoryTransformer
+    from joe_obs import (
+        augment_obs,
+        build_cost_from_raw,
+        compute_build_mask_from_raw,
+        compute_valid_move_mask,
+        decode_action,
+        init_obs_state,
+    )
+
+    with open(BOT_DIR / "artifact" / "manifest.json") as f:
+        manifest = json.load(f)
+    arch = manifest["network"]
+    template = HistoryTransformer(
+        grid_size=int(arch["pad_to"]), pad_to=int(arch["pad_to"]),
+        history_size=int(arch["history_size"]), patch_size=int(arch["patch_size"]),
+        depth=int(arch["depth"]), embed_dim=int(arch["embed_dim"]),
+        n_head=int(arch["n_head"]), ff_factor=int(arch["ff_factor"]),
+        use_bf16=False, value_loss=arch["value_loss"], num_bins=int(arch["num_bins"]),
+        v_min=float(arch["v_min"]), v_max=float(arch["v_max"]),
+        key=jrandom.PRNGKey(0))
+    net = eqx.tree_deserialise_leaves(str(BOT_DIR / "artifact" / manifest["weights"]), template)
+
+    pad_to = int(arch["pad_to"])
+
+    @eqx.filter_jit
+    def capture_step(net, raw, obs_state):
+        """agent.py::step with every intermediate returned, on our weights.
+
+        unclejoe plays the plain argmax (T = 0), so `action` — the oracle's
+        greedy pick — is both the graded reference and, up to tier-3 float
+        noise, what the recorded binary replied. The `.out.log` cross-check
+        below therefore grades the Rust decision path against JAX for every
+        turn of every game, not just the sampled frames.
+        """
+        cost = build_cost_from_raw(raw)
+        aug, new_state = augment_obs(raw, cost, obs_state)
+        move = compute_valid_move_mask(raw[0], raw[5] > 0, raw[3] > 0)
+        build = compute_build_mask_from_raw(raw, cost)
+        temporal = jnp.stack(
+            [new_state.opponent_army_history, new_state.opponent_land_history])
+        logits, value, value_bins = net._forward(aug, move, build, temporal)
+        idx = jnp.argmax(logits)
+        action = decode_action(idx, pad_to)
+
+        return dict(cost=cost, aug=aug, move=move, build=build, temporal=temporal,
+                    logits=logits, value=value, value_bins=value_bins,
+                    idx=idx, action=action), new_state
+
+    player_id, H, W, frames = parse_in_log(out_dir / f"{name}.in.log")
+    out_log = out_dir / f"{name}.out.log"
+    if out_log.exists():
+        replies = out_log.read_text().splitlines()
+        # A reply can be missing for the very last frame if the seat was
+        # closed mid-turn; compare only paired turns.
+        T = min(len(frames), len(replies))
+    else:
+        # Synthetic frame streams (e.g. the stitched long sequence) have no
+        # recorded replies; the oracle's own outputs are the fixture.
+        replies = None
+        T = len(frames)
+    frames = frames[:T]
+
+    # Stratified sample for the per-frame surfaces: every ~stride turns plus
+    # the first and last three (early state growth and late accumulation).
+    stride = max(1, T // stride_target)
+    sampled = sorted(set(range(0, T, stride)) | {0, 1, 2} | {T - 3, T - 2, T - 1})
+    sampled = [t for t in sampled if 0 <= t < T]
+
+    state = init_obs_state(int(arch["pad_to"]))
+    state_fields = state._fields
+
+    all_hash = np.zeros(T, dtype=np.int64)
+    all_action = np.zeros((T, 5), dtype=np.int32)
+    all_idx = np.zeros(T, dtype=np.int64)
+    all_value = np.zeros(T, dtype=np.float32)
+    per_frame = {k: [] for k in
+                 ("raw", "cost", "aug", "move", "build", "temporal",
+                  "logits", "value", "value_bins", "idx", "action")}
+    state_in_frames = {f"state_{k}": [] for k in state_fields}
+
+    for t, (scalars, grids) in enumerate(frames):
+        obs = Observation(
+            H=H, W=W, turn=scalars[0], my_land=scalars[1], my_army=scalars[2],
+            opp_land=scalars[3], opp_army=scalars[4],
+            type_grid=grids[0].tolist(), owner_grid=grids[1].tolist(),
+            army_grid=grids[2].tolist())
+        raw = jnp.asarray(frame_to_raw(obs))
+        if t in sampled:
+            for k, v in zip(state_fields, state):
+                state_in_frames[f"state_{k}"].append(np.asarray(v))
+        outs, state = capture_step(net, raw, state)
+
+        aug_np = np.asarray(outs["aug"], dtype=np.float32)
+        all_hash[t] = aug_hash(aug_np)
+        action = np.asarray(outs["action"], dtype=np.int32)
+        all_action[t] = action
+        all_idx[t] = int(outs["idx"])
+        all_value[t] = float(outs["value"])
+
+        # The deployed reply (after agent.py's pass clamp) must match what
+        # the live game recorded, or this capture is not the deployed path.
+        # A whole game of mismatches usually means the logs are older than the
+        # bot: re-play them (delete the game and run --play) before reading it
+        # as a capture bug.
+        if replies is not None:
+            p, r, c, d, s = (int(x) for x in action)
+            reply = (1, 0, 0, 0, 0) if p == 1 else (p, r, c, d, s)
+            recorded = tuple(int(x) for x in replies[t].split())
+            assert reply == recorded, \
+                f"{name} turn {t}: recomputed {reply} != recorded {recorded}"
+
+        if t in sampled:
+            per_frame["raw"].append(np.asarray(raw, dtype=np.float32))
+            per_frame["cost"].append(np.asarray(outs["cost"], dtype=np.int32))
+            per_frame["aug"].append(aug_np)
+            per_frame["move"].append(np.asarray(outs["move"], dtype=bool))
+            per_frame["build"].append(np.asarray(outs["build"], dtype=bool))
+            per_frame["temporal"].append(np.asarray(outs["temporal"], dtype=np.float32))
+            per_frame["logits"].append(np.asarray(outs["logits"], dtype=np.float32))
+            per_frame["value"].append(np.float32(outs["value"]))
+            per_frame["value_bins"].append(np.asarray(outs["value_bins"], dtype=np.float32))
+            per_frame["idx"].append(np.int64(outs["idx"]))
+            per_frame["action"].append(action)
+
+    payload = {
+        "player_id": np.int32(player_id), "H": np.int32(H), "W": np.int32(W),
+        "turns": np.int64(T), "sampled_turns": np.asarray(sampled, dtype=np.int64),
+        "all_aug_hash": all_hash, "all_action": all_action,
+        "all_idx": all_idx, "all_value": all_value,
+    }
+    for k, v in per_frame.items():
+        payload[k] = np.stack(v)
+    for k, v in state_in_frames.items():
+        payload[k] = np.stack(v)
+    for k, v in zip(state_fields, state):
+        payload[f"final_state_{k}"] = np.asarray(v)
+    np.savez_compressed(npz_path, **payload)
+    print(f"[capture] {name}: {T} turns, {len(sampled)} sampled frames "
+          f"-> {npz_path.name} ({npz_path.stat().st_size // 1024} KiB)")
+
+
+def record_selection_goldens(out_dir: Path) -> None:
+    """Record the unclejoe binary's own wire replies for every recorded game.
+
+    unclejoe ships T = 0, so unlike joe-rs its played move should equal the
+    oracle's greedy `all_action` by design — the golden still exists because
+    it is recorded from the real binary under its own accumulated state, so
+    `test_unclejoe_wire_replay.py` catches an unexplained change anywhere in the
+    played path byte-for-byte. The recording pins the shipped default
+    (argmax); it is byte-stable until the network or the selection default
+    changes on purpose, and both changes regenerate it here.
+    """
+    binary = REPO / "bots" / "unclejoe" / "target" / "release" / "unclejoe"
+    if not binary.is_file():
+        raise SystemExit(f"no release binary at {binary}; build unclejoe first")
+    # A deliberately minimal environment: a JOE_RS_TEMPERATURE leaking in
+    # from the caller's shell would silently record a non-default golden.
+    env = {"JOE_RS_ARTIFACT": str(REPO / "bots" / "unclejoe" / "artifact"),
+           "PATH": "/usr/bin:/bin"}
+    for in_log in sorted(out_dir.glob("*.in.log")):
+        name = in_log.name.removesuffix(".in.log")
+        proc = subprocess.run([str(binary)], input=in_log.read_bytes(),
+                              capture_output=True, env=env)
+        if proc.returncode != 0:
+            raise SystemExit(f"{name}: unclejoe exited {proc.returncode}:\n"
+                             f"{proc.stderr.decode()[-2000:]}")
+        text = proc.stdout.decode()
+        replies = text.splitlines()
+        assert replies, f"{name}: unclejoe sent no replies"
+        for t, line in enumerate(replies):
+            fields = line.split()
+            assert len(fields) == 5 and all(f.isdigit() for f in fields), \
+                f"{name} turn {t}: malformed reply {line!r}"
+        (out_dir / f"{name}.unclejoe.log").write_text(text)
+        print(f"[golden] {name}: {len(replies)} replies -> {name}.unclejoe.log")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--play", action="store_true", help="play the corpus games")
+    parser.add_argument("--capture", action="store_true", help="replay logs into npz")
+    parser.add_argument("--selection-golden", action="store_true",
+                        help="record unclejoe's own replies as the wire-replay golden")
+    parser.add_argument("--out", type=Path, default=CORPUS / "games")
+    parser.add_argument("--game", nargs=2, action="append", metavar=("OPP", "SEED"),
+                        help="extra (opponent, seed) game; replaces the default list")
+    args = parser.parse_args()
+    if not (args.play or args.capture or args.selection_golden):
+        parser.error("pass --play, --capture, and/or --selection-golden")
+
+    if args.play:
+        games = ([(o, int(s)) for o, s in args.game] if args.game else DEFAULT_GAMES)
+        play_games(games, args.out)
+    if args.capture:
+        for path in sorted(args.out.glob("*.in.log")):
+            capture_game(path.name.removesuffix(".in.log"), args.out)
+    if args.selection_golden:
+        record_selection_goldens(args.out)
+
+
+if __name__ == "__main__":
+    main()
