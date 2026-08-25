@@ -93,11 +93,16 @@ zip member uncompressed (STORED) — deflating rANS output buys nothing.
 
 ## 4. Phases and gates
 
-- **P1 — Python encoder/decoder pair.** Encode the real X16 EMA parts,
-  self-decode, and report the exact zip size. Gate: the `rans0` artifact
-  must beat the deflated `f16p` artifact (expected ~47.9 vs 48.55 MiB);
-  if it does not, stop and keep `f16p` — the format loses nothing, since
-  codecs are per-part.
+- **P1 — Python encoder/decoder pair. DONE 2026-08-25, PASS.**
+  `bots/joe-rs/tools/rans.py`; all 552 parts of the step-1750 EMA
+  encode and self-decode byte-exact in 22 s. `rans0` everywhere:
+  **47.86 MiB** (1.698 B/param, matching the §0 entropy bound to
+  0.01 MiB). With the encoder picking the cheaper codec per part —
+  435 tiny parts (bias/norm planes, where the 512 B table exceeds the
+  win) stay raw `f16p` — the packed total is **47.69 MiB**, projected
+  zip 47.74 MiB: 0.86 MiB under the deflate baseline, arena-cap margin
+  2.26 MiB, and still ~0.06 MiB over the strict reading's budget, as
+  §0 predicted. The per-part minimum is adopted into the encoder spec.
 - **P2 — Rust decoder + fixtures.** Golden fixtures under
   `bots/joe-rs/tests/` (outside the content hash): a tiny
   hand-verifiable stream, several Python-encoded random streams
