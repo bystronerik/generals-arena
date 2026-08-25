@@ -115,10 +115,23 @@ zip member uncompressed (STORED) — deflating rANS output buys nothing.
   build clean, pytest suite green. Note: adding `pack.rs` to `src/`
   forks the bot's content hash at the next registration — intended,
   P3 changes the artifact anyway.
-- **P3 — integration.** The `rans0` arm in `unpack-artifact`, the
-  STORED zip member in the packager, then the pack plan's G3 unchanged:
-  clean-dir intake rehearsal, sha match, parity replay identical, zip
-  under the D2 cap, competition matchup gate.
+- **P3 — integration. DONE 2026-08-25.** `joe-rs unpack-artifact`
+  reconstructs `model.safetensors` from `model.packed` (container:
+  JNP2 magic, safetensors header verbatim, two parts per tensor, codec
+  byte `0` raw / `1` rans0), verifying the manifest's `packed_sha256`
+  on input and `safetensors_sha256` on output; in-crate SHA-256
+  (`src/sha256.rs`, FIPS vectors) and an exhaustively numpy-pinned
+  f16→f32 widening (all 65536 patterns; hardware-quieted NaNs) carry
+  the gates. `tools/pack_artifact.py` packs with the per-part minimum
+  and refuses non-f16 values; the packager ships `model.packed` STORED
+  and excludes the safetensors (`artifact_exclude`); `build.sh` unpacks
+  between compile and selfcheck. Proof on the real M7F4 artifact: Rust
+  reconstruction byte-identical (sha `22f81a96…`); **zip
+  23,336,769 B = 22.26 MiB, 24 files** (was 40.23 MiB); packager smoke
+  compiled the extracted bundle, unpacked, selfchecked, and replied
+  well-formed actions; the competition matchup gate finished (win,
+  turn 252, seed 0); `cargo test` 48/48; pytest 536 passed with the
+  spec-contract test updated to the packed keys.
 
 ## 5. Risks
 

@@ -127,6 +127,13 @@ Headroom: **9.76 MiB**. Under the stricter reading of "50 MB" as 50·10⁶ bytes
 headroom is 7.44 MiB. The bundle passes either reading; the ambiguity only
 matters if the artifact grows.
 
+**Update 2026-08-25**: the table above is the vendored-era shape. The current
+bundle ships the `joe-net-v2` packed artifact (`model.packed`, STORED member;
+`model.safetensors` reconstructed at intake by `build.sh` — see
+[rans-plan.md](rans-plan.md)) and an empty vendor tree: **23,336,769 B
+(22.26 MiB), 24 files**, headroom 27.7 MiB / 25.4 MiB under the two cap
+readings.
+
 Heaviest vendored crates (files / unpacked / deflated):
 
 | crate | files | unpacked | deflated |

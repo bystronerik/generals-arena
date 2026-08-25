@@ -56,6 +56,22 @@ then run the converter. The content hash covers `model.safetensors`, so a
 re-conversion forks joe-rs's rating identity — intended behavior, same as a
 joe re-export.
 
+## Packing (after conversion)
+
+Since 2026-08-25 the export has one more step: `tools/pack_artifact.py`
+packs `model.safetensors` into the `joe-net-v2` container
+(`model.packed`, rans0 + raw parts per tensor plane) and writes
+`pack_format` / `packed` / `packed_sha256` into the manifest. The
+submission zip carries only the container; `build.sh` reconstructs the
+safetensors at intake through `joe-rs unpack-artifact`, which refuses on
+any digest mismatch. The safetensors stays on disk dev-side — every
+tool below keeps reading it. Design and measured sizes:
+[rans-plan.md](rans-plan.md).
+
+```bash
+.venv/bin/python bots/joe-rs/tools/pack_artifact.py
+```
+
 ## Quantization
 
 Since 2026-08-18 the lineage is f16-in-f32: after fetching a new `.eqx`

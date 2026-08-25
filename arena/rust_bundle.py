@@ -158,6 +158,14 @@ class RustBotSpec:
     #: does not. `None` skips both the step and the parse, so turning one on
     #: later is a spec edit plus a Rust subcommand, not a packager change.
     selfcheck_argv: tuple[str, ...] | None = None
+    #: Artifact-dir-relative files that stay OUT of the zip. For a packed
+    #: artifact (joe-net-v2), the safetensors is reconstructed by build.sh at
+    #: intake and must not ride along at 54 MB.
+    artifact_exclude: tuple[str, ...] = ()
+    #: Arcnames written uncompressed (ZIP_STORED). Entropy-coded artifact
+    #: members gain nothing from deflate; storing them keeps the packager's
+    #: reported zip size equal to the member size.
+    stored_members: tuple[str, ...] = ()
     selfcheck_keys: frozenset[str] = frozenset()
     minify_dir: Path = MINIFY_DIR
     minify_bin: Path = MINIFY_BIN
@@ -341,10 +349,11 @@ def _artifact_members(spec: RustBotSpec) -> list[tuple[Path, str]]:
             f"{weights.name} hashes to {digest}, manifest says "
             f"{manifest[spec.artifact_sha_key]}"
         )
+    excluded = {root / rel for rel in spec.artifact_exclude}
     return [
         (path, str(path.relative_to(spec.bot_dir)))
         for path in sorted(root.rglob("*"))
-        if path.is_file()
+        if path.is_file() and path not in excluded
     ]
 
 
@@ -394,9 +403,11 @@ def _iter_source_files(spec: RustBotSpec, *, minify: bool) -> tuple[list[tuple[s
     }
 
 
-def _write_entry(zf: zipfile.ZipFile, arcname: str, data: bytes, *, mode: int) -> None:
+def _write_entry(
+    zf: zipfile.ZipFile, arcname: str, data: bytes, *, mode: int, stored: bool = False
+) -> None:
     info = zipfile.ZipInfo(arcname, date_time=_ZIP_DATE)
-    info.compress_type = zipfile.ZIP_DEFLATED
+    info.compress_type = zipfile.ZIP_STORED if stored else zipfile.ZIP_DEFLATED
     # The judge executes run.sh and build.sh; a zip that loses the executable
     # bit produces a "permission denied" at intake that looks like a bot bug.
     info.external_attr = (mode & 0o7777) << 16
@@ -435,7 +446,7 @@ def build_vendored(
                 zf, ".cargo/config.toml", _shell(spec.cargo_config, minify=minify), mode=0o644
             )
         for arcname, data in members:
-            _write_entry(zf, arcname, data, mode=0o644)
+            _write_entry(zf, arcname, data, mode=0o644, stored=arcname in spec.stored_members)
         for rel, arcname, mode in spec.extra_files:
             path = spec.bot_dir / rel
             if not path.is_file():

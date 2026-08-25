@@ -32,6 +32,14 @@ cd "$DIR"
 cargo build --release --offline --locked --manifest-path "$DIR/Cargo.toml"
 echo "[build] $(ls -l "$DIR/target/release/joe-rs")"
 
+# The zip carries artifact/model.packed (joe-net-v2, rans0 + raw parts),
+# not model.safetensors: reconstruct it here, once, before selfcheck reads
+# it. The subcommand verifies the manifest's packed_sha256 on its input and
+# refuses to keep an output whose sha256 is not safetensors_sha256 — a
+# drifted decoder fails intake here instead of playing degraded.
+export JOE_RS_ARTIFACT="$DIR/artifact"
+"$DIR/target/release/joe-rs" unpack-artifact
+
 # Intake is the last moment where failing is cheaper than playing.
 #
 # Everything `selfcheck` looks at — the artifact, the manifest, the FMA the

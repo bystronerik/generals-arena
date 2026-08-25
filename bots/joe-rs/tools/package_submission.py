@@ -105,21 +105,28 @@ SPEC = RustBotSpec(
     binary="joe-rs",
     bot_dir=BOT_DIR,
     source_trees=("src",),
-    # The file that ships is the safetensors conversion, named and digested by
-    # its own keys. `weights_sha256` in this manifest is the **`.eqx`
-    # checkpoint**, which is not in the zip — reading it here would put a
-    # digest in SUBMISSION.json that a human compares against a file that
-    # is not there.
-    artifact_file_key="safetensors",
-    artifact_sha_key="safetensors_sha256",
+    # The file that ships is the joe-net-v2 packed container
+    # (tools/pack_artifact.py); `build.sh` reconstructs model.safetensors at
+    # intake through `joe-rs unpack-artifact`, so the safetensors itself
+    # stays out of the zip. `weights_sha256` in this manifest is the **`.eqx`
+    # checkpoint**, which is not in the zip either — reading it here would
+    # put a digest in SUBMISSION.json that a human compares against a file
+    # that is not there.
+    artifact_file_key="packed",
+    artifact_sha_key="packed_sha256",
+    artifact_exclude=("model.safetensors",),
+    # rans0 streams are entropy-coded already; deflating them buys nothing.
+    stored_members=("artifact/model.packed",),
     run_sh=RUN_SH_VENDORED,
     provenance_fields={
-        "safetensors_sha256": "safetensors_sha256",  # the file in this zip
+        "packed_sha256": "packed_sha256",  # the file in this zip
+        "safetensors_sha256": "safetensors_sha256",  # rebuilt at intake
         "source_eqx_sha256": "weights_sha256",  # NOT in this zip
         "checkpoint": "checkpoint.run_name",
         "checkpoint_step": "checkpoint.global_step",
         "engine_sha": "checkpoint.engine_sha",
         "tensor_schema": "tensor_schema",
+        "pack_format": "pack_format",
     },
     provenance_note=(
         "Rated identity of the program in this zip. The content hash is the "

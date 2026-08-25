@@ -58,6 +58,7 @@ mod board;
 mod io;
 mod nn;
 mod parity;
+mod sha256;
 mod xla_math;
 
 use std::io::{self as stdio, BufWriter, Write};
@@ -831,6 +832,10 @@ fn main() {
             Some(surface) => parity::run(surface),
             None => Err("usage: joe-rs parity <surface>".into()),
         },
+        // Intake-time reconstruction of model.safetensors from model.packed
+        // (docs/bots/joe-rs/rans-plan.md P3). build.sh runs it between the
+        // compile and selfcheck; it refuses on any digest mismatch.
+        Some("unpack-artifact") => nn::pack::unpack_artifact(&artifact_dir()),
         Some(other) => Err(format!("unknown subcommand {other:?}")),
     };
     if let Err(e) = result {

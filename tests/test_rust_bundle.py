@@ -221,13 +221,16 @@ def _fake_artifact(root: Path, payload: dict, filename: str, body: bytes) -> Pat
         ),
         pytest.param(
             JOE,
-            "model.safetensors",
-            # The eqx digest sits right beside the shipped one under the name
-            # morpheus uses for the file it ships. Reading the wrong key here
-            # is the failure this whole test exists for, and it would raise.
+            "model.packed",
+            # Two decoy digests sit right beside the shipped one: the eqx
+            # digest under morpheus's key, and the safetensors digest — the
+            # file build.sh reconstructs at intake, not a zip member. Reading
+            # either wrong key is the failure this test exists for.
             lambda digest: {
+                "packed": "model.packed",
+                "packed_sha256": digest,
                 "safetensors": "model.safetensors",
-                "safetensors_sha256": digest,
+                "safetensors_sha256": "1" * 64,
                 "weights": "ema.eqx",
                 "weights_sha256": "0" * 64,
             },
@@ -265,6 +268,12 @@ def test_joe_provenance_does_not_call_the_eqx_digest_weights():
     assert "weights_sha256" not in JOE.provenance_fields
     assert JOE.provenance_fields["source_eqx_sha256"] == "weights_sha256"
     assert JOE.provenance_fields["safetensors_sha256"] == "safetensors_sha256"
+    # The shipped file is the joe-net-v2 container; its digest must be the
+    # one _artifact_members verifies, and the safetensors must stay out of
+    # the zip (build.sh reconstructs it at intake).
+    assert JOE.provenance_fields["packed_sha256"] == "packed_sha256"
+    assert JOE.artifact_file_key == "packed"
+    assert JOE.artifact_exclude == ("model.safetensors",)
     # morpheus keeps its key, because its manifest means the shipped file by it.
     assert MORPHEUS.provenance_fields["weights_sha256"] == "weights_sha256"
 

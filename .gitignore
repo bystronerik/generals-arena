@@ -60,6 +60,9 @@ bots/joe/artifact/*.eqx
 # re-conversion forks the rating identity. Build output stays out of the
 # tree like morpheus-rs's.
 bots/joe-rs/artifact/*.safetensors
+# model.packed is one more derivation of the same weights (joe-net-v2
+# container, tools/pack_artifact.py), pinned by packed_sha256 in the manifest.
+bots/joe-rs/artifact/*.packed
 bots/joe-rs/target/
 
 # The prebuilt x86_64 binary the submission ships instead of compiling at

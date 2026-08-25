@@ -33,5 +33,8 @@
   "tensor_schema": "joe-net-v1",
   "safetensors": "model.safetensors",
   "safetensors_sha256": "22f81a96b01dfc71c62e354ab21920d91ecac5f884baebef357a88dee8afe3bc",
-  "safetensors_size": 54340304
+  "safetensors_size": 54340304,
+  "pack_format": "joe-net-v2",
+  "packed": "model.packed",
+  "packed_sha256": "0e8d12b8548322416a645c6d9ae276b6293a8a62ba33dc8e11b7b9f7e7c30174"
 }
