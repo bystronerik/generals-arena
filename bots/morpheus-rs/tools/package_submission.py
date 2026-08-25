@@ -68,15 +68,6 @@ SPEC = RustBotSpec(
         "weights_sha256": "weights_sha256",
         "checkpoint": "training_run.checkpoint_id",
     },
-    provenance_note=(
-        "Rated identity of the program in this zip. The content hash is the "
-        "repo bot's, computed over sources + Cargo.lock + run.sh + artifact; "
-        "the zip's own launchers are generated and are not part of it. "
-        "`minified` means the .rs members were stripped of comments on the "
-        "way in — the program is the same, the line numbers are not, so a "
-        "judge traceback locates a fault in the stripped file. Re-package "
-        "with --no-minify when you need to read one."
-    ),
     smoke_input=SMOKE_INPUT,
     smoke_expected_lines=2,
     smoke_reject_all_pass=False,

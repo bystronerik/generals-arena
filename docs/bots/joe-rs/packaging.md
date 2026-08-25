@@ -195,7 +195,6 @@ inside the Python bots' closures.
 | `smoke_input`, `smoke_expected_lines` | current | §5.4 |
 | `smoke_reject_all_pass` | `False` | `True` |
 | `provenance_fields` | `{"weights_sha256": "weights_sha256", "checkpoint": "training_run.checkpoint_id"}` | §5.4 |
-| `provenance_note` | current text verbatim | new text |
 | `minify_bin` | `tools/rust-minify` | same |
 | `gate_opponent_default` | `cm_expander` | `joe` |
 
@@ -236,14 +235,14 @@ Two gain behaviour:
   `spec.artifact_file_key` / `spec.artifact_sha_key` instead of the hardcoded
   morpheus names, and keeps the same failure: a digest mismatch raises.
 - `_provenance(spec, …)` builds the common core (`bot_id`, `minified`,
-  `content_hash`, `git_commit`, `git_dirty`, `note`) and then merges
+  `content_hash`, `git_commit`, `git_dirty`) and then merges
   `spec.provenance_fields`, each value a dotted path into the manifest through
   `_dotted`, which returns `""` for any missing hop. That reproduces morpheus's
   old `manifest.get("training_run", {}).get("checkpoint_id", "")` exactly, and
   the strictness it gives up is already covered: `_artifact_members` runs first
   and raises when the manifest lacks the file or digest key. The morpheus key
-  set and note text are preserved exactly, because `SUBMISSION.json` is a zip
-  member and §6's byte-identity check runs through it.
+  set is preserved exactly, because `SUBMISSION.json` is a zip member and §6's
+  byte-identity check runs through it.
 
 `gate()` keeps its absolute `PYTHON=<repo>/.venv/bin/python`
 ([`rust_bundle.py:643`](../../../arena/rust_bundle.py:643)), which is

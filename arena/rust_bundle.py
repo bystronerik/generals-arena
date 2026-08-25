@@ -120,7 +120,6 @@ class RustBotSpec:
     #: Dotted paths into the artifact manifest, merged into SUBMISSION.json
     #: under the key on the left.
     provenance_fields: Mapping[str, str]
-    provenance_note: str
     #: Handshake plus frames fed to the extracted `run.sh`, and how many
     #: replies must come back.
     smoke_input: str
@@ -208,7 +207,6 @@ def _provenance(spec: RustBotSpec, minify_stats: dict | None = None) -> bytes:
         "content_hash": bot_content_hash(spec.bot_dir / "run.sh"),
         "git_commit": _git("rev-parse", "HEAD"),
         "git_dirty": bool(_git("status", "--porcelain", "--", f"bots/{spec.bot_id}")),
-        "note": spec.provenance_note,
     }
     for key, path in spec.provenance_fields.items():
         payload[key] = _dotted(manifest, path)

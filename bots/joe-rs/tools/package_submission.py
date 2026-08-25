@@ -128,18 +128,6 @@ SPEC = RustBotSpec(
         "tensor_schema": "tensor_schema",
         "pack_format": "pack_format",
     },
-    provenance_note=(
-        "Rated identity of the program in this zip. The content hash is the "
-        "repo bot's, computed over sources + Cargo.lock + run.sh + artifact; "
-        "the zip's own launchers are generated and are not part of it. "
-        "`safetensors_sha256` digests model.safetensors, the weights this zip "
-        "actually carries; `source_eqx_sha256` is the .eqx checkpoint the "
-        "conversion read, which is provenance of that conversion and not of "
-        "anything shipped here. `minified` means the .rs members were stripped "
-        "of comments on the way in — the program is the same, the line numbers "
-        "are not, so a judge traceback locates a fault in the stripped file. "
-        "Re-package with --no-minify when you need to read one."
-    ),
     smoke_input=SMOKE_INPUT,
     # Two frames, two well-formed replies, at least one of them a move: with
     # a seat that degrades to passing rather than exiting, the line count
