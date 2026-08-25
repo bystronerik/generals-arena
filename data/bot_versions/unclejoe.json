@@ -5,6 +5,11 @@
       "at": "2026-08-20T13:55:47Z",
       "content_hash": "cd0706604c28",
       "seq": 1
+    },
+    {
+      "at": "2026-08-25T18:27:37Z",
+      "content_hash": "e5fda0d1c1e4",
+      "seq": 2
     }
   ],
   "version": 1,
@@ -182,6 +187,141 @@
       ],
       "first_seen_at": "2026-08-20T13:55:47Z",
       "git_commit": "e4e509d60a4a8931cdf6808262e18b02b4311536",
+      "git_dirty": false
+    },
+    {
+      "closure_ref": "refs/bot-versions/e5fda0d1c1e4",
+      "closure_tree": "abcf98dd29ac4f47ac1ec863267a6f2243e237d2",
+      "content_hash": "e5fda0d1c1e4",
+      "files": [
+        {
+          "blob": "a0c89260a153bb9b5aa70bea3b8c9900a0377f6a",
+          "path": "bots/unclejoe/.cargo/config.toml",
+          "sha256": "070c62350674ebb7dc151ff3047ee2f16cfd6bf9a00b934cf537ff5aff53674a"
+        },
+        {
+          "blob": "7cf81c1eac8fa6673624621c5877ec6fc821f49b",
+          "path": "bots/unclejoe/Cargo.lock",
+          "sha256": "5f58e154d7b37e1194c4d5de83ca72b06446c4ae89c6ade305eab6eae62cbb83"
+        },
+        {
+          "blob": "193541922e14e4708253cdc57252f2e538679af3",
+          "path": "bots/unclejoe/Cargo.toml",
+          "sha256": "c85c847099d3bf67edb6fd678743d532947fe8289a1b4b6f970c9a5bc13b930d"
+        },
+        {
+          "blob": "7dad5996b893b061eb1bbd2b0de46c1e52b1b319",
+          "path": "bots/unclejoe/artifact/ema.eqx",
+          "sha256": "b354c17cbb62e2d4e79f267c2686c737b39d183b434c92414fc384191a81cca0"
+        },
+        {
+          "blob": "7ae1f0e8181c4b5f9fb351f24693eff0f22f94fe",
+          "path": "bots/unclejoe/artifact/manifest.json",
+          "sha256": "daf59fba31c35ab48adc42215e34fe6ea265c021def278da83b3e3c45458841d"
+        },
+        {
+          "blob": "f1713fe0b5bb0e76f2a61cb6778fd71bea20a120",
+          "path": "bots/unclejoe/artifact/model.packed",
+          "sha256": "faa45fd269fc0f3db0bd088c3188a6ea9dbadb5a32908028bfd1b243f07632a6"
+        },
+        {
+          "blob": "7fe1dbc20386d266bad72df6ca3409f02f58f6d5",
+          "path": "bots/unclejoe/artifact/model.safetensors",
+          "sha256": "e12c235e2139dd2f84de076e59ffcc897e51f136847dac6cce431f378cf94d7b"
+        },
+        {
+          "blob": "92ed15d20c19d75e520ccb458ccae517841cf380",
+          "path": "bots/unclejoe/run.sh",
+          "sha256": "2fe3657a74664f0f30bd1aa33b511d4a19a8fbcbcfb2421dfb44aebe44f1427a"
+        },
+        {
+          "blob": "f827fe55a31954be2c5d9ac6d9bb21655fa38e30",
+          "path": "bots/unclejoe/rust-toolchain.toml",
+          "sha256": "436dd7bc962fef2cd92375e062fb55eacc270c2c73d1adfd693422b8da497aee"
+        },
+        {
+          "blob": "520b3fc49ff1ce4c9fc18d84798d35c90156ade6",
+          "path": "bots/unclejoe/src/board/action.rs",
+          "sha256": "5462bdc3231d593783c9986bbaebcc98cbd7c5f44766be113f5715ef6695b605"
+        },
+        {
+          "blob": "63262028d9f85ce758d5a206bda2603c29853fe1",
+          "path": "bots/unclejoe/src/board/mod.rs",
+          "sha256": "95259bd201564d04a681acfc6b8d05347f2094d03a8c957c0ca923895ee98be6"
+        },
+        {
+          "blob": "4dbe0f6653b80c4651fa21bf95add7ff957afb8b",
+          "path": "bots/unclejoe/src/board/obs.rs",
+          "sha256": "bd4a5cb1da47c3654523b7a8ef4666e0bf06e0a86aadd5ba13edd93414d431b2"
+        },
+        {
+          "blob": "2f3cbf45e55bca44e1e6e81e79e390fd957340de",
+          "path": "bots/unclejoe/src/board/select.rs",
+          "sha256": "cc10e14dfe11b503ba16c7b206820dc1a99315021ed8fab13fa53099087bc7e8"
+        },
+        {
+          "blob": "a3ab22bc9f25cde3d3f1feb283eafc4097a97d63",
+          "path": "bots/unclejoe/src/io/json.rs",
+          "sha256": "cb4a888f84bc5b7418dbb92081a2d1303e2c07193d4ae9edf4bc618dd12af6cc"
+        },
+        {
+          "blob": "3cfe1f25339cd9803f985d1d16af3837beff7582",
+          "path": "bots/unclejoe/src/io/mod.rs",
+          "sha256": "c2e0f81a6de1087085b7db37b44e9b91f2c0bc2395c2bc5313084681a945638b"
+        },
+        {
+          "blob": "671ca774c868f8fce85af05303dc5bb1742a6085",
+          "path": "bots/unclejoe/src/io/wire.rs",
+          "sha256": "a720abb8e66d87a7f96dd22f20299cd8772a7a2fcbc8542222a000ff295a66b7"
+        },
+        {
+          "blob": "f65dc1770773c304afedeb36374ff7566e4a5b6a",
+          "path": "bots/unclejoe/src/main.rs",
+          "sha256": "966442d1823df2a5705d70a45ea683157fb03a5f44a7d5a7b4c8d75e78d9e7a2"
+        },
+        {
+          "blob": "93f99b5eb1065e2926df5e258f0cd5ec1833f6ae",
+          "path": "bots/unclejoe/src/nn/gemm.rs",
+          "sha256": "d7a20b42582caad4dd37e4a6db8beeacecfd760dfe994c7b755bde25c2c6cb45"
+        },
+        {
+          "blob": "618ae64fe4f10ab5453c894b694686529cd75537",
+          "path": "bots/unclejoe/src/nn/mod.rs",
+          "sha256": "bbd746aa24340225a7af250ec419944a868fa31321fb286876ed9620db5fc195"
+        },
+        {
+          "blob": "a98cbe5a94c8aad54d5807550c886e19baf9905a",
+          "path": "bots/unclejoe/src/nn/net.rs",
+          "sha256": "aacff7daa449fe1dbc5cb5f5984c9f3d5a39accebaf0ac784a3a2dc51d1fc9e3"
+        },
+        {
+          "blob": "ff2f77f825cf726f334d5a3b3256e16e694f0e58",
+          "path": "bots/unclejoe/src/nn/pack.rs",
+          "sha256": "bb5a05639419dc34a7048bc98a398e220d1b677e6fadcbacffc12bb9a5f6f779"
+        },
+        {
+          "blob": "582e3a4f478b2329731a735190ee62cbb06e8524",
+          "path": "bots/unclejoe/src/nn/safetensors.rs",
+          "sha256": "71971d5b793b4f9060080f09e0453ba0f9be3c676e7e136891ea666a9b5e1f6c"
+        },
+        {
+          "blob": "1647741d4883d12b178ebb3500db5eab2084a5f3",
+          "path": "bots/unclejoe/src/parity.rs",
+          "sha256": "17b109fc261502e5da51ab57436b396358bc129d43c0869b09f257ae4e3c0258"
+        },
+        {
+          "blob": "293e620f41b6b7fc980f05fa444ec6468a18bcdc",
+          "path": "bots/unclejoe/src/sha256.rs",
+          "sha256": "25e28fcb11581f4969dbc7f72b911f0d8fa1567354347175915c8c57224cd83d"
+        },
+        {
+          "blob": "c4460d2aabfef19b7b252d1443cd5df58d320725",
+          "path": "bots/unclejoe/src/xla_math.rs",
+          "sha256": "d2b12c0893f0ad56def4f849bfbf340f54c498ea90443316fad6f071d06f7a37"
+        }
+      ],
+      "first_seen_at": "2026-08-25T18:27:37Z",
+      "git_commit": "192302ea440c41465ebe36405c792b7da2679716",
       "git_dirty": false
     }
   ]
