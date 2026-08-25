@@ -37,9 +37,12 @@ and an end-of-run re-measure is a formality, not a gate.
 ## What remains open
 
 Only D2, the cap reading. The lossless path lives in the 0.92-to-1.40 MiB
-window between the two readings; no codec refinement inside this plan
-changes that (rANS ~5–10% ≈ 2.4–4.8 MiB would land `f16p` at ~44–46 MiB —
-the one lossless lever left if strict must hold without going lossy).
+window between the two readings, and a follow-up entropy measurement
+(2026-08-25, [rans-plan.md](../../bots/joe-rs/rans-plan.md) §0) closed the
+last lossless escape: the best static-table rANS configuration reaches
+47.85 MiB and the perfect-coder floor is ~47.3 MiB — both still at or
+above the strict reading's budget. No lossless codec rescues strict; the
+earlier "rANS lands ~44–46 MiB" projection is refuted.
 
 ## Reproducing
 

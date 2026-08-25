@@ -26,8 +26,10 @@ until G1):
   Passes the 50·2²⁰ reading with ~0.6 MiB to spare; **fails strict**.
 - int8/row FF matrices (18.9M params) + f16-split rest: ~34.0 MiB.
   Passes both readings; lossy — inherits the f16-precedent gates.
-- rANS instead of deflate: ~5–10% over the shuffle number (~47.5 MiB
-  total) — knife-edge on strict, real loader complexity. Not planned.
+- rANS instead of deflate: **measured −0.70 MiB** (47.85 MiB at
+  per-tensor tables; global tables are *worse* than deflate) — does not
+  rescue strict, planned anyway as the `rans0` codec for margin:
+  [rans-plan.md](rans-plan.md).
 
 **D2**: decide which cap the bundle must satisfy before Phase 1. If
 50·2²⁰ (what our own packager enforces): the lossless path is the plan.
@@ -130,5 +132,7 @@ cap, reporting the packaging.md §2 table.
   it.
 - Integer quantization of the shipped X16 unless G1 + D2 force the
   fallback path.
-- rANS or any entropy coder beyond the zip's deflate (~5–10% for real
-  loader complexity; revisit only if G1 lands within 1 MiB of the cap).
+- ~~rANS or any entropy coder beyond the zip's deflate~~ — promoted to
+  its own plan after the payoff was measured at −0.70 MiB:
+  [rans-plan.md](rans-plan.md). It adds margin under the arena cap; it
+  does not change D2.
