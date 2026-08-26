@@ -73,6 +73,28 @@ def _upload_log(store, run_name, log_path, boot_id):
     store.upload_run_file(run_name, rel, log_path)
 
 
+def apply_env_overrides(cfg, overrides_json):
+    """Apply the ``JOE_CONFIG_OVERRIDES`` JSON to a loaded Config.
+
+    The R2 ``config.yaml`` stays authoritative and untouched; this hook
+    exists for per-platform keys whose meaning depends on the machine —
+    ``num_envs`` and ``minibatch_size`` are PER DEVICE, so the same run
+    needs half the values on a 2-GPU host to keep the recipe identical.
+    Never override schedule or network keys mid-run through this hook.
+    """
+    if not overrides_json:
+        return cfg
+    import json
+
+    from training.joe.config import Config
+
+    data = json.loads(overrides_json)
+    print(f"Applying JOE_CONFIG_OVERRIDES: "
+          f"{ {k: data[k] for k in sorted(data)} }", flush=True)
+    return Config.from_dict({**cfg.to_dict(), **data},
+                            source="JOE_CONFIG_OVERRIDES")
+
+
 def fetch_config(store, run_name, ckpt_dir):
     """Always fetch the run's ``config.yaml`` from R2; return its path.
 
@@ -128,6 +150,18 @@ def main(argv=None):
     else:
         print("No latest.json; fresh start", flush=True)
 
+    # metrics.jsonl is append-local and mirrored as a whole file, so a
+    # boot on a machine with a stale (or empty) local copy would upload
+    # that copy over the run's history. Seed the local file from R2 so
+    # appends continue the union. Measured 2026-08-26: a cross-platform
+    # handover cost the metrics rows of the previous platform's stretch.
+    try:
+        store.download_run_file(run_name, "logs/metrics.jsonl",
+                                os.path.join(ckpt_dir, "metrics.jsonl"))
+        print("Fetched metrics.jsonl for append continuity", flush=True)
+    except FileNotFoundError:
+        pass
+
     cfg_path = fetch_config(store, run_name, ckpt_dir)
 
     heartbeat = _IntervalUploader(
@@ -148,6 +182,7 @@ def main(argv=None):
     from training.joe.main import run
 
     cfg = Config.from_yaml(cfg_path)
+    cfg = apply_env_overrides(cfg, os.environ.get("JOE_CONFIG_OVERRIDES", ""))
     if cfg.run_name != run_name:
         print(f"NOTE: config run_name={cfg.run_name!r}; "
               f"overriding to {run_name!r}", flush=True)

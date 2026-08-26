@@ -203,11 +203,13 @@ def test_uploader_mirrors_checkpoints_and_run_files(store, tmp_path):
     (tmp_path / "metrics.jsonl").write_text('{"step": 1}\n')
     uploader = CheckpointUploader(store, str(tmp_path), "joe-x")
 
-    # First hook call: run start, no checkpoint yet
+    # First hook call: run start, no checkpoint yet. config.yaml must
+    # NOT be mirrored: the launch copy in R2 is authoritative and the
+    # local one carries JOE_CONFIG_OVERRIDES (per-device values).
     uploader()
     uploader.wait()
     assert "joe/joe-x/manifest.json" in store.client.objects
-    assert "joe/joe-x/config.yaml" in store.client.objects
+    assert "joe/joe-x/config.yaml" not in store.client.objects
     assert "joe/joe-x/logs/metrics.jsonl" in store.client.objects
     assert store.resolve_latest("joe-x") is None
 

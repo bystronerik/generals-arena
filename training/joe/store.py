@@ -31,8 +31,12 @@ LEASE_STALE_S = 5 * 60
 
 # Run-dir file -> remote key (relative to the run prefix). Start files are
 # written once at run start; mutable files re-upload on every checkpoint.
+# config.yaml is deliberately absent: the R2 copy from launch is
+# authoritative (vast_boot.fetch_config), and the ckpt_dir copy is the
+# EFFECTIVE config after JOE_CONFIG_OVERRIDES. Measured 2026-08-26: a
+# Modal 2-GPU boot uploaded its per-device num_envs=1024 config over the
+# launch config, and the next single-GPU boot trained at half the recipe.
 RUN_START_FILES = {"manifest.json": "manifest.json",
-                   "config.yaml": "config.yaml",
                    "hparams.json": "hparams.json"}
 MUTABLE_RUN_FILES = {"metrics.jsonl": "logs/metrics.jsonl"}
 

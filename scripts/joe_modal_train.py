@@ -23,13 +23,17 @@ container, and module scope must survive both sides.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 
 import modal
 
 REPO = Path(__file__).resolve().parents[1]
+if modal.is_local():
+    sys.path.insert(0, str(REPO))
 
 IMAGE = (
     modal.Image.debian_slim(python_version="3.12")
@@ -39,6 +43,7 @@ IMAGE = (
         "equinox",
         "optax",
         "pyyaml",
+        "boto3",
     )
     .add_local_dir(
         str(REPO / "competition-module"),
@@ -56,6 +61,26 @@ IMAGE = (
 
 app = modal.App("joe-train")
 VOLUME = modal.Volume.from_name("morpheus-training", create_if_missing=True)
+
+R2_KEYS = ("R2_ENDPOINT_URL", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY",
+           "R2_BUCKET")
+
+
+def _r2_secret():
+    """R2 credentials from the local gitignored .env, as a Modal Secret.
+
+    Values never appear in code or the image; they are injected into the
+    container environment at call time. In the container this module is
+    re-imported without the local .env, so the secret is empty there —
+    only the locally built one is ever attached to a call.
+    """
+    if not modal.is_local():
+        return modal.Secret.from_dict({})
+    from training.joe.store import load_dotenv
+
+    load_dotenv()
+    return modal.Secret.from_dict(
+        {k: os.environ[k] for k in R2_KEYS if os.environ.get(k)})
 
 
 @app.function(image=IMAGE, gpu="H100", timeout=23 * 3600,
@@ -86,6 +111,64 @@ def train_remote(cfg_dict: dict, engine_sha: str) -> dict:
             "peak_device_gib": peak_gib}
 
 
+@app.function(image=IMAGE, gpu="H100:2", timeout=23 * 3600,
+              volumes={"/vol": VOLUME}, secrets=[_r2_secret()])
+def train_r2_h100x2(run_name: str, cfg_overrides: str) -> dict:
+    """Resume an R2-backed run (vast/GCP lineage) on 2x H100.
+
+    Runs the same ``training.joe.vast_boot`` the other platforms use: R2
+    lease, checkpoint restore, heartbeat, ``CheckpointUploader``. The JIT
+    cache lives on the Volume; checkpoints stay container-local because
+    R2 is the durable store. ``cfg_overrides`` is the per-platform
+    ``JOE_CONFIG_OVERRIDES`` JSON — on 2 GPUs the per-device ``num_envs``
+    and ``minibatch_size`` must be half the single-GPU values or the
+    recipe silently doubles.
+    """
+    import time as _time
+
+    os.environ["RUN_NAME"] = run_name
+    os.environ["JOE_ROOT"] = "/vol/joe-r2"      # jax-cache persists here
+    os.environ["CKPT_DIR"] = "/root/joe/ckpt"   # ephemeral; R2 is durable
+    os.environ["CONTAINER_ID"] = (
+        f"modal-{os.environ.get('MODAL_TASK_ID', int(_time.time()))}")
+    if cfg_overrides:
+        os.environ["JOE_CONFIG_OVERRIDES"] = cfg_overrides
+
+    # On vast/GCP the onstart script tees stdout into JOE_TRAIN_LOG and
+    # vast_boot mirrors that file to R2 every minute. There is no onstart
+    # here, so recreate the tee in-process; without it the R2 prefix gets
+    # no logs/train-*.log and the only log copy is Modal's own capture.
+    boot_id = _time.strftime("%Y%m%d-%H%M%S")
+    log_path = "/root/joe/logs/train.log"
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    os.environ["JOE_BOOT_ID"] = boot_id
+    os.environ["JOE_TRAIN_LOG"] = log_path
+    log_file = open(log_path, "a", buffering=1)
+
+    class _Tee:
+        def __init__(self, *streams):
+            self._streams = streams
+
+        def write(self, data):
+            for st in self._streams:
+                st.write(data)
+
+        def flush(self):
+            for st in self._streams:
+                st.flush()
+
+    sys.stdout = _Tee(sys.stdout, log_file)
+    sys.stderr = _Tee(sys.stderr, log_file)
+
+    from training.joe import vast_boot
+
+    try:
+        vast_boot.main([])
+    finally:
+        VOLUME.commit()
+    return {"run_name": run_name, "mode": "r2-h100x2"}
+
+
 def _local_engine_sha() -> str:
     return subprocess.check_output(
         ["git", "-C", str(REPO / "competition-module"), "rev-parse", "HEAD"],
@@ -94,8 +177,23 @@ def _local_engine_sha() -> str:
 
 @app.local_entrypoint()
 def main(tier: str = "M", smoke: bool = False, run_name: str = "",
-         overrides: str = ""):
-    """overrides: JSON object of Config field overrides, applied last."""
+         overrides: str = "", r2_run: str = "", r2_overrides: str = ""):
+    """overrides: JSON object of Config field overrides, applied last.
+
+    --r2-run <name>: instead of a Volume-backed run, resume the named
+    R2-backed run on 2x H100 through vast_boot (use --detach for long
+    runs). --r2-overrides is the JOE_CONFIG_OVERRIDES JSON; on 2 GPUs
+    pass at least {"num_envs": <half>, "minibatch_size": <half>}.
+    """
+    if r2_run:
+        print(f"Resuming R2 run {r2_run} on 2x H100 "
+              f"(overrides: {r2_overrides or 'none'})", flush=True)
+        call = train_r2_h100x2.spawn(r2_run, r2_overrides)
+        print(f"SPAWNED: {call.object_id} — run with --detach so the "
+              f"train call outlives this process; watch it with "
+              f"`modal app logs` and the R2 heartbeat", flush=True)
+        return
+
     import yaml
 
     with open(REPO / "training" / "joe" / "configs" / f"{tier}.yaml") as f:
