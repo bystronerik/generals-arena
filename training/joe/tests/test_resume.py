@@ -127,3 +127,18 @@ def test_resume_rejects_shrunken_curriculum(tmp_path):
     with pytest.raises(ValueError, match="out of range"):
         run(_cfg(curriculum=curriculum[:1], num_iters=4), ckpt_dir,
             engine_sha="test-sha", env_factory=_tiny_env_factory)
+
+
+def test_apply_env_overrides_noop_and_per_device():
+    """JOE_CONFIG_OVERRIDES: empty is a no-op; JSON keys are applied
+    through Config.from_dict so coercion runs (per-device halving for
+    multi-GPU hosts is the intended use)."""
+    from training.joe.config import Config
+    from training.joe.vast_boot import apply_env_overrides
+
+    cfg = Config(num_envs=2048, minibatch_size=2048)
+    assert apply_env_overrides(cfg, "") is cfg
+    out = apply_env_overrides(
+        cfg, '{"num_envs": 1024, "minibatch_size": 1024}')
+    assert (out.num_envs, out.minibatch_size) == (1024, 1024)
+    assert out.num_steps == cfg.num_steps  # untouched keys survive
