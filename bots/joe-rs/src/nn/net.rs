@@ -66,38 +66,128 @@ struct LayerNorm {
     bias: Vec<f32>,
 }
 
+/// Accumulator lanes per row reduction. EMBED = 384 = 48 × 8, so a row is
+/// exactly [`LN_CHUNKS`] chunks of this width and no tail exists.
+const LN_LANES: usize = 8;
+/// Chunks of [`LN_LANES`] in one row.
+const LN_CHUNKS: usize = EMBED / LN_LANES; // 48
+
+/// The mean's lane sums for one row: `lanes[l]` adds `row[l]`, `row[8 + l]`,
+/// … in index order. Split out so the pipeline's prologue and its loop body
+/// run the same additions in the same order.
+#[inline(always)]
+fn ln_sum_lanes(row: &[f32; EMBED]) -> [f32; LN_LANES] {
+    let mut lanes = [0f32; LN_LANES];
+    for c in 0..LN_CHUNKS {
+        let ch: &[f32; LN_LANES] = row[c * LN_LANES..].first_chunk().unwrap();
+        for l in 0..LN_LANES {
+            lanes[l] += ch[l];
+        }
+    }
+    lanes
+}
+
+/// The affine pass for one row: a true divide, then an unfused `mul` + `add`.
+#[inline(always)]
+fn ln_affine(
+    row: &[f32; EMBED],
+    out: &mut [f32; EMBED],
+    mean: f32,
+    denom: f32,
+    weight: &[f32; EMBED],
+    bias: &[f32; EMBED],
+) {
+    for j in 0..EMBED {
+        out[j] = (row[j] - mean) / denom * weight[j] + bias[j];
+    }
+}
+
 impl LayerNorm {
     /// Equinox LayerNorm: biased variance, eps 1e-5, applied per token.
     /// Mirrors the candle op order: mean, centered, mean of squares,
     /// `sqrt(var + eps)`, divide, then multiply-add the affine — the divide
     /// stays a true divide and the affine stays an unfused `mul` + `add`.
+    ///
+    /// The three passes are **software-pipelined across rows**: iteration `r`
+    /// runs the mean sum for row `r + 1`, the centered mean of squares for
+    /// row `r`, and the affine for row `r - 1` in one walk over the 48
+    /// chunks. Every row still accumulates in exactly the order above, so the
+    /// output is bit-identical to the row-at-a-time form; what the pipeline
+    /// buys is independence. Row at a time, each reduction is one serial
+    /// chain of 48 vector adds — 4-cycle latency apiece on x86-64-v3, where
+    /// the codegen also fully unrolls both chains and spills 1.5 KB of the
+    /// row to the stack. Interleaved, the two chains and the affine's divide
+    /// issue together and nothing spills: 2.2× on the arm64 dev box
+    /// (`LayerNorm` alone, 52 × 384), and the x86 chains are the longer ones.
+    ///
+    /// `x` and `y` must not overlap — every call site norms the residual
+    /// stream into a separate scratch buffer.
     fn forward_into(&self, rows: usize, x: &[f32], y: &mut [f32]) {
+        if rows == 0 {
+            return;
+        }
+        let weight: &[f32; EMBED] = self.weight.first_chunk().unwrap();
+        let bias: &[f32; EMBED] = self.bias.first_chunk().unwrap();
+        // Prologue: row 0's mean sum. From here the loop is always one row
+        // ahead on the sum and one row behind on the affine.
+        let mut lanes = ln_sum_lanes(x.first_chunk().unwrap());
+        let mut prev = (0f32, 0f32);
         for r in 0..rows {
-            let row = &x[r * EMBED..(r + 1) * EMBED];
-            let out = &mut y[r * EMBED..(r + 1) * EMBED];
-            // EMBED = 384 = 48 x 8: eight accumulator lanes so the
-            // reductions vectorize instead of serializing on add latency.
-            let mut lanes = [0f32; 8];
-            for chunk in row.chunks_exact(8) {
-                for (l, v) in chunk.iter().enumerate() {
-                    lanes[l] += v;
-                }
-            }
+            let row: &[f32; EMBED] = x[r * EMBED..].first_chunk().unwrap();
             let sum: f32 = lanes.iter().sum();
             let mean = sum / EMBED as f32;
-            let mut vlanes = [0f32; 8];
-            for chunk in row.chunks_exact(8) {
-                for (l, v) in chunk.iter().enumerate() {
-                    let d = v - mean;
-                    vlanes[l] = d.mul_add(d, vlanes[l]);
+            // The last row has no successor: it re-reads its own chunks so
+            // the loop keeps one shape, and the sums are then dropped.
+            let next_row = if r + 1 < rows { r + 1 } else { r };
+            let nrow: &[f32; EMBED] = x[next_row * EMBED..].first_chunk().unwrap();
+            let mut vlanes = [0f32; LN_LANES];
+            let mut nlanes = [0f32; LN_LANES];
+            if r == 0 {
+                // No row -1 to write yet: two stages this once.
+                for c in 0..LN_CHUNKS {
+                    let ch: &[f32; LN_LANES] = row[c * LN_LANES..].first_chunk().unwrap();
+                    for l in 0..LN_LANES {
+                        let d = ch[l] - mean;
+                        vlanes[l] = d.mul_add(d, vlanes[l]);
+                    }
+                    let nc: &[f32; LN_LANES] = nrow[c * LN_LANES..].first_chunk().unwrap();
+                    for l in 0..LN_LANES {
+                        nlanes[l] += nc[l];
+                    }
+                }
+            } else {
+                let (pmean, pdenom) = prev;
+                let prow: &[f32; EMBED] = x[(r - 1) * EMBED..].first_chunk().unwrap();
+                let pout: &mut [f32; EMBED] = y[(r - 1) * EMBED..].first_chunk_mut().unwrap();
+                for c in 0..LN_CHUNKS {
+                    let ch: &[f32; LN_LANES] = row[c * LN_LANES..].first_chunk().unwrap();
+                    for l in 0..LN_LANES {
+                        let d = ch[l] - mean;
+                        vlanes[l] = d.mul_add(d, vlanes[l]);
+                    }
+                    let nc: &[f32; LN_LANES] = nrow[c * LN_LANES..].first_chunk().unwrap();
+                    for l in 0..LN_LANES {
+                        nlanes[l] += nc[l];
+                    }
+                    let pc: &[f32; LN_LANES] = prow[c * LN_LANES..].first_chunk().unwrap();
+                    let wc: &[f32; LN_LANES] = weight[c * LN_LANES..].first_chunk().unwrap();
+                    let bc: &[f32; LN_LANES] = bias[c * LN_LANES..].first_chunk().unwrap();
+                    let oc: &mut [f32; LN_LANES] =
+                        pout[c * LN_LANES..].first_chunk_mut().unwrap();
+                    for l in 0..LN_LANES {
+                        oc[l] = (pc[l] - pmean) / pdenom * wc[l] + bc[l];
+                    }
                 }
             }
+            lanes = nlanes;
             let var_sum: f32 = vlanes.iter().sum();
-            let denom = (var_sum / EMBED as f32 + 1e-5).sqrt();
-            for j in 0..EMBED {
-                out[j] = (row[j] - mean) / denom * self.weight[j] + self.bias[j];
-            }
+            prev = (mean, (var_sum / EMBED as f32 + 1e-5).sqrt());
         }
+        // Drain: the affine of the last row is still owed.
+        let last = rows - 1;
+        let row: &[f32; EMBED] = x[last * EMBED..].first_chunk().unwrap();
+        let out: &mut [f32; EMBED] = y[last * EMBED..].first_chunk_mut().unwrap();
+        ln_affine(row, out, prev.0, prev.1, weight, bias);
     }
 }
 
@@ -533,13 +623,17 @@ impl Net {
                 // Pack the head — Q rows contiguous, K and V into the
                 // strip-major panels gemm_bias streams — then run QK^T and
                 // the context product through the GEMM kernel. ~30 KB of
-                // copies against two register-tiled GEMM calls.
+                // copies against two register-tiled GEMM calls. Q and V keep
+                // their row order, so they fill a row at a time; K becomes
+                // the score panel's columns, so it fills panel-wide, which
+                // is the one form of that transpose whose stores are
+                // contiguous (see `PackedB::fill_from_cols`).
                 for i in 0..N_TOKENS {
                     qh[i * HEAD_DIM..(i + 1) * HEAD_DIM]
                         .copy_from_slice(&q[i * EMBED + off..i * EMBED + off + HEAD_DIM]);
                     vh.fill_row(i, &v[i * EMBED + off..i * EMBED + off + HEAD_DIM]);
-                    kt.fill_col(i, &k[i * EMBED + off..i * EMBED + off + HEAD_DIM]);
                 }
+                kt.fill_from_cols(&k[off..], EMBED);
                 gemm_bias(N_TOKENS, qh, kt, zero_tokens, scores);
                 for s in scores.iter_mut() {
                     *s *= inv_scale;

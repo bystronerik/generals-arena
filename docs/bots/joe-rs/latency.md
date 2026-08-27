@@ -155,10 +155,50 @@ against the committed Gumbel self-golden.
 
 Gates: 51 crate tests, full-corpus parity 11/11, mutation check 18/18.
 
-**Not applied here:** the `#[inline(never)]` fix on `gemm_bias_portable`,
-which is worth 1.64x on the arm64 development box and nothing on x86. This
-crate has the same defect — the numbers below, and every arm64 figure on
-this page, are inflated by roughly that factor.
+## Results (2026-08-27, the remaining three unclejoe changes)
+
+The other three accepted changes followed, so both crates now carry the same
+set. `gemm.rs` was byte-identical between the two before this, so the two
+GEMM changes transplanted exactly; the head-pack hunk was hand-applied,
+because in unclejoe it sits inside `forward_staged` — the 25-step
+instrumentation this crate does not have.
+
+- **Layernorm pipeline.** The eight accumulator lanes were collapsing into
+  one ymm register on x86, making a single serial `vaddps` chain, and the
+  row spilled between passes. Measured 2.0–2.14x on the three norm steps on
+  unclejoe.
+- **Const-width GEMM column tail.** `NR = 16` leaves a 4-column tail on the
+  52-wide score panel and a 10-column tail on the 90-wide policy head; the
+  loop took its width at runtime and never unrolled. Measured 1.47–1.60x on
+  `policy_head` and 1.06–1.09x on `scores` on unclejoe.
+- **`#[inline(never)]` on `gemm_bias_portable`.** Worth 1.64x on the arm64
+  development box and provably nothing on x86, where that kernel is not in
+  the build at all. Every arm64 figure elsewhere on this page predates it
+  and is inflated by roughly that factor.
+
+**The x86 gain is not resolvable from this crate's own numbers**, and that is
+a limit of the instrument rather than a verdict. Together the three are worth
+about 1 % of the forward here, against a base arm that already carries the
+exp fix; joe-rs has only the eight-cell move split, so there is no `norm1` or
+`scores` cell to read the way there is on unclejoe.
+
+| host | dispatch | base forward | patched | change | base noise floor |
+| --- | --- | ---: | ---: | ---: | ---: |
+| AMD 175/1 | avx2 | 15.72 ms | 15.43 ms | +1.86 % | 1.81 % |
+| Intel 6/143 | avx512 | 17.30 ms | 17.19 ms | +0.63 % | 1.77 % |
+| Intel 6/85 | avx512 | 22.33 ms | 22.50 ms | −0.76 % | 5.79 % |
+
+One host reads just above its floor and two sit inside theirs. What justifies
+carrying these here is not that table: it is that the code is byte-identical
+to unclejoe's, where the per-step cells measured the effect directly on six
+containers, and that the output does not move. Base and patched print the
+same tier-2 line over 728 frames, tier-3 is 728/728, and replies are
+byte-identical on all three containers — two of them AVX-512, a dispatch the
+arm64 development box never runs.
+
+Gates: 52 crate tests, full-corpus parity 11/11, mutation check 18/18,
+default suite 13.2 s, and a competition match against aegis ending with a
+capture at turn 232 — the same turn as before.
 
 ## Where the move goes (2026-08-16)
 

@@ -83,7 +83,7 @@ impl PackedB {
 
     /// Write element `(kk, nn)` of the logical `(k_dim, n_dim)` matrix.
     /// Per-element layout math — fine for load-time packing; the per-turn
-    /// attention fills use `fill_row` / `fill_col` instead.
+    /// attention fills use `fill_row` / `fill_from_cols` instead.
     #[inline]
     pub fn set(&mut self, kk: usize, nn: usize, value: f32) {
         let n_main = self.n_main();
@@ -115,21 +115,36 @@ impl PackedB {
         }
     }
 
-    /// Write logical column `nn` from a contiguous slice — the layout base
-    /// is computed once, so the loop is plain strided stores.
-    pub fn fill_col(&mut self, nn: usize, col: &[f32]) {
-        debug_assert_eq!(col.len(), self.k_dim);
+    /// Fill the whole panel from a column-major source: logical column
+    /// `nn` is `src[nn * src_stride..][..k_dim]`. This is the transpose the
+    /// attention K pack needs — one head's K is 48 of the 384 values in
+    /// each of 52 rows, and the score panel wants those 52 rows as columns.
+    ///
+    /// It writes strip by strip, so every store is `NR` contiguous values.
+    /// Filling the same panel one column at a time stores one value every
+    /// `NR` instead, and 52 columns × 48 scattered stores is what the head
+    /// loop used to pay: the blocked form measured 1.6× on the arm64 dev
+    /// box, and both forms write the identical bytes.
+    pub fn fill_from_cols(&mut self, src: &[f32], src_stride: usize) {
+        debug_assert!(self.n_dim == 0 || src.len() >= (self.n_dim - 1) * src_stride + self.k_dim);
         let n_main = self.n_main();
-        if nn < n_main {
-            let base = (nn / NR) * self.k_dim * NR + nn % NR;
-            for (kk, &v) in col.iter().enumerate() {
-                self.data[base + kk * NR] = v;
+        let mut strip_off = 0;
+        let mut n0 = 0;
+        while n0 < n_main {
+            for kk in 0..self.k_dim {
+                let dst = &mut self.data[strip_off + kk * NR..strip_off + kk * NR + NR];
+                for (j, d) in dst.iter_mut().enumerate() {
+                    *d = src[(n0 + j) * src_stride + kk];
+                }
             }
-        } else {
-            let n_tail = self.n_dim - n_main;
-            let base = n_main * self.k_dim + (nn - n_main);
-            for (kk, &v) in col.iter().enumerate() {
-                self.data[base + kk * n_tail] = v;
+            strip_off += self.k_dim * NR;
+            n0 += NR;
+        }
+        let n_tail = self.n_dim - n_main;
+        for kk in 0..self.k_dim {
+            let base = n_main * self.k_dim + kk * n_tail;
+            for (j, d) in self.data[base..base + n_tail].iter_mut().enumerate() {
+                *d = src[(n_main + j) * src_stride + kk];
             }
         }
     }
@@ -185,6 +200,25 @@ pub fn gemm_bias(rows: usize, a: &[f32], b: &PackedB, bias: &[f32], c: &mut [f32
 /// parameter carries `noalias`, while a Vec data pointer loaded through a
 /// struct reference does not — and without it LLVM refuses to vectorize
 /// this kernel. Measured 6.5× on NEON (packbisect, 2026-08-20).
+///
+/// `#[inline(never)]` is the second half of that same trap. `Net::forward`
+/// reaches this through eleven `Linear::forward_into` sites inside the block
+/// loop, and under `lto = "fat"` + `codegen-units = 1` LLVM inlines every one
+/// of them into that single enormous function. The tile's `MR * NR`
+/// accumulators then compete for vector registers with the rest of the
+/// forward pass and get spilled. Keeping the kernel out of line restores the
+/// standalone codegen: on the arm64 dev box unclejoe's forward drops 64.4 -> 39.1 ms
+/// p50 (1.65x, A/B/A/B interleaved), and every GEMM step in
+/// `bench --forward-stages` improves — the four 384x384 projections 311 ->
+/// 188 us a call, `ff1` 1319 -> 777.
+///
+/// It is deliberately **not** on the two intrinsics kernels, which cannot hit
+/// this: a `#[target_feature]` function is never inlined into a caller
+/// without those features, so `gemm_bias` already calls them out of line. The
+/// x86 asm for the whole crate is instruction-identical with and without this
+/// attribute — only panic-location line numbers move — so this is an arm64
+/// development fix with no effect on the competition host.
+#[inline(never)]
 fn gemm_bias_portable(
     rows: usize,
     k_dim: usize,
@@ -255,10 +289,94 @@ fn gemm_bias_portable(
 
 /// Column tail over the packed `k × n_tail` block: the policy head is 90
 /// wide, leaving 10 columns here, and the attention score panel is 52 wide,
-/// leaving 4. The inner loop has a runtime trip count, so it vectorizes
-/// worse than the main tile — acceptable for these widths. Shared by both
-/// kernels, so the tail cannot drift between them.
+/// leaving 4. Shared by all three kernels, so the tail cannot drift between
+/// them.
+///
+/// The width decides which form runs. [`column_tail_dyn`] takes it as a
+/// runtime value, and a runtime trip count on the innermost loop leaves one
+/// row's `k` chain — 48 or 384 dependent FMAs — with nothing else in flight.
+/// That is why the 52 × 48 × 52 score panel spent a third of its time on
+/// 7.7 % of its FLOPs. [`column_tail_n`] takes the width as a constant and
+/// blocks `MR` rows, so the width unrolls and `MR` chains run at once: the
+/// 4-wide tail measured 2.9× and the 10-wide tail 1.7× on the arm64 dev box.
+/// The graph has exactly these two widths; any other still runs the dynamic
+/// form, and `tail_widths_agree_bitwise` holds the two forms together.
 fn column_tail(
+    rows: usize,
+    k_dim: usize,
+    n_dim: usize,
+    n_main: usize,
+    a: &[f32],
+    tail: &[f32],
+    bias: &[f32],
+    c: &mut [f32],
+) {
+    match n_dim - n_main {
+        0 => {}
+        4 => column_tail_n::<4>(rows, k_dim, n_dim, n_main, a, tail, bias, c),
+        10 => column_tail_n::<10>(rows, k_dim, n_dim, n_main, a, tail, bias, c),
+        _ => column_tail_dyn(rows, k_dim, n_dim, n_main, a, tail, bias, c),
+    }
+}
+
+/// The tail at a compile-time width, `MR` rows at a time. Every output
+/// element still keeps one accumulator and walks `k` in order, exactly as
+/// [`column_tail_dyn`] does, so the two forms agree bit for bit.
+fn column_tail_n<const NT: usize>(
+    rows: usize,
+    k_dim: usize,
+    n_dim: usize,
+    n_main: usize,
+    a: &[f32],
+    tail: &[f32],
+    bias: &[f32],
+    c: &mut [f32],
+) {
+    let mut m0 = 0;
+    while m0 + MR <= rows {
+        let mut acc = [[0f32; NT]; MR];
+        let block = &a[m0 * k_dim..(m0 + MR) * k_dim];
+        for k in 0..k_dim {
+            // `&[f32; NT]`, not `&[f32]`: the length in the type is what
+            // keeps the bounds check out of the innermost loop.
+            let brow: &[f32; NT] = tail[k * NT..].first_chunk().unwrap();
+            for (i, row) in acc.iter_mut().enumerate() {
+                let av = block[i * k_dim + k];
+                for j in 0..NT {
+                    row[j] = av.mul_add(brow[j], row[j]);
+                }
+            }
+        }
+        for (i, row) in acc.iter().enumerate() {
+            let base = (m0 + i) * n_dim + n_main;
+            for j in 0..NT {
+                c[base + j] = row[j] + bias[n_main + j];
+            }
+        }
+        m0 += MR;
+    }
+    // Row tail: 52 rows leave nothing over 4·13, 49 rows leave one.
+    while m0 < rows {
+        let arow = &a[m0 * k_dim..(m0 + 1) * k_dim];
+        let mut acc = [0f32; NT];
+        for k in 0..k_dim {
+            let brow: &[f32; NT] = tail[k * NT..].first_chunk().unwrap();
+            let av = arow[k];
+            for j in 0..NT {
+                acc[j] = av.mul_add(brow[j], acc[j]);
+            }
+        }
+        let base = m0 * n_dim + n_main;
+        for j in 0..NT {
+            c[base + j] = acc[j] + bias[n_main + j];
+        }
+        m0 += 1;
+    }
+}
+
+/// The tail at a runtime width — the fallback for any `n % 16` the graph
+/// does not use, and the reference the specializations are tested against.
+fn column_tail_dyn(
     rows: usize,
     k_dim: usize,
     n_dim: usize,
@@ -543,15 +661,39 @@ mod tests {
         }
         assert_eq!(packed.data, by_row.data);
 
-        let mut by_col = PackedB::zeroed(k, n);
-        let mut col = vec![0f32; k];
+        // `fill_from_cols` reads the same matrix transposed, so hand it a
+        // column-major copy: same panel, written strip by strip.
+        let mut colmajor = vec![0f32; k * n];
         for nn in 0..n {
             for kk in 0..k {
-                col[kk] = b[kk * n + nn];
+                colmajor[nn * k + kk] = b[kk * n + nn];
             }
-            by_col.fill_col(nn, &col);
         }
+        let mut by_col = PackedB::zeroed(k, n);
+        by_col.fill_from_cols(&colmajor, k);
         assert_eq!(packed.data, by_col.data);
+    }
+
+    /// `column_tail` picks a specialization by width. Every width must give
+    /// the dynamic form's bits back, or a shape change silently moves the
+    /// answer — the specializations are a speed choice, never a numeric one.
+    #[test]
+    fn tail_widths_agree_bitwise() {
+        let (rows, k) = (7usize, 9usize); // a row tail under MR=4 as well
+        let a = pseudo(rows * k, 31);
+        for n_tail in 1..NR {
+            let n_dim = NR + n_tail; // one full strip, then this tail
+            let n_main = NR;
+            let tail = pseudo(k * n_tail, 37 + n_tail as u32);
+            let bias = pseudo(n_dim, 41);
+            let mut want = vec![0f32; rows * n_dim];
+            column_tail_dyn(rows, k, n_dim, n_main, &a, &tail, &bias, &mut want);
+            let mut got = vec![0f32; rows * n_dim];
+            column_tail(rows, k, n_dim, n_main, &a, &tail, &bias, &mut got);
+            for i in 0..rows * n_dim {
+                assert_eq!(got[i].to_bits(), want[i].to_bits(), "n_tail={n_tail} at {i}");
+            }
+        }
     }
 
     /// One graph-shape sweep of `kernel` against the portable reference,
