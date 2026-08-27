@@ -232,6 +232,123 @@ pub struct Net {
     scratch: RefCell<Scratch>,
 }
 
+// ---------------------------------------------------- the forward-step split
+
+/// The steps `bench --forward-stages` splits [`Net::forward`] into, in run
+/// order.
+///
+/// The split is finer than the move-level `STAGE_NAMES`'s single `forward`
+/// cell because that cell is most of the move: it answers *how much* the net
+/// costs but not *which* of its ~7 GEMM shapes, two norms, softmax or SiLU
+/// carries the cost, and every kernel decision downstream needs the second
+/// answer.
+///
+/// Each name covers exactly the statements between two marks:
+///
+/// * `patchify` also carries the three argument asserts and the scratch
+///   borrow, because the clock starts on entry.
+/// * `temporal` is the whole temporal encoder: the /50 reciprocal multiply,
+///   both 512 -> 512 -> 384 MLPs, both SiLUs and the type embedding.
+/// * `assemble` is the value-token copy, the temporal-token copy and the
+///   position add.
+/// * `head_pack` is the per-head Q/K/V copy into `qh`/`vh`/`kt`;
+///   `head_scatter` is the matching copy of `ch` back into `ctx`.
+/// * `scale` is the `inv_scale` multiply over the 52x52 score matrix alone;
+///   `softmax` is the 52 row softmaxes that follow it.
+/// * `value_head` is its GEMM, the softmax and the bin-centre dot together;
+///   `unpatchify` is the policy scatter and the mask add.
+///
+/// A step that runs once per block or once per head runs many times per turn
+/// — see [`FORWARD_STEP_CALLS`]. The reported number is always the sum over
+/// one turn, so `mean / calls` is the cost of one invocation.
+pub const FORWARD_STEP_NAMES: [&str; 25] = [
+    "patchify",
+    "embed",
+    "temporal",
+    "assemble",
+    "norm1",
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "head_pack",
+    "scores",
+    "scale",
+    "softmax",
+    "context",
+    "head_scatter",
+    "attn_out",
+    "attn_resid",
+    "norm2",
+    "ff1",
+    "silu",
+    "ff2",
+    "ff_resid",
+    "norm_out",
+    "value_head",
+    "policy_head",
+    "unpatchify",
+];
+
+/// How many times each step of [`FORWARD_STEP_NAMES`] runs in one forward
+/// pass: once, once per block, or once per head per block.
+pub const FORWARD_STEP_CALLS: [usize; FORWARD_STEP_NAMES.len()] = [
+    1, 1, 1, 1, // patchify, embed, temporal, assemble
+    DEPTH, DEPTH, DEPTH, DEPTH, // norm1, q, k, v
+    DEPTH * N_HEAD, // head_pack
+    DEPTH * N_HEAD, // scores
+    DEPTH * N_HEAD, // scale
+    DEPTH * N_HEAD, // softmax
+    DEPTH * N_HEAD, // context
+    DEPTH * N_HEAD, // head_scatter
+    DEPTH, DEPTH, DEPTH, DEPTH, DEPTH, DEPTH, DEPTH, // out..ff_resid
+    1, 1, 1, 1, // norm_out, value, policy, unpatchify
+];
+
+pub const F_PATCHIFY: usize = 0;
+pub const F_EMBED: usize = 1;
+pub const F_TEMPORAL: usize = 2;
+pub const F_ASSEMBLE: usize = 3;
+pub const F_NORM1: usize = 4;
+pub const F_Q: usize = 5;
+pub const F_K: usize = 6;
+pub const F_V: usize = 7;
+pub const F_HEAD_PACK: usize = 8;
+pub const F_SCORES: usize = 9;
+pub const F_SCALE: usize = 10;
+pub const F_SOFTMAX: usize = 11;
+pub const F_CONTEXT: usize = 12;
+pub const F_HEAD_SCATTER: usize = 13;
+pub const F_ATTN_OUT: usize = 14;
+pub const F_ATTN_RESID: usize = 15;
+pub const F_NORM2: usize = 16;
+pub const F_FF1: usize = 17;
+pub const F_SILU: usize = 18;
+pub const F_FF2: usize = 19;
+pub const F_FF_RESID: usize = 20;
+pub const F_NORM_OUT: usize = 21;
+pub const F_VALUE_HEAD: usize = 22;
+pub const F_POLICY_HEAD: usize = 23;
+pub const F_UNPATCHIFY: usize = 24;
+
+/// Where [`Net::forward_staged`] reports a step boundary. The same shape as
+/// the move-level `StageClock`, and for the same reason: the played
+/// path takes [`NoNetSteps`], whose `mark` is an empty inlined method, so the
+/// marks cost nothing where they are not wanted and the measured graph stays
+/// the played graph.
+pub trait NetClock {
+    /// Charge the time since the last mark to `step`. Accumulates: most
+    /// steps run 16 or 128 times per turn.
+    fn mark(&mut self, step: usize);
+}
+
+/// The wire path's clock: no clock at all. Monomorphization deletes the marks.
+pub struct NoNetSteps;
+
+impl NetClock for NoNetSteps {
+    #[inline(always)]
+    fn mark(&mut self, _step: usize) {}
+}
+
 /// The forward pass's outputs: masked flat logits, the value scalar, and the
 /// raw value-bin logits (the parity surface covers the whole network).
 pub struct ForwardOut {
@@ -378,6 +495,22 @@ impl Net {
         penalties: &[f32],
         temporal: &[f32],
     ) -> Result<ForwardOut, String> {
+        self.forward_staged(aug_norm, penalties, temporal, &mut NoNetSteps)
+    }
+
+    /// [`Net::forward`], with the step boundaries `bench --forward-stages`
+    /// measures. Marks sit between statements only: no float op moves, so a
+    /// measured pass and a played pass return the same bits.
+    ///
+    /// The clock's reference instant is whatever the caller last set, so the
+    /// caller marks the start of the turn immediately before calling this.
+    pub fn forward_staged<C: NetClock>(
+        &self,
+        aug_norm: &[f32],
+        penalties: &[f32],
+        temporal: &[f32],
+        clock: &mut C,
+    ) -> Result<ForwardOut, String> {
         assert_eq!(aug_norm.len(), N_CHANNELS * CELLS);
         assert_eq!(penalties.len(), N_LOGITS);
         assert_eq!(temporal.len(), 2 * TEMPORAL_WINDOW);
@@ -422,8 +555,10 @@ impl Net {
                 }
             }
         }
+        clock.mark(F_PATCHIFY);
         // Embed straight into the patch rows (3..52) of the residual stream.
         self.embedder.forward_into(N_PATCHES, patched, &mut x[3 * EMBED..]);
+        clock.mark(F_EMBED);
 
         // Temporal tokens: two independent 512 -> 512 -> 384 MLPs with SiLU,
         // on history / 50, plus the type embedding. The division happens as a
@@ -442,6 +577,7 @@ impl Net {
         for (t, e) in tokens.iter_mut().zip(&self.temporal_type_embed) {
             *t += e;
         }
+        clock.mark(F_TEMPORAL);
 
         // Sequence: [VALUE, TEMPORAL_ARMY, TEMPORAL_LAND, PATCH_0..48] + pos.
         x[..EMBED].copy_from_slice(&self.value_token);
@@ -449,6 +585,7 @@ impl Net {
         for (xv, pv) in x.iter_mut().zip(&self.pos_encoding) {
             *xv += pv;
         }
+        clock.mark(F_ASSEMBLE);
 
         // The candle path divided the score matrix by this f64 scale, which
         // is an `affine(1/scale, 0)` — a reciprocal multiply folded in f64,
@@ -457,9 +594,13 @@ impl Net {
         let inv_scale = (1.0 / scale) as f32;
         for block in &self.blocks {
             block.norm1.forward_into(N_TOKENS, x, normed);
+            clock.mark(F_NORM1);
             block.q.forward_into(N_TOKENS, normed, q);
+            clock.mark(F_Q);
             block.k.forward_into(N_TOKENS, normed, k);
+            clock.mark(F_K);
             block.v.forward_into(N_TOKENS, normed, v);
+            clock.mark(F_V);
             for h in 0..N_HEAD {
                 let off = h * HEAD_DIM;
                 // Pack the head — Q rows contiguous, K and V into the
@@ -472,32 +613,46 @@ impl Net {
                     vh.fill_row(i, &v[i * EMBED + off..i * EMBED + off + HEAD_DIM]);
                     kt.fill_col(i, &k[i * EMBED + off..i * EMBED + off + HEAD_DIM]);
                 }
+                clock.mark(F_HEAD_PACK);
                 gemm_bias(N_TOKENS, qh, kt, zero_tokens, scores);
+                clock.mark(F_SCORES);
                 for s in scores.iter_mut() {
                     *s *= inv_scale;
                 }
+                clock.mark(F_SCALE);
                 for i in 0..N_TOKENS {
                     softmax_in_place(&mut scores[i * N_TOKENS..(i + 1) * N_TOKENS]);
                 }
+                clock.mark(F_SOFTMAX);
                 gemm_bias(N_TOKENS, scores, vh, zero_head, ch);
+                clock.mark(F_CONTEXT);
                 for i in 0..N_TOKENS {
                     ctx[i * EMBED + off..i * EMBED + off + HEAD_DIM]
                         .copy_from_slice(&ch[i * HEAD_DIM..(i + 1) * HEAD_DIM]);
                 }
+                clock.mark(F_HEAD_SCATTER);
             }
             block.out.forward_into(N_TOKENS, ctx, proj);
+            clock.mark(F_ATTN_OUT);
             for (xv, pv) in x.iter_mut().zip(proj.iter()) {
                 *xv += pv;
             }
+            clock.mark(F_ATTN_RESID);
             block.norm2.forward_into(N_TOKENS, x, normed);
+            clock.mark(F_NORM2);
             block.ff1.forward_into(N_TOKENS, normed, ff);
+            clock.mark(F_FF1);
             silu_in_place(ff);
+            clock.mark(F_SILU);
             block.ff2.forward_into(N_TOKENS, ff, proj);
+            clock.mark(F_FF2);
             for (xv, pv) in x.iter_mut().zip(proj.iter()) {
                 *xv += pv;
             }
+            clock.mark(F_FF_RESID);
         }
         self.norm_out.forward_into(N_TOKENS, x, normed);
+        clock.mark(F_NORM_OUT);
 
         // Value head: 128 bin logits -> softmax -> dot with bin centers.
         let mut value_bins = vec![0f32; NUM_BINS];
@@ -509,10 +664,12 @@ impl Net {
             .zip(&self.bin_centers)
             .map(|(p, c)| p * c)
             .sum();
+        clock.mark(F_VALUE_HEAD);
 
         // Policy head: per-patch logits, unpatchified to (10, 21, 21), plus
         // the -1e9 mask.
         self.policy_head.forward_into(N_PATCHES, &normed[3 * EMBED..], patch_logits);
+        clock.mark(F_POLICY_HEAD);
         let mut logits = vec![0f32; N_LOGITS];
         for gi in 0..GRID_PATCHES {
             for gj in 0..GRID_PATCHES {
@@ -530,6 +687,7 @@ impl Net {
             }
         }
 
+        clock.mark(F_UNPATCHIFY);
         Ok(ForwardOut { logits, value, value_bins })
     }
 }

@@ -62,4 +62,8 @@ Same shape as joe-rs's, with its own corpus and goldens:
 
 Latency, measured over real recorded competition games (dev arm64, M-series):
 forward ~57 ms per move — see [export.md](export.md) for the measured
-percentiles against the 140 ms budget.
+percentiles against the 140 ms budget. On x86 the forward is 32.6–56.1 ms
+depending on the host, and
+[unclejoe-forward-steps](../../research/measurements/unclejoe-forward-steps.md)
+splits it into 25 steps: 83–89 % GEMM, 9–14 % `exp` (`softmax` + `silu`),
+nothing else above 1 %.

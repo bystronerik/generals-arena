@@ -58,6 +58,7 @@ Small topic files for the Generals Arena research repo.
 - [joe X16 training pilots](research/measurements/joe-x16-pilots.md) — the 29.55M depth-16 shape priced for a $100/5-day run: OOMs an 80 GB card at the production shape, 37.6k samples/s at `num_steps 128`, pmap N=2 scales linearly and restores the full recipe on 2×96 GB; three outbids in an hour say measure market churn before committing
 - [unclejoe](bots/unclejoe/index.md) — joe-rs fork playing the X16 network (depth 16, 29.55M params, own R2 export) at **pure argmax** (T = 0); the name's second life since 2026-08-25
 - [unclejoe export](bots/unclejoe/export.md) — the X16 export chain, artifact provenance (run/step/shas), zip size vs both cap readings, measured latency
+- [unclejoe forward steps](research/measurements/unclejoe-forward-steps.md) — the forward pass split 25 ways on eight single-core x86 containers: 83–89 % GEMM, 9–14 % `exp` (`softmax` costs more than the two GEMMs it sits between), nothing else above 1 %
 - [unclejoe shadow measurements](bots/unclejoe/shadow.md) — what the layer would have done while it did nothing: trigger rates (U2), what the proofs proved (U3), and U4's **no-go** on the value re-rank (the *previous* unclejoe, a tactics fork removed 2026-08-20)
 - [unclejoe strategy spec](research/strategies/unclejoe.md) — the two claims (provable moments, one-step improvement), triggers, caps, and what the joe-rs contrast had to show (bot removed 2026-08-20)
 - [smoke](bots/smoke.md) — stdio smoke test, not competitive

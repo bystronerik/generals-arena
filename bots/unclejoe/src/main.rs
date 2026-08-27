@@ -82,7 +82,7 @@ use crate::io::wire::{
     read_handshake, read_observation, write_action, Action, Observation, PASS, TYPE_FOG,
     TYPE_GENERAL, TYPE_PLAIN,
 };
-use crate::nn::net::Net;
+use crate::nn::net::{NetClock, Net, NoNetSteps, FORWARD_STEP_CALLS, FORWARD_STEP_NAMES};
 
 /// Where `model.safetensors` + `manifest.json` live. `run.sh` exports
 /// `JOE_RS_ARTIFACT`; the exe-relative fallback covers running the binary by
@@ -187,6 +187,50 @@ impl StageClock for StageTimes {
     fn mark(&mut self, stage: usize) {
         let now = Instant::now();
         self.turn_ms[stage] += now.duration_since(self.last).as_secs_f64() * 1e3;
+        self.last = now;
+    }
+}
+
+/// `bench --forward-stages`'s clock: the same accumulate-and-sample shape as
+/// [`StageTimes`], over [`FORWARD_STEP_NAMES`] instead.
+///
+/// This one is not free the way the move-level split is. A turn fires 816
+/// marks — 128 of them per step inside the head loop — for about 20 us of
+/// `Instant::now()` against a forward of tens of milliseconds. The marks also
+/// stand between adjacent loops the compiler could otherwise fuse. Both show
+/// up as the gap between this split's total and the `forward` cell of
+/// `bench --stages`, which the report prints so the gap can be read rather
+/// than assumed.
+struct ForwardTimes {
+    last: Instant,
+    turn_ms: [f64; FORWARD_STEP_NAMES.len()],
+    samples: Vec<[f64; FORWARD_STEP_NAMES.len()]>,
+}
+
+impl ForwardTimes {
+    fn new() -> Self {
+        Self {
+            last: Instant::now(),
+            turn_ms: [0.0; FORWARD_STEP_NAMES.len()],
+            samples: Vec::new(),
+        }
+    }
+
+    fn begin_turn(&mut self) {
+        self.turn_ms = [0.0; FORWARD_STEP_NAMES.len()];
+        self.last = Instant::now();
+    }
+
+    fn end_turn(&mut self) {
+        self.samples.push(self.turn_ms);
+    }
+}
+
+impl NetClock for ForwardTimes {
+    #[inline]
+    fn mark(&mut self, step: usize) {
+        let now = Instant::now();
+        self.turn_ms[step] += now.duration_since(self.last).as_secs_f64() * 1e3;
         self.last = now;
     }
 }
@@ -305,7 +349,7 @@ impl Seat {
     /// The full per-move path. Mirrors `agent.py::step` + the pass clamp in
     /// `agent.py::act`.
     fn act(&mut self, obs: &Observation) -> Result<Action, String> {
-        self.act_staged(obs, &mut NoStages)
+        self.act_staged(obs, &mut NoStages, &mut NoNetSteps)
     }
 
     /// `act`, with the stage boundaries `bench --stages` measures.
@@ -315,10 +359,11 @@ impl Seat {
     /// wanted and the measured path stays the played path. Two code paths would
     /// drift, and a drifted stage split is a measurement that describes a
     /// program nobody runs.
-    fn act_staged<C: StageClock>(
+    fn act_staged<C: StageClock, N: NetClock>(
         &mut self,
         obs: &Observation,
         clock: &mut C,
+        net_clock: &mut N,
     ) -> Result<Action, String> {
         frame_to_raw(obs, &mut self.raw);
         build_cost_from_raw(&self.raw, self.h, self.w, &mut self.cost);
@@ -352,7 +397,8 @@ impl Seat {
         // The second half of joe's mask work, and the reason `mark` accumulates
         // rather than assigns: one stage, two places in the order.
         clock.mark(S_MASK);
-        let mut fwd = self.net.forward(&self.aug, &self.penalties, &self.temporal)?;
+        let mut fwd =
+            self.net.forward_staged(&self.aug, &self.penalties, &self.temporal, net_clock)?;
         clock.mark(S_FORWARD);
         // Selection (plan S1 + S4) joins `decode`: both turn the network's
         // answer into the reply, and together they still cost microseconds.
@@ -491,8 +537,11 @@ fn wire_main() -> Result<(), String> {
 /// object to stdout for recording. The plain form still prints exactly what it
 /// printed before, so the numbers in `docs/bots/joe-rs/latency.md` stay
 /// comparable to anything measured after this.
-fn bench_main(stages: bool) -> Result<(), String> {
+fn bench_main(mode: BenchMode) -> Result<(), String> {
     use std::io::Read;
+
+    let stages = mode != BenchMode::Plain;
+    let steps = mode == BenchMode::ForwardStages;
 
     let mut text = String::new();
     stdio::stdin().read_to_string(&mut text).map_err(|e| e.to_string())?;
@@ -511,6 +560,7 @@ fn bench_main(stages: bool) -> Result<(), String> {
     let mut sink = stdio::sink();
     let mut times_ms: Vec<f64> = Vec::new();
     let mut clock = StageTimes::new();
+    let mut net_clock = ForwardTimes::new();
     loop {
         let t0 = Instant::now();
         clock.begin_turn();
@@ -519,9 +569,19 @@ fn bench_main(stages: bool) -> Result<(), String> {
             Ok(false) => break,
             Err(e) => return Err(e.to_string()),
         }
-        let action = if stages {
+        let action = if steps {
             clock.mark(S_PARSE);
-            seat.act_staged(&obs, &mut clock)?
+            // The net clock's reference instant has to be the move clock's,
+            // or `patchify` would absorb the mask work that runs between
+            // them. `begin_turn` resets it; the forward starts microseconds
+            // later, inside `act_staged`.
+            net_clock.begin_turn();
+            let a = seat.act_staged(&obs, &mut clock, &mut net_clock)?;
+            net_clock.end_turn();
+            a
+        } else if stages {
+            clock.mark(S_PARSE);
+            seat.act_staged(&obs, &mut clock, &mut NoNetSteps)?
         } else {
             seat.act(&obs)?
         };
@@ -548,7 +608,23 @@ fn bench_main(stages: bool) -> Result<(), String> {
     if stages {
         report_stages(&clock.samples, &times_ms, startup_ms);
     }
+    if steps {
+        report_forward_steps(&net_clock.samples, &clock.samples);
+    }
     Ok(())
+}
+
+/// What `bench` was asked for. `Plain` is the historical form and still
+/// prints exactly what it printed before, so the numbers in
+/// `docs/bots/joe-rs/latency.md` stay comparable.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum BenchMode {
+    Plain,
+    /// `--stages`: the eight-cell move split.
+    Stages,
+    /// `--forward-stages`: the move split plus the 25-step split inside the
+    /// forward pass.
+    ForwardStages,
 }
 
 /// Per-stage percentiles: a table on stderr, one JSON object on stdout.
@@ -611,6 +687,109 @@ fn report_stages(samples: &[[f64; STAGE_NAMES.len()]], total_ms: &[f64], startup
         json.push_str(&format!(
             "\"{name}\":{{\"mean\":{mean:.4},\"p50\":{:.4},\"p90\":{:.4},\"p99\":{:.4},\"max\":{:.4}}}",
             q[0], q[1], q[2], q[3]
+        ));
+    }
+    json.push_str("}}");
+    println!("{json}");
+}
+
+/// Per-step percentiles inside the forward pass: a table on stderr, one JSON
+/// object on stdout.
+///
+/// Columns match [`report_stages`]: each step is sorted on its own, so only
+/// `mean` adds up. Two columns are new. `calls` is how many times the step
+/// ran in one turn ([`FORWARD_STEP_CALLS`]), and `us/call` is `mean / calls`
+/// in microseconds — the only figure that compares a per-head step against a
+/// per-turn one.
+///
+/// The `forward` row from the move split is printed beside the step total.
+/// The step total is the larger of the two: it carries 816 `Instant::now()`
+/// calls the played pass does not. Read the difference as this split's
+/// measurement cost, and the shares rather than the absolute numbers as the
+/// result.
+fn report_forward_steps(
+    samples: &[[f64; FORWARD_STEP_NAMES.len()]],
+    move_samples: &[[f64; STAGE_NAMES.len()]],
+) {
+    if samples.is_empty() {
+        eprintln!("[unclejoe] no staged forwards to report");
+        return;
+    }
+    let n = samples.len();
+    let pct = |sorted: &[f64], p: f64| sorted[((n as f64 - 1.0) * p) as usize];
+
+    let mut rows: Vec<(&str, usize, f64, [f64; 4])> = Vec::with_capacity(FORWARD_STEP_NAMES.len());
+    let mut total_per_turn = vec![0f64; n];
+    for (at, name) in FORWARD_STEP_NAMES.iter().enumerate() {
+        let mut column: Vec<f64> = samples.iter().map(|turn| turn[at]).collect();
+        for (t, v) in total_per_turn.iter_mut().zip(&column) {
+            *t += v;
+        }
+        let mean = column.iter().sum::<f64>() / n as f64;
+        column.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        rows.push((
+            name,
+            FORWARD_STEP_CALLS[at],
+            mean,
+            [pct(&column, 0.50), pct(&column, 0.90), pct(&column, 0.99), pct(&column, 1.0)],
+        ));
+    }
+    let sum_mean = rows.iter().map(|r| r.2).sum::<f64>();
+    total_per_turn.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    rows.push((
+        "forward",
+        1,
+        sum_mean,
+        [
+            pct(&total_per_turn, 0.50),
+            pct(&total_per_turn, 0.90),
+            pct(&total_per_turn, 0.99),
+            pct(&total_per_turn, 1.0),
+        ],
+    ));
+
+    // The uninstrumented reading of the same span, for the overhead line.
+    let move_forward_mean = if move_samples.is_empty() {
+        0.0
+    } else {
+        move_samples.iter().map(|turn| turn[S_FORWARD]).sum::<f64>() / move_samples.len() as f64
+    };
+
+    eprintln!("[unclejoe] forward steps over {n} turns, gemm kernel {}", nn::gemm::kernel_name());
+    eprintln!(
+        "[unclejoe] {:<13} {:>5} {:>9} {:>9} {:>9} {:>9} {:>9} {:>8} {:>9}",
+        "step", "calls", "mean", "p50", "p90", "p99", "max", "share", "us/call"
+    );
+    for (name, calls, mean, q) in &rows {
+        let share = if sum_mean > 0.0 { 100.0 * mean / sum_mean } else { 0.0 };
+        eprintln!(
+            "[unclejoe] {name:<13} {calls:>5} {mean:>9.3} {:>9.3} {:>9.3} {:>9.3} {:>9.3} {share:>7.2}% {:>9.2}",
+            q[0], q[1], q[2], q[3],
+            1e3 * mean / *calls as f64,
+        );
+    }
+    eprintln!(
+        "[unclejoe] uninstrumented forward mean {move_forward_mean:.3} ms; \
+         the split costs {:+.3} ms",
+        sum_mean - move_forward_mean
+    );
+
+    let mut json = format!(
+        "{{\"turns\":{n},\"gemm_kernel\":\"{}\",\
+         \"uninstrumented_forward_mean_ms\":{move_forward_mean:.4},\"steps\":{{",
+        nn::gemm::kernel_name()
+    );
+    for (i, (name, calls, mean, q)) in rows.iter().enumerate() {
+        if i > 0 {
+            json.push(',');
+        }
+        let share = if sum_mean > 0.0 { 100.0 * mean / sum_mean } else { 0.0 };
+        json.push_str(&format!(
+            "\"{name}\":{{\"calls\":{calls},\"mean\":{mean:.4},\"p50\":{:.4},\
+             \"p90\":{:.4},\"p99\":{:.4},\"max\":{:.4},\"share_pct\":{share:.3},\
+             \"us_per_call\":{:.4}}}",
+            q[0], q[1], q[2], q[3],
+            1e3 * mean / *calls as f64,
         ));
     }
     json.push_str("}}");
@@ -838,7 +1017,12 @@ fn main() {
     let result = match args.get(1).map(String::as_str) {
         None => wire_main(),
         Some("selfcheck") => run_selfcheck(),
-        Some("bench") => bench_main(args.get(2).map(String::as_str) == Some("--stages")),
+        Some("bench") => match args.get(2).map(String::as_str) {
+            None => bench_main(BenchMode::Plain),
+            Some("--stages") => bench_main(BenchMode::Stages),
+            Some("--forward-stages") => bench_main(BenchMode::ForwardStages),
+            Some(other) => Err(format!("unknown bench flag {other:?}")),
+        },
         Some("parity") => match args.get(2) {
             Some(surface) => parity::run(surface),
             None => Err("usage: unclejoe parity <surface>".into()),

@@ -1,0 +1,2855 @@
+{
+  "containers": 4,
+  "batches": [
+    {
+      "batch": 0,
+      "results": [
+        {
+          "replica": 0,
+          "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+          "machine": "x86_64",
+          "online_cpus": 17,
+          "cpu_model": "unknown",
+          "cpu_mhz": "3087.014",
+          "avx512f": false,
+          "avx2": true,
+          "cpu_ident": "vendor_id=AuthenticAMD cpu family=175 model=1 stepping=unknown",
+          "selfcheck_rc": 0,
+          "selfcheck": "hardware_fma true\nhardware_avx2 true\nruntime_gemm avx2\nartifact_dir /root/unclejoe/artifact\nsafetensors_sha256 e12c235e2139dd2f84de076e59ffcc897e51f136847dac6cce431f378cf94d7b\ntensor_schema joe-net-v1\ncheckpoint joe-X16-gcp-20260825\ncheckpoint_step 2500\nstartup_ms 327.867\ntemperature 0\nnoundo 0\nnoundo_window 8\ndecide_ms 43.144\ndecision 0 10 10 0 0\nselfcheck ok",
+          "plain_s": 48.5,
+          "bench_rc": 0,
+          "bench_stdout": "turns 1062 startup_ms 288.4 p50 44.75 p90 47.57 p99 52.48 max 92.77",
+          "steps_rc": 0,
+          "staged_total_line": "turns 1062 startup_ms 274.9 p50 42.35 p90 43.89 p99 49.40 max 52.57",
+          "move_stages": {
+            "turns": 1062,
+            "startup_ms": 274.882,
+            "stages": {
+              "parse": {
+                "mean": 0.0073,
+                "p50": 0.0068,
+                "p90": 0.0077,
+                "p99": 0.0168,
+                "max": 0.0231
+              },
+              "raw": {
+                "mean": 0.0046,
+                "p50": 0.0041,
+                "p90": 0.0052,
+                "p99": 0.0143,
+                "max": 0.0334
+              },
+              "mask": {
+                "mean": 0.0046,
+                "p50": 0.004,
+                "p90": 0.0059,
+                "p99": 0.0176,
+                "max": 0.0342
+              },
+              "augment": {
+                "mean": 0.0238,
+                "p50": 0.0219,
+                "p90": 0.0265,
+                "p99": 0.0654,
+                "max": 0.0771
+              },
+              "normalize": {
+                "mean": 0.0029,
+                "p50": 0.0026,
+                "p90": 0.0048,
+                "p99": 0.0061,
+                "max": 0.0202
+              },
+              "forward": {
+                "mean": 42.5209,
+                "p50": 42.0385,
+                "p90": 43.5217,
+                "p99": 49.0395,
+                "max": 52.209
+              },
+              "decode": {
+                "mean": 0.0093,
+                "p50": 0.0088,
+                "p90": 0.0111,
+                "p99": 0.0159,
+                "max": 0.0285
+              },
+              "stderr": {
+                "mean": 0.2615,
+                "p50": 0.2585,
+                "p90": 0.3167,
+                "p99": 0.3933,
+                "max": 0.8914
+              },
+              "total": {
+                "mean": 42.8351,
+                "p50": 42.3484,
+                "p90": 43.8915,
+                "p99": 49.395,
+                "max": 52.5663
+              }
+            }
+          },
+          "forward_steps": {
+            "turns": 1062,
+            "gemm_kernel": "avx2",
+            "uninstrumented_forward_mean_ms": 42.5209,
+            "steps": {
+              "patchify": {
+                "calls": 1,
+                "mean": 0.0503,
+                "p50": 0.0471,
+                "p90": 0.0584,
+                "p99": 0.1203,
+                "max": 0.141,
+                "share_pct": 0.118,
+                "us_per_call": 50.3211
+              },
+              "embed": {
+                "calls": 1,
+                "mean": 0.1789,
+                "p50": 0.1662,
+                "p90": 0.188,
+                "p99": 0.4482,
+                "max": 0.581,
+                "share_pct": 0.42,
+                "us_per_call": 178.8845
+              },
+              "temporal": {
+                "calls": 1,
+                "mean": 0.1548,
+                "p50": 0.1427,
+                "p90": 0.1906,
+                "p99": 0.3423,
+                "max": 0.523,
+                "share_pct": 0.364,
+                "us_per_call": 154.7551
+              },
+              "assemble": {
+                "calls": 1,
+                "mean": 0.0049,
+                "p50": 0.0044,
+                "p90": 0.0064,
+                "p99": 0.0095,
+                "max": 0.0296,
+                "share_pct": 0.011,
+                "us_per_call": 4.8854
+              },
+              "norm1": {
+                "calls": 16,
+                "mean": 0.1645,
+                "p50": 0.1617,
+                "p90": 0.1771,
+                "p99": 0.1894,
+                "max": 0.2147,
+                "share_pct": 0.387,
+                "us_per_call": 10.2823
+              },
+              "q_proj": {
+                "calls": 16,
+                "mean": 3.0853,
+                "p50": 3.0409,
+                "p90": 3.1619,
+                "p99": 3.6242,
+                "max": 3.9663,
+                "share_pct": 7.25,
+                "us_per_call": 192.833
+              },
+              "k_proj": {
+                "calls": 16,
+                "mean": 3.0696,
+                "p50": 3.0313,
+                "p90": 3.1371,
+                "p99": 3.6488,
+                "max": 3.9108,
+                "share_pct": 7.213,
+                "us_per_call": 191.8508
+              },
+              "v_proj": {
+                "calls": 16,
+                "mean": 3.0837,
+                "p50": 3.0462,
+                "p90": 3.1508,
+                "p99": 3.6279,
+                "max": 3.9619,
+                "share_pct": 7.246,
+                "us_per_call": 192.7318
+              },
+              "head_pack": {
+                "calls": 128,
+                "mean": 0.2713,
+                "p50": 0.2682,
+                "p90": 0.2946,
+                "p99": 0.3189,
+                "max": 0.3541,
+                "share_pct": 0.638,
+                "us_per_call": 2.1199
+              },
+              "scores": {
+                "calls": 128,
+                "mean": 0.7517,
+                "p50": 0.7522,
+                "p90": 0.7718,
+                "p99": 0.802,
+                "max": 0.8232,
+                "share_pct": 1.766,
+                "us_per_call": 5.873
+              },
+              "scale": {
+                "calls": 128,
+                "mean": 0.0206,
+                "p50": 0.0201,
+                "p90": 0.0206,
+                "p99": 0.0365,
+                "max": 0.0575,
+                "share_pct": 0.048,
+                "us_per_call": 0.1609
+              },
+              "softmax": {
+                "calls": 128,
+                "mean": 1.8416,
+                "p50": 1.8418,
+                "p90": 1.8631,
+                "p99": 1.891,
+                "max": 1.9969,
+                "share_pct": 4.327,
+                "us_per_call": 14.3874
+              },
+              "context": {
+                "calls": 128,
+                "mean": 0.3888,
+                "p50": 0.3819,
+                "p90": 0.4014,
+                "p99": 0.4253,
+                "max": 0.4604,
+                "share_pct": 0.914,
+                "us_per_call": 3.0376
+              },
+              "head_scatter": {
+                "calls": 128,
+                "mean": 0.0475,
+                "p50": 0.0463,
+                "p90": 0.0507,
+                "p99": 0.0651,
+                "max": 0.0821,
+                "share_pct": 0.112,
+                "us_per_call": 0.3714
+              },
+              "attn_out": {
+                "calls": 16,
+                "mean": 3.0863,
+                "p50": 3.0494,
+                "p90": 3.159,
+                "p99": 3.649,
+                "max": 3.8542,
+                "share_pct": 7.252,
+                "us_per_call": 192.8935
+              },
+              "attn_resid": {
+                "calls": 16,
+                "mean": 0.0447,
+                "p50": 0.0436,
+                "p90": 0.0514,
+                "p99": 0.0626,
+                "max": 0.0686,
+                "share_pct": 0.105,
+                "us_per_call": 2.7915
+              },
+              "norm2": {
+                "calls": 16,
+                "mean": 0.1645,
+                "p50": 0.1615,
+                "p90": 0.1768,
+                "p99": 0.191,
+                "max": 0.2394,
+                "share_pct": 0.387,
+                "us_per_call": 10.2832
+              },
+              "ff1": {
+                "calls": 16,
+                "mean": 12.0526,
+                "p50": 11.9107,
+                "p90": 12.3554,
+                "p99": 14.1788,
+                "max": 15.1732,
+                "share_pct": 28.321,
+                "us_per_call": 753.2877
+              },
+              "silu": {
+                "calls": 16,
+                "mean": 1.8548,
+                "p50": 1.8547,
+                "p90": 1.8743,
+                "p99": 1.9066,
+                "max": 1.9247,
+                "share_pct": 4.358,
+                "us_per_call": 115.9236
+              },
+              "ff2": {
+                "calls": 16,
+                "mean": 12.0818,
+                "p50": 11.9361,
+                "p90": 12.5107,
+                "p99": 14.2056,
+                "max": 15.1014,
+                "share_pct": 28.39,
+                "us_per_call": 755.1118
+              },
+              "ff_resid": {
+                "calls": 16,
+                "mean": 0.0528,
+                "p50": 0.0517,
+                "p90": 0.0605,
+                "p99": 0.0747,
+                "max": 0.0983,
+                "share_pct": 0.124,
+                "us_per_call": 3.2979
+              },
+              "norm_out": {
+                "calls": 1,
+                "mean": 0.0103,
+                "p50": 0.0102,
+                "p90": 0.0104,
+                "p99": 0.0111,
+                "max": 0.0266,
+                "share_pct": 0.024,
+                "us_per_call": 10.3373
+              },
+              "value_head": {
+                "calls": 1,
+                "mean": 0.0107,
+                "p50": 0.0097,
+                "p90": 0.0138,
+                "p99": 0.0243,
+                "max": 0.0335,
+                "share_pct": 0.025,
+                "us_per_call": 10.7399
+              },
+              "policy_head": {
+                "calls": 1,
+                "mean": 0.0811,
+                "p50": 0.0795,
+                "p90": 0.0865,
+                "p99": 0.0988,
+                "max": 0.1052,
+                "share_pct": 0.191,
+                "us_per_call": 81.1341
+              },
+              "unpatchify": {
+                "calls": 1,
+                "mean": 0.0032,
+                "p50": 0.0029,
+                "p90": 0.004,
+                "p99": 0.0061,
+                "max": 0.0196,
+                "share_pct": 0.007,
+                "us_per_call": 3.1692
+              },
+              "forward": {
+                "calls": 1,
+                "mean": 42.5565,
+                "p50": 42.0712,
+                "p90": 43.5608,
+                "p99": 49.0774,
+                "max": 52.3175,
+                "share_pct": 100.0,
+                "us_per_call": 42556.4544
+              }
+            }
+          },
+          "tables": "[unclejoe] load 231.7 ms, warmup 42.8 ms, temperature 0\n[unclejoe] stages over 1062 turns, startup 274.9 ms\n[unclejoe] stage           mean       p50       p90       p99       max\n[unclejoe] parse          0.007     0.007     0.008     0.017     0.023\n[unclejoe] raw            0.005     0.004     0.005     0.014     0.033\n[unclejoe] mask           0.005     0.004     0.006     0.018     0.034\n[unclejoe] augment        0.024     0.022     0.027     0.065     0.077\n[unclejoe] normalize      0.003     0.003     0.005     0.006     0.020\n[unclejoe] forward       42.521    42.039    43.522    49.040    52.209\n[unclejoe] decode         0.009     0.009     0.011     0.016     0.029\n[unclejoe] stderr         0.262     0.259     0.317     0.393     0.891\n[unclejoe] total         42.835    42.348    43.892    49.395    52.566\n[unclejoe] forward steps over 1062 turns, gemm kernel avx2\n[unclejoe] step          calls      mean       p50       p90       p99       max    share   us/call\n[unclejoe] patchify          1     0.050     0.047     0.058     0.120     0.141    0.12%     50.32\n[unclejoe] embed             1     0.179     0.166     0.188     0.448     0.581    0.42%    178.88\n[unclejoe] temporal          1     0.155     0.143     0.191     0.342     0.523    0.36%    154.76\n[unclejoe] assemble          1     0.005     0.004     0.006     0.010     0.030    0.01%      4.89\n[unclejoe] norm1            16     0.165     0.162     0.177     0.189     0.215    0.39%     10.28\n[unclejoe] q_proj           16     3.085     3.041     3.162     3.624     3.966    7.25%    192.83\n[unclejoe] k_proj           16     3.070     3.031     3.137     3.649     3.911    7.21%    191.85\n[unclejoe] v_proj           16     3.084     3.046     3.151     3.628     3.962    7.25%    192.73\n[unclejoe] head_pack       128     0.271     0.268     0.295     0.319     0.354    0.64%      2.12\n[unclejoe] scores          128     0.752     0.752     0.772     0.802     0.823    1.77%      5.87\n[unclejoe] scale           128     0.021     0.020     0.021     0.037     0.057    0.05%      0.16\n[unclejoe] softmax         128     1.842     1.842     1.863     1.891     1.997    4.33%     14.39\n[unclejoe] context         128     0.389     0.382     0.401     0.425     0.460    0.91%      3.04\n[unclejoe] head_scatter    128     0.048     0.046     0.051     0.065     0.082    0.11%      0.37\n[unclejoe] attn_out         16     3.086     3.049     3.159     3.649     3.854    7.25%    192.89\n[unclejoe] attn_resid       16     0.045     0.044     0.051     0.063     0.069    0.10%      2.79\n[unclejoe] norm2            16     0.165     0.162     0.177     0.191     0.239    0.39%     10.28\n[unclejoe] ff1              16    12.053    11.911    12.355    14.179    15.173   28.32%    753.29\n[unclejoe] silu             16     1.855     1.855     1.874     1.907     1.925    4.36%    115.92\n[unclejoe] ff2              16    12.082    11.936    12.511    14.206    15.101   28.39%    755.11\n[unclejoe] ff_resid         16     0.053     0.052     0.061     0.075     0.098    0.12%      3.30\n[unclejoe] norm_out          1     0.010     0.010     0.010     0.011     0.027    0.02%     10.34\n[unclejoe] value_head        1     0.011     0.010     0.014     0.024     0.034    0.03%     10.74\n[unclejoe] policy_head       1     0.081     0.080     0.087     0.099     0.105    0.19%     81.13\n[unclejoe] unpatchify        1     0.003     0.003     0.004     0.006     0.020    0.01%      3.17\n[unclejoe] forward           1    42.556    42.071    43.561    49.077    52.318  100.00%  42556.45\n[unclejoe] uninstrumented forward mean 42.521 ms; the split costs +0.036 ms"
+        },
+        {
+          "replica": 1,
+          "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+          "machine": "x86_64",
+          "online_cpus": 17,
+          "cpu_model": "unknown",
+          "cpu_mhz": "3049.996",
+          "avx512f": false,
+          "avx2": true,
+          "cpu_ident": "vendor_id=AuthenticAMD cpu family=175 model=1 stepping=unknown",
+          "selfcheck_rc": 0,
+          "selfcheck": "hardware_fma true\nhardware_avx2 true\nruntime_gemm avx2\nartifact_dir /root/unclejoe/artifact\nsafetensors_sha256 e12c235e2139dd2f84de076e59ffcc897e51f136847dac6cce431f378cf94d7b\ntensor_schema joe-net-v1\ncheckpoint joe-X16-gcp-20260825\ncheckpoint_step 2500\nstartup_ms 304.164\ntemperature 0\nnoundo 0\nnoundo_window 8\ndecide_ms 36.825\ndecision 0 10 10 0 0\nselfcheck ok",
+          "plain_s": 40.3,
+          "bench_rc": 0,
+          "bench_stdout": "turns 1062 startup_ms 251.5 p50 36.85 p90 40.66 p99 45.32 max 63.59",
+          "steps_rc": 0,
+          "staged_total_line": "turns 1062 startup_ms 266.1 p50 38.55 p90 44.06 p99 52.53 max 61.52",
+          "move_stages": {
+            "turns": 1062,
+            "startup_ms": 266.146,
+            "stages": {
+              "parse": {
+                "mean": 0.008,
+                "p50": 0.0068,
+                "p90": 0.0091,
+                "p99": 0.0266,
+                "max": 0.1224
+              },
+              "raw": {
+                "mean": 0.0059,
+                "p50": 0.005,
+                "p90": 0.0075,
+                "p99": 0.0201,
+                "max": 0.1365
+              },
+              "mask": {
+                "mean": 0.0063,
+                "p50": 0.0053,
+                "p90": 0.0081,
+                "p99": 0.0183,
+                "max": 0.2897
+              },
+              "augment": {
+                "mean": 0.0302,
+                "p50": 0.0239,
+                "p90": 0.0468,
+                "p99": 0.1201,
+                "max": 0.4113
+              },
+              "normalize": {
+                "mean": 0.0031,
+                "p50": 0.0028,
+                "p90": 0.0039,
+                "p99": 0.007,
+                "max": 0.0262
+              },
+              "forward": {
+                "mean": 39.3132,
+                "p50": 38.0673,
+                "p90": 43.5969,
+                "p99": 52.0901,
+                "max": 60.8914
+              },
+              "decode": {
+                "mean": 0.0102,
+                "p50": 0.0089,
+                "p90": 0.0125,
+                "p99": 0.0264,
+                "max": 0.1798
+              },
+              "stderr": {
+                "mean": 0.3283,
+                "p50": 0.2722,
+                "p90": 0.5083,
+                "p99": 1.0474,
+                "max": 3.363
+              },
+              "total": {
+                "mean": 39.7055,
+                "p50": 38.5544,
+                "p90": 44.0571,
+                "p99": 52.5267,
+                "max": 61.525
+              }
+            }
+          },
+          "forward_steps": {
+            "turns": 1062,
+            "gemm_kernel": "avx2",
+            "uninstrumented_forward_mean_ms": 39.3132,
+            "steps": {
+              "patchify": {
+                "calls": 1,
+                "mean": 0.0589,
+                "p50": 0.0505,
+                "p90": 0.0854,
+                "p99": 0.1948,
+                "max": 0.4566,
+                "share_pct": 0.15,
+                "us_per_call": 58.9398
+              },
+              "embed": {
+                "calls": 1,
+                "mean": 0.1716,
+                "p50": 0.1546,
+                "p90": 0.2076,
+                "p99": 0.3676,
+                "max": 0.6583,
+                "share_pct": 0.436,
+                "us_per_call": 171.6472
+              },
+              "temporal": {
+                "calls": 1,
+                "mean": 0.1827,
+                "p50": 0.1608,
+                "p90": 0.2654,
+                "p99": 0.4175,
+                "max": 0.5829,
+                "share_pct": 0.464,
+                "us_per_call": 182.6907
+              },
+              "assemble": {
+                "calls": 1,
+                "mean": 0.0054,
+                "p50": 0.0047,
+                "p90": 0.0076,
+                "p99": 0.0167,
+                "max": 0.043,
+                "share_pct": 0.014,
+                "us_per_call": 5.4297
+              },
+              "norm1": {
+                "calls": 16,
+                "mean": 0.1543,
+                "p50": 0.1452,
+                "p90": 0.1626,
+                "p99": 0.333,
+                "max": 0.6163,
+                "share_pct": 0.392,
+                "us_per_call": 9.6432
+              },
+              "q_proj": {
+                "calls": 16,
+                "mean": 2.8411,
+                "p50": 2.7225,
+                "p90": 3.1805,
+                "p99": 3.8605,
+                "max": 4.9207,
+                "share_pct": 7.218,
+                "us_per_call": 177.5669
+              },
+              "k_proj": {
+                "calls": 16,
+                "mean": 2.8158,
+                "p50": 2.6934,
+                "p90": 3.1584,
+                "p99": 3.9622,
+                "max": 4.8408,
+                "share_pct": 7.154,
+                "us_per_call": 175.9886
+              },
+              "v_proj": {
+                "calls": 16,
+                "mean": 2.8378,
+                "p50": 2.7154,
+                "p90": 3.2033,
+                "p99": 3.8931,
+                "max": 6.286,
+                "share_pct": 7.21,
+                "us_per_call": 177.3604
+              },
+              "head_pack": {
+                "calls": 128,
+                "mean": 0.254,
+                "p50": 0.2344,
+                "p90": 0.3004,
+                "p99": 0.5763,
+                "max": 0.8779,
+                "share_pct": 0.645,
+                "us_per_call": 1.984
+              },
+              "scores": {
+                "calls": 128,
+                "mean": 0.6819,
+                "p50": 0.6549,
+                "p90": 0.7405,
+                "p99": 1.0359,
+                "max": 2.0964,
+                "share_pct": 1.732,
+                "us_per_call": 5.3271
+              },
+              "scale": {
+                "calls": 128,
+                "mean": 0.0192,
+                "p50": 0.0176,
+                "p90": 0.0178,
+                "p99": 0.0349,
+                "max": 0.6516,
+                "share_pct": 0.049,
+                "us_per_call": 0.1501
+              },
+              "softmax": {
+                "calls": 128,
+                "mean": 1.6926,
+                "p50": 1.6319,
+                "p90": 1.8684,
+                "p99": 2.366,
+                "max": 3.1152,
+                "share_pct": 4.3,
+                "us_per_call": 13.2233
+              },
+              "context": {
+                "calls": 128,
+                "mean": 0.3504,
+                "p50": 0.3346,
+                "p90": 0.3659,
+                "p99": 0.5999,
+                "max": 1.4239,
+                "share_pct": 0.89,
+                "us_per_call": 2.7373
+              },
+              "head_scatter": {
+                "calls": 128,
+                "mean": 0.0482,
+                "p50": 0.0415,
+                "p90": 0.0621,
+                "p99": 0.1055,
+                "max": 0.6788,
+                "share_pct": 0.122,
+                "us_per_call": 0.3764
+              },
+              "attn_out": {
+                "calls": 16,
+                "mean": 2.8197,
+                "p50": 2.6973,
+                "p90": 3.1818,
+                "p99": 3.9523,
+                "max": 5.0627,
+                "share_pct": 7.164,
+                "us_per_call": 176.231
+              },
+              "attn_resid": {
+                "calls": 16,
+                "mean": 0.0412,
+                "p50": 0.0374,
+                "p90": 0.051,
+                "p99": 0.0858,
+                "max": 0.2468,
+                "share_pct": 0.105,
+                "us_per_call": 2.5756
+              },
+              "norm2": {
+                "calls": 16,
+                "mean": 0.1535,
+                "p50": 0.145,
+                "p90": 0.1609,
+                "p99": 0.3244,
+                "max": 0.559,
+                "share_pct": 0.39,
+                "us_per_call": 9.5929
+              },
+              "ff1": {
+                "calls": 16,
+                "mean": 11.1782,
+                "p50": 10.743,
+                "p90": 12.5427,
+                "p99": 15.1894,
+                "max": 18.979,
+                "share_pct": 28.401,
+                "us_per_call": 698.6401
+              },
+              "silu": {
+                "calls": 16,
+                "mean": 1.6994,
+                "p50": 1.6441,
+                "p90": 1.8547,
+                "p99": 2.2558,
+                "max": 2.7196,
+                "share_pct": 4.318,
+                "us_per_call": 106.2142
+              },
+              "ff2": {
+                "calls": 16,
+                "mean": 11.1938,
+                "p50": 10.7998,
+                "p90": 12.4402,
+                "p99": 15.0442,
+                "max": 20.5684,
+                "share_pct": 28.441,
+                "us_per_call": 699.6144
+              },
+              "ff_resid": {
+                "calls": 16,
+                "mean": 0.0545,
+                "p50": 0.05,
+                "p90": 0.0618,
+                "p99": 0.1434,
+                "max": 0.4287,
+                "share_pct": 0.139,
+                "us_per_call": 3.4093
+              },
+              "norm_out": {
+                "calls": 1,
+                "mean": 0.0096,
+                "p50": 0.0089,
+                "p90": 0.0092,
+                "p99": 0.0206,
+                "max": 0.3451,
+                "share_pct": 0.024,
+                "us_per_call": 9.5589
+              },
+              "value_head": {
+                "calls": 1,
+                "mean": 0.0132,
+                "p50": 0.0109,
+                "p90": 0.0168,
+                "p99": 0.0307,
+                "max": 0.4738,
+                "share_pct": 0.033,
+                "us_per_call": 13.172
+              },
+              "policy_head": {
+                "calls": 1,
+                "mean": 0.0777,
+                "p50": 0.0725,
+                "p90": 0.0838,
+                "p99": 0.1857,
+                "max": 0.5456,
+                "share_pct": 0.198,
+                "us_per_call": 77.7496
+              },
+              "unpatchify": {
+                "calls": 1,
+                "mean": 0.0036,
+                "p50": 0.0032,
+                "p90": 0.0049,
+                "p99": 0.008,
+                "max": 0.1172,
+                "share_pct": 0.009,
+                "us_per_call": 3.556
+              },
+              "forward": {
+                "calls": 1,
+                "mean": 39.3583,
+                "p50": 38.1157,
+                "p90": 43.6529,
+                "p99": 52.1352,
+                "max": 61.2951,
+                "share_pct": 100.0,
+                "us_per_call": 39358.2886
+              }
+            }
+          },
+          "tables": "[unclejoe] load 222.0 ms, warmup 43.7 ms, temperature 0\n[unclejoe] stages over 1062 turns, startup 266.1 ms\n[unclejoe] stage           mean       p50       p90       p99       max\n[unclejoe] parse          0.008     0.007     0.009     0.027     0.122\n[unclejoe] raw            0.006     0.005     0.008     0.020     0.136\n[unclejoe] mask           0.006     0.005     0.008     0.018     0.290\n[unclejoe] augment        0.030     0.024     0.047     0.120     0.411\n[unclejoe] normalize      0.003     0.003     0.004     0.007     0.026\n[unclejoe] forward       39.313    38.067    43.597    52.090    60.891\n[unclejoe] decode         0.010     0.009     0.013     0.026     0.180\n[unclejoe] stderr         0.328     0.272     0.508     1.047     3.363\n[unclejoe] total         39.705    38.554    44.057    52.527    61.525\n[unclejoe] forward steps over 1062 turns, gemm kernel avx2\n[unclejoe] step          calls      mean       p50       p90       p99       max    share   us/call\n[unclejoe] patchify          1     0.059     0.050     0.085     0.195     0.457    0.15%     58.94\n[unclejoe] embed             1     0.172     0.155     0.208     0.368     0.658    0.44%    171.65\n[unclejoe] temporal          1     0.183     0.161     0.265     0.418     0.583    0.46%    182.69\n[unclejoe] assemble          1     0.005     0.005     0.008     0.017     0.043    0.01%      5.43\n[unclejoe] norm1            16     0.154     0.145     0.163     0.333     0.616    0.39%      9.64\n[unclejoe] q_proj           16     2.841     2.723     3.180     3.860     4.921    7.22%    177.57\n[unclejoe] k_proj           16     2.816     2.693     3.158     3.962     4.841    7.15%    175.99\n[unclejoe] v_proj           16     2.838     2.715     3.203     3.893     6.286    7.21%    177.36\n[unclejoe] head_pack       128     0.254     0.234     0.300     0.576     0.878    0.65%      1.98\n[unclejoe] scores          128     0.682     0.655     0.740     1.036     2.096    1.73%      5.33\n[unclejoe] scale           128     0.019     0.018     0.018     0.035     0.652    0.05%      0.15\n[unclejoe] softmax         128     1.693     1.632     1.868     2.366     3.115    4.30%     13.22\n[unclejoe] context         128     0.350     0.335     0.366     0.600     1.424    0.89%      2.74\n[unclejoe] head_scatter    128     0.048     0.041     0.062     0.106     0.679    0.12%      0.38\n[unclejoe] attn_out         16     2.820     2.697     3.182     3.952     5.063    7.16%    176.23\n[unclejoe] attn_resid       16     0.041     0.037     0.051     0.086     0.247    0.10%      2.58\n[unclejoe] norm2            16     0.153     0.145     0.161     0.324     0.559    0.39%      9.59\n[unclejoe] ff1              16    11.178    10.743    12.543    15.189    18.979   28.40%    698.64\n[unclejoe] silu             16     1.699     1.644     1.855     2.256     2.720    4.32%    106.21\n[unclejoe] ff2              16    11.194    10.800    12.440    15.044    20.568   28.44%    699.61\n[unclejoe] ff_resid         16     0.055     0.050     0.062     0.143     0.429    0.14%      3.41\n[unclejoe] norm_out          1     0.010     0.009     0.009     0.021     0.345    0.02%      9.56\n[unclejoe] value_head        1     0.013     0.011     0.017     0.031     0.474    0.03%     13.17\n[unclejoe] policy_head       1     0.078     0.072     0.084     0.186     0.546    0.20%     77.75\n[unclejoe] unpatchify        1     0.004     0.003     0.005     0.008     0.117    0.01%      3.56\n[unclejoe] forward           1    39.358    38.116    43.653    52.135    61.295  100.00%  39358.29\n[unclejoe] uninstrumented forward mean 39.313 ms; the split costs +0.045 ms"
+        },
+        {
+          "replica": 2,
+          "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+          "machine": "x86_64",
+          "online_cpus": 17,
+          "cpu_model": "unknown",
+          "cpu_mhz": "2880.065",
+          "avx512f": false,
+          "avx2": true,
+          "cpu_ident": "vendor_id=AuthenticAMD cpu family=175 model=1 stepping=unknown",
+          "selfcheck_rc": 0,
+          "selfcheck": "hardware_fma true\nhardware_avx2 true\nruntime_gemm avx2\nartifact_dir /root/unclejoe/artifact\nsafetensors_sha256 e12c235e2139dd2f84de076e59ffcc897e51f136847dac6cce431f378cf94d7b\ntensor_schema joe-net-v1\ncheckpoint joe-X16-gcp-20260825\ncheckpoint_step 2500\nstartup_ms 271.429\ntemperature 0\nnoundo 0\nnoundo_window 8\ndecide_ms 36.803\ndecision 0 10 10 0 0\nselfcheck ok",
+          "plain_s": 40.0,
+          "bench_rc": 0,
+          "bench_stdout": "turns 1062 startup_ms 218.2 p50 36.80 p90 38.03 p99 48.23 max 150.23",
+          "steps_rc": 0,
+          "staged_total_line": "turns 1062 startup_ms 216.7 p50 36.83 p90 37.35 p99 39.62 max 41.11",
+          "move_stages": {
+            "turns": 1062,
+            "startup_ms": 216.712,
+            "stages": {
+              "parse": {
+                "mean": 0.0069,
+                "p50": 0.0066,
+                "p90": 0.0075,
+                "p99": 0.0136,
+                "max": 0.0295
+              },
+              "raw": {
+                "mean": 0.0046,
+                "p50": 0.0041,
+                "p90": 0.0062,
+                "p99": 0.0084,
+                "max": 0.037
+              },
+              "mask": {
+                "mean": 0.0047,
+                "p50": 0.0043,
+                "p90": 0.0066,
+                "p99": 0.0099,
+                "max": 0.0326
+              },
+              "augment": {
+                "mean": 0.0232,
+                "p50": 0.0216,
+                "p90": 0.0279,
+                "p99": 0.049,
+                "max": 0.1775
+              },
+              "normalize": {
+                "mean": 0.003,
+                "p50": 0.0031,
+                "p90": 0.0038,
+                "p99": 0.0054,
+                "max": 0.0235
+              },
+              "forward": {
+                "mean": 36.6822,
+                "p50": 36.5432,
+                "p90": 36.9921,
+                "p99": 39.2994,
+                "max": 40.3918
+              },
+              "decode": {
+                "mean": 0.0091,
+                "p50": 0.0086,
+                "p90": 0.0117,
+                "p99": 0.0212,
+                "max": 0.0329
+              },
+              "stderr": {
+                "mean": 0.2386,
+                "p50": 0.2293,
+                "p90": 0.2856,
+                "p99": 0.4354,
+                "max": 2.6822
+              },
+              "total": {
+                "mean": 36.9725,
+                "p50": 36.8317,
+                "p90": 37.3516,
+                "p99": 39.6228,
+                "max": 41.1119
+              }
+            }
+          },
+          "forward_steps": {
+            "turns": 1062,
+            "gemm_kernel": "avx2",
+            "uninstrumented_forward_mean_ms": 36.6822,
+            "steps": {
+              "patchify": {
+                "calls": 1,
+                "mean": 0.0485,
+                "p50": 0.0452,
+                "p90": 0.0598,
+                "p99": 0.0796,
+                "max": 0.2128,
+                "share_pct": 0.132,
+                "us_per_call": 48.4587
+              },
+              "embed": {
+                "calls": 1,
+                "mean": 0.1559,
+                "p50": 0.1485,
+                "p90": 0.179,
+                "p99": 0.2069,
+                "max": 0.4572,
+                "share_pct": 0.425,
+                "us_per_call": 155.9354
+              },
+              "temporal": {
+                "calls": 1,
+                "mean": 0.1692,
+                "p50": 0.1643,
+                "p90": 0.1885,
+                "p99": 0.211,
+                "max": 0.2982,
+                "share_pct": 0.461,
+                "us_per_call": 169.221
+              },
+              "assemble": {
+                "calls": 1,
+                "mean": 0.0047,
+                "p50": 0.0045,
+                "p90": 0.0053,
+                "p99": 0.0069,
+                "max": 0.0388,
+                "share_pct": 0.013,
+                "us_per_call": 4.7433
+              },
+              "norm1": {
+                "calls": 16,
+                "mean": 0.1462,
+                "p50": 0.1437,
+                "p90": 0.1571,
+                "p99": 0.178,
+                "max": 0.2204,
+                "share_pct": 0.398,
+                "us_per_call": 9.1371
+              },
+              "q_proj": {
+                "calls": 16,
+                "mean": 2.6457,
+                "p50": 2.6398,
+                "p90": 2.6823,
+                "p99": 2.8251,
+                "max": 2.9743,
+                "share_pct": 7.206,
+                "us_per_call": 165.3561
+              },
+              "k_proj": {
+                "calls": 16,
+                "mean": 2.6119,
+                "p50": 2.6064,
+                "p90": 2.649,
+                "p99": 2.8145,
+                "max": 2.9965,
+                "share_pct": 7.113,
+                "us_per_call": 163.2406
+              },
+              "v_proj": {
+                "calls": 16,
+                "mean": 2.6325,
+                "p50": 2.6258,
+                "p90": 2.6706,
+                "p99": 2.8369,
+                "max": 3.2367,
+                "share_pct": 7.17,
+                "us_per_call": 164.5317
+              },
+              "head_pack": {
+                "calls": 128,
+                "mean": 0.2375,
+                "p50": 0.2348,
+                "p90": 0.2544,
+                "p99": 0.2778,
+                "max": 0.3179,
+                "share_pct": 0.647,
+                "us_per_call": 1.8556
+              },
+              "scores": {
+                "calls": 128,
+                "mean": 0.6455,
+                "p50": 0.6447,
+                "p90": 0.6634,
+                "p99": 0.6994,
+                "max": 0.8006,
+                "share_pct": 1.758,
+                "us_per_call": 5.0429
+              },
+              "scale": {
+                "calls": 128,
+                "mean": 0.0176,
+                "p50": 0.0173,
+                "p90": 0.0176,
+                "p99": 0.0306,
+                "max": 0.0419,
+                "share_pct": 0.048,
+                "us_per_call": 0.1378
+              },
+              "softmax": {
+                "calls": 128,
+                "mean": 1.5855,
+                "p50": 1.5831,
+                "p90": 1.61,
+                "p99": 1.6879,
+                "max": 1.7912,
+                "share_pct": 4.318,
+                "us_per_call": 12.3868
+              },
+              "context": {
+                "calls": 128,
+                "mean": 0.3262,
+                "p50": 0.3207,
+                "p90": 0.339,
+                "p99": 0.3597,
+                "max": 0.4734,
+                "share_pct": 0.888,
+                "us_per_call": 2.5487
+              },
+              "head_scatter": {
+                "calls": 128,
+                "mean": 0.0408,
+                "p50": 0.0399,
+                "p90": 0.0426,
+                "p99": 0.0567,
+                "max": 0.0652,
+                "share_pct": 0.111,
+                "us_per_call": 0.3186
+              },
+              "attn_out": {
+                "calls": 16,
+                "mean": 2.6248,
+                "p50": 2.6201,
+                "p90": 2.6577,
+                "p99": 2.7873,
+                "max": 2.9317,
+                "share_pct": 7.149,
+                "us_per_call": 164.0502
+              },
+              "attn_resid": {
+                "calls": 16,
+                "mean": 0.0392,
+                "p50": 0.0383,
+                "p90": 0.0434,
+                "p99": 0.0591,
+                "max": 0.0733,
+                "share_pct": 0.107,
+                "us_per_call": 2.4494
+              },
+              "norm2": {
+                "calls": 16,
+                "mean": 0.1448,
+                "p50": 0.1426,
+                "p90": 0.1554,
+                "p99": 0.171,
+                "max": 0.1973,
+                "share_pct": 0.394,
+                "us_per_call": 9.0521
+              },
+              "ff1": {
+                "calls": 16,
+                "mean": 10.3869,
+                "p50": 10.3527,
+                "p90": 10.4765,
+                "p99": 11.0682,
+                "max": 11.3053,
+                "share_pct": 28.289,
+                "us_per_call": 649.1792
+              },
+              "silu": {
+                "calls": 16,
+                "mean": 1.6037,
+                "p50": 1.5998,
+                "p90": 1.6333,
+                "p99": 1.7072,
+                "max": 1.8428,
+                "share_pct": 4.368,
+                "us_per_call": 100.2331
+              },
+              "ff2": {
+                "calls": 16,
+                "mean": 10.5045,
+                "p50": 10.4395,
+                "p90": 10.6667,
+                "p99": 11.6087,
+                "max": 12.3439,
+                "share_pct": 28.609,
+                "us_per_call": 656.5288
+              },
+              "ff_resid": {
+                "calls": 16,
+                "mean": 0.0523,
+                "p50": 0.0513,
+                "p90": 0.0583,
+                "p99": 0.0747,
+                "max": 0.0919,
+                "share_pct": 0.142,
+                "us_per_call": 3.2691
+              },
+              "norm_out": {
+                "calls": 1,
+                "mean": 0.0094,
+                "p50": 0.0092,
+                "p90": 0.0095,
+                "p99": 0.0218,
+                "max": 0.027,
+                "share_pct": 0.026,
+                "us_per_call": 9.3959
+              },
+              "value_head": {
+                "calls": 1,
+                "mean": 0.011,
+                "p50": 0.0108,
+                "p90": 0.0123,
+                "p99": 0.0238,
+                "max": 0.0382,
+                "share_pct": 0.03,
+                "us_per_call": 11.0174
+              },
+              "policy_head": {
+                "calls": 1,
+                "mean": 0.07,
+                "p50": 0.0688,
+                "p90": 0.0706,
+                "p99": 0.0879,
+                "max": 0.1073,
+                "share_pct": 0.191,
+                "us_per_call": 69.9725
+              },
+              "unpatchify": {
+                "calls": 1,
+                "mean": 0.003,
+                "p50": 0.0029,
+                "p90": 0.0035,
+                "p99": 0.0047,
+                "max": 0.0243,
+                "share_pct": 0.008,
+                "us_per_call": 2.9685
+              },
+              "forward": {
+                "calls": 1,
+                "mean": 36.7173,
+                "p50": 36.5765,
+                "p90": 37.028,
+                "p99": 39.3357,
+                "max": 40.4258,
+                "share_pct": 100.0,
+                "us_per_call": 36717.3176
+              }
+            }
+          },
+          "tables": "[unclejoe] load 179.4 ms, warmup 36.9 ms, temperature 0\n[unclejoe] stages over 1062 turns, startup 216.7 ms\n[unclejoe] stage           mean       p50       p90       p99       max\n[unclejoe] parse          0.007     0.007     0.008     0.014     0.029\n[unclejoe] raw            0.005     0.004     0.006     0.008     0.037\n[unclejoe] mask           0.005     0.004     0.007     0.010     0.033\n[unclejoe] augment        0.023     0.022     0.028     0.049     0.177\n[unclejoe] normalize      0.003     0.003     0.004     0.005     0.024\n[unclejoe] forward       36.682    36.543    36.992    39.299    40.392\n[unclejoe] decode         0.009     0.009     0.012     0.021     0.033\n[unclejoe] stderr         0.239     0.229     0.286     0.435     2.682\n[unclejoe] total         36.972    36.832    37.352    39.623    41.112\n[unclejoe] forward steps over 1062 turns, gemm kernel avx2\n[unclejoe] step          calls      mean       p50       p90       p99       max    share   us/call\n[unclejoe] patchify          1     0.048     0.045     0.060     0.080     0.213    0.13%     48.46\n[unclejoe] embed             1     0.156     0.149     0.179     0.207     0.457    0.42%    155.94\n[unclejoe] temporal          1     0.169     0.164     0.189     0.211     0.298    0.46%    169.22\n[unclejoe] assemble          1     0.005     0.004     0.005     0.007     0.039    0.01%      4.74\n[unclejoe] norm1            16     0.146     0.144     0.157     0.178     0.220    0.40%      9.14\n[unclejoe] q_proj           16     2.646     2.640     2.682     2.825     2.974    7.21%    165.36\n[unclejoe] k_proj           16     2.612     2.606     2.649     2.814     2.996    7.11%    163.24\n[unclejoe] v_proj           16     2.633     2.626     2.671     2.837     3.237    7.17%    164.53\n[unclejoe] head_pack       128     0.238     0.235     0.254     0.278     0.318    0.65%      1.86\n[unclejoe] scores          128     0.645     0.645     0.663     0.699     0.801    1.76%      5.04\n[unclejoe] scale           128     0.018     0.017     0.018     0.031     0.042    0.05%      0.14\n[unclejoe] softmax         128     1.586     1.583     1.610     1.688     1.791    4.32%     12.39\n[unclejoe] context         128     0.326     0.321     0.339     0.360     0.473    0.89%      2.55\n[unclejoe] head_scatter    128     0.041     0.040     0.043     0.057     0.065    0.11%      0.32\n[unclejoe] attn_out         16     2.625     2.620     2.658     2.787     2.932    7.15%    164.05\n[unclejoe] attn_resid       16     0.039     0.038     0.043     0.059     0.073    0.11%      2.45\n[unclejoe] norm2            16     0.145     0.143     0.155     0.171     0.197    0.39%      9.05\n[unclejoe] ff1              16    10.387    10.353    10.476    11.068    11.305   28.29%    649.18\n[unclejoe] silu             16     1.604     1.600     1.633     1.707     1.843    4.37%    100.23\n[unclejoe] ff2              16    10.504    10.439    10.667    11.609    12.344   28.61%    656.53\n[unclejoe] ff_resid         16     0.052     0.051     0.058     0.075     0.092    0.14%      3.27\n[unclejoe] norm_out          1     0.009     0.009     0.009     0.022     0.027    0.03%      9.40\n[unclejoe] value_head        1     0.011     0.011     0.012     0.024     0.038    0.03%     11.02\n[unclejoe] policy_head       1     0.070     0.069     0.071     0.088     0.107    0.19%     69.97\n[unclejoe] unpatchify        1     0.003     0.003     0.004     0.005     0.024    0.01%      2.97\n[unclejoe] forward           1    36.717    36.576    37.028    39.336    40.426  100.00%  36717.32\n[unclejoe] uninstrumented forward mean 36.682 ms; the split costs +0.035 ms"
+        },
+        {
+          "replica": 3,
+          "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+          "machine": "x86_64",
+          "online_cpus": 17,
+          "cpu_model": "unknown",
+          "cpu_mhz": "2550.030",
+          "avx512f": true,
+          "avx2": true,
+          "cpu_ident": "vendor_id=AuthenticAMD cpu family=175 model=17 stepping=unknown",
+          "selfcheck_rc": 0,
+          "selfcheck": "hardware_fma true\nhardware_avx2 true\nruntime_gemm avx512\nartifact_dir /root/unclejoe/artifact\nsafetensors_sha256 e12c235e2139dd2f84de076e59ffcc897e51f136847dac6cce431f378cf94d7b\ntensor_schema joe-net-v1\ncheckpoint joe-X16-gcp-20260825\ncheckpoint_step 2500\nstartup_ms 227.408\ntemperature 0\nnoundo 0\nnoundo_window 8\ndecide_ms 32.916\ndecision 0 10 10 0 0\nselfcheck ok",
+          "plain_s": 38.4,
+          "bench_rc": 0,
+          "bench_stdout": "turns 1062 startup_ms 191.0 p50 36.35 p90 36.65 p99 41.21 max 44.63",
+          "steps_rc": 0,
+          "staged_total_line": "turns 1062 startup_ms 195.5 p50 32.54 p90 32.85 p99 37.20 max 42.35",
+          "move_stages": {
+            "turns": 1062,
+            "startup_ms": 195.543,
+            "stages": {
+              "parse": {
+                "mean": 0.0059,
+                "p50": 0.0057,
+                "p90": 0.0065,
+                "p99": 0.0172,
+                "max": 0.0218
+              },
+              "raw": {
+                "mean": 0.0038,
+                "p50": 0.0037,
+                "p90": 0.0043,
+                "p99": 0.0082,
+                "max": 0.0328
+              },
+              "mask": {
+                "mean": 0.0036,
+                "p50": 0.0034,
+                "p90": 0.0043,
+                "p99": 0.0075,
+                "max": 0.0163
+              },
+              "augment": {
+                "mean": 0.0195,
+                "p50": 0.0184,
+                "p90": 0.0217,
+                "p99": 0.0362,
+                "max": 0.1008
+              },
+              "normalize": {
+                "mean": 0.0035,
+                "p50": 0.0035,
+                "p90": 0.0044,
+                "p99": 0.0053,
+                "max": 0.0175
+              },
+              "forward": {
+                "mean": 32.5781,
+                "p50": 32.2466,
+                "p90": 32.5143,
+                "p99": 36.9345,
+                "max": 41.9545
+              },
+              "decode": {
+                "mean": 0.0079,
+                "p50": 0.0075,
+                "p90": 0.0088,
+                "p99": 0.0183,
+                "max": 0.0339
+              },
+              "stderr": {
+                "mean": 0.2514,
+                "p50": 0.2483,
+                "p90": 0.2988,
+                "p99": 0.3603,
+                "max": 0.7684
+              },
+              "total": {
+                "mean": 32.8739,
+                "p50": 32.5414,
+                "p90": 32.8494,
+                "p99": 37.1978,
+                "max": 42.3475
+              }
+            }
+          },
+          "forward_steps": {
+            "turns": 1062,
+            "gemm_kernel": "avx512",
+            "uninstrumented_forward_mean_ms": 32.5781,
+            "steps": {
+              "patchify": {
+                "calls": 1,
+                "mean": 0.0393,
+                "p50": 0.0377,
+                "p90": 0.043,
+                "p99": 0.0687,
+                "max": 0.1411,
+                "share_pct": 0.12,
+                "us_per_call": 39.2804
+              },
+              "embed": {
+                "calls": 1,
+                "mean": 0.1884,
+                "p50": 0.184,
+                "p90": 0.2002,
+                "p99": 0.2245,
+                "max": 0.2643,
+                "share_pct": 0.578,
+                "us_per_call": 188.4264
+              },
+              "temporal": {
+                "calls": 1,
+                "mean": 0.1179,
+                "p50": 0.1143,
+                "p90": 0.1371,
+                "p99": 0.1783,
+                "max": 0.3559,
+                "share_pct": 0.362,
+                "us_per_call": 117.8816
+              },
+              "assemble": {
+                "calls": 1,
+                "mean": 0.0038,
+                "p50": 0.0035,
+                "p90": 0.0043,
+                "p99": 0.0077,
+                "max": 0.0252,
+                "share_pct": 0.012,
+                "us_per_call": 3.7695
+              },
+              "norm1": {
+                "calls": 16,
+                "mean": 0.1339,
+                "p50": 0.1317,
+                "p90": 0.1429,
+                "p99": 0.1582,
+                "max": 0.2085,
+                "share_pct": 0.411,
+                "us_per_call": 8.3665
+              },
+              "q_proj": {
+                "calls": 16,
+                "mean": 2.3121,
+                "p50": 2.2687,
+                "p90": 2.3926,
+                "p99": 2.6967,
+                "max": 3.1116,
+                "share_pct": 7.091,
+                "us_per_call": 144.5054
+              },
+              "k_proj": {
+                "calls": 16,
+                "mean": 2.2897,
+                "p50": 2.2473,
+                "p90": 2.3721,
+                "p99": 2.6848,
+                "max": 3.0867,
+                "share_pct": 7.022,
+                "us_per_call": 143.1038
+              },
+              "v_proj": {
+                "calls": 16,
+                "mean": 2.297,
+                "p50": 2.2527,
+                "p90": 2.4041,
+                "p99": 2.6989,
+                "max": 3.1145,
+                "share_pct": 7.044,
+                "us_per_call": 143.5616
+              },
+              "head_pack": {
+                "calls": 128,
+                "mean": 0.1872,
+                "p50": 0.1838,
+                "p90": 0.2003,
+                "p99": 0.2202,
+                "max": 0.2649,
+                "share_pct": 0.574,
+                "us_per_call": 1.4623
+              },
+              "scores": {
+                "calls": 128,
+                "mean": 0.5971,
+                "p50": 0.589,
+                "p90": 0.6158,
+                "p99": 0.6554,
+                "max": 0.6848,
+                "share_pct": 1.831,
+                "us_per_call": 4.6646
+              },
+              "scale": {
+                "calls": 128,
+                "mean": 0.0166,
+                "p50": 0.0163,
+                "p90": 0.0167,
+                "p99": 0.0283,
+                "max": 0.0349,
+                "share_pct": 0.051,
+                "us_per_call": 0.1297
+              },
+              "softmax": {
+                "calls": 128,
+                "mean": 1.457,
+                "p50": 1.44,
+                "p90": 1.497,
+                "p99": 1.5456,
+                "max": 1.585,
+                "share_pct": 4.468,
+                "us_per_call": 11.3825
+              },
+              "context": {
+                "calls": 128,
+                "mean": 0.298,
+                "p50": 0.2939,
+                "p90": 0.3084,
+                "p99": 0.3332,
+                "max": 0.378,
+                "share_pct": 0.914,
+                "us_per_call": 2.3277
+              },
+              "head_scatter": {
+                "calls": 128,
+                "mean": 0.0414,
+                "p50": 0.0405,
+                "p90": 0.0448,
+                "p99": 0.0559,
+                "max": 0.0849,
+                "share_pct": 0.127,
+                "us_per_call": 0.3234
+              },
+              "attn_out": {
+                "calls": 16,
+                "mean": 2.356,
+                "p50": 2.3132,
+                "p90": 2.4404,
+                "p99": 2.8152,
+                "max": 3.3228,
+                "share_pct": 7.225,
+                "us_per_call": 147.2479
+              },
+              "attn_resid": {
+                "calls": 16,
+                "mean": 0.0318,
+                "p50": 0.0311,
+                "p90": 0.0333,
+                "p99": 0.0445,
+                "max": 0.056,
+                "share_pct": 0.097,
+                "us_per_call": 1.9848
+              },
+              "norm2": {
+                "calls": 16,
+                "mean": 0.1331,
+                "p50": 0.1311,
+                "p90": 0.1423,
+                "p99": 0.158,
+                "max": 0.1772,
+                "share_pct": 0.408,
+                "us_per_call": 8.3212
+              },
+              "ff1": {
+                "calls": 16,
+                "mean": 9.175,
+                "p50": 9.0801,
+                "p90": 9.2383,
+                "p99": 10.6434,
+                "max": 12.2099,
+                "share_pct": 28.137,
+                "us_per_call": 573.4378
+              },
+              "silu": {
+                "calls": 16,
+                "mean": 1.5448,
+                "p50": 1.525,
+                "p90": 1.5876,
+                "p99": 1.6544,
+                "max": 1.7302,
+                "share_pct": 4.737,
+                "us_per_call": 96.5495
+              },
+              "ff2": {
+                "calls": 16,
+                "mean": 9.2581,
+                "p50": 9.1727,
+                "p90": 9.3199,
+                "p99": 10.5483,
+                "max": 12.0626,
+                "share_pct": 28.392,
+                "us_per_call": 578.632
+              },
+              "ff_resid": {
+                "calls": 16,
+                "mean": 0.0329,
+                "p50": 0.0323,
+                "p90": 0.0344,
+                "p99": 0.046,
+                "max": 0.0707,
+                "share_pct": 0.101,
+                "us_per_call": 2.0582
+              },
+              "norm_out": {
+                "calls": 1,
+                "mean": 0.0082,
+                "p50": 0.0082,
+                "p90": 0.0084,
+                "p99": 0.0088,
+                "max": 0.0228,
+                "share_pct": 0.025,
+                "us_per_call": 8.2495
+              },
+              "value_head": {
+                "calls": 1,
+                "mean": 0.0078,
+                "p50": 0.0073,
+                "p90": 0.0091,
+                "p99": 0.02,
+                "max": 0.0259,
+                "share_pct": 0.024,
+                "us_per_call": 7.8177
+              },
+              "policy_head": {
+                "calls": 1,
+                "mean": 0.0772,
+                "p50": 0.0757,
+                "p90": 0.0823,
+                "p99": 0.0941,
+                "max": 0.1016,
+                "share_pct": 0.237,
+                "us_per_call": 77.2142
+              },
+              "unpatchify": {
+                "calls": 1,
+                "mean": 0.0039,
+                "p50": 0.0037,
+                "p90": 0.0045,
+                "p99": 0.0077,
+                "max": 0.0202,
+                "share_pct": 0.012,
+                "us_per_call": 3.8641
+              },
+              "forward": {
+                "calls": 1,
+                "mean": 32.608,
+                "p50": 32.2762,
+                "p90": 32.5452,
+                "p99": 36.9644,
+                "max": 42.0414,
+                "share_pct": 100.0,
+                "us_per_call": 32607.9535
+              }
+            }
+          },
+          "tables": "[unclejoe] load 157.9 ms, warmup 37.1 ms, temperature 0\n[unclejoe] stages over 1062 turns, startup 195.5 ms\n[unclejoe] stage           mean       p50       p90       p99       max\n[unclejoe] parse          0.006     0.006     0.007     0.017     0.022\n[unclejoe] raw            0.004     0.004     0.004     0.008     0.033\n[unclejoe] mask           0.004     0.003     0.004     0.007     0.016\n[unclejoe] augment        0.019     0.018     0.022     0.036     0.101\n[unclejoe] normalize      0.004     0.004     0.004     0.005     0.018\n[unclejoe] forward       32.578    32.247    32.514    36.935    41.954\n[unclejoe] decode         0.008     0.008     0.009     0.018     0.034\n[unclejoe] stderr         0.251     0.248     0.299     0.360     0.768\n[unclejoe] total         32.874    32.541    32.849    37.198    42.348\n[unclejoe] forward steps over 1062 turns, gemm kernel avx512\n[unclejoe] step          calls      mean       p50       p90       p99       max    share   us/call\n[unclejoe] patchify          1     0.039     0.038     0.043     0.069     0.141    0.12%     39.28\n[unclejoe] embed             1     0.188     0.184     0.200     0.224     0.264    0.58%    188.43\n[unclejoe] temporal          1     0.118     0.114     0.137     0.178     0.356    0.36%    117.88\n[unclejoe] assemble          1     0.004     0.004     0.004     0.008     0.025    0.01%      3.77\n[unclejoe] norm1            16     0.134     0.132     0.143     0.158     0.209    0.41%      8.37\n[unclejoe] q_proj           16     2.312     2.269     2.393     2.697     3.112    7.09%    144.51\n[unclejoe] k_proj           16     2.290     2.247     2.372     2.685     3.087    7.02%    143.10\n[unclejoe] v_proj           16     2.297     2.253     2.404     2.699     3.115    7.04%    143.56\n[unclejoe] head_pack       128     0.187     0.184     0.200     0.220     0.265    0.57%      1.46\n[unclejoe] scores          128     0.597     0.589     0.616     0.655     0.685    1.83%      4.66\n[unclejoe] scale           128     0.017     0.016     0.017     0.028     0.035    0.05%      0.13\n[unclejoe] softmax         128     1.457     1.440     1.497     1.546     1.585    4.47%     11.38\n[unclejoe] context         128     0.298     0.294     0.308     0.333     0.378    0.91%      2.33\n[unclejoe] head_scatter    128     0.041     0.041     0.045     0.056     0.085    0.13%      0.32\n[unclejoe] attn_out         16     2.356     2.313     2.440     2.815     3.323    7.23%    147.25\n[unclejoe] attn_resid       16     0.032     0.031     0.033     0.044     0.056    0.10%      1.98\n[unclejoe] norm2            16     0.133     0.131     0.142     0.158     0.177    0.41%      8.32\n[unclejoe] ff1              16     9.175     9.080     9.238    10.643    12.210   28.14%    573.44\n[unclejoe] silu             16     1.545     1.525     1.588     1.654     1.730    4.74%     96.55\n[unclejoe] ff2              16     9.258     9.173     9.320    10.548    12.063   28.39%    578.63\n[unclejoe] ff_resid         16     0.033     0.032     0.034     0.046     0.071    0.10%      2.06\n[unclejoe] norm_out          1     0.008     0.008     0.008     0.009     0.023    0.03%      8.25\n[unclejoe] value_head        1     0.008     0.007     0.009     0.020     0.026    0.02%      7.82\n[unclejoe] policy_head       1     0.077     0.076     0.082     0.094     0.102    0.24%     77.21\n[unclejoe] unpatchify        1     0.004     0.004     0.004     0.008     0.020    0.01%      3.86\n[unclejoe] forward           1    32.608    32.276    32.545    36.964    42.041  100.00%  32607.95\n[unclejoe] uninstrumented forward mean 32.578 ms; the split costs +0.030 ms"
+        }
+      ]
+    },
+    {
+      "batch": 1,
+      "results": [
+        {
+          "replica": 0,
+          "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+          "machine": "x86_64",
+          "online_cpus": 17,
+          "cpu_model": "unknown",
+          "cpu_mhz": "3100.113",
+          "avx512f": true,
+          "avx2": true,
+          "cpu_ident": "vendor_id=GenuineIntel cpu family=6 model=85 stepping=unknown",
+          "selfcheck_rc": 0,
+          "selfcheck": "hardware_fma true\nhardware_avx2 true\nruntime_gemm avx512\nartifact_dir /root/unclejoe/artifact\nsafetensors_sha256 e12c235e2139dd2f84de076e59ffcc897e51f136847dac6cce431f378cf94d7b\ntensor_schema joe-net-v1\ncheckpoint joe-X16-gcp-20260825\ncheckpoint_step 2500\nstartup_ms 318.703\ntemperature 0\nnoundo 0\nnoundo_window 8\ndecide_ms 56.114\ndecision 0 10 10 0 0\nselfcheck ok",
+          "plain_s": 63.8,
+          "bench_rc": 0,
+          "bench_stdout": "turns 1062 startup_ms 316.2 p50 60.18 p90 63.53 p99 73.28 max 94.33",
+          "steps_rc": 0,
+          "staged_total_line": "turns 1062 startup_ms 307.7 p50 54.58 p90 62.81 p99 65.98 max 76.30",
+          "move_stages": {
+            "turns": 1062,
+            "startup_ms": 307.656,
+            "stages": {
+              "parse": {
+                "mean": 0.016,
+                "p50": 0.0158,
+                "p90": 0.0166,
+                "p99": 0.0276,
+                "max": 0.0361
+              },
+              "raw": {
+                "mean": 0.013,
+                "p50": 0.0123,
+                "p90": 0.015,
+                "p99": 0.0255,
+                "max": 0.0404
+              },
+              "mask": {
+                "mean": 0.0097,
+                "p50": 0.0097,
+                "p90": 0.0123,
+                "p99": 0.021,
+                "max": 0.1356
+              },
+              "augment": {
+                "mean": 0.0655,
+                "p50": 0.0616,
+                "p90": 0.0773,
+                "p99": 0.1024,
+                "max": 0.1555
+              },
+              "normalize": {
+                "mean": 0.006,
+                "p50": 0.0059,
+                "p90": 0.0066,
+                "p99": 0.0148,
+                "max": 0.033
+              },
+              "forward": {
+                "mean": 55.966,
+                "p50": 54.3762,
+                "p90": 62.6001,
+                "p99": 65.7493,
+                "max": 76.1178
+              },
+              "decode": {
+                "mean": 0.0148,
+                "p50": 0.0147,
+                "p90": 0.0167,
+                "p99": 0.0257,
+                "max": 0.0582
+              },
+              "stderr": {
+                "mean": 0.078,
+                "p50": 0.0723,
+                "p90": 0.0895,
+                "p99": 0.1817,
+                "max": 0.3666
+              },
+              "total": {
+                "mean": 56.1695,
+                "p50": 54.5815,
+                "p90": 62.8149,
+                "p99": 65.9765,
+                "max": 76.2978
+              }
+            }
+          },
+          "forward_steps": {
+            "turns": 1062,
+            "gemm_kernel": "avx512",
+            "uninstrumented_forward_mean_ms": 55.966,
+            "steps": {
+              "patchify": {
+                "calls": 1,
+                "mean": 0.1193,
+                "p50": 0.1151,
+                "p90": 0.1342,
+                "p99": 0.1621,
+                "max": 0.2638,
+                "share_pct": 0.213,
+                "us_per_call": 119.2707
+              },
+              "embed": {
+                "calls": 1,
+                "mean": 0.2976,
+                "p50": 0.2888,
+                "p90": 0.3238,
+                "p99": 0.381,
+                "max": 0.7157,
+                "share_pct": 0.531,
+                "us_per_call": 297.5865
+              },
+              "temporal": {
+                "calls": 1,
+                "mean": 0.3437,
+                "p50": 0.3124,
+                "p90": 0.4576,
+                "p99": 0.5581,
+                "max": 0.736,
+                "share_pct": 0.613,
+                "us_per_call": 343.6985
+              },
+              "assemble": {
+                "calls": 1,
+                "mean": 0.0115,
+                "p50": 0.0106,
+                "p90": 0.0136,
+                "p99": 0.0254,
+                "max": 0.073,
+                "share_pct": 0.021,
+                "us_per_call": 11.5293
+              },
+              "norm1": {
+                "calls": 16,
+                "mean": 0.2723,
+                "p50": 0.2697,
+                "p90": 0.2855,
+                "p99": 0.3165,
+                "max": 0.3885,
+                "share_pct": 0.486,
+                "us_per_call": 17.0205
+              },
+              "q_proj": {
+                "calls": 16,
+                "mean": 3.5609,
+                "p50": 3.4586,
+                "p90": 4.0219,
+                "p99": 4.2677,
+                "max": 4.68,
+                "share_pct": 6.352,
+                "us_per_call": 222.5538
+              },
+              "k_proj": {
+                "calls": 16,
+                "mean": 3.5669,
+                "p50": 3.4592,
+                "p90": 4.0264,
+                "p99": 4.3333,
+                "max": 6.4351,
+                "share_pct": 6.363,
+                "us_per_call": 222.9296
+              },
+              "v_proj": {
+                "calls": 16,
+                "mean": 3.556,
+                "p50": 3.4476,
+                "p90": 4.0213,
+                "p99": 4.336,
+                "max": 5.2226,
+                "share_pct": 6.343,
+                "us_per_call": 222.2509
+              },
+              "head_pack": {
+                "calls": 128,
+                "mean": 0.5121,
+                "p50": 0.4839,
+                "p90": 0.586,
+                "p99": 0.8477,
+                "max": 1.1696,
+                "share_pct": 0.914,
+                "us_per_call": 4.0011
+              },
+              "scores": {
+                "calls": 128,
+                "mean": 1.4434,
+                "p50": 1.4343,
+                "p90": 1.4977,
+                "p99": 1.6498,
+                "max": 1.9356,
+                "share_pct": 2.575,
+                "us_per_call": 11.2767
+              },
+              "scale": {
+                "calls": 128,
+                "mean": 0.0282,
+                "p50": 0.0277,
+                "p90": 0.0284,
+                "p99": 0.044,
+                "max": 0.1088,
+                "share_pct": 0.05,
+                "us_per_call": 0.2205
+              },
+              "softmax": {
+                "calls": 128,
+                "mean": 3.9799,
+                "p50": 3.9791,
+                "p90": 4.1267,
+                "p99": 4.432,
+                "max": 5.3091,
+                "share_pct": 7.099,
+                "us_per_call": 31.0931
+              },
+              "context": {
+                "calls": 128,
+                "mean": 0.5044,
+                "p50": 0.4636,
+                "p90": 0.6015,
+                "p99": 0.9174,
+                "max": 0.9426,
+                "share_pct": 0.9,
+                "us_per_call": 3.9404
+              },
+              "head_scatter": {
+                "calls": 128,
+                "mean": 0.1993,
+                "p50": 0.1663,
+                "p90": 0.2823,
+                "p99": 0.5179,
+                "max": 0.807,
+                "share_pct": 0.355,
+                "us_per_call": 1.5569
+              },
+              "attn_out": {
+                "calls": 16,
+                "mean": 3.5041,
+                "p50": 3.4108,
+                "p90": 3.9376,
+                "p99": 4.1545,
+                "max": 4.6717,
+                "share_pct": 6.251,
+                "us_per_call": 219.0037
+              },
+              "attn_resid": {
+                "calls": 16,
+                "mean": 0.0802,
+                "p50": 0.0756,
+                "p90": 0.0924,
+                "p99": 0.1296,
+                "max": 0.2045,
+                "share_pct": 0.143,
+                "us_per_call": 5.0134
+              },
+              "norm2": {
+                "calls": 16,
+                "mean": 0.272,
+                "p50": 0.2683,
+                "p90": 0.2844,
+                "p99": 0.3217,
+                "max": 0.6034,
+                "share_pct": 0.485,
+                "us_per_call": 17.0024
+              },
+              "ff1": {
+                "calls": 16,
+                "mean": 15.3548,
+                "p50": 14.8113,
+                "p90": 17.5705,
+                "p99": 18.586,
+                "max": 21.7711,
+                "share_pct": 27.39,
+                "us_per_call": 959.6736
+              },
+              "silu": {
+                "calls": 16,
+                "mean": 3.8442,
+                "p50": 3.8288,
+                "p90": 3.9773,
+                "p99": 4.4151,
+                "max": 5.7412,
+                "share_pct": 6.857,
+                "us_per_call": 240.2598
+              },
+              "ff2": {
+                "calls": 16,
+                "mean": 14.2866,
+                "p50": 13.8604,
+                "p90": 16.1556,
+                "p99": 16.8953,
+                "max": 19.8794,
+                "share_pct": 25.485,
+                "us_per_call": 892.9152
+              },
+              "ff_resid": {
+                "calls": 16,
+                "mean": 0.0945,
+                "p50": 0.0895,
+                "p90": 0.1085,
+                "p99": 0.152,
+                "max": 0.2448,
+                "share_pct": 0.169,
+                "us_per_call": 5.9069
+              },
+              "norm_out": {
+                "calls": 1,
+                "mean": 0.0169,
+                "p50": 0.0167,
+                "p90": 0.017,
+                "p99": 0.0277,
+                "max": 0.0444,
+                "share_pct": 0.03,
+                "us_per_call": 16.8751
+              },
+              "value_head": {
+                "calls": 1,
+                "mean": 0.0261,
+                "p50": 0.024,
+                "p90": 0.0327,
+                "p99": 0.0486,
+                "max": 0.2229,
+                "share_pct": 0.047,
+                "us_per_call": 26.1367
+              },
+              "policy_head": {
+                "calls": 1,
+                "mean": 0.1734,
+                "p50": 0.1702,
+                "p90": 0.1846,
+                "p99": 0.2139,
+                "max": 0.373,
+                "share_pct": 0.309,
+                "us_per_call": 173.3845
+              },
+              "unpatchify": {
+                "calls": 1,
+                "mean": 0.0112,
+                "p50": 0.0105,
+                "p90": 0.0146,
+                "p99": 0.0182,
+                "max": 0.0518,
+                "share_pct": 0.02,
+                "us_per_call": 11.2314
+              },
+              "forward": {
+                "calls": 1,
+                "mean": 56.0595,
+                "p50": 54.4641,
+                "p90": 62.7073,
+                "p99": 65.8562,
+                "max": 76.2003,
+                "share_pct": 100.0,
+                "us_per_call": 56059.5382
+              }
+            }
+          },
+          "tables": "[unclejoe] load 253.0 ms, warmup 54.5 ms, temperature 0\n[unclejoe] stages over 1062 turns, startup 307.7 ms\n[unclejoe] stage           mean       p50       p90       p99       max\n[unclejoe] parse          0.016     0.016     0.017     0.028     0.036\n[unclejoe] raw            0.013     0.012     0.015     0.025     0.040\n[unclejoe] mask           0.010     0.010     0.012     0.021     0.136\n[unclejoe] augment        0.066     0.062     0.077     0.102     0.156\n[unclejoe] normalize      0.006     0.006     0.007     0.015     0.033\n[unclejoe] forward       55.966    54.376    62.600    65.749    76.118\n[unclejoe] decode         0.015     0.015     0.017     0.026     0.058\n[unclejoe] stderr         0.078     0.072     0.090     0.182     0.367\n[unclejoe] total         56.170    54.581    62.815    65.976    76.298\n[unclejoe] forward steps over 1062 turns, gemm kernel avx512\n[unclejoe] step          calls      mean       p50       p90       p99       max    share   us/call\n[unclejoe] patchify          1     0.119     0.115     0.134     0.162     0.264    0.21%    119.27\n[unclejoe] embed             1     0.298     0.289     0.324     0.381     0.716    0.53%    297.59\n[unclejoe] temporal          1     0.344     0.312     0.458     0.558     0.736    0.61%    343.70\n[unclejoe] assemble          1     0.012     0.011     0.014     0.025     0.073    0.02%     11.53\n[unclejoe] norm1            16     0.272     0.270     0.285     0.317     0.388    0.49%     17.02\n[unclejoe] q_proj           16     3.561     3.459     4.022     4.268     4.680    6.35%    222.55\n[unclejoe] k_proj           16     3.567     3.459     4.026     4.333     6.435    6.36%    222.93\n[unclejoe] v_proj           16     3.556     3.448     4.021     4.336     5.223    6.34%    222.25\n[unclejoe] head_pack       128     0.512     0.484     0.586     0.848     1.170    0.91%      4.00\n[unclejoe] scores          128     1.443     1.434     1.498     1.650     1.936    2.57%     11.28\n[unclejoe] scale           128     0.028     0.028     0.028     0.044     0.109    0.05%      0.22\n[unclejoe] softmax         128     3.980     3.979     4.127     4.432     5.309    7.10%     31.09\n[unclejoe] context         128     0.504     0.464     0.601     0.917     0.943    0.90%      3.94\n[unclejoe] head_scatter    128     0.199     0.166     0.282     0.518     0.807    0.36%      1.56\n[unclejoe] attn_out         16     3.504     3.411     3.938     4.154     4.672    6.25%    219.00\n[unclejoe] attn_resid       16     0.080     0.076     0.092     0.130     0.205    0.14%      5.01\n[unclejoe] norm2            16     0.272     0.268     0.284     0.322     0.603    0.49%     17.00\n[unclejoe] ff1              16    15.355    14.811    17.570    18.586    21.771   27.39%    959.67\n[unclejoe] silu             16     3.844     3.829     3.977     4.415     5.741    6.86%    240.26\n[unclejoe] ff2              16    14.287    13.860    16.156    16.895    19.879   25.48%    892.92\n[unclejoe] ff_resid         16     0.095     0.089     0.108     0.152     0.245    0.17%      5.91\n[unclejoe] norm_out          1     0.017     0.017     0.017     0.028     0.044    0.03%     16.88\n[unclejoe] value_head        1     0.026     0.024     0.033     0.049     0.223    0.05%     26.14\n[unclejoe] policy_head       1     0.173     0.170     0.185     0.214     0.373    0.31%    173.38\n[unclejoe] unpatchify        1     0.011     0.010     0.015     0.018     0.052    0.02%     11.23\n[unclejoe] forward           1    56.060    54.464    62.707    65.856    76.200  100.00%  56059.54\n[unclejoe] uninstrumented forward mean 55.966 ms; the split costs +0.094 ms"
+        },
+        {
+          "replica": 1,
+          "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+          "machine": "x86_64",
+          "online_cpus": 17,
+          "cpu_model": "unknown",
+          "cpu_mhz": "2449.996",
+          "avx512f": false,
+          "avx2": true,
+          "cpu_ident": "vendor_id=AuthenticAMD cpu family=175 model=1 stepping=unknown",
+          "selfcheck_rc": 0,
+          "selfcheck": "hardware_fma true\nhardware_avx2 true\nruntime_gemm avx2\nartifact_dir /root/unclejoe/artifact\nsafetensors_sha256 e12c235e2139dd2f84de076e59ffcc897e51f136847dac6cce431f378cf94d7b\ntensor_schema joe-net-v1\ncheckpoint joe-X16-gcp-20260825\ncheckpoint_step 2500\nstartup_ms 307.701\ntemperature 0\nnoundo 0\nnoundo_window 8\ndecide_ms 44.083\ndecision 0 10 10 0 0\nselfcheck ok",
+          "plain_s": 45.3,
+          "bench_rc": 0,
+          "bench_stdout": "turns 1062 startup_ms 310.1 p50 41.90 p90 43.81 p99 46.49 max 48.98",
+          "steps_rc": 0,
+          "staged_total_line": "turns 1062 startup_ms 307.7 p50 41.54 p90 45.31 p99 47.09 max 49.18",
+          "move_stages": {
+            "turns": 1062,
+            "startup_ms": 307.7,
+            "stages": {
+              "parse": {
+                "mean": 0.0088,
+                "p50": 0.0078,
+                "p90": 0.013,
+                "p99": 0.0199,
+                "max": 0.0394
+              },
+              "raw": {
+                "mean": 0.0068,
+                "p50": 0.0056,
+                "p90": 0.0109,
+                "p99": 0.0199,
+                "max": 0.0667
+              },
+              "mask": {
+                "mean": 0.0065,
+                "p50": 0.0058,
+                "p90": 0.0106,
+                "p99": 0.0148,
+                "max": 0.0374
+              },
+              "augment": {
+                "mean": 0.0341,
+                "p50": 0.028,
+                "p90": 0.0593,
+                "p99": 0.0748,
+                "max": 0.4358
+              },
+              "normalize": {
+                "mean": 0.0052,
+                "p50": 0.0052,
+                "p90": 0.0059,
+                "p99": 0.0116,
+                "max": 0.0291
+              },
+              "forward": {
+                "mean": 41.9053,
+                "p50": 41.1331,
+                "p90": 44.8607,
+                "p99": 46.6395,
+                "max": 48.8213
+              },
+              "decode": {
+                "mean": 0.0115,
+                "p50": 0.0108,
+                "p90": 0.0142,
+                "p99": 0.0238,
+                "max": 0.0304
+              },
+              "stderr": {
+                "mean": 0.3393,
+                "p50": 0.3178,
+                "p90": 0.4322,
+                "p99": 0.8601,
+                "max": 1.5058
+              },
+              "total": {
+                "mean": 42.3179,
+                "p50": 41.5397,
+                "p90": 45.3128,
+                "p99": 47.0897,
+                "max": 49.1787
+              }
+            }
+          },
+          "forward_steps": {
+            "turns": 1062,
+            "gemm_kernel": "avx2",
+            "uninstrumented_forward_mean_ms": 41.9053,
+            "steps": {
+              "patchify": {
+                "calls": 1,
+                "mean": 0.0668,
+                "p50": 0.0583,
+                "p90": 0.1001,
+                "p99": 0.1258,
+                "max": 0.4805,
+                "share_pct": 0.159,
+                "us_per_call": 66.7525
+              },
+              "embed": {
+                "calls": 1,
+                "mean": 0.1977,
+                "p50": 0.1691,
+                "p90": 0.3097,
+                "p99": 0.3921,
+                "max": 0.5206,
+                "share_pct": 0.471,
+                "us_per_call": 197.7353
+              },
+              "temporal": {
+                "calls": 1,
+                "mean": 0.2263,
+                "p50": 0.204,
+                "p90": 0.3215,
+                "p99": 0.3716,
+                "max": 0.5198,
+                "share_pct": 0.539,
+                "us_per_call": 226.2697
+              },
+              "assemble": {
+                "calls": 1,
+                "mean": 0.0067,
+                "p50": 0.0058,
+                "p90": 0.0088,
+                "p99": 0.0124,
+                "max": 0.0777,
+                "share_pct": 0.016,
+                "us_per_call": 6.6997
+              },
+              "norm1": {
+                "calls": 16,
+                "mean": 0.1619,
+                "p50": 0.1583,
+                "p90": 0.1735,
+                "p99": 0.1932,
+                "max": 0.2542,
+                "share_pct": 0.386,
+                "us_per_call": 10.121
+              },
+              "q_proj": {
+                "calls": 16,
+                "mean": 3.0623,
+                "p50": 3.0067,
+                "p90": 3.2989,
+                "p99": 3.503,
+                "max": 3.6049,
+                "share_pct": 7.299,
+                "us_per_call": 191.3965
+              },
+              "k_proj": {
+                "calls": 16,
+                "mean": 3.0148,
+                "p50": 2.9595,
+                "p90": 3.2421,
+                "p99": 3.4422,
+                "max": 4.229,
+                "share_pct": 7.185,
+                "us_per_call": 188.4237
+              },
+              "v_proj": {
+                "calls": 16,
+                "mean": 3.0219,
+                "p50": 2.9724,
+                "p90": 3.253,
+                "p99": 3.4048,
+                "max": 3.6016,
+                "share_pct": 7.202,
+                "us_per_call": 188.8682
+              },
+              "head_pack": {
+                "calls": 128,
+                "mean": 0.2749,
+                "p50": 0.2624,
+                "p90": 0.3019,
+                "p99": 0.4713,
+                "max": 0.6652,
+                "share_pct": 0.655,
+                "us_per_call": 2.1476
+              },
+              "scores": {
+                "calls": 128,
+                "mean": 0.7205,
+                "p50": 0.7165,
+                "p90": 0.744,
+                "p99": 0.7833,
+                "max": 0.9132,
+                "share_pct": 1.717,
+                "us_per_call": 5.6292
+              },
+              "scale": {
+                "calls": 128,
+                "mean": 0.0192,
+                "p50": 0.0187,
+                "p90": 0.0192,
+                "p99": 0.0337,
+                "max": 0.0405,
+                "share_pct": 0.046,
+                "us_per_call": 0.1499
+              },
+              "softmax": {
+                "calls": 128,
+                "mean": 1.7691,
+                "p50": 1.7654,
+                "p90": 1.8038,
+                "p99": 1.8639,
+                "max": 1.9453,
+                "share_pct": 4.216,
+                "us_per_call": 13.8212
+              },
+              "context": {
+                "calls": 128,
+                "mean": 0.3655,
+                "p50": 0.3609,
+                "p90": 0.3829,
+                "p99": 0.4074,
+                "max": 0.451,
+                "share_pct": 0.871,
+                "us_per_call": 2.8553
+              },
+              "head_scatter": {
+                "calls": 128,
+                "mean": 0.0478,
+                "p50": 0.0436,
+                "p90": 0.0595,
+                "p99": 0.0849,
+                "max": 0.127,
+                "share_pct": 0.114,
+                "us_per_call": 0.3731
+              },
+              "attn_out": {
+                "calls": 16,
+                "mean": 3.0041,
+                "p50": 2.9572,
+                "p90": 3.2522,
+                "p99": 3.4067,
+                "max": 3.5421,
+                "share_pct": 7.16,
+                "us_per_call": 187.7559
+              },
+              "attn_resid": {
+                "calls": 16,
+                "mean": 0.0477,
+                "p50": 0.0455,
+                "p90": 0.0585,
+                "p99": 0.0803,
+                "max": 0.1015,
+                "share_pct": 0.114,
+                "us_per_call": 2.9832
+              },
+              "norm2": {
+                "calls": 16,
+                "mean": 0.1609,
+                "p50": 0.1569,
+                "p90": 0.172,
+                "p99": 0.1894,
+                "max": 0.3445,
+                "share_pct": 0.383,
+                "us_per_call": 10.0536
+              },
+              "ff1": {
+                "calls": 16,
+                "mean": 11.7766,
+                "p50": 11.5643,
+                "p90": 12.6932,
+                "p99": 13.1876,
+                "max": 14.2627,
+                "share_pct": 28.068,
+                "us_per_call": 736.038
+              },
+              "silu": {
+                "calls": 16,
+                "mean": 1.7819,
+                "p50": 1.7783,
+                "p90": 1.8164,
+                "p99": 1.8697,
+                "max": 2.2107,
+                "share_pct": 4.247,
+                "us_per_call": 111.3681
+              },
+              "ff2": {
+                "calls": 16,
+                "mean": 12.0589,
+                "p50": 11.8337,
+                "p90": 13.0629,
+                "p99": 13.6291,
+                "max": 14.4282,
+                "share_pct": 28.741,
+                "us_per_call": 753.6824
+              },
+              "ff_resid": {
+                "calls": 16,
+                "mean": 0.0633,
+                "p50": 0.0609,
+                "p90": 0.0749,
+                "p99": 0.0943,
+                "max": 0.2595,
+                "share_pct": 0.151,
+                "us_per_call": 3.9569
+              },
+              "norm_out": {
+                "calls": 1,
+                "mean": 0.0101,
+                "p50": 0.0098,
+                "p90": 0.0101,
+                "p99": 0.0218,
+                "max": 0.0291,
+                "share_pct": 0.024,
+                "us_per_call": 10.0868
+              },
+              "value_head": {
+                "calls": 1,
+                "mean": 0.0132,
+                "p50": 0.012,
+                "p90": 0.0181,
+                "p99": 0.0278,
+                "max": 0.0404,
+                "share_pct": 0.032,
+                "us_per_call": 13.217
+              },
+              "policy_head": {
+                "calls": 1,
+                "mean": 0.0814,
+                "p50": 0.0788,
+                "p90": 0.0899,
+                "p99": 0.1032,
+                "max": 0.2627,
+                "share_pct": 0.194,
+                "us_per_call": 81.4325
+              },
+              "unpatchify": {
+                "calls": 1,
+                "mean": 0.0038,
+                "p50": 0.0034,
+                "p90": 0.0049,
+                "p99": 0.0092,
+                "max": 0.0241,
+                "share_pct": 0.009,
+                "us_per_call": 3.7837
+              },
+              "forward": {
+                "calls": 1,
+                "mean": 41.9573,
+                "p50": 41.1771,
+                "p90": 44.9007,
+                "p99": 46.7395,
+                "max": 48.8629,
+                "share_pct": 100.0,
+                "us_per_call": 41957.3049
+              }
+            }
+          },
+          "tables": "[unclejoe] load 265.1 ms, warmup 42.0 ms, temperature 0\n[unclejoe] stages over 1062 turns, startup 307.7 ms\n[unclejoe] stage           mean       p50       p90       p99       max\n[unclejoe] parse          0.009     0.008     0.013     0.020     0.039\n[unclejoe] raw            0.007     0.006     0.011     0.020     0.067\n[unclejoe] mask           0.006     0.006     0.011     0.015     0.037\n[unclejoe] augment        0.034     0.028     0.059     0.075     0.436\n[unclejoe] normalize      0.005     0.005     0.006     0.012     0.029\n[unclejoe] forward       41.905    41.133    44.861    46.640    48.821\n[unclejoe] decode         0.011     0.011     0.014     0.024     0.030\n[unclejoe] stderr         0.339     0.318     0.432     0.860     1.506\n[unclejoe] total         42.318    41.540    45.313    47.090    49.179\n[unclejoe] forward steps over 1062 turns, gemm kernel avx2\n[unclejoe] step          calls      mean       p50       p90       p99       max    share   us/call\n[unclejoe] patchify          1     0.067     0.058     0.100     0.126     0.480    0.16%     66.75\n[unclejoe] embed             1     0.198     0.169     0.310     0.392     0.521    0.47%    197.74\n[unclejoe] temporal          1     0.226     0.204     0.322     0.372     0.520    0.54%    226.27\n[unclejoe] assemble          1     0.007     0.006     0.009     0.012     0.078    0.02%      6.70\n[unclejoe] norm1            16     0.162     0.158     0.173     0.193     0.254    0.39%     10.12\n[unclejoe] q_proj           16     3.062     3.007     3.299     3.503     3.605    7.30%    191.40\n[unclejoe] k_proj           16     3.015     2.960     3.242     3.442     4.229    7.19%    188.42\n[unclejoe] v_proj           16     3.022     2.972     3.253     3.405     3.602    7.20%    188.87\n[unclejoe] head_pack       128     0.275     0.262     0.302     0.471     0.665    0.66%      2.15\n[unclejoe] scores          128     0.721     0.717     0.744     0.783     0.913    1.72%      5.63\n[unclejoe] scale           128     0.019     0.019     0.019     0.034     0.040    0.05%      0.15\n[unclejoe] softmax         128     1.769     1.765     1.804     1.864     1.945    4.22%     13.82\n[unclejoe] context         128     0.365     0.361     0.383     0.407     0.451    0.87%      2.86\n[unclejoe] head_scatter    128     0.048     0.044     0.059     0.085     0.127    0.11%      0.37\n[unclejoe] attn_out         16     3.004     2.957     3.252     3.407     3.542    7.16%    187.76\n[unclejoe] attn_resid       16     0.048     0.045     0.058     0.080     0.102    0.11%      2.98\n[unclejoe] norm2            16     0.161     0.157     0.172     0.189     0.344    0.38%     10.05\n[unclejoe] ff1              16    11.777    11.564    12.693    13.188    14.263   28.07%    736.04\n[unclejoe] silu             16     1.782     1.778     1.816     1.870     2.211    4.25%    111.37\n[unclejoe] ff2              16    12.059    11.834    13.063    13.629    14.428   28.74%    753.68\n[unclejoe] ff_resid         16     0.063     0.061     0.075     0.094     0.259    0.15%      3.96\n[unclejoe] norm_out          1     0.010     0.010     0.010     0.022     0.029    0.02%     10.09\n[unclejoe] value_head        1     0.013     0.012     0.018     0.028     0.040    0.03%     13.22\n[unclejoe] policy_head       1     0.081     0.079     0.090     0.103     0.263    0.19%     81.43\n[unclejoe] unpatchify        1     0.004     0.003     0.005     0.009     0.024    0.01%      3.78\n[unclejoe] forward           1    41.957    41.177    44.901    46.740    48.863  100.00%  41957.30\n[unclejoe] uninstrumented forward mean 41.905 ms; the split costs +0.052 ms"
+        },
+        {
+          "replica": 2,
+          "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+          "machine": "x86_64",
+          "online_cpus": 17,
+          "cpu_model": "unknown",
+          "cpu_mhz": "3103.924",
+          "avx512f": false,
+          "avx2": true,
+          "cpu_ident": "vendor_id=AuthenticAMD cpu family=175 model=1 stepping=unknown",
+          "selfcheck_rc": 0,
+          "selfcheck": "hardware_fma true\nhardware_avx2 true\nruntime_gemm avx2\nartifact_dir /root/unclejoe/artifact\nsafetensors_sha256 e12c235e2139dd2f84de076e59ffcc897e51f136847dac6cce431f378cf94d7b\ntensor_schema joe-net-v1\ncheckpoint joe-X16-gcp-20260825\ncheckpoint_step 2500\nstartup_ms 278.609\ntemperature 0\nnoundo 0\nnoundo_window 8\ndecide_ms 41.076\ndecision 0 10 10 0 0\nselfcheck ok",
+          "plain_s": 45.5,
+          "bench_rc": 0,
+          "bench_stdout": "turns 1062 startup_ms 272.6 p50 42.20 p90 44.38 p99 46.97 max 50.11",
+          "steps_rc": 0,
+          "staged_total_line": "turns 1062 startup_ms 275.2 p50 43.02 p90 47.22 p99 52.35 max 55.74",
+          "move_stages": {
+            "turns": 1062,
+            "startup_ms": 275.208,
+            "stages": {
+              "parse": {
+                "mean": 0.0072,
+                "p50": 0.0067,
+                "p90": 0.0076,
+                "p99": 0.0169,
+                "max": 0.025
+              },
+              "raw": {
+                "mean": 0.0045,
+                "p50": 0.0039,
+                "p90": 0.0061,
+                "p99": 0.0136,
+                "max": 0.0296
+              },
+              "mask": {
+                "mean": 0.0047,
+                "p50": 0.0041,
+                "p90": 0.0069,
+                "p99": 0.0148,
+                "max": 0.0351
+              },
+              "augment": {
+                "mean": 0.0241,
+                "p50": 0.0211,
+                "p90": 0.0292,
+                "p99": 0.0748,
+                "max": 0.1094
+              },
+              "normalize": {
+                "mean": 0.0017,
+                "p50": 0.0014,
+                "p90": 0.0026,
+                "p99": 0.0052,
+                "max": 0.0158
+              },
+              "forward": {
+                "mean": 43.4099,
+                "p50": 42.7273,
+                "p90": 46.8202,
+                "p99": 51.8248,
+                "max": 55.3272
+              },
+              "decode": {
+                "mean": 0.0095,
+                "p50": 0.0087,
+                "p90": 0.0122,
+                "p99": 0.0205,
+                "max": 0.035
+              },
+              "stderr": {
+                "mean": 0.2907,
+                "p50": 0.2762,
+                "p90": 0.3521,
+                "p99": 0.5503,
+                "max": 2.615
+              },
+              "total": {
+                "mean": 43.7526,
+                "p50": 43.0186,
+                "p90": 47.2166,
+                "p99": 52.3455,
+                "max": 55.7386
+              }
+            }
+          },
+          "forward_steps": {
+            "turns": 1062,
+            "gemm_kernel": "avx2",
+            "uninstrumented_forward_mean_ms": 43.4099,
+            "steps": {
+              "patchify": {
+                "calls": 1,
+                "mean": 0.0497,
+                "p50": 0.0448,
+                "p90": 0.0588,
+                "p99": 0.1282,
+                "max": 0.1758,
+                "share_pct": 0.114,
+                "us_per_call": 49.6858
+              },
+              "embed": {
+                "calls": 1,
+                "mean": 0.1835,
+                "p50": 0.1711,
+                "p90": 0.1988,
+                "p99": 0.4224,
+                "max": 0.4948,
+                "share_pct": 0.422,
+                "us_per_call": 183.5026
+              },
+              "temporal": {
+                "calls": 1,
+                "mean": 0.1712,
+                "p50": 0.1605,
+                "p90": 0.2348,
+                "p99": 0.3802,
+                "max": 0.5632,
+                "share_pct": 0.394,
+                "us_per_call": 171.1966
+              },
+              "assemble": {
+                "calls": 1,
+                "mean": 0.0049,
+                "p50": 0.0045,
+                "p90": 0.0066,
+                "p99": 0.011,
+                "max": 0.0248,
+                "share_pct": 0.011,
+                "us_per_call": 4.9346
+              },
+              "norm1": {
+                "calls": 16,
+                "mean": 0.1667,
+                "p50": 0.1625,
+                "p90": 0.1787,
+                "p99": 0.1966,
+                "max": 0.2505,
+                "share_pct": 0.384,
+                "us_per_call": 10.4175
+              },
+              "q_proj": {
+                "calls": 16,
+                "mean": 3.1709,
+                "p50": 3.1117,
+                "p90": 3.4198,
+                "p99": 3.9117,
+                "max": 4.3134,
+                "share_pct": 7.299,
+                "us_per_call": 198.1815
+              },
+              "k_proj": {
+                "calls": 16,
+                "mean": 3.1397,
+                "p50": 3.0737,
+                "p90": 3.3858,
+                "p99": 3.8345,
+                "max": 4.3816,
+                "share_pct": 7.227,
+                "us_per_call": 196.2311
+              },
+              "v_proj": {
+                "calls": 16,
+                "mean": 3.1553,
+                "p50": 3.0942,
+                "p90": 3.3921,
+                "p99": 3.8178,
+                "max": 4.1478,
+                "share_pct": 7.263,
+                "us_per_call": 197.2091
+              },
+              "head_pack": {
+                "calls": 128,
+                "mean": 0.2671,
+                "p50": 0.2619,
+                "p90": 0.2853,
+                "p99": 0.3242,
+                "max": 0.4875,
+                "share_pct": 0.615,
+                "us_per_call": 2.087
+              },
+              "scores": {
+                "calls": 128,
+                "mean": 0.7556,
+                "p50": 0.7497,
+                "p90": 0.788,
+                "p99": 0.852,
+                "max": 1.0108,
+                "share_pct": 1.739,
+                "us_per_call": 5.903
+              },
+              "scale": {
+                "calls": 128,
+                "mean": 0.0205,
+                "p50": 0.0201,
+                "p90": 0.021,
+                "p99": 0.0347,
+                "max": 0.0436,
+                "share_pct": 0.047,
+                "us_per_call": 0.1603
+              },
+              "softmax": {
+                "calls": 128,
+                "mean": 1.8564,
+                "p50": 1.8424,
+                "p90": 1.8991,
+                "p99": 2.0502,
+                "max": 2.8314,
+                "share_pct": 4.273,
+                "us_per_call": 14.5028
+              },
+              "context": {
+                "calls": 128,
+                "mean": 0.3886,
+                "p50": 0.3789,
+                "p90": 0.4088,
+                "p99": 0.4458,
+                "max": 0.7038,
+                "share_pct": 0.895,
+                "us_per_call": 3.0361
+              },
+              "head_scatter": {
+                "calls": 128,
+                "mean": 0.0462,
+                "p50": 0.0445,
+                "p90": 0.0492,
+                "p99": 0.0685,
+                "max": 0.0908,
+                "share_pct": 0.106,
+                "us_per_call": 0.3609
+              },
+              "attn_out": {
+                "calls": 16,
+                "mean": 3.1475,
+                "p50": 3.0827,
+                "p90": 3.3909,
+                "p99": 3.7707,
+                "max": 4.0338,
+                "share_pct": 7.245,
+                "us_per_call": 196.7157
+              },
+              "attn_resid": {
+                "calls": 16,
+                "mean": 0.0401,
+                "p50": 0.0375,
+                "p90": 0.0478,
+                "p99": 0.0637,
+                "max": 0.0937,
+                "share_pct": 0.092,
+                "us_per_call": 2.5032
+              },
+              "norm2": {
+                "calls": 16,
+                "mean": 0.1658,
+                "p50": 0.162,
+                "p90": 0.1771,
+                "p99": 0.1944,
+                "max": 0.2423,
+                "share_pct": 0.382,
+                "us_per_call": 10.3632
+              },
+              "ff1": {
+                "calls": 16,
+                "mean": 12.3077,
+                "p50": 12.1036,
+                "p90": 13.2593,
+                "p99": 14.7447,
+                "max": 16.3667,
+                "share_pct": 28.33,
+                "us_per_call": 769.2343
+              },
+              "silu": {
+                "calls": 16,
+                "mean": 1.8681,
+                "p50": 1.8557,
+                "p90": 1.9139,
+                "p99": 2.0358,
+                "max": 2.1385,
+                "share_pct": 4.3,
+                "us_per_call": 116.7545
+              },
+              "ff2": {
+                "calls": 16,
+                "mean": 12.3819,
+                "p50": 12.1777,
+                "p90": 13.5236,
+                "p99": 15.2478,
+                "max": 16.5388,
+                "share_pct": 28.5,
+                "us_per_call": 773.8664
+              },
+              "ff_resid": {
+                "calls": 16,
+                "mean": 0.0502,
+                "p50": 0.0469,
+                "p90": 0.0606,
+                "p99": 0.0809,
+                "max": 0.0969,
+                "share_pct": 0.115,
+                "us_per_call": 3.1358
+              },
+              "norm_out": {
+                "calls": 1,
+                "mean": 0.0102,
+                "p50": 0.01,
+                "p90": 0.0104,
+                "p99": 0.0121,
+                "max": 0.0321,
+                "share_pct": 0.024,
+                "us_per_call": 10.2462
+              },
+              "value_head": {
+                "calls": 1,
+                "mean": 0.0111,
+                "p50": 0.0101,
+                "p90": 0.0151,
+                "p99": 0.0249,
+                "max": 0.0406,
+                "share_pct": 0.026,
+                "us_per_call": 11.086
+              },
+              "policy_head": {
+                "calls": 1,
+                "mean": 0.0828,
+                "p50": 0.0806,
+                "p90": 0.0903,
+                "p99": 0.1042,
+                "max": 0.1274,
+                "share_pct": 0.191,
+                "us_per_call": 82.8302
+              },
+              "unpatchify": {
+                "calls": 1,
+                "mean": 0.0031,
+                "p50": 0.0028,
+                "p90": 0.0038,
+                "p99": 0.0061,
+                "max": 0.0333,
+                "share_pct": 0.007,
+                "us_per_call": 3.072
+              },
+              "forward": {
+                "calls": 1,
+                "mean": 43.4448,
+                "p50": 42.7577,
+                "p90": 46.8603,
+                "p99": 51.9487,
+                "max": 55.3725,
+                "share_pct": 100.0,
+                "us_per_call": 43444.7506
+              }
+            }
+          },
+          "tables": "[unclejoe] load 232.5 ms, warmup 42.3 ms, temperature 0\n[unclejoe] stages over 1062 turns, startup 275.2 ms\n[unclejoe] stage           mean       p50       p90       p99       max\n[unclejoe] parse          0.007     0.007     0.008     0.017     0.025\n[unclejoe] raw            0.005     0.004     0.006     0.014     0.030\n[unclejoe] mask           0.005     0.004     0.007     0.015     0.035\n[unclejoe] augment        0.024     0.021     0.029     0.075     0.109\n[unclejoe] normalize      0.002     0.001     0.003     0.005     0.016\n[unclejoe] forward       43.410    42.727    46.820    51.825    55.327\n[unclejoe] decode         0.009     0.009     0.012     0.020     0.035\n[unclejoe] stderr         0.291     0.276     0.352     0.550     2.615\n[unclejoe] total         43.753    43.019    47.217    52.346    55.739\n[unclejoe] forward steps over 1062 turns, gemm kernel avx2\n[unclejoe] step          calls      mean       p50       p90       p99       max    share   us/call\n[unclejoe] patchify          1     0.050     0.045     0.059     0.128     0.176    0.11%     49.69\n[unclejoe] embed             1     0.184     0.171     0.199     0.422     0.495    0.42%    183.50\n[unclejoe] temporal          1     0.171     0.161     0.235     0.380     0.563    0.39%    171.20\n[unclejoe] assemble          1     0.005     0.005     0.007     0.011     0.025    0.01%      4.93\n[unclejoe] norm1            16     0.167     0.163     0.179     0.197     0.251    0.38%     10.42\n[unclejoe] q_proj           16     3.171     3.112     3.420     3.912     4.313    7.30%    198.18\n[unclejoe] k_proj           16     3.140     3.074     3.386     3.834     4.382    7.23%    196.23\n[unclejoe] v_proj           16     3.155     3.094     3.392     3.818     4.148    7.26%    197.21\n[unclejoe] head_pack       128     0.267     0.262     0.285     0.324     0.487    0.61%      2.09\n[unclejoe] scores          128     0.756     0.750     0.788     0.852     1.011    1.74%      5.90\n[unclejoe] scale           128     0.021     0.020     0.021     0.035     0.044    0.05%      0.16\n[unclejoe] softmax         128     1.856     1.842     1.899     2.050     2.831    4.27%     14.50\n[unclejoe] context         128     0.389     0.379     0.409     0.446     0.704    0.89%      3.04\n[unclejoe] head_scatter    128     0.046     0.044     0.049     0.068     0.091    0.11%      0.36\n[unclejoe] attn_out         16     3.147     3.083     3.391     3.771     4.034    7.24%    196.72\n[unclejoe] attn_resid       16     0.040     0.038     0.048     0.064     0.094    0.09%      2.50\n[unclejoe] norm2            16     0.166     0.162     0.177     0.194     0.242    0.38%     10.36\n[unclejoe] ff1              16    12.308    12.104    13.259    14.745    16.367   28.33%    769.23\n[unclejoe] silu             16     1.868     1.856     1.914     2.036     2.138    4.30%    116.75\n[unclejoe] ff2              16    12.382    12.178    13.524    15.248    16.539   28.50%    773.87\n[unclejoe] ff_resid         16     0.050     0.047     0.061     0.081     0.097    0.12%      3.14\n[unclejoe] norm_out          1     0.010     0.010     0.010     0.012     0.032    0.02%     10.25\n[unclejoe] value_head        1     0.011     0.010     0.015     0.025     0.041    0.03%     11.09\n[unclejoe] policy_head       1     0.083     0.081     0.090     0.104     0.127    0.19%     82.83\n[unclejoe] unpatchify        1     0.003     0.003     0.004     0.006     0.033    0.01%      3.07\n[unclejoe] forward           1    43.445    42.758    46.860    51.949    55.373  100.00%  43444.75\n[unclejoe] uninstrumented forward mean 43.410 ms; the split costs +0.035 ms"
+        },
+        {
+          "replica": 3,
+          "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+          "machine": "x86_64",
+          "online_cpus": 17,
+          "cpu_model": "unknown",
+          "cpu_mhz": "3100.049",
+          "avx512f": true,
+          "avx2": true,
+          "cpu_ident": "vendor_id=GenuineIntel cpu family=6 model=85 stepping=unknown",
+          "selfcheck_rc": 0,
+          "selfcheck": "hardware_fma true\nhardware_avx2 true\nruntime_gemm avx512\nartifact_dir /root/unclejoe/artifact\nsafetensors_sha256 e12c235e2139dd2f84de076e59ffcc897e51f136847dac6cce431f378cf94d7b\ntensor_schema joe-net-v1\ncheckpoint joe-X16-gcp-20260825\ncheckpoint_step 2500\nstartup_ms 317.089\ntemperature 0\nnoundo 0\nnoundo_window 8\ndecide_ms 61.818\ndecision 0 10 10 0 0\nselfcheck ok",
+          "plain_s": 60.1,
+          "bench_rc": 0,
+          "bench_stdout": "turns 1062 startup_ms 316.0 p50 55.08 p90 60.84 p99 66.98 max 75.71",
+          "steps_rc": 0,
+          "staged_total_line": "turns 1062 startup_ms 304.8 p50 53.70 p90 56.11 p99 62.60 max 64.97",
+          "move_stages": {
+            "turns": 1062,
+            "startup_ms": 304.771,
+            "stages": {
+              "parse": {
+                "mean": 0.0163,
+                "p50": 0.0146,
+                "p90": 0.0158,
+                "p99": 0.0324,
+                "max": 0.974
+              },
+              "raw": {
+                "mean": 0.013,
+                "p50": 0.0121,
+                "p90": 0.0147,
+                "p99": 0.0292,
+                "max": 0.138
+              },
+              "mask": {
+                "mean": 0.01,
+                "p50": 0.0099,
+                "p90": 0.013,
+                "p99": 0.0251,
+                "max": 0.2343
+              },
+              "augment": {
+                "mean": 0.0614,
+                "p50": 0.0588,
+                "p90": 0.0744,
+                "p99": 0.09,
+                "max": 0.2974
+              },
+              "normalize": {
+                "mean": 0.0047,
+                "p50": 0.0044,
+                "p90": 0.0056,
+                "p99": 0.014,
+                "max": 0.021
+              },
+              "forward": {
+                "mean": 53.4195,
+                "p50": 53.5074,
+                "p90": 55.8871,
+                "p99": 62.3988,
+                "max": 64.6685
+              },
+              "decode": {
+                "mean": 0.0148,
+                "p50": 0.0144,
+                "p90": 0.0178,
+                "p99": 0.0311,
+                "max": 0.0876
+              },
+              "stderr": {
+                "mean": 0.0809,
+                "p50": 0.0617,
+                "p90": 0.1453,
+                "p99": 0.2064,
+                "max": 0.2601
+              },
+              "total": {
+                "mean": 53.6209,
+                "p50": 53.7035,
+                "p90": 56.1109,
+                "p99": 62.5995,
+                "max": 64.9715
+              }
+            }
+          },
+          "forward_steps": {
+            "turns": 1062,
+            "gemm_kernel": "avx512",
+            "uninstrumented_forward_mean_ms": 53.4195,
+            "steps": {
+              "patchify": {
+                "calls": 1,
+                "mean": 0.1131,
+                "p50": 0.1101,
+                "p90": 0.129,
+                "p99": 0.1546,
+                "max": 0.344,
+                "share_pct": 0.211,
+                "us_per_call": 113.0746
+              },
+              "embed": {
+                "calls": 1,
+                "mean": 0.296,
+                "p50": 0.2895,
+                "p90": 0.3289,
+                "p99": 0.3729,
+                "max": 0.5729,
+                "share_pct": 0.553,
+                "us_per_call": 295.9662
+              },
+              "temporal": {
+                "calls": 1,
+                "mean": 0.3279,
+                "p50": 0.3118,
+                "p90": 0.3455,
+                "p99": 0.5361,
+                "max": 1.1858,
+                "share_pct": 0.613,
+                "us_per_call": 327.8612
+              },
+              "assemble": {
+                "calls": 1,
+                "mean": 0.0107,
+                "p50": 0.0102,
+                "p90": 0.012,
+                "p99": 0.0228,
+                "max": 0.0304,
+                "share_pct": 0.02,
+                "us_per_call": 10.74
+              },
+              "norm1": {
+                "calls": 16,
+                "mean": 0.2625,
+                "p50": 0.2628,
+                "p90": 0.2777,
+                "p99": 0.2935,
+                "max": 0.9581,
+                "share_pct": 0.491,
+                "us_per_call": 16.4047
+              },
+              "q_proj": {
+                "calls": 16,
+                "mean": 3.3971,
+                "p50": 3.3936,
+                "p90": 3.5493,
+                "p99": 4.0087,
+                "max": 4.2724,
+                "share_pct": 6.349,
+                "us_per_call": 212.3215
+              },
+              "k_proj": {
+                "calls": 16,
+                "mean": 3.4046,
+                "p50": 3.3995,
+                "p90": 3.564,
+                "p99": 4.0418,
+                "max": 4.7243,
+                "share_pct": 6.363,
+                "us_per_call": 212.7901
+              },
+              "v_proj": {
+                "calls": 16,
+                "mean": 3.4018,
+                "p50": 3.3946,
+                "p90": 3.5724,
+                "p99": 4.0843,
+                "max": 5.7954,
+                "share_pct": 6.358,
+                "us_per_call": 212.6122
+              },
+              "head_pack": {
+                "calls": 128,
+                "mean": 0.471,
+                "p50": 0.4652,
+                "p90": 0.5008,
+                "p99": 0.6696,
+                "max": 0.8763,
+                "share_pct": 0.88,
+                "us_per_call": 3.6796
+              },
+              "scores": {
+                "calls": 128,
+                "mean": 1.3771,
+                "p50": 1.3898,
+                "p90": 1.4399,
+                "p99": 1.4861,
+                "max": 1.8098,
+                "share_pct": 2.574,
+                "us_per_call": 10.759
+              },
+              "scale": {
+                "calls": 128,
+                "mean": 0.0268,
+                "p50": 0.0266,
+                "p90": 0.0279,
+                "p99": 0.0413,
+                "max": 0.045,
+                "share_pct": 0.05,
+                "us_per_call": 0.2097
+              },
+              "softmax": {
+                "calls": 128,
+                "mean": 3.807,
+                "p50": 3.8375,
+                "p90": 3.9813,
+                "p99": 4.0552,
+                "max": 5.86,
+                "share_pct": 7.115,
+                "us_per_call": 29.7425
+              },
+              "context": {
+                "calls": 128,
+                "mean": 0.4793,
+                "p50": 0.4498,
+                "p90": 0.5324,
+                "p99": 0.8954,
+                "max": 0.935,
+                "share_pct": 0.896,
+                "us_per_call": 3.7447
+              },
+              "head_scatter": {
+                "calls": 128,
+                "mean": 0.1699,
+                "p50": 0.1549,
+                "p90": 0.2022,
+                "p99": 0.3983,
+                "max": 0.5003,
+                "share_pct": 0.318,
+                "us_per_call": 1.3275
+              },
+              "attn_out": {
+                "calls": 16,
+                "mean": 3.353,
+                "p50": 3.3357,
+                "p90": 3.4881,
+                "p99": 3.9862,
+                "max": 6.0898,
+                "share_pct": 6.266,
+                "us_per_call": 209.5612
+              },
+              "attn_resid": {
+                "calls": 16,
+                "mean": 0.076,
+                "p50": 0.0737,
+                "p90": 0.0871,
+                "p99": 0.1058,
+                "max": 0.1419,
+                "share_pct": 0.142,
+                "us_per_call": 4.7529
+              },
+              "norm2": {
+                "calls": 16,
+                "mean": 0.2593,
+                "p50": 0.2607,
+                "p90": 0.2748,
+                "p99": 0.2939,
+                "max": 0.485,
+                "share_pct": 0.485,
+                "us_per_call": 16.2045
+              },
+              "ff1": {
+                "calls": 16,
+                "mean": 14.6469,
+                "p50": 14.629,
+                "p90": 15.363,
+                "p99": 17.9257,
+                "max": 19.6621,
+                "share_pct": 27.373,
+                "us_per_call": 915.4336
+              },
+              "silu": {
+                "calls": 16,
+                "mean": 3.6634,
+                "p50": 3.7034,
+                "p90": 3.8299,
+                "p99": 3.9104,
+                "max": 4.1461,
+                "share_pct": 6.846,
+                "us_per_call": 228.9633
+              },
+              "ff2": {
+                "calls": 16,
+                "mean": 13.6575,
+                "p50": 13.6928,
+                "p90": 14.2104,
+                "p99": 15.8004,
+                "max": 16.8016,
+                "share_pct": 25.524,
+                "us_per_call": 853.5936
+              },
+              "ff_resid": {
+                "calls": 16,
+                "mean": 0.0899,
+                "p50": 0.087,
+                "p90": 0.1003,
+                "p99": 0.1303,
+                "max": 0.2989,
+                "share_pct": 0.168,
+                "us_per_call": 5.6181
+              },
+              "norm_out": {
+                "calls": 1,
+                "mean": 0.0164,
+                "p50": 0.0162,
+                "p90": 0.0168,
+                "p99": 0.0312,
+                "max": 0.0428,
+                "share_pct": 0.031,
+                "us_per_call": 16.3541
+              },
+              "value_head": {
+                "calls": 1,
+                "mean": 0.0242,
+                "p50": 0.0234,
+                "p90": 0.0292,
+                "p99": 0.0385,
+                "max": 0.0618,
+                "share_pct": 0.045,
+                "us_per_call": 24.2211
+              },
+              "policy_head": {
+                "calls": 1,
+                "mean": 0.1665,
+                "p50": 0.1694,
+                "p90": 0.1786,
+                "p99": 0.1984,
+                "max": 0.3829,
+                "share_pct": 0.311,
+                "us_per_call": 166.5346
+              },
+              "unpatchify": {
+                "calls": 1,
+                "mean": 0.0098,
+                "p50": 0.0095,
+                "p90": 0.011,
+                "p99": 0.0189,
+                "max": 0.0272,
+                "share_pct": 0.018,
+                "us_per_call": 9.8466
+              },
+              "forward": {
+                "calls": 1,
+                "mean": 53.508,
+                "p50": 53.5895,
+                "p90": 55.9969,
+                "p99": 62.497,
+                "max": 64.7681,
+                "share_pct": 100.0,
+                "us_per_call": 53507.9565
+              }
+            }
+          },
+          "tables": "[unclejoe] load 249.9 ms, warmup 54.7 ms, temperature 0\n[unclejoe] stages over 1062 turns, startup 304.8 ms\n[unclejoe] stage           mean       p50       p90       p99       max\n[unclejoe] parse          0.016     0.015     0.016     0.032     0.974\n[unclejoe] raw            0.013     0.012     0.015     0.029     0.138\n[unclejoe] mask           0.010     0.010     0.013     0.025     0.234\n[unclejoe] augment        0.061     0.059     0.074     0.090     0.297\n[unclejoe] normalize      0.005     0.004     0.006     0.014     0.021\n[unclejoe] forward       53.419    53.507    55.887    62.399    64.669\n[unclejoe] decode         0.015     0.014     0.018     0.031     0.088\n[unclejoe] stderr         0.081     0.062     0.145     0.206     0.260\n[unclejoe] total         53.621    53.703    56.111    62.600    64.971\n[unclejoe] forward steps over 1062 turns, gemm kernel avx512\n[unclejoe] step          calls      mean       p50       p90       p99       max    share   us/call\n[unclejoe] patchify          1     0.113     0.110     0.129     0.155     0.344    0.21%    113.07\n[unclejoe] embed             1     0.296     0.289     0.329     0.373     0.573    0.55%    295.97\n[unclejoe] temporal          1     0.328     0.312     0.345     0.536     1.186    0.61%    327.86\n[unclejoe] assemble          1     0.011     0.010     0.012     0.023     0.030    0.02%     10.74\n[unclejoe] norm1            16     0.262     0.263     0.278     0.294     0.958    0.49%     16.40\n[unclejoe] q_proj           16     3.397     3.394     3.549     4.009     4.272    6.35%    212.32\n[unclejoe] k_proj           16     3.405     3.399     3.564     4.042     4.724    6.36%    212.79\n[unclejoe] v_proj           16     3.402     3.395     3.572     4.084     5.795    6.36%    212.61\n[unclejoe] head_pack       128     0.471     0.465     0.501     0.670     0.876    0.88%      3.68\n[unclejoe] scores          128     1.377     1.390     1.440     1.486     1.810    2.57%     10.76\n[unclejoe] scale           128     0.027     0.027     0.028     0.041     0.045    0.05%      0.21\n[unclejoe] softmax         128     3.807     3.838     3.981     4.055     5.860    7.11%     29.74\n[unclejoe] context         128     0.479     0.450     0.532     0.895     0.935    0.90%      3.74\n[unclejoe] head_scatter    128     0.170     0.155     0.202     0.398     0.500    0.32%      1.33\n[unclejoe] attn_out         16     3.353     3.336     3.488     3.986     6.090    6.27%    209.56\n[unclejoe] attn_resid       16     0.076     0.074     0.087     0.106     0.142    0.14%      4.75\n[unclejoe] norm2            16     0.259     0.261     0.275     0.294     0.485    0.48%     16.20\n[unclejoe] ff1              16    14.647    14.629    15.363    17.926    19.662   27.37%    915.43\n[unclejoe] silu             16     3.663     3.703     3.830     3.910     4.146    6.85%    228.96\n[unclejoe] ff2              16    13.657    13.693    14.210    15.800    16.802   25.52%    853.59\n[unclejoe] ff_resid         16     0.090     0.087     0.100     0.130     0.299    0.17%      5.62\n[unclejoe] norm_out          1     0.016     0.016     0.017     0.031     0.043    0.03%     16.35\n[unclejoe] value_head        1     0.024     0.023     0.029     0.038     0.062    0.05%     24.22\n[unclejoe] policy_head       1     0.167     0.169     0.179     0.198     0.383    0.31%    166.53\n[unclejoe] unpatchify        1     0.010     0.010     0.011     0.019     0.027    0.02%      9.85\n[unclejoe] forward           1    53.508    53.590    55.997    62.497    64.768  100.00%  53507.96\n[unclejoe] uninstrumented forward mean 53.419 ms; the split costs +0.088 ms"
+        }
+      ]
+    }
+  ]
+}
