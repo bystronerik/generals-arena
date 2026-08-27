@@ -21,14 +21,17 @@
 //! cost more than the halved bandwidth saves (18.65 vs 18.00 ms). Numbers:
 //! `docs/research/measurements/joe-rs-packed-b-sweep.md`.
 //!
-//! **Two paths, one answer.** On x86-64 with AVX2+FMA detected at runtime
-//! the tiles run through explicit intrinsics; everywhere else — the aarch64
-//! development Macs included — the portable safe kernel runs and LLVM
-//! autovectorizes it. Both paths keep exactly one accumulator per output
-//! element and walk `k` in order, so their outputs are bit-identical — to
-//! each other and to the pre-packing kernels they replaced;
-//! `tests::avx2_matches_the_portable_kernel_bitwise` holds the paths
-//! together.
+//! **Three paths, one answer.** On x86-64 the dispatcher prefers AVX-512F
+//! (one zmm register covers a whole 16-column strip), then AVX2+FMA;
+//! everywhere else — the aarch64 development Macs included — the portable
+//! safe kernel runs and LLVM autovectorizes it. The compile target stays
+//! `x86-64-v3` because the M0 CPU probe
+//! (`docs/research/measurements/morpheus-rs-cpu-probe.md`) saw v3 hosts in
+//! the fleet next to the v4 majority, so AVX-512 exists only behind runtime
+//! detection. Every path keeps exactly one accumulator per output element
+//! and walks `k` in order, so their outputs are bit-identical — to each
+//! other and to the pre-packing kernels they replaced; the
+//! `*_matches_the_portable_kernel_bitwise` tests hold the paths together.
 //!
 //! **`mul_add`, not `a * b + c`.** Rust compiles floating-point with
 //! contraction off, so `acc += a * b` emits a separate multiply and add and
@@ -132,6 +135,24 @@ impl PackedB {
     }
 }
 
+/// The kernel `gemm_bias` dispatches to on this host, by name — `selfcheck`
+/// reports it, because the fleet mixes v3 and v4 hosts and nothing else
+/// makes the runtime choice visible. Must stay the mirror of the dispatch
+/// order in `gemm_bias` below.
+pub fn kernel_name() -> &'static str {
+    #[cfg(target_arch = "x86_64")]
+    {
+        if std::arch::is_x86_feature_detected!("avx512f") {
+            return "avx512";
+        }
+        if std::arch::is_x86_feature_detected!("avx2") && std::arch::is_x86_feature_detected!("fma")
+        {
+            return "avx2";
+        }
+    }
+    "portable"
+}
+
 /// `c[r][o] = bias[o] + Σ_k a[r][k] · b[k][o]` — `a` is (rows × k_dim)
 /// row-major, `b` packed, `c` (rows × n_dim) row-major.
 pub fn gemm_bias(rows: usize, a: &[f32], b: &PackedB, bias: &[f32], c: &mut [f32]) {
@@ -140,10 +161,18 @@ pub fn gemm_bias(rows: usize, a: &[f32], b: &PackedB, bias: &[f32], c: &mut [f32
     debug_assert_eq!(c.len(), rows * b.n_dim);
 
     #[cfg(target_arch = "x86_64")]
-    if std::arch::is_x86_feature_detected!("avx2") && std::arch::is_x86_feature_detected!("fma") {
-        // SAFETY: the required features were just detected on this CPU.
-        unsafe { avx::gemm_bias_avx2(rows, b.k_dim, b.n_dim, a, &b.data, bias, c) };
-        return;
+    {
+        if std::arch::is_x86_feature_detected!("avx512f") {
+            // SAFETY: avx512f was just detected on this CPU.
+            unsafe { avx512::gemm_bias_avx512(rows, b.k_dim, b.n_dim, a, &b.data, bias, c) };
+            return;
+        }
+        if std::arch::is_x86_feature_detected!("avx2") && std::arch::is_x86_feature_detected!("fma")
+        {
+            // SAFETY: the required features were just detected on this CPU.
+            unsafe { avx::gemm_bias_avx2(rows, b.k_dim, b.n_dim, a, &b.data, bias, c) };
+            return;
+        }
     }
 
     gemm_bias_portable(rows, b.k_dim, b.n_dim, a, &b.data, bias, c);
@@ -334,6 +363,80 @@ mod avx {
     }
 }
 
+#[cfg(target_arch = "x86_64")]
+mod avx512 {
+    use super::{column_tail, NR};
+    use std::arch::x86_64::*;
+
+    /// Rows per AVX-512 tile. One zmm register covers a whole 16-column
+    /// strip, so a row costs one accumulator instead of the AVX2 tile's
+    /// two — the sweep result that MR above 4 loses does not carry over,
+    /// because that was a 16-register ymm budget. 13 accumulators + one B
+    /// vector + one broadcast use 15 of 32 zmm registers, 13 chains cover
+    /// the FMA latency × throughput product on the two-pipe hosts, and 13
+    /// divides 52: every token-stream GEMM runs with no row tail.
+    const MR: usize = 13;
+
+    /// The MR=13 × NR=16 tile in AVX-512F intrinsics. Loop order,
+    /// accumulation order, and the bias add match `gemm_bias_portable`
+    /// operation for operation — one fused chain per output element, `k` in
+    /// order — which is what makes the result bit-identical.
+    ///
+    /// # Safety
+    /// The caller must have detected `avx512f` on the running CPU.
+    #[target_feature(enable = "avx512f")]
+    pub unsafe fn gemm_bias_avx512(
+        rows: usize,
+        k_dim: usize,
+        n_dim: usize,
+        a: &[f32],
+        bp: &[f32],
+        bias: &[f32],
+        c: &mut [f32],
+    ) {
+        let n_main = n_dim - n_dim % NR;
+        let mut n0 = 0;
+        let mut strip_off = 0;
+        while n0 < n_main {
+            let strip = bp.as_ptr().add(strip_off);
+            let biasv = _mm512_loadu_ps(bias.as_ptr().add(n0));
+            let mut m0 = 0;
+            while m0 + MR <= rows {
+                let mut acc = [_mm512_setzero_ps(); MR];
+                for k in 0..k_dim {
+                    let bv = _mm512_loadu_ps(strip.add(k * NR));
+                    for i in 0..MR {
+                        let av = _mm512_set1_ps(*a.get_unchecked((m0 + i) * k_dim + k));
+                        acc[i] = _mm512_fmadd_ps(av, bv, acc[i]);
+                    }
+                }
+                for (i, &accv) in acc.iter().enumerate() {
+                    let cp = c.as_mut_ptr().add((m0 + i) * n_dim + n0);
+                    _mm512_storeu_ps(cp, _mm512_add_ps(accv, biasv));
+                }
+                m0 += MR;
+            }
+            // Row tail, one token at a time. The rows=1 heads and the
+            // 49-row embedder/policy GEMMs land here; a single chain is
+            // latency-bound, but those GEMMs are ~1% of the FLOPs.
+            while m0 < rows {
+                let mut acc = _mm512_setzero_ps();
+                for k in 0..k_dim {
+                    let av = _mm512_set1_ps(*a.get_unchecked(m0 * k_dim + k));
+                    acc = _mm512_fmadd_ps(av, _mm512_loadu_ps(strip.add(k * NR)), acc);
+                }
+                let cp = c.as_mut_ptr().add(m0 * n_dim + n0);
+                _mm512_storeu_ps(cp, _mm512_add_ps(acc, biasv));
+                m0 += 1;
+            }
+            strip_off += k_dim * NR;
+            n0 += NR;
+        }
+
+        column_tail(rows, k_dim, n_dim, n_main, a, &bp[strip_off..], bias, c);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -451,11 +554,61 @@ mod tests {
         assert_eq!(packed.data, by_col.data);
     }
 
-    /// The dispatch must never change the answer: on an AVX2+FMA host the
-    /// intrinsics tiles produce the same bits as the portable kernel. On
-    /// other hosts (the arm64 dev box) this reduces to portable == portable.
+    /// One graph-shape sweep of `kernel` against the portable reference,
+    /// bit for bit. `kernel` runs inside the caller's `unsafe` obligation:
+    /// the caller detects the features first.
+    #[cfg(target_arch = "x86_64")]
+    fn assert_bitwise_matches_portable(
+        name: &str,
+        kernel: unsafe fn(usize, usize, usize, &[f32], &[f32], &[f32], &mut [f32]),
+    ) {
+        for &(rows, k, n) in GRAPH_SHAPES {
+            let a = pseudo(rows * k, 17 + rows as u32);
+            let b = pseudo(k * n, 19 + k as u32);
+            let bias = pseudo(n, 23 + n as u32);
+            let packed = PackedB::from_row_major(&b, k, n);
+            let mut want = vec![0f32; rows * n];
+            gemm_bias_portable(rows, k, n, &a, &packed.data, &bias, &mut want);
+            let mut got = vec![0f32; rows * n];
+            // SAFETY: forwarded from the caller, who detected the features.
+            unsafe { kernel(rows, k, n, &a, &packed.data, &bias, &mut got) };
+            for i in 0..rows * n {
+                assert_eq!(
+                    got[i].to_bits(),
+                    want[i].to_bits(),
+                    "{name}: rows={rows} k={k} n={n} at {i}: {} vs {}",
+                    got[i],
+                    want[i]
+                );
+            }
+        }
+    }
+
+    /// Each intrinsics path the host can run, against the portable kernel,
+    /// bitwise — direct calls, not the dispatcher, so an AVX-512 host still
+    /// covers the AVX2 tiles it would never dispatch to. On the arm64 dev
+    /// box this test is empty; the x86 CI moment is the Modal container.
     #[test]
-    fn avx2_matches_the_portable_kernel_bitwise() {
+    fn simd_paths_match_the_portable_kernel_bitwise() {
+        #[cfg(target_arch = "x86_64")]
+        {
+            if std::arch::is_x86_feature_detected!("avx2")
+                && std::arch::is_x86_feature_detected!("fma")
+            {
+                assert_bitwise_matches_portable("avx2", avx::gemm_bias_avx2);
+            }
+            if std::arch::is_x86_feature_detected!("avx512f") {
+                assert_bitwise_matches_portable("avx512", avx512::gemm_bias_avx512);
+            }
+        }
+    }
+
+    /// The dispatch must never change the answer: whatever path
+    /// `gemm_bias` picks on this host produces the same bits as the
+    /// portable kernel. On non-x86 hosts this reduces to portable ==
+    /// portable.
+    #[test]
+    fn dispatch_matches_the_portable_kernel_bitwise() {
         for &(rows, k, n) in GRAPH_SHAPES {
             let a = pseudo(rows * k, 17 + rows as u32);
             let b = pseudo(k * n, 19 + k as u32);
