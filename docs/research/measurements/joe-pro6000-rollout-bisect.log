@@ -1,0 +1,24 @@
+[bisect] device=cuda:0 cc=12.0
+[bisect] pool in 38.1s
+[bisect] obs_aug stack at T=128: 16.80 GiB (N=2048)
+[bisect] compiling full_T128 ...
+[bisect]   full_T128 compiled+ran 34.9s
+[bisect] compiling nostack_T128 ...
+[bisect]   nostack_T128 compiled+ran 27.4s
+[bisect] compiling full_T64 ...
+[bisect]   full_T64 compiled+ran 16.5s
+[bisect] compiling nostack_T64 ...
+[bisect]   nostack_T64 compiled+ran 17.7s
+[bisect] compiling envonly_T128 ...
+[bisect]   envonly_T128 compiled+ran 1.1s
+[bisect] round 0 full_T128      19.575s
+[bisect] round 0 nostack_T128   20.100s
+[bisect] round 0 full_T64       10.004s
+[bisect] round 0 nostack_T64    10.146s
+[bisect] round 0 envonly_T128   0.016s
+[bisect] round 1 full_T128      20.061s
+[bisect] round 1 nostack_T128   20.386s
+[bisect] round 1 full_T64       10.086s
+[bisect] round 1 nostack_T64    10.218s
+[bisect] round 1 envonly_T128   0.016s
+[bisect] round 2 full_T128      20.142s

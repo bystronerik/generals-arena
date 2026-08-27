@@ -1,0 +1,283 @@
+{
+  "gpu": "L4",
+  "device": "cuda:0",
+  "jax": "0.11.0",
+  "engine_sha": "9e3b9d13cca51caa1bb07db48bb85c9e90ce0462",
+  "config": {
+    "run_name": "joe-profile-L4",
+    "pad_to": 21,
+    "min_grid_size": 18,
+    "max_grid_size": 21,
+    "truncation": 1200,
+    "mountain_density_min": 0.24,
+    "mountain_density_max": 0.26,
+    "build_castles": true,
+    "deathtouch_turn": 800,
+    "pool_size": 200000,
+    "reset_pool_every": 5,
+    "network": "history_transformer",
+    "init_checkpoint": "",
+    "ema_checkpoint": "",
+    "ema_decay": 0.999,
+    "depth": 4,
+    "embed_dim": 352,
+    "n_head": 8,
+    "ff_factor": 2,
+    "patch_size": 3,
+    "use_bf16": true,
+    "num_envs": 256,
+    "num_steps": 64,
+    "num_iters": 10,
+    "minibatch_size": 1024,
+    "seed": 44,
+    "num_epochs": 1,
+    "gamma": 1.0,
+    "gae_lambda": 0.9,
+    "clip_eps": 0.2,
+    "vf_coef": 0.5,
+    "max_grad_norm": 0.267,
+    "target_kl": 0.02,
+    "adv_top_frac": 0.25,
+    "iteration_offset": 0,
+    "ent_schedule": "power_law",
+    "ent_coef_start": 0.05,
+    "ent_power": 0.2,
+    "ent_coef_min": 0.001,
+    "ent_coef_end": 0.001,
+    "ent_coef_decay_iters": 5000,
+    "lr": 0.0001,
+    "lr_schedule": "power_law",
+    "lr_power_law_numerator": 0.5,
+    "lr_power_law_exponent": 1.1,
+    "lr_power_law_min": 5e-06,
+    "lr_power_law_max": 0.0001,
+    "final_lr": 0.0,
+    "lr_decay_iters": 0,
+    "value_loss": "ce",
+    "num_bins": 128,
+    "v_min": -1.0,
+    "v_max": 1.0,
+    "hl_sigma": 0.04,
+    "eval_every": 4,
+    "eval_every_after": 0,
+    "eval_games": 64,
+    "eval_ref_checkpoint": "",
+    "eval_ref_config": "",
+    "ckpt_every": 9,
+    "save_every": 9,
+    "debug": false,
+    "curriculum": null
+  },
+  "total_wall_s": 448.15,
+  "clock_backend": "sys.monitoring",
+  "iterations": 10,
+  "setup_phases": {
+    "00a setup: config + curriculum print": 0.002,
+    "00b setup: env + pool generation": 185.947,
+    "00c setup: partition/replicate params": 0.56,
+    "00d setup: init envs + obs state": 6.963,
+    "00e setup: pmap definitions": 0.001,
+    "00f setup: EMA init": 0.929
+  },
+  "cold_iter0_phases": {
+    "00f setup: EMA init": 0.0,
+    "01 eval (vs random)": 44.195,
+    "02 curriculum check": 0.0,
+    "03 pool refresh": 0.0,
+    "04 rollout (self-play)": 36.808,
+    "05 unpack rollout": 0.465,
+    "06 GAE + adv normalize": 0.71,
+    "07 diagnostics (host sync)": 0.513,
+    "08 diagnostics MC returns": 0.335,
+    "09 PPO update": 30.342,
+    "10 metrics host sync": 0.004,
+    "11 episode stats": 0.294,
+    "12 progress print": 0.117,
+    "13 metrics log": 0.102,
+    "14 EMA update": 4.873,
+    "15 checkpoint": 0.019,
+    "16 free arrays": 0.0
+  },
+  "steady_phases_total": {
+    "00f setup: EMA init": 0.0,
+    "01 eval (vs random)": 43.726,
+    "02 curriculum check": 0.0,
+    "03 pool refresh": 4.587,
+    "04 rollout (self-play)": 35.122,
+    "05 unpack rollout": 0.032,
+    "06 GAE + adv normalize": 0.035,
+    "07 diagnostics (host sync)": 0.051,
+    "08 diagnostics MC returns": 0.015,
+    "09 PPO update": 35.985,
+    "10 metrics host sync": 0.049,
+    "11 episode stats": 0.029,
+    "12 progress print": 0.033,
+    "13 metrics log": 0.031,
+    "14 EMA update": 4.71,
+    "15 checkpoint": 0.69,
+    "16 free arrays": 0.059
+  },
+  "steady_phases_per_iter": {
+    "00f setup: EMA init": 0.0,
+    "01 eval (vs random)": 4.8585,
+    "02 curriculum check": 0.0,
+    "03 pool refresh": 0.5097,
+    "04 rollout (self-play)": 3.9025,
+    "05 unpack rollout": 0.0036,
+    "06 GAE + adv normalize": 0.0039,
+    "07 diagnostics (host sync)": 0.0056,
+    "08 diagnostics MC returns": 0.0016,
+    "09 PPO update": 3.9984,
+    "10 metrics host sync": 0.0055,
+    "11 episode stats": 0.0032,
+    "12 progress print": 0.0037,
+    "13 metrics log": 0.0035,
+    "14 EMA update": 0.5233,
+    "15 checkpoint": 0.0767,
+    "16 free arrays": 0.0066
+  },
+  "per_iteration_wall_s": {
+    "-1": 194.4,
+    "0": 118.777,
+    "1": 58.168,
+    "2": 2.312,
+    "3": 43.787,
+    "4": 2.269,
+    "5": 6.886,
+    "6": 2.286,
+    "7": 4.359,
+    "8": 2.755,
+    "9": 2.334
+  },
+  "steady_top_lines": [
+    {
+      "lineno": 444,
+      "s_per_iter": 4.8371,
+      "src": "        eval_ran, last_eval_wr, key = periodic_eval("
+    },
+    {
+      "lineno": 574,
+      "s_per_iter": 2.9208,
+      "src": "            params, opt_state, metrics = p_ppo_step("
+    },
+    {
+      "lineno": 490,
+      "s_per_iter": 2.8721,
+      "src": "        states, rollout_data, keys, obs_state_p0, obs_state_p1 = p_rollout("
+    },
+    {
+      "lineno": 577,
+      "s_per_iter": 1.0693,
+      "src": "            if cfg.target_kl is not None and float(metrics[\"approx_kl\"][0]) > cfg.target_kl:"
+    },
+    {
+      "lineno": 492,
+      "s_per_iter": 1.0303,
+      "src": "        jax.block_until_ready(states)"
+    },
+    {
+      "lineno": 485,
+      "s_per_iter": 0.5094,
+      "src": "            pool, _ = env.reset(pool_key)"
+    },
+    {
+      "lineno": 670,
+      "s_per_iter": 0.5005,
+      "src": "        ema_params = jax.tree.map("
+    },
+    {
+      "lineno": 679,
+      "s_per_iter": 0.0394,
+      "src": "            written = save_checkpoint("
+    },
+    {
+      "lineno": 674,
+      "s_per_iter": 0.0243,
+      "src": "        network = _get_network()"
+    },
+    {
+      "lineno": 669,
+      "s_per_iter": 0.0227,
+      "src": "        current_params = jax.tree.map(lambda x: x[0], params)"
+    },
+    {
+      "lineno": 434,
+      "s_per_iter": 0.0214,
+      "src": "        network = _get_network()"
+    },
+    {
+      "lineno": 680,
+      "s_per_iter": 0.0127,
+      "src": "                ckpt_dir, run_name, it + 1, network, _get_opt_state(),"
+    },
+    {
+      "lineno": 701,
+      "s_per_iter": 0.0063,
+      "src": "    return _get_network(), _get_opt_state(), eqx.combine(ema_params, static)"
+    },
+    {
+      "lineno": 582,
+      "s_per_iter": 0.0055,
+      "src": "        m = jax.tree.map(lambda x: x[0], metrics)"
+    },
+    {
+      "lineno": 666,
+      "s_per_iter": 0.0022,
+      "src": "        logger.log(it + 1, log_metrics)"
+    },
+    {
+      "lineno": 507,
+      "s_per_iter": 0.0021,
+      "src": "        advs = p_gae(rews, vals, next_vals, terminated, truncated)"
+    },
+    {
+      "lineno": 573,
+      "s_per_iter": 0.002,
+      "src": "            keys, epoch_keys = split[:, 0], split[:, 1]"
+    },
+    {
+      "lineno": 579,
+      "s_per_iter": 0.0017,
+      "src": "        jax.block_until_ready(params)"
+    },
+    {
+      "lineno": 517,
+      "s_per_iter": 0.0014,
+      "src": "        var_returns = float(jnp.var(rets))"
+    },
+    {
+      "lineno": 503,
+      "s_per_iter": 0.0014,
+      "src": "        dones_p0 = dones[:, :, :num_envs]"
+    },
+    {
+      "lineno": 586,
+      "s_per_iter": 0.0013,
+      "src": "        wins = int(jnp.sum(terminated_p0 & (winners_p0 == 0)))"
+    },
+    {
+      "lineno": 509,
+      "s_per_iter": 0.0013,
+      "src": "        adv_std_raw = float(advs.std())"
+    },
+    {
+      "lineno": 587,
+      "s_per_iter": 0.0011,
+      "src": "        losses = int(jnp.sum(terminated_p0 & (winners_p0 == 1)))"
+    },
+    {
+      "lineno": 521,
+      "s_per_iter": 0.001,
+      "src": "        mc_rets, mc_valid = p_mc_returns(rews, terminated, truncated)"
+    },
+    {
+      "lineno": 518,
+      "s_per_iter": 0.0009,
+      "src": "        explained_var = 1.0 - float(jnp.var(rets - vals)) / max(var_returns, 1e-8)"
+    }
+  ],
+  "peak_device_gib": 6.0,
+  "n_steady_iters": 9,
+  "clocked_in_train_s": 438.33,
+  "outside_train_s": 9.82
+}

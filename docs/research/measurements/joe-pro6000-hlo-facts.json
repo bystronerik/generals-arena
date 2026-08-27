@@ -1,0 +1,272 @@
+{
+  "hlo": {
+    "files": [
+      "module_0000.jit_convert_element_type.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0002.jit_stage.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0004.jit__threefry_seed.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0007.jit__threefry_split.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0010.jit_unstack.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0015.jit__threefry_split.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0018.jit_dynamic_slice.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0021.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0082.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0125.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0166.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0208.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0243.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0288.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0329.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0370.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0405.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0440.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0485.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0530.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0565.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0600.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0639.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0684.jit_concatenate.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0687.jit_concatenate.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0690.jit_concatenate.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0693.jit_concatenate.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0696.jit_concatenate.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0699.jit_iota.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0702.jit__shuffle.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0706.jit_less.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0709.jit_add.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0712.jit_select_n.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0715.jit__broadcast_arrays.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0717.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0719.jit_gather.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0722.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0724.jit_gather.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0727.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0729.jit_gather.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0732.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0734.jit_gather.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0737.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0739.jit_gather.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0742.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0744.jit_generate_grid.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0806.jit_greater.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0809.jit__where.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0812.jit_equal.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0815.jit_bitwise_or.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0818.jit_not_equal.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0821.jit_stack.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0824.jit_invert.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0827.jit_bitwise_and.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0830.jit__where.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0833.jit_convert_element_type.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0835.jit__where.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0838.jit_atleast_1d.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0840.jit_cumsum.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0843.jit_convert_element_type.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0845.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0847.jit_clip.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0850.jit_less.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0853.jit_add.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0856.jit_select_n.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0859.jit__broadcast_arrays.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0861.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0863.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0866.jit__squeeze.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0868.jit_scatter-add.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0870.jit_cumsum.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0872.jit_floor_divide.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0875.jit_remainder.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0878.jit_iota.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0880.jit__reduce_sum.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0883.jit_greater_equal.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0886.jit__where.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0889.jit_atleast_2d.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0891.jit_concatenate.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0894.jit_transpose.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0896.jit_squeeze.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0898.jit_stack.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0901.jit__threefry_split.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0904.jit_dynamic_slice.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0907.jit_squeeze.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0909.jit__threefry_split.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0912.jit_unstack.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0916.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0919.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0922.jit__normal.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0925.jit_multiply.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0928.jit__truncated_normal.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0931.jit_multiply.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0934.jit_convert_element_type.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0936.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0939.jit__threefry_split.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0942.jit_unstack.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0948.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0951.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0954.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0957.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0960.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0963.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0966.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0969.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0972.jit__linspace.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0975.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0978.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0981.jit__uniform.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0984.jit__normal.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0987.jit_multiply.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0990.jit__threefry_split.sm_12.0a_gpu_after_optimizations.txt",
+      "module_0993.jit_generate_grid.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1046.jit_greater.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1049.jit__where.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1052.jit_equal.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1055.jit_bitwise_or.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1058.jit_not_equal.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1061.jit_stack.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1064.jit_invert.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1067.jit_bitwise_and.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1070.jit__where.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1073.jit_convert_element_type.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1075.jit__where.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1078.jit_atleast_1d.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1080.jit_cumsum.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1085.jit_clip.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1088.jit_less.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1091.jit_add.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1094.jit_select_n.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1097.jit__broadcast_arrays.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1099.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1101.jit__squeeze.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1103.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1106.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1109.jit_scatter-add.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1111.jit_cumsum.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1113.jit_floor_divide.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1116.jit_remainder.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1119.jit__reduce_sum.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1122.jit_greater_equal.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1125.jit__where.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1128.jit_atleast_2d.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1130.jit_concatenate.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1133.jit_transpose.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1135.jit_squeeze.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1137.jit_stack.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1140.jit_transpose.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1146.jit_transpose.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1152.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1155.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1158.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1161.jit_convert_element_type.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1163.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1166.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1169.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1171.jit_tile.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1174.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1176.jit_tile.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1179.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1181.jit_tile.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1184.jit_broadcast_in_dim.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1186.jit_tile.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1189.jit_tile.sm_12.0a_gpu_after_optimizations.txt",
+      "module_1192.jit_roll.sm_12.0a_gpu_after_optimizations.txt"
+    ],
+    "modules": [
+      {
+        "name": "module_1192.jit_roll.sm_12.0a_gpu_after_optimizations.txt",
+        "bytes": 3572235
+      },
+      {
+        "name": "module_0600.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+        "bytes": 806791
+      },
+      {
+        "name": "module_0485.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt",
+        "bytes": 806778
+      }
+    ],
+    "per_module": {
+      "module_1192.jit_roll.sm_12.0a_gpu_after_optimizations.txt": {
+        "dot_algorithms": {},
+        "multi_pass_bf16": 0,
+        "transpose_like_ops": {
+          "bitcast": 2,
+          "copy": 2
+        },
+        "transpose_like_top": [
+          [
+            "bitcast u32[]",
+            2
+          ],
+          [
+            "copy s32[]",
+            2
+          ]
+        ],
+        "fusion_kinds": {
+          "kLoop": 665,
+          "kInput": 62,
+          "kCustom": 373
+        }
+      },
+      "module_0600.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt": {
+        "dot_algorithms": {},
+        "multi_pass_bf16": 0,
+        "transpose_like_ops": {
+          "copy": 1
+        },
+        "transpose_like_top": [
+          [
+            "copy s32[]",
+            1
+          ]
+        ],
+        "fusion_kinds": {
+          "kLoop": 31,
+          "kInput": 22,
+          "kCustom": 1
+        }
+      },
+      "module_0485.jit__make_pool_batch.sm_12.0a_gpu_after_optimizations.txt": {
+        "dot_algorithms": {},
+        "multi_pass_bf16": 0,
+        "transpose_like_ops": {
+          "copy": 1
+        },
+        "transpose_like_top": [
+          [
+            "copy s32[]",
+            1
+          ]
+        ],
+        "fusion_kinds": {
+          "kLoop": 31,
+          "kInput": 22,
+          "kCustom": 1
+        }
+      }
+    },
+    "analyzed": "module_1192.jit_roll.sm_12.0a_gpu_after_optimizations.txt",
+    "analyzed_bytes": 3572235,
+    "dot_algorithms": {},
+    "multi_pass_bf16": 0,
+    "transpose_like_ops": {
+      "bitcast": 2,
+      "copy": 2
+    },
+    "transpose_like_top": [
+      [
+        "bitcast u32[]",
+        2
+      ],
+      [
+        "copy s32[]",
+        2
+      ]
+    ],
+    "fusion_kinds": {
+      "kLoop": 665,
+      "kInput": 62,
+      "kCustom": 373
+    },
+    "hlo_line_count": 24863
+  },
+  "device": "cuda:0",
+  "compute_capability": "12.0"
+}

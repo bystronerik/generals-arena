@@ -1,0 +1,50 @@
+{
+  "device": "cuda:0",
+  "cc": "12.0",
+  "config": "X16.yaml",
+  "num_envs": 2048,
+  "num_steps": 128,
+  "depth": 16,
+  "embed_dim": 384,
+  "head_dim": 48,
+  "reps": 3,
+  "rounds": 2,
+  "times_s": {
+    "base": [
+      17.153,
+      16.1053
+    ],
+    "qkv": [
+      17.1259,
+      16.1126
+    ],
+    "cudnn": [
+      16.0865,
+      16.0944
+    ],
+    "both": [
+      16.094,
+      16.0995
+    ]
+  },
+  "best_s": {
+    "base": 16.1053,
+    "qkv": 16.1126,
+    "cudnn": 16.0865,
+    "both": 16.094
+  },
+  "compile_s": {
+    "base": 39.4,
+    "qkv": 29.2,
+    "cudnn": 29.2,
+    "both": 29.6
+  },
+  "failed": {},
+  "speedup_vs_base": {
+    "base": 1.0,
+    "qkv": 0.9995,
+    "cudnn": 1.0012,
+    "both": 1.0007
+  },
+  "peak_device_gib": 42.59
+}

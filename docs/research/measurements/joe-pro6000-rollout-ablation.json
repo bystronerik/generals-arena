@@ -1,0 +1,46 @@
+{
+  "device": "cuda:0",
+  "cc": "12.0",
+  "config": "X16.yaml",
+  "num_envs": 2048,
+  "num_steps": 128,
+  "depth": 16,
+  "embed_dim": 384,
+  "head_dim": 48,
+  "reps": 2,
+  "rounds": 3,
+  "times_s": {
+    "base": [
+      17.0129,
+      16.421,
+      16.0781
+    ],
+    "no_silu": [
+      17.2115,
+      16.0614,
+      16.072
+    ],
+    "none": [
+      17.3216,
+      16.0644,
+      16.073
+    ]
+  },
+  "best_s": {
+    "base": 16.0781,
+    "no_silu": 16.0614,
+    "none": 16.0644
+  },
+  "compile_s": {
+    "base": 39.2,
+    "no_silu": 29.1,
+    "none": 29.7
+  },
+  "failed": {},
+  "speedup_vs_base": {
+    "base": 1.0,
+    "no_silu": 1.001,
+    "none": 1.0009
+  },
+  "peak_device_gib": 42.59
+}

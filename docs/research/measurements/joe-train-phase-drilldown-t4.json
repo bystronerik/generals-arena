@@ -1,0 +1,38 @@
+{
+  "gpu": "T4",
+  "device": "cuda:0",
+  "num_envs": 256,
+  "num_steps": 64,
+  "pool_size": 8192,
+  "pool_gen_cold_s": 83.91,
+  "stages": [
+    {
+      "stage": "S1 env.step only",
+      "s": 0.0308,
+      "first_call_s": 7.12
+    },
+    {
+      "stage": "S2 + observations & masks",
+      "s": 0.0434,
+      "first_call_s": 7.95
+    },
+    {
+      "stage": "S3 + augmentation",
+      "s": 0.1023,
+      "first_call_s": 12.03
+    },
+    {
+      "stage": "S4 + network forward (real collect_rollout)",
+      "s": 94.9438,
+      "first_call_s": 113.99
+    }
+  ],
+  "stage_deltas_s": {
+    "env.step": 0.0308,
+    "observations + masks": 0.0126,
+    "augmentation": 0.0589,
+    "network forward + sampling": 94.8415
+  },
+  "rollout_total_s": 94.9438,
+  "peak_device_gib": 3.04
+}
