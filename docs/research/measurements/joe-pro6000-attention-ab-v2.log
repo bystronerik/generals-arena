@@ -1,0 +1,89 @@
+[attn-ab] device=cuda:0 cc=12.0 depth=16 embed=384 heads=8 head_dim=48 (cudnn needs hd%8==0 -> True)
+[attn-ab] 2048 envs x 64 steps
+[attn-ab] pool in 38.2s
+[attn-ab] compiling base ...
+[attn-ab]   base compiled+ran 44.2s  hlo=3ec369f7304c cublas_gemm=98 cudnn_fmha=0 value_sum=-2801.2231
+[attn-ab] compiling cudnn ...
+[attn-ab]   cudnn compiled+ran 30.9s  hlo=ec0f2b952871 cublas_gemm=98 cudnn_fmha=16 value_sum=-2800.2151
+[attn-ab] compiling qkv ...
+[attn-ab]   qkv compiled+ran 34.6s  hlo=965c7ac26421 cublas_gemm=66 cudnn_fmha=0 value_sum=-2801.2231
+[attn-ab] guard passed: 3 distinct compiled programs
+[attn-ab] round 0 base   23.214s
+[attn-ab] round 0 cudnn  22.078s
+[attn-ab] round 0 qkv    23.691s
+[attn-ab] round 1 base   23.576s
+[attn-ab] round 1 cudnn  22.323s
+[attn-ab] round 1 qkv    23.893s
+[attn-ab] ==============================================================
+[attn-ab] ATTENTION A/B (best of 2 rounds, T=64)
+[attn-ab]   base     23.214s   1.000x vs base   gemm=98 fmha=0
+[attn-ab]   cudnn    22.078s   1.051x vs base   gemm=98 fmha=16
+[attn-ab]   qkv      23.691s   0.980x vs base   gemm=66 fmha=0
+[attn-ab] ==============================================================
+ATTN_JSON_BEGIN
+{
+  "device": "cuda:0",
+  "cc": "12.0",
+  "config": "X16.yaml",
+  "num_envs": 2048,
+  "num_steps": 64,
+  "depth": 16,
+  "embed_dim": 384,
+  "head_dim": 48,
+  "rounds": 2,
+  "reps": 1,
+  "times_s": {
+    "base": [
+      23.214,
+      23.5765
+    ],
+    "cudnn": [
+      22.0782,
+      22.3232
+    ],
+    "qkv": [
+      23.6913,
+      23.8934
+    ]
+  },
+  "best_s": {
+    "base": 23.214,
+    "cudnn": 22.0782,
+    "qkv": 23.6913
+  },
+  "speedup_vs_base": {
+    "base": 1.0,
+    "cudnn": 1.0514,
+    "qkv": 0.9799
+  },
+  "fingerprints": {
+    "base": -2801.22314453125,
+    "cudnn": -2800.215087890625,
+    "qkv": -2801.22314453125
+  },
+  "signatures": {
+    "base": [
+      "3ec369f7304c",
+      98,
+      0
+    ],
+    "cudnn": [
+      "ec0f2b952871",
+      98,
+      16
+    ],
+    "qkv": [
+      "965c7ac26421",
+      66,
+      0
+    ]
+  },
+  "compile_s": {
+    "base": 44.2,
+    "cudnn": 30.9,
+    "qkv": 34.6
+  },
+  "failed": {},
+  "peak_device_gib": 2.18
+}
+ATTN_JSON_END

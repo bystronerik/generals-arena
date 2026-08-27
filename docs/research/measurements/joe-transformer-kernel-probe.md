@@ -98,26 +98,56 @@ field that is part of the cache key):
 
 | Proposal | Verdict | Evidence |
 | --- | --- | --- |
-| Kill per-Linear output transposes | **already free** | optimized HLO emits `bitcast`, not `copy` |
-| `Precision.HIGH` selecting 3-pass bf16 | **does not happen** | no `algorithm=` on any dot |
-| Fused cuDNN attention | **untested** | the A/B hit the jit-cache bug |
-| Fuse q/k/v into one GEMM | **untested** | same |
-| Remove the `silu` | **untested** | same |
+| **Fused cuDNN attention** | **+5.1 % of the rollout** | 22.078 s vs 23.214 s base |
+| **Fuse q/k/v into one GEMM** | **-2.0 %, slightly harmful** | 23.691 s vs 23.214 s base |
+| Kill per-Linear output transposes | already free | optimized HLO emits `bitcast`, not `copy` |
+| `Precision.HIGH` selecting 3-pass bf16 | does not happen | no `algorithm=` on any dot |
+| Remove the `silu` | untested | the invalid A/B; never retried |
 
-The two HLO-based verdicts stand, because they read the compiled program
-and never depended on running an ablation. The three timing-based verdicts
-do not.
+Rerun on vast 48944567 (on-demand RTX PRO 6000 Workstation, X16, 2048 envs
+x 64 steps, two rounds), with the harness fixed and a guard that compares
+**compiled programs** rather than numbers:
 
-Notes that still matter for whoever retries the attention work:
+| arm | round 0 | round 1 | vs base | cublasLt GEMMs | cuDNN FMHA |
+| --- | --- | --- | --- | --- | --- |
+| base | 23.214 | 23.576 | 1.000x | 98 | 0 |
+| cudnn | 22.078 | 22.323 | **1.051x** | 98 | **16** |
+| qkv | 23.691 | 23.893 | **0.980x** | **66** | 0 |
 
-- cuDNN flash attention **does compile and run** on sm_120 at head_dim 48,
-  with no fallback. (S tier at head_dim 44 would be ineligible: cuDNN needs
-  `head_dim % 8 == 0`.)
-- The optimized HLO contains **96 real bf16 transposes** in the attention
-  head plumbing, 21.3 GB of transpose output per scan step, plus sixteen
-  654 MB `silu` fusions on the feed-forward hidden.
-- Only **64 `__cublas$lt$matmul`** custom calls appear (4 per layer: q, k,
-  v, out). The FF GEMMs sit inside fusions.
+The signatures confirm each arm did what it claimed: the cuDNN arm gained
+16 `__cudnn$fmha` custom calls, one per layer, and the q/k/v arm dropped
+98 GEMMs to 66 -- exactly 2 fewer per layer, three projections folded into
+one. Both rounds agree.
+
+**cuDNN flash attention is worth ~5 % of the rollout.** Modest, but it sits
+on top of the 97.4 % that the blocks own, and the same block code runs in
+the PPO backward (98.3 %), so the iteration-level win is plausibly similar;
+that half is not measured.
+
+**Folding q/k/v is slightly harmful.** Removing 32 GEMM calls per rollout
+made it 2 % slower, consistently across both rounds. Fewer, larger GEMMs
+lose here -- the per-call weight `concatenate` and the wider N=1152 kernel
+cost more than the launches they save. Drop this idea.
+
+Caveats: cuDNN changes the numerics (value sum -2800.2151 against
+-2801.2231), so it changes the training trajectory and shifts the joe/joe-rs
+parity reference. It also needs `head_dim % 8 == 0`, which X16, M and M7F4
+satisfy at 48 but **S tier does not** at 44.
+
+### How the first attempt got this wrong
+
+The 2026-08-27 A/B reported all arms within 0.16 % and concluded "no
+effect". It called the `@jax.jit` `collect_rollout`, so the nested jit
+cache served the first arm's binary to every arm. The guard here would have
+caught it: the three arms now hash to three distinct programs, and an
+earlier revision of this run **aborted** rather than report a false null.
+
+One wrinkle worth keeping: the guard originally compared numeric output and
+flagged the q/k/v arm as a failure, because folding q/k/v concatenates along
+the **output** dimension rather than the contraction dimension, so every
+element keeps the same dot product and the same accumulation order and the
+result is bit-identical *by construction*. Comparing compiled programs is
+the correct test; comparing numbers is not.
 
 ## 3. Reading this against the earlier phase profile
 
@@ -221,10 +251,10 @@ and network-off together. Until then, "the network" is established and
 1. **The 16 transformer blocks** — 97.4 % of the rollout and 98.3 % of the
    PPO update, so ~97 % of the whole training iteration. There is no second
    target. Attention rewrites (fused cuDNN attention, q/k/v fusion) are
-   untested rather than dead, and they now sit on top of nearly all of the
-   run time; retry them with a harness that does not call a jitted
-   function. `adv_top_frac` and `minibatch_size` scale the PPO half
-   directly.
+   measured at **+5.1 % of the rollout for cuDNN flash attention** and
+   **-2.0 % for the q/k/v fusion**, which should be dropped. The cuDNN win
+   is untested on the PPO backward, where the same blocks are 98.3 %.
+   `adv_top_frac` and `minibatch_size` scale the PPO half directly.
 2. **The PPO update is the transformer**, 98.3 % of 13.6 s. The levers that
    scale it directly are `adv_top_frac` (0.25 today, linear in kept samples)
    and `minibatch_size` / epoch count. Kernel-level attention rewrites are
