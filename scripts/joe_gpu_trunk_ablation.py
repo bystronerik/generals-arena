@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
 """Ablate the transformer trunk out of the joe rollout, on one CUDA GPU.
 
+WARNING -- this script produced an invalid result on 2026-08-27 and the fix
+below is unverified on GPU. ``collect_rollout`` is ``@jax.jit``; a fresh
+``pmap`` wrapper per arm still hits the *nested* jit cache, so the
+monkeypatched ``SelfAttentionLayer.__call__`` was ignored and every arm ran
+the first arm's compiled binary. All arms therefore timed identically and
+the run "showed" that removing 16 transformer blocks costs nothing. It
+costs 97.4 % of the rollout. ``jax.clear_caches()`` is now called before
+each arm; prefer ``scripts/joe_gpu_rollout_bisect.py``, which inlines the
+scan body instead of calling the jitted function and does not have the
+problem.
+
 Arms, all on identical weights at the X16 production shape. Only
 ``SelfAttentionLayer.__call__`` is swapped; nothing in ``training/joe`` is
 edited on disk:
@@ -138,6 +149,9 @@ def main():
     keys = jrandom.split(jrandom.PRNGKey(3), ND)
 
     def build(arm):
+        # Without this the nested jit cache inside collect_rollout returns
+        # the first arm's trace and the patch below does nothing.
+        jax.clear_caches()
         SelfAttentionLayer.__call__ = ARMS[arm]
 
         def _rollout(prm, st, key, a, b, pl):

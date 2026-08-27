@@ -1,0 +1,35 @@
+{
+  "device": "cuda:0",
+  "cc": "12.0",
+  "num_envs": 2048,
+  "obs_stack_gib": 16.8,
+  "times_s": {
+    "netoff_T128": [
+      0.2894,
+      0.2989,
+      0.3003
+    ],
+    "blocksoff_T128": [
+      1.2726,
+      1.3071,
+      1.314
+    ],
+    "full_T128": [
+      48.3249,
+      49.0017,
+      49.1121
+    ]
+  },
+  "best_s": {
+    "netoff_T128": 0.2894,
+    "blocksoff_T128": 1.2726,
+    "full_T128": 48.3249
+  },
+  "compile_s": {
+    "netoff_T128": 4.2,
+    "blocksoff_T128": 11.4,
+    "full_T128": 62.5
+  },
+  "failed": {},
+  "peak_device_gib": 22.23
+}

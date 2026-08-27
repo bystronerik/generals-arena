@@ -47,6 +47,7 @@ import jax.random as jrandom
 from training.joe.config import Config
 from training.joe.env import make_competition_env, preset_min_generals_distance
 from training.joe.networks import build_network, get_network_bundle
+from training.joe.networks.transformer import SelfAttentionLayer
 from training.joe.networks.common import reset_done_envs
 from training.joe.train.ppo import _replicate
 from training.joe.train.rewards import win_lose_reward
@@ -104,7 +105,7 @@ def main():
 
     TWIN = int(single.opponent_army_history.shape[0])
 
-    def build(T, do_obs, do_net, do_stack, do_augment=True):
+    def build(T, do_obs, do_net, do_stack, do_augment=True, do_blocks=True):
         C, P = 39, cfg.pad_to
 
         def _r(prm, st, key, osp, pl):
@@ -162,23 +163,33 @@ def main():
             return s, data
         return jax.pmap(_r)
 
-    # (name, T, do_obs, do_net, do_stack, do_augment)
-    # Stacking is ON in every arm so it cancels; each arm adds one stage.
-    #   env -> obs      = the observation pipeline
-    #   obs -> obsaug   = augment_obs
-    #   obsaug -> full  = the whole network (embed + blocks + heads + sampling)
+    # (name, T, do_obs, do_net, do_stack, do_augment, do_blocks)
+    # All three arms in ONE process on ONE machine with ONE harness, so the
+    # differences do not chain across runs:
+    #   netoff -> blocksoff = the network minus its 16 transformer blocks
+    #                         (patch embed, temporal encoder, policy and
+    #                          value heads, mask add, categorical sampling)
+    #   blocksoff -> full   = the 16 transformer blocks
     arms = [
-        (f"env_T{TLONG}",    TLONG, False, False, True, False),
-        (f"obs_T{TLONG}",    TLONG, True,  False, True, False),
-        (f"obsaug_T{TLONG}", TLONG, True,  False, True, True),
-        (f"full_T{TLONG}",   TLONG, True,  True,  True, True),
+        (f"netoff_T{TLONG}",    TLONG, True, False, True, True, True),
+        (f"blocksoff_T{TLONG}", TLONG, True, True,  True, True, False),
+        (f"full_T{TLONG}",      TLONG, True, True,  True, True, True),
     ]
 
     results, compile_s, failed = {}, {}, {}
     fns = {}
-    for name, T, do_obs, do_net, do_stack, do_aug in arms:
+    _ORIG_LAYER = SelfAttentionLayer.__call__
+
+    def _identity_layer(self, x):
+        return x
+
+    for name, T, do_obs, do_net, do_stack, do_aug, do_blk in arms:
         log(f"compiling {name} ...")
         t0 = time.perf_counter()
+        # The patch must be live while pmap traces and compiles this arm;
+        # the compiled executable then keeps it after the class is restored.
+        SelfAttentionLayer.__call__ = (_ORIG_LAYER if do_blk
+                                       else _identity_layer)
         try:
             f = build(T, do_obs, do_net, do_stack, do_aug)
             out = f(p_params, states0, keys, osp0, pool_rep)
@@ -190,6 +201,8 @@ def main():
         except Exception as e:
             failed[name] = f"{type(e).__name__}: {str(e)[:200]}"
             log(f"  {name} FAILED {failed[name]}")
+        finally:
+            SelfAttentionLayer.__call__ = _ORIG_LAYER
 
     times = {a: [] for a in fns}
     for rnd in range(ROUNDS):
@@ -211,22 +224,20 @@ def main():
     def have(*ks):
         return all(k in best for k in ks)
 
-    eT, oT, aT, fT = (f"env_T{TLONG}", f"obs_T{TLONG}",
-                      f"obsaug_T{TLONG}", f"full_T{TLONG}")
+    nT, bT, fT = (f"netoff_T{TLONG}", f"blocksoff_T{TLONG}", f"full_T{TLONG}")
     base = best.get(fT)
-    if have(eT, oT):
-        v = best[oT] - best[eT]
-        log(f"  observation pipeline : {v:7.3f}s "
+    if have(nT, bT):
+        v = best[bT] - best[nT]
+        log(f"  network minus blocks : {v:7.3f}s "
             f"({100 * v / base:5.1f}% of the rollout)")
-    if have(oT, aT):
-        v = best[aT] - best[oT]
-        log(f"  augment_obs          : {v:7.3f}s ({100 * v / base:5.1f}%)")
-    if have(aT, fT):
-        v = best[fT] - best[aT]
-        log(f"  network (all parts)  : {v:7.3f}s ({100 * v / base:5.1f}%)")
-    if eT in best:
-        log(f"  env.step + stacking  : {best[eT]:7.3f}s "
-            f"({100 * best[eT] / base:5.1f}%)")
+        log("    (patch embed, temporal encoder, policy/value heads, "
+            "mask add, categorical sampling)")
+    if have(bT, fT):
+        v = best[fT] - best[bT]
+        log(f"  16 transformer blocks: {v:7.3f}s ({100 * v / base:5.1f}%)")
+    if nT in best:
+        log(f"  env+obs+augment+stack: {best[nT]:7.3f}s "
+            f"({100 * best[nT] / base:5.1f}%)")
     log("=" * 62)
 
     res = {"device": str(dev), "cc": str(getattr(dev, "compute_capability", "?")),

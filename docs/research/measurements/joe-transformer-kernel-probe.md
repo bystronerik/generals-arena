@@ -18,53 +18,106 @@ Provenance:
   minibatch 2048, `adv_top_frac` 0.25 -> 64 minibatches over 131,072 samples.
 - Raw JSON: `joe-pro6000-{attention-ab,rollout-ablation,ppo-ablation,hlo-facts}.json`.
 
-## 1. The headline: the transformer is the PPO half, and only the PPO half
-
-Ablation removes the whole depth-16 trunk by making
-`SelfAttentionLayer.__call__` the identity. Same weights, same shapes, same
-data; three interleaved rounds, best of rounds reported.
+## 1. The headline: the transformer blocks are both halves
 
 | | base | trunk removed | trunk's share |
 | --- | --- | --- | --- |
-| **Rollout** | 16.078 s | 16.064 s | **0.09 %** |
+| **Rollout** | 48.325 s | 1.273 s | **97.4 %** |
 | **PPO update** | 13.608 s | 0.224 s | **98.3 %** |
 
-So of a ~29.7 s iteration, the transformer is **~46 %, all of it inside the
-PPO update**. The rollout does not care whether the network exists.
+The 16 transformer blocks are essentially the entire training iteration, on
+both sides of it. Everything else is rounding error: the observation
+pipeline, the augmentation, `env.step` and the output stacking together
+cost **0.289 s of a 48 s rollout (0.6 %)**, and the network's non-block path
+-- patch embed, temporal encoder, policy and value heads, the mask add and
+the categorical sampling over 4410 logits -- costs **0.983 s (2.0 %)**.
 
-That is not a typo and not a broken ablation: the identical patch drops the
-PPO update from 13.6 s to 0.22 s, so it demonstrably removes the trunk's
-compute. In the rollout, 128 sequential steps at batch 4096, the trunk's
-work is entirely hidden behind whatever else that loop is doing.
+Full four-way split of the rollout (vast 48941959, on-demand RTX PRO 6000,
+three rounds within 1 %, all arms in one process on one machine):
 
-**Resolved in section 5: the rollout is the observation and augmentation
-pipeline.**
+| stage | seconds | share |
+| --- | --- | --- |
+| env + observations + augmentation + stacking | 0.289 | 0.6 % |
+| network minus blocks | 0.983 | 2.0 % |
+| **16 transformer blocks** | **47.052** | **97.4 %** |
 
-## 2. Four proposed transformer optimizations, all measured dead
+### An earlier revision of this file said the opposite. Here is why.
 
-From an optimization review of the network code. Every one was checked on
-this card at this shape rather than argued.
+It reported the rollout trunk share as **0.09 %** -- that removing all 16
+blocks left the clock unchanged. That measurement was invalid.
+`collect_rollout` is decorated `@jax.jit`. Wrapping it in a fresh `pmap`
+per arm still hits the **nested jit cache**: the cache key is the callee's
+identity plus static args and input avals, none of which change when a
+Python method is monkeypatched. Every arm therefore ran the *first* arm's
+compiled binary, and all arms timed identically -- which reads as "this
+change does nothing" for any change.
+
+Minimal reproduction (CPU, no GPU needed):
+
+```python
+class Layer:
+    def __call__(self, x): return x * 2.0
+L = Layer()
+
+@jax.jit                       # <- like collect_rollout
+def jitted_caller(x): return L(x)
+
+def fresh_wrapper():           # <- like build(arm): new fn, fresh jit
+    def f(x): return jitted_caller(x)
+    return jax.jit(f)
+
+a = fresh_wrapper()(x)                       # 2.0
+Layer.__call__ = lambda self, y: y * 100.0
+b = fresh_wrapper()(x)                       # 2.0  <- patch ignored
+```
+
+With the callee *not* jitted the patch applies normally. That is the
+difference between the invalid runs and the valid ones.
+
+**Invalidated by this bug** (all called the jitted `collect_rollout`):
+
+- the rollout trunk ablation ("blocks are 0.09 %") -- the truth is 97.4 %;
+- the attention A/B: cuDNN fused attention, the q/k/v GEMM fusion, and both
+  together "showed no effect". Nothing was tested. **These are live
+  candidates again**, and they now sit on top of 97 % of the rollout;
+- the `no_silu` arm.
+
+**Not affected** (the callee is not jitted, or the arms differ in a static
+field that is part of the cache key):
+
+- the PPO trunk ablation -- `ppo_update` is a plain function, and its
+  13.6 s -> 0.22 s result always contradicted the rollout ablation;
+- the four-arm and three-arm rollout splits, which inline the scan body
+  rather than calling `collect_rollout`;
+- the `use_bf16` A/B -- `use_bf16` is `eqx.field(static=True)`, so it is
+  part of the treedef and gives each arm its own cache entry;
+- the HLO analysis, which needs no execution at all, and which pointed at
+  the network from the start.
+
+## 2. Proposed transformer optimizations: status
 
 | Proposal | Verdict | Evidence |
 | --- | --- | --- |
-| Fused cuDNN attention (`jax.nn.dot_product_attention`) | **no effect** | 16.087 s vs 16.105 s base |
-| Fuse q/k/v into one GEMM | **no effect** | 16.113 s vs 16.105 s base |
-| Both together | **no effect** | 16.094 s |
-| Remove the `silu` | **no effect** | 16.061 s vs 16.078 s base |
 | Kill per-Linear output transposes | **already free** | optimized HLO emits `bitcast`, not `copy` |
 | `Precision.HIGH` selecting 3-pass bf16 | **does not happen** | no `algorithm=` on any dot |
+| Fused cuDNN attention | **untested** | the A/B hit the jit-cache bug |
+| Fuse q/k/v into one GEMM | **untested** | same |
+| Remove the `silu` | **untested** | same |
 
-Notes that matter for anyone revisiting these:
+The two HLO-based verdicts stand, because they read the compiled program
+and never depended on running an ablation. The three timing-based verdicts
+do not.
 
-- cuDNN flash attention **does work** on sm_120 at head_dim 48 — it compiled
-  and ran, no fallback. It simply buys nothing here. (S tier at head_dim 44
-  would be ineligible: cuDNN needs `head_dim % 8 == 0`.)
-- The optimized HLO contains **96 real bf16 transposes** in the attention head
-  plumbing, 21.3 GB of transpose output per scan step. Replacing them all with
-  flash attention changed the wall clock by 0.1 %, so they are fused into
-  neighbours or hidden — a reminder that HLO op counts are not costs.
-- Only **64 `__cublas$lt$matmul`** custom calls appear (4 per layer: q, k, v,
-  out). The FF GEMMs are inside fusions.
+Notes that still matter for whoever retries the attention work:
+
+- cuDNN flash attention **does compile and run** on sm_120 at head_dim 48,
+  with no fallback. (S tier at head_dim 44 would be ineligible: cuDNN needs
+  `head_dim % 8 == 0`.)
+- The optimized HLO contains **96 real bf16 transposes** in the attention
+  head plumbing, 21.3 GB of transpose output per scan step, plus sixteen
+  654 MB `silu` fusions on the feed-forward hidden.
+- Only **64 `__cublas$lt$matmul`** custom calls appear (4 per layer: q, k,
+  v, out). The FF GEMMs sit inside fusions.
 
 ## 3. Reading this against the earlier phase profile
 
@@ -165,12 +218,13 @@ and network-off together. Until then, "the network" is established and
 
 ## 6. Where the optimization budget should go
 
-1. **The network's forward pass in the rollout** — 99.4 % of the rollout,
-   which is ~54 % of the training iteration. Not the observations (0.1 %),
-   not `augment_obs` (0.4 %), not `env.step` or the stacking (0.1 %). One
-   run is still needed to say whether the cost sits in the 16 blocks or in
-   the embed/heads/sampling path around them; run full, blocks-off and
-   network-off in a single process.
+1. **The 16 transformer blocks** — 97.4 % of the rollout and 98.3 % of the
+   PPO update, so ~97 % of the whole training iteration. There is no second
+   target. Attention rewrites (fused cuDNN attention, q/k/v fusion) are
+   untested rather than dead, and they now sit on top of nearly all of the
+   run time; retry them with a harness that does not call a jitted
+   function. `adv_top_frac` and `minibatch_size` scale the PPO half
+   directly.
 2. **The PPO update is the transformer**, 98.3 % of 13.6 s. The levers that
    scale it directly are `adv_top_frac` (0.25 today, linear in kept samples)
    and `minibatch_size` / epoch count. Kernel-level attention rewrites are

@@ -1,0 +1,66 @@
+[bisect] device=cuda:0 cc=12.0
+[bisect] pool in 39.8s
+[bisect] obs_aug stack at T=128: 16.80 GiB (N=2048)
+[bisect] compiling netoff_T128 ...
+[bisect]   netoff_T128 compiled+ran 4.2s
+[bisect] compiling blocksoff_T128 ...
+E0827 21:36:04.064657     970 cuda_timer.cc:88] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+[bisect]   blocksoff_T128 compiled+ran 11.4s
+[bisect] compiling full_T128 ...
+[bisect]   full_T128 compiled+ran 62.5s
+[bisect] round 0 netoff_T128    0.289s
+[bisect] round 0 blocksoff_T128 1.273s
+[bisect] round 0 full_T128      48.325s
+[bisect] round 1 netoff_T128    0.299s
+[bisect] round 1 blocksoff_T128 1.307s
+[bisect] round 1 full_T128      49.002s
+[bisect] round 2 netoff_T128    0.300s
+[bisect] round 2 blocksoff_T128 1.314s
+[bisect] round 2 full_T128      49.112s
+[bisect] ==============================================================
+[bisect] ROLLOUT BISECTION (best of rounds)
+[bisect]   netoff_T128       0.289s
+[bisect]   blocksoff_T128    1.273s
+[bisect]   full_T128        48.325s
+[bisect]   network minus blocks :   0.983s (  2.0% of the rollout)
+[bisect]     (patch embed, temporal encoder, policy/value heads, mask add, categorical sampling)
+[bisect]   16 transformer blocks:  47.052s ( 97.4%)
+[bisect]   env+obs+augment+stack:   0.289s (  0.6%)
+[bisect] ==============================================================
+BISECT_JSON_BEGIN
+{
+  "device": "cuda:0",
+  "cc": "12.0",
+  "num_envs": 2048,
+  "obs_stack_gib": 16.8,
+  "times_s": {
+    "netoff_T128": [
+      0.2894,
+      0.2989,
+      0.3003
+    ],
+    "blocksoff_T128": [
+      1.2726,
+      1.3071,
+      1.314
+    ],
+    "full_T128": [
+      48.3249,
+      49.0017,
+      49.1121
+    ]
+  },
+  "best_s": {
+    "netoff_T128": 0.2894,
+    "blocksoff_T128": 1.2726,
+    "full_T128": 48.3249
+  },
+  "compile_s": {
+    "netoff_T128": 4.2,
+    "blocksoff_T128": 11.4,
+    "full_T128": 62.5
+  },
+  "failed": {},
+  "peak_device_gib": 22.23
+}
+BISECT_JSON_END
