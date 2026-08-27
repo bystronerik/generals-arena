@@ -102,26 +102,43 @@ Reading it:
   `augment_obs` — is therefore **~19.5 s of the ~19.6 s**, about
   **153 ms per scan step**.
 
-A later arm split those two (vast 48935672, same card class, two rounds):
+A later arm split off the augmentation (vast 48935672, same card class,
+two rounds):
 
-| stage | seconds | share of rollout | whose code |
+| stage | seconds | share of rollout | status |
 | --- | --- | --- | --- |
-| `augment_obs` | 0.20 / 0.38 | **1.0 % / 1.9 %** | ours |
-| `_observe_both` (observations + masks) | 18.90 | **98.9 %** | mostly competition-module |
-| `env.step` | 0.017 | 0.09 % | competition-module |
+| `augment_obs` | 0.20 / 0.38 | 1.0 % / 1.9 % | established |
+| `env.step` | 0.017 | 0.09 % | established |
+| output stacking | negative | free | established |
+| transformer blocks | ~0 | 0.09 % | established |
+| **everything else** | **~18.9** | **~98 %** | **not attributed** |
 
-**The augmentation is not the cost. The observation construction is.**
-`augment_obs` is our largest single function at 142 lines, and it is worth
-1-2 %. `_observe_both` is our orchestration around mostly upstream
-primitives: `get_observation` and `build_cost_grid` each run **twice per
-step**, one per seat, and `compute_valid_move_mask` runs on the 2N batch --
-all three live in `competition-module`, which AGENTS.md says to wrap rather
-than edit. `obs_to_array` (27 lines) and `compute_build_mask` (10 lines) are
-ours.
+**The augmentation is not the cost.** `augment_obs` is our largest single
+function at 142 lines and is worth 1-2 %, an upper bound at that (the
+`full` arm runs first in each round and carries the warm-up).
 
-The `augment_obs` figure is an upper bound: `full` runs first in each round
-and carries the warm-up, so the true share is at or below 1-2 %. Which of
-the six pieces inside `_observe_both` dominates is **not yet measured**.
+**What the remaining ~98 % is has NOT been established.** An earlier
+revision of this file assigned it to `_observe_both`. That was wrong. The
+`envonly` arm sets `do_obs=False` **and `do_net=False`**, so the difference
+against it removes the observation pipeline *and* the network together. The
+trunk ablation only removed the 16 transformer blocks -- the patch embed,
+the policy and value heads, and the categorical sampling over 4410 logits
+per sample were never isolated. The bucket therefore holds:
+
+  observations + masks  +  patch embed  +  policy/value heads  +  sampling
+
+Arithmetic says neither half explains it. `get_observation` is roughly
+9,700 element-ops per call over a 21x21 board (a 9-slice visibility stack,
+four reductions, nine masked multiplies); at 524,288 calls per rollout that
+is 5.1 G element-ops, or about **5 ms** at a plausible GPU rate -- against a
+measured bucket of **18,900 ms**, a factor of 3,700. The sampling side is
+2.3 G element-ops and is no better an explanation. So the cost is
+structural, not arithmetic, and it is still unidentified.
+
+The experiment that settles it needs four arms that all keep stacking on and
+differ one stage at a time: env only; + observations; + augmentation;
++ network. `env -> obs` gives the observation pipeline and `obsaug -> full`
+gives the whole network including the heads.
 - It scales **linearly** in steps (T=64 -> T=128 is 1.96x), so it is a
   per-step cost, not an O(T^2) accumulator pathology.
 
@@ -136,13 +153,12 @@ used.** The observation pipeline is not free — it is the rollout.
 
 ## 6. Where the optimization budget should go
 
-1. **The observation construction** — ~54 % of the training iteration and
-   98.9 % of the rollout. Not `augment_obs`, which is 1-2 %. The next step
-   is to split `_observe_both` into its six pieces, because most of them are
-   `competition-module` code that AGENTS.md says to wrap rather than edit.
-   The reachable lever without touching upstream is the **two calls per
-   step**: `get_observation` and `build_cost_grid` each run once per seat,
-   and that wrapping is ours.
+1. **The unattributed ~98 % of the rollout** — ~54 % of the training
+   iteration. It is *not* `augment_obs` (1-2 %), *not* `env.step` (0.09 %),
+   *not* the output stacking (free), and *not* the transformer blocks
+   (0.09 %). It is the observation pipeline, the network's embed, heads and
+   sampling, or something structural across them. Run the four-arm
+   experiment above before spending any effort on a candidate.
 2. **The PPO update is the transformer**, 98.3 % of 13.6 s. The levers that
    scale it directly are `adv_top_frac` (0.25 today, linear in kept samples)
    and `minibatch_size` / epoch count. Kernel-level attention rewrites are
