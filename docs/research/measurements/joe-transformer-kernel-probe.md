@@ -101,6 +101,27 @@ Reading it:
   `build_cost_grid`, `obs_to_array`, the move and build masks) plus
   `augment_obs` — is therefore **~19.5 s of the ~19.6 s**, about
   **153 ms per scan step**.
+
+A later arm split those two (vast 48935672, same card class, two rounds):
+
+| stage | seconds | share of rollout | whose code |
+| --- | --- | --- | --- |
+| `augment_obs` | 0.20 / 0.38 | **1.0 % / 1.9 %** | ours |
+| `_observe_both` (observations + masks) | 18.90 | **98.9 %** | mostly competition-module |
+| `env.step` | 0.017 | 0.09 % | competition-module |
+
+**The augmentation is not the cost. The observation construction is.**
+`augment_obs` is our largest single function at 142 lines, and it is worth
+1-2 %. `_observe_both` is our orchestration around mostly upstream
+primitives: `get_observation` and `build_cost_grid` each run **twice per
+step**, one per seat, and `compute_valid_move_mask` runs on the 2N batch --
+all three live in `competition-module`, which AGENTS.md says to wrap rather
+than edit. `obs_to_array` (27 lines) and `compute_build_mask` (10 lines) are
+ours.
+
+The `augment_obs` figure is an upper bound: `full` runs first in each round
+and carries the warm-up, so the true share is at or below 1-2 %. Which of
+the six pieces inside `_observe_both` dominates is **not yet measured**.
 - It scales **linearly** in steps (T=64 -> T=128 is 1.96x), so it is a
   per-step cost, not an O(T^2) accumulator pathology.
 
@@ -115,11 +136,13 @@ used.** The observation pipeline is not free — it is the rollout.
 
 ## 6. Where the optimization budget should go
 
-1. **The observation and augmentation pipeline** — ~54 % of the training
-   iteration and ~99 % of the rollout, at 153 ms per step. Nothing else in
-   the rollout is worth touching. Start with `augment_obs` (the 39-channel
-   build, the `_pool2d` reduce_window, the history rolls) and `_observe_both`
-   (called for both seats every step).
+1. **The observation construction** — ~54 % of the training iteration and
+   98.9 % of the rollout. Not `augment_obs`, which is 1-2 %. The next step
+   is to split `_observe_both` into its six pieces, because most of them are
+   `competition-module` code that AGENTS.md says to wrap rather than edit.
+   The reachable lever without touching upstream is the **two calls per
+   step**: `get_observation` and `build_cost_grid` each run once per seat,
+   and that wrapping is ours.
 2. **The PPO update is the transformer**, 98.3 % of 13.6 s. The levers that
    scale it directly are `adv_top_frac` (0.25 today, linear in kept samples)
    and `minibatch_size` / epoch count. Kernel-level attention rewrites are

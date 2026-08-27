@@ -104,18 +104,31 @@ def main():
 
     TWIN = int(single.opponent_army_history.shape[0])
 
-    def build(T, do_obs, do_net, do_stack):
+    def build(T, do_obs, do_net, do_stack, do_augment=True):
         C, P = 39, cfg.pad_to
 
         def _r(prm, st, key, osp, pl):
             def body(carry, _):
                 states, key, o = carry
-                if do_obs:
+                if do_obs and do_augment:
                     _, obs_arr, cost, mm, bm = _observe_both(states)
                     oa, no = jax.vmap(augment_fn)(obs_arr, cost, o)
                     oa = oa.astype(jnp.bfloat16)
                     tp = jnp.stack([no.opponent_army_history,
                                     no.opponent_land_history], axis=1)
+                elif do_obs:
+                    # Observations run; only augment_obs is skipped. Build
+                    # obs_aug by concatenation so every element of obs_arr
+                    # and cost is read -- a scalar tie would let XLA delete
+                    # obs_to_array and build_cost_grid, which is exactly the
+                    # artifact that made the earlier T4 drill-down wrong.
+                    _, obs_arr, cost, mm, bm = _observe_both(states)
+                    pad = jnp.zeros(
+                        (2 * N, C - obs_arr.shape[1] - 1, P, P), jnp.float32)
+                    oa = jnp.concatenate(
+                        [obs_arr, cost[:, None], pad], axis=1).astype(jnp.bfloat16)
+                    tp = jnp.zeros((2 * N, 2, TWIN), jnp.float32)
+                    no = o
                 else:
                     tie = states.armies[0, 0, 0].astype(jnp.bfloat16)
                     oa = jnp.full((2 * N, C, P, P), tie, jnp.bfloat16)
@@ -149,21 +162,21 @@ def main():
             return s, data
         return jax.pmap(_r)
 
+    # (name, T, do_obs, do_net, do_stack, do_augment)
     arms = [
-        (f"full_T{TLONG}",    TLONG,  True,  True,  True),
-        (f"nostack_T{TLONG}", TLONG,  True,  True,  False),
-        (f"full_T{TSHORT}",   TSHORT, True,  True,  True),
-        (f"nostack_T{TSHORT}", TSHORT, True, True,  False),
-        (f"envonly_T{TLONG}", TLONG,  False, False, False),
+        (f"full_T{TLONG}",    TLONG,  True,  True,  True,  True),
+        (f"noaug_T{TLONG}",   TLONG,  True,  True,  True,  False),
+        (f"nostack_T{TLONG}", TLONG,  True,  True,  False, True),
+        (f"envonly_T{TLONG}", TLONG,  False, False, False, True),
     ]
 
     results, compile_s, failed = {}, {}, {}
     fns = {}
-    for name, T, do_obs, do_net, do_stack in arms:
+    for name, T, do_obs, do_net, do_stack, do_aug in arms:
         log(f"compiling {name} ...")
         t0 = time.perf_counter()
         try:
-            f = build(T, do_obs, do_net, do_stack)
+            f = build(T, do_obs, do_net, do_stack, do_aug)
             out = f(p_params, states0, keys, osp0, pool_rep)
             jax.block_until_ready(out[0].armies)
             del out
@@ -191,16 +204,28 @@ def main():
     log("ROLLOUT BISECTION (best of rounds)")
     for a, v in best.items():
         log(f"  {a:<14} {v:8.3f}s")
-    if f"full_T{TLONG}" in best and f"nostack_T{TLONG}" in best:
-        st128 = best[f"full_T{TLONG}"] - best[f"nostack_T{TLONG}"]
-        log(f"  stacking cost T=128 : {st128:.3f}s "
-            f"({100 * st128 / best[f'full_T{TLONG}']:.1f}% of the rollout)")
-    if f"full_T{TSHORT}" in best and f"nostack_T{TSHORT}" in best:
-        st64 = best[f"full_T{TSHORT}"] - best[f"nostack_T{TSHORT}"]
-        log(f"  stacking cost T=64  : {st64:.3f}s")
-        if f"full_T{TLONG}" in best:
-            log(f"  scaling T{TSHORT}->T{TLONG}   : {st128 / max(st64, 1e-9):.2f}x "
-                f"(2x = bandwidth, 4x = O(T^2) accumulator copies)")
+    def have(*ks):
+        return all(k in best for k in ks)
+
+    fT, nT, aT, eT = (f"full_T{TLONG}", f"nostack_T{TLONG}",
+                      f"noaug_T{TLONG}", f"envonly_T{TLONG}")
+    if have(fT, nT):
+        st = best[fT] - best[nT]
+        log(f"  output stacking      : {st:+.3f}s "
+            f"({100 * st / best[fT]:+.1f}% of the rollout)")
+    if have(fT, aT):
+        au = best[fT] - best[aT]
+        log(f"  augment_obs (ours)   : {au:.3f}s "
+            f"({100 * au / best[fT]:.1f}% of the rollout)")
+    if have(aT, eT):
+        ob = best[aT] - best[eT]
+        log(f"  observations+masks   : {ob:.3f}s "
+            f"({100 * ob / best[fT]:.1f}% of the rollout)")
+        log("    (get_observation x2, build_cost_grid x2, "
+            "compute_valid_move_mask, obs_to_array, compute_build_mask)")
+    if eT in best:
+        log(f"  env.step             : {best[eT]:.3f}s "
+            f"({100 * best[eT] / best[fT]:.1f}% of the rollout)")
     log("=" * 62)
 
     res = {"device": str(dev), "cc": str(getattr(dev, "compute_capability", "?")),
