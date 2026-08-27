@@ -117,48 +117,60 @@ two rounds):
 function at 142 lines and is worth 1-2 %, an upper bound at that (the
 `full` arm runs first in each round and carries the warm-up).
 
-**What the remaining ~98 % is has NOT been established.** An earlier
-revision of this file assigned it to `_observe_both`. That was wrong. The
-`envonly` arm sets `do_obs=False` **and `do_net=False`**, so the difference
-against it removes the observation pipeline *and* the network together. The
-trunk ablation only removed the 16 transformer blocks -- the patch embed,
-the policy and value heads, and the categorical sampling over 4410 logits
-per sample were never isolated. The bucket therefore holds:
+### Resolved: the network, not the observations
 
-  observations + masks  +  patch embed  +  policy/value heads  +  sampling
+The four-arm run (vast 48940477, on-demand RTX PRO 6000 Workstation, three
+rounds, stacking ON in every arm so it cancels):
 
-Arithmetic says neither half explains it. `get_observation` is roughly
-9,700 element-ops per call over a 21x21 board (a 9-slice visibility stack,
-four reductions, nine masked multiplies); at 524,288 calls per rollout that
-is 5.1 G element-ops, or about **5 ms** at a plausible GPU rate -- against a
-measured bucket of **18,900 ms**, a factor of 3,700. The sampling side is
-2.3 G element-ops and is no better an explanation. So the cost is
-structural, not arithmetic, and it is still unidentified.
+| arm | r0 | r1 | r2 | delta = stage |
+| --- | --- | --- | --- | --- |
+| env | 0.062 | 0.061 | 0.062 | env.step + stacking **0.061 s (0.1 %)** |
+| + observations | 0.118 | 0.119 | 0.120 | observation pipeline **0.057 s (0.1 %)** |
+| + augmentation | 0.285 | 0.290 | 0.293 | `augment_obs` **0.167 s (0.4 %)** |
+| + network | 47.207 | 47.749 | 47.978 | network **46.92 s (99.4 %)** |
 
-The experiment that settles it needs four arms that all keep stacking on and
-differ one stage at a time: env only; + observations; + augmentation;
-+ network. `env -> obs` gives the observation pipeline and `obsaug -> full`
-gives the whole network including the heads.
-- It scales **linearly** in steps (T=64 -> T=128 is 1.96x), so it is a
-  per-step cost, not an O(T^2) accumulator pathology.
+**The rollout is the network. The observation pipeline is 0.1 %.** An
+earlier revision of this file put it at 98.9 %; that was wrong, and this is
+the measurement that settles it. The observation and augmentation pipelines
+together cost 0.22 s of a 47 s rollout.
 
-### This refutes the T4 drill-down
+Two independent methods agree. The optimized HLO of the *real*
+`collect_rollout` attributes **47.5 GB/step of kernel output across 205
+kernels** to the network -- including sixteen 654 MB `silu` fusions on the
+feed-forward hidden (`bf16[1536,4096,52]`, one per layer) -- against 0.07
+GB/step over 43 kernels for `env.step` and 1-3 near-empty kernels for
+`get_observation`. The HLO also shows the scan accumulator update is a
+`dynamic_update_index_in_dim` writing **in place** into the aliased 18 GB
+buffer, which is why removing the stacking never helped.
 
-[joe-train-phase-profile.md](joe-train-phase-profile.md) reported env +
-observations + augmentation at **0.10 s**, 0.1 % of a rollout. That harness
-reduced each stage into a scalar accumulator, so XLA elided most of the work;
-here `obs_aug` feeds the network, then `env.step`, then the `states` carry,
-so it cannot be elided. **The 0.1 % figure is an artifact and should not be
-used.** The observation pipeline is not free — it is the rollout.
+### Still open: which part of the network
+
+The trunk ablation (section 1) removed all 16 transformer blocks and moved
+the rollout by 0.09 %. Taken with the 99.4 % above, that puts the cost in
+the network's **non-block** path -- patch embed, temporal encoder, policy
+and value heads, the action-mask add, and the categorical sampling over
+4410 logits per sample.
+
+That inference chains two runs on two machines and should not be trusted
+yet. The trunk ablation measured `full` at 16.078 s where this run measures
+47.2 s -- a 2.9x spread between two PRO 6000 variants (Max-Q vs
+Workstation), wider than the documented fleet spread, and the two used
+different harnesses (the real `collect_rollout` vs the replica here). It
+also sits awkwardly against the sixteen 654 MB per-layer `silu` fusions the
+HLO shows inside the blocks.
+
+**The next run must contain both arms in one process**: full, blocks-off,
+and network-off together. Until then, "the network" is established and
+"which part of the network" is not.
 
 ## 6. Where the optimization budget should go
 
-1. **The unattributed ~98 % of the rollout** — ~54 % of the training
-   iteration. It is *not* `augment_obs` (1-2 %), *not* `env.step` (0.09 %),
-   *not* the output stacking (free), and *not* the transformer blocks
-   (0.09 %). It is the observation pipeline, the network's embed, heads and
-   sampling, or something structural across them. Run the four-arm
-   experiment above before spending any effort on a candidate.
+1. **The network's forward pass in the rollout** — 99.4 % of the rollout,
+   which is ~54 % of the training iteration. Not the observations (0.1 %),
+   not `augment_obs` (0.4 %), not `env.step` or the stacking (0.1 %). One
+   run is still needed to say whether the cost sits in the 16 blocks or in
+   the embed/heads/sampling path around them; run full, blocks-off and
+   network-off in a single process.
 2. **The PPO update is the transformer**, 98.3 % of 13.6 s. The levers that
    scale it directly are `adv_top_frac` (0.25 today, linear in kept samples)
    and `minibatch_size` / epoch count. Kernel-level attention rewrites are

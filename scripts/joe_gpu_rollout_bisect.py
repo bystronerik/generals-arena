@@ -163,11 +163,15 @@ def main():
         return jax.pmap(_r)
 
     # (name, T, do_obs, do_net, do_stack, do_augment)
+    # Stacking is ON in every arm so it cancels; each arm adds one stage.
+    #   env -> obs      = the observation pipeline
+    #   obs -> obsaug   = augment_obs
+    #   obsaug -> full  = the whole network (embed + blocks + heads + sampling)
     arms = [
-        (f"full_T{TLONG}",    TLONG,  True,  True,  True,  True),
-        (f"noaug_T{TLONG}",   TLONG,  True,  True,  True,  False),
-        (f"nostack_T{TLONG}", TLONG,  True,  True,  False, True),
-        (f"envonly_T{TLONG}", TLONG,  False, False, False, True),
+        (f"env_T{TLONG}",    TLONG, False, False, True, False),
+        (f"obs_T{TLONG}",    TLONG, True,  False, True, False),
+        (f"obsaug_T{TLONG}", TLONG, True,  False, True, True),
+        (f"full_T{TLONG}",   TLONG, True,  True,  True, True),
     ]
 
     results, compile_s, failed = {}, {}, {}
@@ -207,25 +211,22 @@ def main():
     def have(*ks):
         return all(k in best for k in ks)
 
-    fT, nT, aT, eT = (f"full_T{TLONG}", f"nostack_T{TLONG}",
-                      f"noaug_T{TLONG}", f"envonly_T{TLONG}")
-    if have(fT, nT):
-        st = best[fT] - best[nT]
-        log(f"  output stacking      : {st:+.3f}s "
-            f"({100 * st / best[fT]:+.1f}% of the rollout)")
-    if have(fT, aT):
-        au = best[fT] - best[aT]
-        log(f"  augment_obs (ours)   : {au:.3f}s "
-            f"({100 * au / best[fT]:.1f}% of the rollout)")
-    if have(aT, eT):
-        ob = best[aT] - best[eT]
-        log(f"  observations+masks   : {ob:.3f}s "
-            f"({100 * ob / best[fT]:.1f}% of the rollout)")
-        log("    (get_observation x2, build_cost_grid x2, "
-            "compute_valid_move_mask, obs_to_array, compute_build_mask)")
+    eT, oT, aT, fT = (f"env_T{TLONG}", f"obs_T{TLONG}",
+                      f"obsaug_T{TLONG}", f"full_T{TLONG}")
+    base = best.get(fT)
+    if have(eT, oT):
+        v = best[oT] - best[eT]
+        log(f"  observation pipeline : {v:7.3f}s "
+            f"({100 * v / base:5.1f}% of the rollout)")
+    if have(oT, aT):
+        v = best[aT] - best[oT]
+        log(f"  augment_obs          : {v:7.3f}s ({100 * v / base:5.1f}%)")
+    if have(aT, fT):
+        v = best[fT] - best[aT]
+        log(f"  network (all parts)  : {v:7.3f}s ({100 * v / base:5.1f}%)")
     if eT in best:
-        log(f"  env.step             : {best[eT]:.3f}s "
-            f"({100 * best[eT] / best[fT]:.1f}% of the rollout)")
+        log(f"  env.step + stacking  : {best[eT]:7.3f}s "
+            f"({100 * best[eT] / base:5.1f}%)")
     log("=" * 62)
 
     res = {"device": str(dev), "cc": str(getattr(dev, "compute_capability", "?")),

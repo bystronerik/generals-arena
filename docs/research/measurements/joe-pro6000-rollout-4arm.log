@@ -1,0 +1,78 @@
+[bisect] device=cuda:0 cc=12.0
+[bisect] pool in 40.9s
+[bisect] obs_aug stack at T=128: 16.80 GiB (N=2048)
+[bisect] compiling env_T128 ...
+[bisect]   env_T128 compiled+ran 1.5s
+[bisect] compiling obs_T128 ...
+[bisect]   obs_T128 compiled+ran 2.5s
+[bisect] compiling obsaug_T128 ...
+[bisect]   obsaug_T128 compiled+ran 3.8s
+[bisect] compiling full_T128 ...
+[bisect]   full_T128 compiled+ran 67.0s
+[bisect] round 0 env_T128       0.062s
+[bisect] round 0 obs_T128       0.118s
+[bisect] round 0 obsaug_T128    0.285s
+[bisect] round 0 full_T128      47.207s
+[bisect] round 1 env_T128       0.061s
+[bisect] round 1 obs_T128       0.119s
+[bisect] round 1 obsaug_T128    0.290s
+[bisect] round 1 full_T128      47.749s
+[bisect] round 2 env_T128       0.062s
+[bisect] round 2 obs_T128       0.120s
+[bisect] round 2 obsaug_T128    0.293s
+[bisect] round 2 full_T128      47.978s
+[bisect] ==============================================================
+[bisect] ROLLOUT BISECTION (best of rounds)
+[bisect]   env_T128          0.061s
+[bisect]   obs_T128          0.118s
+[bisect]   obsaug_T128       0.285s
+[bisect]   full_T128        47.207s
+[bisect]   observation pipeline :   0.057s (  0.1% of the rollout)
+[bisect]   augment_obs          :   0.167s (  0.4%)
+[bisect]   network (all parts)  :  46.922s ( 99.4%)
+[bisect]   env.step + stacking  :   0.061s (  0.1%)
+[bisect] ==============================================================
+BISECT_JSON_BEGIN
+{
+  "device": "cuda:0",
+  "cc": "12.0",
+  "num_envs": 2048,
+  "obs_stack_gib": 16.8,
+  "times_s": {
+    "env_T128": [
+      0.0621,
+      0.0614,
+      0.0622
+    ],
+    "obs_T128": [
+      0.118,
+      0.1194,
+      0.1203
+    ],
+    "obsaug_T128": [
+      0.285,
+      0.2901,
+      0.2927
+    ],
+    "full_T128": [
+      47.2066,
+      47.7493,
+      47.9776
+    ]
+  },
+  "best_s": {
+    "env_T128": 0.0614,
+    "obs_T128": 0.118,
+    "obsaug_T128": 0.285,
+    "full_T128": 47.2066
+  },
+  "compile_s": {
+    "env_T128": 1.5,
+    "obs_T128": 2.5,
+    "obsaug_T128": 3.8,
+    "full_T128": 67.0
+  },
+  "failed": {},
+  "peak_device_gib": 22.23
+}
+BISECT_JSON_END
