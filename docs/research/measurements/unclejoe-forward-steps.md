@@ -30,13 +30,30 @@ Raw record: [unclejoe-forward-steps-modal.json](unclejoe-forward-steps-modal.jso
 
 Two things follow, and neither was visible from the move-level split.
 
-**The GEMMs are already near the machine.** The four 384×384 token
-projections and the two feed-forward GEMMs sustain 78–107 GFLOP/s. An
-AVX2 + FMA core does 32 FLOP/cycle, so at the ~3 GHz these hosts report that
-roofline is ~99 GFLOP/s. The AVX2 hosts run `ff1`/`ff2` at 79–94, the AVX-512
-AMD host at 106–107. There is no factor-of-two hiding in the kernel; what is
-left is the AVX-512 tile on the hosts that expose it, and the ~11 % that is
-not GEMM.
+**The AVX2 GEMM is issue-bound; the AVX-512 one is not.** The four 384×384
+token projections and the two feed-forward GEMMs sustain 78–107 GFLOP/s. Do
+**not** turn that into a percentage of roofline — see the clock warning
+below. The disassembly answers the question the ratio cannot. Compiled for
+`x86-64-v3` and read at the hot block:
+
+* **AVX2** (inlined into `gemm_bias`; `target-cpu=x86-64-v3` supplies the
+  features, so it needs no out-of-line call): 2 k-steps per iteration as
+  **16 `vfmadd231ps` + 8 `vbroadcastss` + 4 `vmovups`** and six ops of loop
+  and address overhead. All eight ymm accumulators stay in registers —
+  **zero spill stores in the whole function**. Eight FMAs per k-step against
+  a 2-per-cycle core is 4 cycles, and there is nothing in the block to
+  delete. This is the fleet's majority path and it is finished.
+* **AVX-512** (out of line — `avx512f` is not in `x86-64-v3`, so it cannot
+  inline): per k-step **13 `vfmadd231ps` with `{1to16}` embedded broadcast +
+  1 `vmovups`**, but also **nine address-arithmetic ops**, five of them a
+  serial `addq %r10, %r13` chain re-deriving the 13 row pointers every
+  iteration. 13 FMAs would be 6.5 cycles; the block issues ~27 instructions.
+  It is front-end and address bound, not FMA bound, which is the one place
+  in either kernel with room in it.
+
+So there is no factor of two hiding in the AVX2 kernel. What is left is the
+AVX-512 tile on the three hosts that expose it, and the ~11 % that is not
+GEMM.
 
 **`exp` is the whole remainder.** `softmax` and `silu` together cost four to
 five times every layernorm, copy, residual and reshape in the pass combined.
@@ -106,7 +123,10 @@ its GEMM, the softmax and the bin-centre dot together.
 | policy_head | 49 × 384 × 90 | 3.39 | 70.0–82.8 (41–48) | 77.2 (44) | 166.5–173.4 (20–20) |
 | value_head | 1 × 384 × 128 | 0.10 | 10.7–13.2 (7–9) | 7.8 (13) | 24.2–26.1 (4–4) |
 
-One forward is ~3.03 GFLOP. The small-N shapes — `scores` (N = 52),
+One forward is ~3.03 GFLOP. **The GFLOP/s columns are throughput, not
+efficiency** — dividing them by a peak computed from the reported clock
+gives a number that is wrong and sometimes impossible (below). The small-N
+shapes — `scores` (N = 52),
 `policy_head` (N = 90), `value_head` (M = 1) — run at a third to a tenth of
 the large shapes' rate, which is what a strip-major kernel with a fixed tile
 does on a short row; together they are 2.0 % of the pass, so the inefficiency
@@ -135,6 +155,30 @@ here has hit. The two Skylake-SP containers are the slowest despite
 dispatching AVX-512 — and they are also where `exp` jumps from 8.6 % to
 14.0 %, because the AVX-512 GEMMs speed up around scalar `exp` code that does
 not. **Read the shares across hosts and the milliseconds only within one.**
+
+## The clock these hosts report is not the clock they run at
+
+`/proc/cpuinfo`'s `cpu MHz` cannot be used to convert these microseconds
+into cycles, and an earlier draft of this page did exactly that. The check
+that kills it: the AVX2 kernel issues a known number of FMAs for each of
+these shapes — 8 per k-step, over `(N/16)·(M/4)·K` tile-steps — and no core
+here retires more than 2 FMAs a cycle. Dividing the measured time by that
+floor at the reported MHz gives, for `ff1` / `ff2` / `q_proj`:
+
+| host | ratio to the 2-FMA/cycle floor |
+| --- | ---: |
+| AMD 175/1 b0r2 @ 2880 MHz | **0.975 / 0.986 / 0.994** |
+| AMD 175/1 b1r1 @ 2450 MHz | **0.941 / 0.963 / 0.978** |
+| the other three AVX2 hosts | 1.11–1.28 |
+
+Six of those cells are below 1.0, which is not a slow kernel but an
+impossible one: the reported MHz understates the real clock by at least
+2–6 % on those containers, and by an unknown amount everywhere else.
+Modal's sandbox also reports 17 online CPUs to a container that was given
+one, so the whole `cpuinfo` block is advisory. Every claim on this page is
+therefore made in **microseconds and in shares**, both of which are
+clock-free, and the "is the kernel good" question is answered from the
+disassembly instead.
 
 ## What this does not establish
 

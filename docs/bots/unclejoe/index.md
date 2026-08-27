@@ -66,4 +66,4 @@ percentiles against the 140 ms budget. On x86 the forward is 32.6–56.1 ms
 depending on the host, and
 [unclejoe-forward-steps](../../research/measurements/unclejoe-forward-steps.md)
 splits it into 25 steps: 83–89 % GEMM, 9–14 % `exp` (`softmax` + `silu`),
-nothing else above 1 %.
+nothing else above 1 %. Four bit-exact changes off that split are worth **+6.8 % to +9.5 %** of the forward — [unclejoe-forward-ab](../../research/measurements/unclejoe-forward-ab.md).

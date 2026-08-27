@@ -87,19 +87,29 @@ mismatch.
 
 ## Latency (measured over real competition games)
 
-`unclejoe bench` replays of three recorded corpus games through the full
-per-move path, release build, dev arm64 (M-series, unpinned), 2026-08-25 —
-X16 is ~2.2x M7F4's params and lands at ~2.2x joe-rs's per-move time:
+`unclejoe bench` replays of four recorded corpus games through the full
+per-move path, release build, dev arm64 (M-series, unpinned), **re-measured
+2026-08-27** after the forward-pass work in
+[unclejoe-forward-ab](../../research/measurements/unclejoe-forward-ab.md):
 
-| game | turns | p50 | p90 | p99 | max | startup |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| synthetic-long | 1496 | 60.20 | 60.42 | 60.75 | 89.72 | 110.1 ms |
-| joe-seed10 | 748 | 60.68 | 60.89 | 61.88 | 78.41 | 102.0 ms |
-| castle_rush-seed3 | 551 | 60.32 | 60.55 | 60.87 | 87.49 | 101.3 ms |
-| aegis-seed0 | 272 | 60.22 | 60.59 | 61.16 | 63.41 | 103.0 ms |
+| game | turns | p50 | p90 | p99 | max | startup | was (2026-08-25) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| synthetic-long | 1496 | 36.66 | 39.42 | 46.39 | 78.50 | 77.8 ms | 60.20 |
+| joe-seed10 | 748 | 36.60 | 38.14 | 40.79 | 64.92 | 120.9 ms | 60.68 |
+| castle_rush-seed3 | 551 | 37.07 | 38.36 | 42.81 | 82.92 | 103.0 ms | 60.32 |
+| aegis-seed0 | 272 | 36.33 | 37.92 | 40.72 | 42.82 | 91.3 ms | 60.22 |
 
-Worst p99 61.9 ms against the 140 ms working deadline: **~78 ms margin** on
-this host, at 2.3x joe-rs's 26.2–26.6 ms p50 on the same machine. The deadline knobs joe-rs parses are dead code here too — the
+Worst p99 46.4 ms against the 140 ms working deadline: **~94 ms margin** on
+this host.
+
+**The 2026-08-25 column was measuring the compiler, not the network.** Under
+`lto = "fat"` + `codegen-units = 1`, LLVM inlined the portable GEMM kernel
+into `forward_staged` at eleven call sites and spilled the tile
+accumulators; `#[inline(never)]` on that kernel is worth 1.64x here and
+**nothing at all** on the competition host, where the portable kernel is not
+even present in the `x86-64-v3` build. Treat every arm64 latency figure
+recorded before that date as inflated by roughly that factor, this bot's and
+joe-rs's alike — the two crates share the kernel. The deadline knobs joe-rs parses are dead code here too — the
 turn budget is the full 140 ms. Do not quote joe's Python-side numbers for
 this bot, and do not build a musl static binary (measured 4x allocator
 regression on candle-era joe-rs; portable builds target old glibc). The
