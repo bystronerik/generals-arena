@@ -687,6 +687,10 @@ fn run_selfcheck() -> ! {
     }
     #[cfg(not(target_arch = "x86_64"))]
     say("hardware_fma", "n/a (not x86_64)".to_string());
+    // Runtime, not build: the fleet mixes v3 and v4 hosts (the M0 CPU
+    // probe), so which GEMM path dispatch picks is a fact about this
+    // machine that no `cfg!` can report.
+    say("runtime_gemm", nn::gemm::kernel_name().to_string());
 
     let dir = artifact_dir();
     say("artifact_dir", dir.display().to_string());
