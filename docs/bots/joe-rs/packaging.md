@@ -339,6 +339,7 @@ loaded and chose badly, and it says nothing at all about the judge's machine.
 | key | why it is in there |
 | --- | --- |
 | `hardware_fma`, `hardware_avx2` | the wrong-cwd build that cost morpheus a 49× pessimisation. `cfg!(target_feature)`, so it reports the **build**, not the host; `n/a` off x86_64, and a failure only on x86_64 |
+| `runtime_gemm` | which GEMM path dispatch picks on **this host** (`avx512` / `avx2` / `portable`) — runtime detection, not `cfg!`, because the fleet mixes v3 and v4 hosts ([avx512 gate](../../research/measurements/joe-rs-avx512-gate.md)). Informational, never a failure |
 | `artifact_dir`, `safetensors_sha256`, `tensor_schema`, `checkpoint`, `checkpoint_step` | provenance a judge-side log can be compared against `data/bot_versions/joe-rs.json` without a rebuild |
 | `startup_ms`, `decide_ms` | the first-move grace and the 150 ms budget, measured on the judge's own hardware at intake |
 | `decision` | a skip here fails the run: on a general with 40 army and four empty neighbours, a skip is what a bot that failed to start looks like |

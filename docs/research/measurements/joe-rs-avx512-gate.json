@@ -1,0 +1,788 @@
+{
+  "batch1": [
+    {
+      "idx": 0,
+      "cpu_model": "unknown",
+      "family": "GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 ",
+      "avx2": true,
+      "avx512f": true,
+      "build_head_s": 16.6,
+      "build_wip_s": 10.4,
+      "selfcheck_rc": 0,
+      "runtime_gemm": "avx512",
+      "test_s": 13.8,
+      "test_rc": 0,
+      "replies_rc_head": 0,
+      "replies_rc_wip": 0,
+      "replies_match": true,
+      "reply_sha": "810e8cbe31b980a3",
+      "bench": {
+        "head": [
+          {
+            "p50": 28.6501,
+            "p99": 30.9816,
+            "forward_p50": 28.3772,
+            "startup_ms": 185.857,
+            "turns": 1062
+          },
+          {
+            "p50": 26.9803,
+            "p99": 34.6338,
+            "forward_p50": 26.7225,
+            "startup_ms": 185.658,
+            "turns": 1062
+          },
+          {
+            "p50": 26.8097,
+            "p99": 31.8678,
+            "forward_p50": 26.5412,
+            "startup_ms": 188.448,
+            "turns": 1062
+          }
+        ],
+        "wip": [
+          {
+            "p50": 27.3906,
+            "p99": 31.5014,
+            "forward_p50": 27.1137,
+            "startup_ms": 188.322,
+            "turns": 1062
+          },
+          {
+            "p50": 25.1742,
+            "p99": 30.3964,
+            "forward_p50": 24.8844,
+            "startup_ms": 190.532,
+            "turns": 1062
+          },
+          {
+            "p50": 25.0802,
+            "p99": 29.4578,
+            "forward_p50": 24.8005,
+            "startup_ms": 189.682,
+            "turns": 1062
+          }
+        ]
+      }
+    },
+    {
+      "idx": 1,
+      "cpu_model": "unknown",
+      "family": "AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 ",
+      "avx2": true,
+      "avx512f": false,
+      "build_head_s": 13.2,
+      "build_wip_s": 8.1,
+      "selfcheck_rc": 0,
+      "runtime_gemm": "avx2",
+      "test_s": 10.4,
+      "test_rc": 0,
+      "replies_rc_head": 0,
+      "replies_rc_wip": 0,
+      "replies_match": true,
+      "reply_sha": "810e8cbe31b980a3",
+      "bench": {
+        "head": [
+          {
+            "p50": 18.6768,
+            "p99": 21.575,
+            "forward_p50": 18.2344,
+            "startup_ms": 132.035,
+            "turns": 1062
+          },
+          {
+            "p50": 18.9797,
+            "p99": 21.3178,
+            "forward_p50": 18.5416,
+            "startup_ms": 136.429,
+            "turns": 1062
+          },
+          {
+            "p50": 18.4996,
+            "p99": 22.9148,
+            "forward_p50": 18.0022,
+            "startup_ms": 140.759,
+            "turns": 1062
+          }
+        ],
+        "wip": [
+          {
+            "p50": 18.408,
+            "p99": 23.089,
+            "forward_p50": 17.9701,
+            "startup_ms": 148.359,
+            "turns": 1062
+          },
+          {
+            "p50": 18.4849,
+            "p99": 20.0409,
+            "forward_p50": 18.0178,
+            "startup_ms": 138.42,
+            "turns": 1062
+          },
+          {
+            "p50": 18.6782,
+            "p99": 23.8181,
+            "forward_p50": 18.1892,
+            "startup_ms": 150.862,
+            "turns": 1062
+          }
+        ]
+      }
+    },
+    {
+      "idx": 2,
+      "cpu_model": "unknown",
+      "family": "AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 ",
+      "avx2": true,
+      "avx512f": false,
+      "build_head_s": 12.3,
+      "build_wip_s": 8.0,
+      "selfcheck_rc": 0,
+      "runtime_gemm": "avx2",
+      "test_s": 10.2,
+      "test_rc": 0,
+      "replies_rc_head": 0,
+      "replies_rc_wip": 0,
+      "replies_match": true,
+      "reply_sha": "810e8cbe31b980a3",
+      "bench": {
+        "head": [
+          {
+            "p50": 19.9796,
+            "p99": 24.9547,
+            "forward_p50": 19.5235,
+            "startup_ms": 130.641,
+            "turns": 1062
+          },
+          {
+            "p50": 19.3282,
+            "p99": 22.9032,
+            "forward_p50": 18.8385,
+            "startup_ms": 138.647,
+            "turns": 1062
+          },
+          {
+            "p50": 19.0549,
+            "p99": 23.0349,
+            "forward_p50": 18.557,
+            "startup_ms": 149.053,
+            "turns": 1062
+          }
+        ],
+        "wip": [
+          {
+            "p50": 19.0531,
+            "p99": 22.4512,
+            "forward_p50": 18.5572,
+            "startup_ms": 150.756,
+            "turns": 1062
+          },
+          {
+            "p50": 19.3591,
+            "p99": 23.1052,
+            "forward_p50": 18.8687,
+            "startup_ms": 143.835,
+            "turns": 1062
+          },
+          {
+            "p50": 20.0924,
+            "p99": 27.2001,
+            "forward_p50": 19.6026,
+            "startup_ms": 142.059,
+            "turns": 1062
+          }
+        ]
+      }
+    },
+    {
+      "idx": 3,
+      "cpu_model": "unknown",
+      "family": "AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 ",
+      "avx2": true,
+      "avx512f": false,
+      "build_head_s": 13.6,
+      "build_wip_s": 8.7,
+      "selfcheck_rc": 0,
+      "runtime_gemm": "avx2",
+      "test_s": 11.7,
+      "test_rc": 0,
+      "replies_rc_head": 0,
+      "replies_rc_wip": 0,
+      "replies_match": true,
+      "reply_sha": "810e8cbe31b980a3",
+      "bench": {
+        "head": [
+          {
+            "p50": 22.5547,
+            "p99": 30.1731,
+            "forward_p50": 21.9566,
+            "startup_ms": 189.875,
+            "turns": 1062
+          },
+          {
+            "p50": 22.6171,
+            "p99": 27.0014,
+            "forward_p50": 21.9784,
+            "startup_ms": 165.025,
+            "turns": 1062
+          },
+          {
+            "p50": 22.6155,
+            "p99": 40.953,
+            "forward_p50": 21.9793,
+            "startup_ms": 163.867,
+            "turns": 1062
+          }
+        ],
+        "wip": [
+          {
+            "p50": 21.8981,
+            "p99": 25.8693,
+            "forward_p50": 21.265,
+            "startup_ms": 163.441,
+            "turns": 1062
+          },
+          {
+            "p50": 21.9641,
+            "p99": 26.0452,
+            "forward_p50": 21.3153,
+            "startup_ms": 157.361,
+            "turns": 1062
+          },
+          {
+            "p50": 21.5682,
+            "p99": 24.7564,
+            "forward_p50": 20.9497,
+            "startup_ms": 156.705,
+            "turns": 1062
+          }
+        ]
+      }
+    }
+  ],
+  "batch2": [
+    {
+      "idx": 0,
+      "cpu_model": "unknown",
+      "family": "GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 GenuineIntel 6 143 ",
+      "avx2": true,
+      "avx512f": true,
+      "build_head_s": 12.3,
+      "build_wip_s": 7.7,
+      "selfcheck_rc": 0,
+      "runtime_gemm": "avx512",
+      "test_s": 10.3,
+      "test_rc": 0,
+      "replies_rc_head": 0,
+      "replies_rc_wip": 0,
+      "replies_match": true,
+      "reply_sha": "810e8cbe31b980a3",
+      "bench": {
+        "head": [
+          {
+            "p50": 21.4661,
+            "p99": 23.5808,
+            "forward_p50": 21.1601,
+            "startup_ms": 115.121,
+            "turns": 1062
+          },
+          {
+            "p50": 23.9517,
+            "p99": 27.2165,
+            "forward_p50": 23.5848,
+            "startup_ms": 115.527,
+            "turns": 1062
+          },
+          {
+            "p50": 21.1755,
+            "p99": 25.7492,
+            "forward_p50": 20.8013,
+            "startup_ms": 119.891,
+            "turns": 1062
+          }
+        ],
+        "wip": [
+          {
+            "p50": 17.6702,
+            "p99": 20.5241,
+            "forward_p50": 17.3581,
+            "startup_ms": 109.824,
+            "turns": 1062
+          },
+          {
+            "p50": 19.3365,
+            "p99": 22.7018,
+            "forward_p50": 18.9747,
+            "startup_ms": 116.179,
+            "turns": 1062
+          },
+          {
+            "p50": 17.7989,
+            "p99": 20.3753,
+            "forward_p50": 17.421,
+            "startup_ms": 114.655,
+            "turns": 1062
+          }
+        ]
+      }
+    },
+    {
+      "idx": 1,
+      "cpu_model": "unknown",
+      "family": "AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 ",
+      "avx2": true,
+      "avx512f": false,
+      "build_head_s": 12.0,
+      "build_wip_s": 8.1,
+      "selfcheck_rc": 0,
+      "runtime_gemm": "avx2",
+      "test_s": 10.8,
+      "test_rc": 0,
+      "replies_rc_head": 0,
+      "replies_rc_wip": 0,
+      "replies_match": true,
+      "reply_sha": "810e8cbe31b980a3",
+      "bench": {
+        "head": [
+          {
+            "p50": 22.7123,
+            "p99": 27.8907,
+            "forward_p50": 22.2203,
+            "startup_ms": 140.969,
+            "turns": 1062
+          },
+          {
+            "p50": 24.5283,
+            "p99": 41.4372,
+            "forward_p50": 24.0117,
+            "startup_ms": 160.329,
+            "turns": 1062
+          },
+          {
+            "p50": 22.5277,
+            "p99": 25.7875,
+            "forward_p50": 22.0783,
+            "startup_ms": 146.523,
+            "turns": 1062
+          }
+        ],
+        "wip": [
+          {
+            "p50": 23.8773,
+            "p99": 29.1831,
+            "forward_p50": 23.3901,
+            "startup_ms": 154.794,
+            "turns": 1062
+          },
+          {
+            "p50": 22.5176,
+            "p99": 35.6745,
+            "forward_p50": 22.0492,
+            "startup_ms": 163.337,
+            "turns": 1062
+          },
+          {
+            "p50": 22.3096,
+            "p99": 25.7028,
+            "forward_p50": 21.8727,
+            "startup_ms": 144.901,
+            "turns": 1062
+          }
+        ]
+      }
+    },
+    {
+      "idx": 2,
+      "cpu_model": "unknown",
+      "family": "GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 ",
+      "avx2": true,
+      "avx512f": true,
+      "build_head_s": 15.0,
+      "build_wip_s": 9.7,
+      "selfcheck_rc": 0,
+      "runtime_gemm": "avx512",
+      "test_s": 12.4,
+      "test_rc": 0,
+      "replies_rc_head": 0,
+      "replies_rc_wip": 0,
+      "replies_match": true,
+      "reply_sha": "810e8cbe31b980a3",
+      "bench": {
+        "head": [
+          {
+            "p50": 26.7918,
+            "p99": 29.6833,
+            "forward_p50": 26.4725,
+            "startup_ms": 138.466,
+            "turns": 1062
+          },
+          {
+            "p50": 26.743,
+            "p99": 27.9888,
+            "forward_p50": 26.4166,
+            "startup_ms": 141.722,
+            "turns": 1062
+          },
+          {
+            "p50": 26.7742,
+            "p99": 29.3931,
+            "forward_p50": 26.4496,
+            "startup_ms": 140.915,
+            "turns": 1062
+          }
+        ],
+        "wip": [
+          {
+            "p50": 25.3184,
+            "p99": 28.4171,
+            "forward_p50": 24.965,
+            "startup_ms": 137.103,
+            "turns": 1062
+          },
+          {
+            "p50": 25.2657,
+            "p99": 27.7402,
+            "forward_p50": 24.9288,
+            "startup_ms": 137.771,
+            "turns": 1062
+          },
+          {
+            "p50": 25.3827,
+            "p99": 29.6211,
+            "forward_p50": 25.0352,
+            "startup_ms": 136.946,
+            "turns": 1062
+          }
+        ]
+      }
+    },
+    {
+      "idx": 3,
+      "cpu_model": "unknown",
+      "family": "GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 ",
+      "avx2": true,
+      "avx512f": true,
+      "build_head_s": 15.1,
+      "build_wip_s": 10.2,
+      "selfcheck_rc": 0,
+      "runtime_gemm": "avx512",
+      "test_s": 13.4,
+      "test_rc": 0,
+      "replies_rc_head": 0,
+      "replies_rc_wip": 0,
+      "replies_match": true,
+      "reply_sha": "810e8cbe31b980a3",
+      "bench": {
+        "head": [
+          {
+            "p50": 26.3362,
+            "p99": 27.2848,
+            "forward_p50": 26.1171,
+            "startup_ms": 181.288,
+            "turns": 1062
+          },
+          {
+            "p50": 27.1034,
+            "p99": 32.8977,
+            "forward_p50": 26.8416,
+            "startup_ms": 179.218,
+            "turns": 1062
+          },
+          {
+            "p50": 26.7339,
+            "p99": 32.4643,
+            "forward_p50": 26.4979,
+            "startup_ms": 187.607,
+            "turns": 1062
+          }
+        ],
+        "wip": [
+          {
+            "p50": 25.0884,
+            "p99": 31.509,
+            "forward_p50": 24.825,
+            "startup_ms": 178.066,
+            "turns": 1062
+          },
+          {
+            "p50": 26.3652,
+            "p99": 54.5741,
+            "forward_p50": 26.0496,
+            "startup_ms": 193.827,
+            "turns": 1062
+          },
+          {
+            "p50": 28.5517,
+            "p99": 38.2439,
+            "forward_p50": 28.1992,
+            "startup_ms": 187.404,
+            "turns": 1062
+          }
+        ]
+      }
+    }
+  ],
+  "unclejoe_batch": [
+    {
+      "idx": 0,
+      "cpu_model": "unknown",
+      "family": "AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 ",
+      "avx2": true,
+      "avx512f": false,
+      "build_head_s": 11.6,
+      "build_wip_s": 7.1,
+      "selfcheck_rc": 0,
+      "runtime_gemm": "avx2",
+      "test_s": 9.3,
+      "test_rc": 0,
+      "replies_rc_head": 0,
+      "replies_rc_wip": 0,
+      "replies_match": true,
+      "reply_sha": "e5d7c043013df3e6",
+      "bench": {
+        "head": [
+          {
+            "p50": 38.2363,
+            "p99": 54.1356,
+            "forward_p50": 37.8122,
+            "startup_ms": 249.251,
+            "turns": 1062
+          },
+          {
+            "p50": 37.8162,
+            "p99": 41.0771,
+            "forward_p50": 37.4554,
+            "startup_ms": 222.19,
+            "turns": 1062
+          },
+          {
+            "p50": 38.1196,
+            "p99": 51.1394,
+            "forward_p50": 37.7265,
+            "startup_ms": 229.041,
+            "turns": 1062
+          }
+        ],
+        "wip": [
+          {
+            "p50": 37.8683,
+            "p99": 41.3455,
+            "forward_p50": 37.5063,
+            "startup_ms": 217.733,
+            "turns": 1062
+          },
+          {
+            "p50": 37.9963,
+            "p99": 43.2271,
+            "forward_p50": 37.6104,
+            "startup_ms": 225.556,
+            "turns": 1062
+          },
+          {
+            "p50": 38.1685,
+            "p99": 44.8727,
+            "forward_p50": 37.7982,
+            "startup_ms": 220.478,
+            "turns": 1062
+          }
+        ]
+      }
+    },
+    {
+      "idx": 1,
+      "cpu_model": "unknown",
+      "family": "AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 AuthenticAMD 175 17 ",
+      "avx2": true,
+      "avx512f": true,
+      "build_head_s": 10.3,
+      "build_wip_s": 6.2,
+      "selfcheck_rc": 0,
+      "runtime_gemm": "avx512",
+      "test_s": 8.1,
+      "test_rc": 0,
+      "replies_rc_head": 0,
+      "replies_rc_wip": 0,
+      "replies_match": true,
+      "reply_sha": "e5d7c043013df3e6",
+      "bench": {
+        "head": [
+          {
+            "p50": 38.3223,
+            "p99": 47.104,
+            "forward_p50": 37.9354,
+            "startup_ms": 195.494,
+            "turns": 1062
+          },
+          {
+            "p50": 38.7972,
+            "p99": 41.5742,
+            "forward_p50": 38.3184,
+            "startup_ms": 194.191,
+            "turns": 1062
+          },
+          {
+            "p50": 38.7473,
+            "p99": 42.4701,
+            "forward_p50": 38.2899,
+            "startup_ms": 190.245,
+            "turns": 1062
+          }
+        ],
+        "wip": [
+          {
+            "p50": 33.0938,
+            "p99": 37.8504,
+            "forward_p50": 32.7629,
+            "startup_ms": 190.381,
+            "turns": 1062
+          },
+          {
+            "p50": 34.5627,
+            "p99": 39.3569,
+            "forward_p50": 34.1956,
+            "startup_ms": 193.325,
+            "turns": 1062
+          },
+          {
+            "p50": 34.8449,
+            "p99": 39.9023,
+            "forward_p50": 34.4175,
+            "startup_ms": 192.88,
+            "turns": 1062
+          }
+        ]
+      }
+    },
+    {
+      "idx": 2,
+      "cpu_model": "unknown",
+      "family": "AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 AuthenticAMD 175 1 ",
+      "avx2": true,
+      "avx512f": false,
+      "build_head_s": 14.1,
+      "build_wip_s": 8.0,
+      "selfcheck_rc": 0,
+      "runtime_gemm": "avx2",
+      "test_s": 10.4,
+      "test_rc": 0,
+      "replies_rc_head": 0,
+      "replies_rc_wip": 0,
+      "replies_match": true,
+      "reply_sha": "e5d7c043013df3e6",
+      "bench": {
+        "head": [
+          {
+            "p50": 42.1771,
+            "p99": 63.7699,
+            "forward_p50": 41.7464,
+            "startup_ms": 272.824,
+            "turns": 1062
+          },
+          {
+            "p50": 42.0249,
+            "p99": 44.7953,
+            "forward_p50": 41.5984,
+            "startup_ms": 277.793,
+            "turns": 1062
+          },
+          {
+            "p50": 41.9482,
+            "p99": 44.9899,
+            "forward_p50": 41.5029,
+            "startup_ms": 277.725,
+            "turns": 1062
+          }
+        ],
+        "wip": [
+          {
+            "p50": 42.0893,
+            "p99": 46.0299,
+            "forward_p50": 41.6514,
+            "startup_ms": 289.491,
+            "turns": 1062
+          },
+          {
+            "p50": 41.8701,
+            "p99": 44.6385,
+            "forward_p50": 41.4262,
+            "startup_ms": 288.912,
+            "turns": 1062
+          },
+          {
+            "p50": 41.8146,
+            "p99": 43.9461,
+            "forward_p50": 41.3946,
+            "startup_ms": 283.805,
+            "turns": 1062
+          }
+        ]
+      }
+    },
+    {
+      "idx": 3,
+      "cpu_model": "unknown",
+      "family": "GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 GenuineIntel 6 85 ",
+      "avx2": true,
+      "avx512f": true,
+      "build_head_s": 15.9,
+      "build_wip_s": 10.8,
+      "selfcheck_rc": 0,
+      "runtime_gemm": "avx512",
+      "test_s": 13.8,
+      "test_rc": 0,
+      "replies_rc_head": 0,
+      "replies_rc_wip": 0,
+      "replies_match": true,
+      "reply_sha": "e5d7c043013df3e6",
+      "bench": {
+        "head": [
+          {
+            "p50": 60.2531,
+            "p99": 70.1599,
+            "forward_p50": 60.0657,
+            "startup_ms": 397.589,
+            "turns": 1062
+          },
+          {
+            "p50": 59.2979,
+            "p99": 66.9708,
+            "forward_p50": 59.1116,
+            "startup_ms": 378.776,
+            "turns": 1062
+          },
+          {
+            "p50": 59.3544,
+            "p99": 67.5934,
+            "forward_p50": 59.1718,
+            "startup_ms": 382.05,
+            "turns": 1062
+          }
+        ],
+        "wip": [
+          {
+            "p50": 60.9708,
+            "p99": 69.4856,
+            "forward_p50": 60.7537,
+            "startup_ms": 380.556,
+            "turns": 1062
+          },
+          {
+            "p50": 55.6664,
+            "p99": 65.507,
+            "forward_p50": 55.4627,
+            "startup_ms": 373.169,
+            "turns": 1062
+          },
+          {
+            "p50": 61.0149,
+            "p99": 64.9341,
+            "forward_p50": 60.7907,
+            "startup_ms": 381.937,
+            "turns": 1062
+          }
+        ]
+      }
+    }
+  ]
+}

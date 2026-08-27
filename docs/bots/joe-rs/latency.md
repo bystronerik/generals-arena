@@ -97,6 +97,14 @@ across two host generations — p50 29.5 → 17.0 ms on the final tree, arm64
 Compounded, the day is ~2.3–2.5×: the 46.49 ms morning baseline lands at
 17–20 ms, or 7–8 forwards per 150 ms move.
 
+On 2026-08-27 an AVX-512F tile joined the dispatch, preferred over the
+AVX2 path when the host has `avx512f` (the fleet's v4 majority; the
+compile target stays v3 and v3 hosts keep the AVX2 path unchanged).
+Same-host interleaved: **1.21×** on Sapphire Rapids (21.5 → 17.8 ms p50),
+1.05× on license-downclocking Skylake-SP, replies byte-identical on every
+host class:
+[joe-rs-avx512-gate](../../research/measurements/joe-rs-avx512-gate.md).
+
 **Fleet variance caveat, now measured:** identical pristine code hit 29.1,
 46.5, and 77.1 ms p50 across three Modal runs on one day. A cross-run
 delta measures the fleet, not the code — only same-host in-run contrasts
