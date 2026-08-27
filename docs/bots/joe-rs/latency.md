@@ -117,6 +117,49 @@ The container built the crate from source in 12.4 s at depth 5 (12.6 s at
 M7F4) — the same build a sandbox intake would run, against 71–131 s for
 the old 93-crate graph.
 
+## Results (2026-08-27, the exp_poly x86 fix)
+
+Ported from unclejoe, where the 25-step split found it
+([unclejoe-forward-ab](../../research/measurements/unclejoe-forward-ab.md)).
+The two crates' `exp_poly`, `silu_in_place` and `softmax_in_place` were
+byte-identical, and the graph shape is the same — 52 tokens, 384 embed, 8
+heads, ff 1536 — so only `DEPTH` (7 here, 16 there) differs and the patch
+transplanted unchanged.
+
+Rust's `f32 as i32` saturates and no x86 instruction does, so LLVM
+scalarized the cast and refused to vectorize any loop holding one; aarch64's
+`fcvtzs` saturates in hardware and hid it. `softmax` additionally
+accumulated its sum inside the exp loop, which stopped that loop
+vectorizing on every target.
+
+Same-host interleaved A/B, base first and last, three single-CPU Modal
+containers. Raw record:
+[joe-rs-forward-ab-modal.json](../../research/measurements/joe-rs-forward-ab-modal.json).
+
+| host | dispatch | base forward | patched | gain | base noise floor |
+| --- | --- | ---: | ---: | ---: | ---: |
+| AMD 175/1 | avx2 | 16.59 ms | 15.64 ms | **+5.75 %** | 2.22 % |
+| AMD 175/1 | avx2 | 17.56 ms | 16.66 ms | **+5.11 %** | 2.10 % |
+| AMD 175/17 | avx512 | 14.68 ms | 14.32 ms | +2.48 % | 9.82 % |
+
+The AVX-512 row is inside its own noise floor and is not evidence either
+way. The two AVX2 rows clear theirs by 2.4x, and they match what the
+exp-only arm measured on unclejoe (+5.8 / +6.0 / +8.1 %).
+
+**Nothing the network computes changed.** Base and patched print the same
+tier-2 line over the 728-frame corpus, to the character — max relative logit
+error 1.607e-05, the value already recorded beside `LOGIT_REL_ACHIEVED` —
+with tier-3 at 728/728 greedy actions equal. Replies over the recorded wire
+stream are byte-identical on all three containers, AVX-512 included, and
+against the committed Gumbel self-golden.
+
+Gates: 51 crate tests, full-corpus parity 11/11, mutation check 18/18.
+
+**Not applied here:** the `#[inline(never)]` fix on `gemm_bias_portable`,
+which is worth 1.64x on the arm64 development box and nothing on x86. This
+crate has the same defect — the numbers below, and every arm64 figure on
+this page, are inflated by roughly that factor.
+
 ## Where the move goes (2026-08-16)
 
 `joe-rs bench --stages` replays the same log and splits the move. The forward

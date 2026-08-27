@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -42,13 +43,19 @@ import modal
 
 REPO = Path(__file__).resolve().parents[1]
 MEASUREMENTS = REPO / "docs" / "research" / "measurements"
-BOT = REPO / "bots" / "unclejoe"
+# `AB_BOT=joe-rs` points the whole harness at the sibling crate: it is the
+# same graph at DEPTH 7, the same kernel, and the same wire protocol, so the
+# only things that change are the paths and the binary's name. Set it at
+# stage time and at run time both — the image is built at import.
+BOT_NAME = os.environ.get("AB_BOT", "unclejoe")
+BOT = REPO / "bots" / BOT_NAME
 IN_LOG = REPO / "data" / "joe" / "joe-rs-parity" / "games" / "synthetic-long.in.log"
-ARMS = REPO / "data" / "unclejoe_ab_arms"          # gitignored staging area
+ARMS = REPO / "data" / f"{BOT_NAME}_ab_arms"       # gitignored staging area
 
 CRATE_FILES = ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml"]
 REMOTE_ARMS = "/root/arms"
 ARTIFACT = "/root/artifact"
+BINARY = BOT_NAME
 
 
 def stage(src: Path, name: str) -> None:
@@ -67,6 +74,14 @@ def stage(src: Path, name: str) -> None:
                  dst / "tests" / "fixtures" / "rans_vectors.rs")
     for f in CRATE_FILES:
         shutil.copy2(src / f, dst / f)
+    # A staged arm whose crate name does not match the bot under test is the
+    # `stage_base` bug of 2026-08-27 all over again: the base arm came from
+    # the wrong bot and the A/B silently compared two different networks.
+    name = next(
+        (ln.split('"')[1] for ln in (dst / "Cargo.toml").read_text().splitlines()
+         if ln.startswith("name")), "")
+    if name != BOT_NAME:
+        sys.exit(f"arm {dst.name!r} is crate {name!r}, expected {BOT_NAME!r}")
     shutil.copy2(src / ".cargo" / "config.toml", dst / ".cargo" / "config.toml")
     print(f"staged {src} as arm {name!r} -> {dst}")
 
@@ -78,7 +93,7 @@ def stage_base() -> None:
         shutil.rmtree(dst)
     dst.mkdir(parents=True)
     out = subprocess.run(
-        ["git", "archive", "--format=tar", "HEAD:bots/unclejoe"],
+        ["git", "archive", "--format=tar", f"HEAD:bots/{BOT_NAME}"],
         cwd=REPO, check=True, capture_output=True).stdout
     subprocess.run(["tar", "-x", "-C", str(dst)], input=out, check=True)
     for junk in ("artifact", "tools", "run.sh"):
@@ -122,7 +137,12 @@ IMAGE = (
         "--component rustfmt --component clippy "
         "--target x86_64-unknown-linux-musl"
     )
-    .env({"PATH": "/root/.cargo/bin:/usr/local/bin:/usr/bin:/bin"})
+    # `AB_BOT` has to be baked into the image, not merely exported locally:
+    # the container re-imports this module, and an env var set on the client
+    # does not cross that boundary — it silently fell back to the default and
+    # looked for the wrong binary.
+    .env({"PATH": "/root/.cargo/bin:/usr/local/bin:/usr/bin:/bin",
+          "AB_BOT": BOT_NAME})
     .add_local_dir(str(ARMS), REMOTE_ARMS, copy=True)
     .add_local_file(str(BOT / "artifact" / "manifest.json"),
                     f"{ARTIFACT}/manifest.json", copy=True)
@@ -135,11 +155,11 @@ IMAGE = (
         f"for a in {REMOTE_ARMS}/*/; do echo \"building $a\"; "
         f"(cd \"$a\" && cargo build --release) || exit 1; done",
         f"cd {REMOTE_ARMS}/base && JOE_RS_ARTIFACT={ARTIFACT} "
-        f"./target/release/unclejoe unpack-artifact",
+        f"./target/release/{BINARY} unpack-artifact",
     )
 )
 
-app = modal.App("unclejoe-forward-ab")
+app = modal.App(f"{BOT_NAME}-forward-ab")
 
 
 @app.function(
@@ -191,8 +211,38 @@ def ab(spec: dict) -> dict:
     def run(arm: str, args: list[str]):
         with open("/root/synthetic-long.in.log", "rb") as f:
             return subprocess.run(
-                [f"{REMOTE_ARMS}/{arm}/target/release/unclejoe", *args],
+                [f"{REMOTE_ARMS}/{arm}/target/release/{BINARY}", *args],
                 stdin=f, capture_output=True, text=True, env=env)
+
+    # unclejoe splits the forward pass 25 ways; joe-rs only has the
+    # eight-cell move split. Either gives a `forward` cell, which is the
+    # only one an exp or GEMM change can move, so take whichever exists.
+    #
+    # Probe by OUTPUT SHAPE, not by exit code: joe-rs parses its bench flag
+    # as `== "--stages"`, so `--forward-stages` is not an error there — it
+    # silently runs the plain bench and prints one line, which parsed as an
+    # empty list of JSON blobs and took the run down.
+    def cells_of(proc) -> dict | None:
+        if proc.returncode != 0:
+            return None
+        rows = [ln for ln in proc.stdout.strip().splitlines() if ln.strip()]
+        for ln in reversed(rows[1:]):
+            try:
+                blob = json.loads(ln)
+            except json.JSONDecodeError:
+                continue
+            cells = blob.get("steps") or blob.get("stages")
+            if cells and "forward" in cells:
+                return blob
+        return None
+
+    bench_args = ["bench", "--forward-stages"]
+    if cells_of(run("base", bench_args)) is None:
+        bench_args = ["bench", "--stages"]
+        if cells_of(run("base", bench_args)) is None:
+            out["error"] = "neither bench --forward-stages nor --stages gave a forward cell"
+            return out
+    out["bench_args"] = bench_args
 
     # Correctness first: an arm that changes a reply is a failure whatever it
     # did to the clock, and there is no point timing it.
@@ -208,7 +258,7 @@ def ab(spec: dict) -> dict:
             "identical_to_base": played.stdout == base_replies,
         }
         check = subprocess.run(
-            [f"{REMOTE_ARMS}/{arm}/target/release/unclejoe", "selfcheck"],
+            [f"{REMOTE_ARMS}/{arm}/target/release/{BINARY}", "selfcheck"],
             capture_output=True, text=True, env=env)
         out["replies"][arm]["selfcheck_rc"] = check.returncode
         out["replies"][arm]["runtime_gemm"] = next(
@@ -222,23 +272,27 @@ def ab(spec: dict) -> dict:
     samples: dict[str, list[dict]] = {a: [] for a in arms}
     for arm in order:
         t0 = time.time()
-        r = run(arm, ["bench", "--forward-stages"])
+        r = run(arm, bench_args)
         if r.returncode != 0:
             out["error"] = f"{arm}: {r.stderr[-2000:]}"
             return out
         lines = [ln for ln in r.stdout.strip().splitlines() if ln.strip()]
         head = lines[0].split()
-        blobs = [json.loads(ln) for ln in lines[1:]]
-        steps = next(b for b in blobs if "steps" in b)
+        steps = cells_of(r)
+        if steps is None:
+            out["error"] = f"{arm}: no forward cell in bench output"
+            return out
+        cells = steps.get("steps") or steps["stages"]
         samples[arm].append({
             "wall_s": round(time.time() - t0, 1),
             "turns": int(head[1]),
             "p50": float(head[head.index("p50") + 1]),
             "p90": float(head[head.index("p90") + 1]),
             "p99": float(head[head.index("p99") + 1]),
-            "forward_mean": steps["steps"]["forward"]["mean"],
-            "uninstrumented_forward_mean": steps["uninstrumented_forward_mean_ms"],
-            "step_means": {k: v["mean"] for k, v in steps["steps"].items()},
+            "forward_mean": cells["forward"]["mean"],
+            "uninstrumented_forward_mean": steps.get(
+                "uninstrumented_forward_mean_ms", cells["forward"]["mean"]),
+            "step_means": {k: v["mean"] for k, v in cells.items()},
         })
     out["samples"] = samples
     return out
@@ -276,7 +330,7 @@ def main(containers: int = 2, rounds: int = 2) -> None:
                   f"ratio {base_mean / mean:.4f}x  ({100 * (base_mean - mean) / base_mean:+.2f}%)")
 
     MEASUREMENTS.mkdir(parents=True, exist_ok=True)
-    path = MEASUREMENTS / "unclejoe-forward-ab-modal.json"
+    path = MEASUREMENTS / f"{BOT_NAME}-forward-ab-modal.json"
     path.write_text(json.dumps({"results": results}, indent=2) + "\n")
     print(f"\nwrote {path}")
 

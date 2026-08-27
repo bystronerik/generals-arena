@@ -1,0 +1,568 @@
+{
+  "results": [
+    {
+      "replica": 0,
+      "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+      "arms": [
+        "base",
+        "exp-vectorize"
+      ],
+      "rounds": 3,
+      "cpu_ident": "vendor_id=AuthenticAMD cpu family=175 model=17 stepping=unknown",
+      "cpu_mhz": "3690.088",
+      "avx512f": true,
+      "avx2": true,
+      "bench_args": [
+        "bench",
+        "--stages"
+      ],
+      "replies": {
+        "base": {
+          "rc": 0,
+          "bytes": 11702,
+          "identical_to_base": true,
+          "selfcheck_rc": 0,
+          "runtime_gemm": "avx512"
+        },
+        "exp-vectorize": {
+          "rc": 0,
+          "bytes": 11702,
+          "identical_to_base": true,
+          "selfcheck_rc": 0,
+          "runtime_gemm": "avx512"
+        }
+      },
+      "schedule": [
+        "base",
+        "exp-vectorize",
+        "base",
+        "exp-vectorize",
+        "base",
+        "exp-vectorize",
+        "base"
+      ],
+      "samples": {
+        "base": [
+          {
+            "wall_s": 15.7,
+            "turns": 1062,
+            "p50": 14.5,
+            "p90": 15.76,
+            "p99": 18.73,
+            "forward_mean": 14.4064,
+            "uninstrumented_forward_mean": 14.4064,
+            "step_means": {
+              "parse": 0.0059,
+              "raw": 0.0043,
+              "mask": 0.0043,
+              "augment": 0.023,
+              "normalize": 0.0026,
+              "forward": 14.4064,
+              "decode": 0.0392,
+              "stderr": 0.2388,
+              "total": 14.7247
+            }
+          },
+          {
+            "wall_s": 15.4,
+            "turns": 1062,
+            "p50": 14.27,
+            "p90": 14.69,
+            "p99": 17.32,
+            "forward_mean": 14.0744,
+            "uninstrumented_forward_mean": 14.0744,
+            "step_means": {
+              "parse": 0.0056,
+              "raw": 0.004,
+              "mask": 0.004,
+              "augment": 0.0213,
+              "normalize": 0.0024,
+              "forward": 14.0744,
+              "decode": 0.0391,
+              "stderr": 0.2285,
+              "total": 14.3794
+            }
+          },
+          {
+            "wall_s": 16.2,
+            "turns": 1062,
+            "p50": 14.77,
+            "p90": 16.11,
+            "p99": 20.45,
+            "forward_mean": 14.7257,
+            "uninstrumented_forward_mean": 14.7257,
+            "step_means": {
+              "parse": 0.0061,
+              "raw": 0.0045,
+              "mask": 0.0044,
+              "augment": 0.0249,
+              "normalize": 0.0024,
+              "forward": 14.7257,
+              "decode": 0.0394,
+              "stderr": 0.2524,
+              "total": 15.0599
+            }
+          },
+          {
+            "wall_s": 17.1,
+            "turns": 1062,
+            "p50": 15.12,
+            "p90": 18.67,
+            "p99": 23.64,
+            "forward_mean": 15.5158,
+            "uninstrumented_forward_mean": 15.5158,
+            "step_means": {
+              "parse": 0.0074,
+              "raw": 0.0057,
+              "mask": 0.0053,
+              "augment": 0.0367,
+              "normalize": 0.0028,
+              "forward": 15.5158,
+              "decode": 0.0397,
+              "stderr": 0.311,
+              "total": 15.9246
+            }
+          }
+        ],
+        "exp-vectorize": [
+          {
+            "wall_s": 14.6,
+            "turns": 1062,
+            "p50": 13.52,
+            "p90": 13.95,
+            "p99": 17.09,
+            "forward_mean": 13.3024,
+            "uninstrumented_forward_mean": 13.3024,
+            "step_means": {
+              "parse": 0.0055,
+              "raw": 0.0038,
+              "mask": 0.0037,
+              "augment": 0.0207,
+              "normalize": 0.0024,
+              "forward": 13.3024,
+              "decode": 0.0389,
+              "stderr": 0.2283,
+              "total": 13.6058
+            }
+          },
+          {
+            "wall_s": 15.0,
+            "turns": 1062,
+            "p50": 13.89,
+            "p90": 14.32,
+            "p99": 17.34,
+            "forward_mean": 13.652,
+            "uninstrumented_forward_mean": 13.652,
+            "step_means": {
+              "parse": 0.0054,
+              "raw": 0.0039,
+              "mask": 0.0036,
+              "augment": 0.0214,
+              "normalize": 0.0023,
+              "forward": 13.652,
+              "decode": 0.0388,
+              "stderr": 0.2283,
+              "total": 13.956
+            }
+          },
+          {
+            "wall_s": 17.6,
+            "turns": 1062,
+            "p50": 15.17,
+            "p90": 20.53,
+            "p99": 29.08,
+            "forward_mean": 15.9929,
+            "uninstrumented_forward_mean": 15.9929,
+            "step_means": {
+              "parse": 0.0069,
+              "raw": 0.0061,
+              "mask": 0.0047,
+              "augment": 0.0354,
+              "normalize": 0.003,
+              "forward": 15.9929,
+              "decode": 0.0405,
+              "stderr": 0.3163,
+              "total": 16.4059
+            }
+          }
+        ]
+      }
+    },
+    {
+      "replica": 1,
+      "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+      "arms": [
+        "base",
+        "exp-vectorize"
+      ],
+      "rounds": 3,
+      "cpu_ident": "vendor_id=AuthenticAMD cpu family=175 model=1 stepping=unknown",
+      "cpu_mhz": "3049.998",
+      "avx512f": false,
+      "avx2": true,
+      "bench_args": [
+        "bench",
+        "--stages"
+      ],
+      "replies": {
+        "base": {
+          "rc": 0,
+          "bytes": 11702,
+          "identical_to_base": true,
+          "selfcheck_rc": 0,
+          "runtime_gemm": "avx2"
+        },
+        "exp-vectorize": {
+          "rc": 0,
+          "bytes": 11702,
+          "identical_to_base": true,
+          "selfcheck_rc": 0,
+          "runtime_gemm": "avx2"
+        }
+      },
+      "schedule": [
+        "base",
+        "exp-vectorize",
+        "base",
+        "exp-vectorize",
+        "base",
+        "exp-vectorize",
+        "base"
+      ],
+      "samples": {
+        "base": [
+          {
+            "wall_s": 18.3,
+            "turns": 1062,
+            "p50": 16.71,
+            "p90": 18.37,
+            "p99": 21.16,
+            "forward_mean": 16.8383,
+            "uninstrumented_forward_mean": 16.8383,
+            "step_means": {
+              "parse": 0.0066,
+              "raw": 0.0052,
+              "mask": 0.0048,
+              "augment": 0.0272,
+              "normalize": 0.0019,
+              "forward": 16.8383,
+              "decode": 0.0429,
+              "stderr": 0.2157,
+              "total": 17.1429
+            }
+          },
+          {
+            "wall_s": 18.1,
+            "turns": 1062,
+            "p50": 16.47,
+            "p90": 18.32,
+            "p99": 19.37,
+            "forward_mean": 16.5883,
+            "uninstrumented_forward_mean": 16.5883,
+            "step_means": {
+              "parse": 0.0066,
+              "raw": 0.005,
+              "mask": 0.0046,
+              "augment": 0.0247,
+              "normalize": 0.0017,
+              "forward": 16.5883,
+              "decode": 0.0415,
+              "stderr": 0.1991,
+              "total": 16.8716
+            }
+          },
+          {
+            "wall_s": 17.9,
+            "turns": 1062,
+            "p50": 16.6,
+            "p90": 17.16,
+            "p99": 19.98,
+            "forward_mean": 16.477,
+            "uninstrumented_forward_mean": 16.477,
+            "step_means": {
+              "parse": 0.0069,
+              "raw": 0.0049,
+              "mask": 0.0048,
+              "augment": 0.0245,
+              "normalize": 0.0019,
+              "forward": 16.477,
+              "decode": 0.0417,
+              "stderr": 0.2041,
+              "total": 16.766
+            }
+          },
+          {
+            "wall_s": 17.9,
+            "turns": 1062,
+            "p50": 16.51,
+            "p90": 17.09,
+            "p99": 20.28,
+            "forward_mean": 16.47,
+            "uninstrumented_forward_mean": 16.47,
+            "step_means": {
+              "parse": 0.0065,
+              "raw": 0.0049,
+              "mask": 0.0048,
+              "augment": 0.0256,
+              "normalize": 0.0017,
+              "forward": 16.47,
+              "decode": 0.0416,
+              "stderr": 0.1911,
+              "total": 16.7463
+            }
+          }
+        ],
+        "exp-vectorize": [
+          {
+            "wall_s": 17.0,
+            "turns": 1062,
+            "p50": 15.77,
+            "p90": 16.15,
+            "p99": 16.77,
+            "forward_mean": 15.5815,
+            "uninstrumented_forward_mean": 15.5815,
+            "step_means": {
+              "parse": 0.0068,
+              "raw": 0.0046,
+              "mask": 0.0045,
+              "augment": 0.0224,
+              "normalize": 0.0023,
+              "forward": 15.5815,
+              "decode": 0.0416,
+              "stderr": 0.1791,
+              "total": 15.8429
+            }
+          },
+          {
+            "wall_s": 17.2,
+            "turns": 1062,
+            "p50": 15.95,
+            "p90": 16.94,
+            "p99": 19.06,
+            "forward_mean": 15.8406,
+            "uninstrumented_forward_mean": 15.8406,
+            "step_means": {
+              "parse": 0.0065,
+              "raw": 0.0047,
+              "mask": 0.0047,
+              "augment": 0.0228,
+              "normalize": 0.0023,
+              "forward": 15.8406,
+              "decode": 0.0415,
+              "stderr": 0.1829,
+              "total": 16.1061
+            }
+          },
+          {
+            "wall_s": 16.9,
+            "turns": 1062,
+            "p50": 15.68,
+            "p90": 15.95,
+            "p99": 17.53,
+            "forward_mean": 15.4942,
+            "uninstrumented_forward_mean": 15.4942,
+            "step_means": {
+              "parse": 0.0069,
+              "raw": 0.0046,
+              "mask": 0.0047,
+              "augment": 0.023,
+              "normalize": 0.0022,
+              "forward": 15.4942,
+              "decode": 0.042,
+              "stderr": 0.1899,
+              "total": 15.7675
+            }
+          }
+        ]
+      }
+    },
+    {
+      "replica": 2,
+      "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+      "arms": [
+        "base",
+        "exp-vectorize"
+      ],
+      "rounds": 3,
+      "cpu_ident": "vendor_id=AuthenticAMD cpu family=175 model=1 stepping=unknown",
+      "cpu_mhz": "3102.225",
+      "avx512f": false,
+      "avx2": true,
+      "bench_args": [
+        "bench",
+        "--stages"
+      ],
+      "replies": {
+        "base": {
+          "rc": 0,
+          "bytes": 11702,
+          "identical_to_base": true,
+          "selfcheck_rc": 0,
+          "runtime_gemm": "avx2"
+        },
+        "exp-vectorize": {
+          "rc": 0,
+          "bytes": 11702,
+          "identical_to_base": true,
+          "selfcheck_rc": 0,
+          "runtime_gemm": "avx2"
+        }
+      },
+      "schedule": [
+        "base",
+        "exp-vectorize",
+        "base",
+        "exp-vectorize",
+        "base",
+        "exp-vectorize",
+        "base"
+      ],
+      "samples": {
+        "base": [
+          {
+            "wall_s": 19.1,
+            "turns": 1062,
+            "p50": 17.83,
+            "p90": 18.26,
+            "p99": 18.5,
+            "forward_mean": 17.5162,
+            "uninstrumented_forward_mean": 17.5162,
+            "step_means": {
+              "parse": 0.007,
+              "raw": 0.0043,
+              "mask": 0.0043,
+              "augment": 0.0221,
+              "normalize": 0.0012,
+              "forward": 17.5162,
+              "decode": 0.046,
+              "stderr": 0.2707,
+              "total": 17.872
+            }
+          },
+          {
+            "wall_s": 19.4,
+            "turns": 1062,
+            "p50": 17.9,
+            "p90": 18.97,
+            "p99": 20.31,
+            "forward_mean": 17.7625,
+            "uninstrumented_forward_mean": 17.7625,
+            "step_means": {
+              "parse": 0.0071,
+              "raw": 0.0045,
+              "mask": 0.0044,
+              "augment": 0.0222,
+              "normalize": 0.0013,
+              "forward": 17.7625,
+              "decode": 0.0462,
+              "stderr": 0.2748,
+              "total": 18.1232
+            }
+          },
+          {
+            "wall_s": 19.0,
+            "turns": 1062,
+            "p50": 17.62,
+            "p90": 18.21,
+            "p99": 19.19,
+            "forward_mean": 17.3945,
+            "uninstrumented_forward_mean": 17.3945,
+            "step_means": {
+              "parse": 0.0073,
+              "raw": 0.0044,
+              "mask": 0.0043,
+              "augment": 0.0215,
+              "normalize": 0.0013,
+              "forward": 17.3945,
+              "decode": 0.0461,
+              "stderr": 0.271,
+              "total": 17.7505
+            }
+          },
+          {
+            "wall_s": 19.2,
+            "turns": 1062,
+            "p50": 17.89,
+            "p90": 18.36,
+            "p99": 19.01,
+            "forward_mean": 17.5715,
+            "uninstrumented_forward_mean": 17.5715,
+            "step_means": {
+              "parse": 0.0068,
+              "raw": 0.0044,
+              "mask": 0.0045,
+              "augment": 0.0219,
+              "normalize": 0.0013,
+              "forward": 17.5715,
+              "decode": 0.046,
+              "stderr": 0.2846,
+              "total": 17.9411
+            }
+          }
+        ],
+        "exp-vectorize": [
+          {
+            "wall_s": 18.1,
+            "turns": 1062,
+            "p50": 16.82,
+            "p90": 17.18,
+            "p99": 17.44,
+            "forward_mean": 16.521,
+            "uninstrumented_forward_mean": 16.521,
+            "step_means": {
+              "parse": 0.007,
+              "raw": 0.0043,
+              "mask": 0.0043,
+              "augment": 0.0209,
+              "normalize": 0.0011,
+              "forward": 16.521,
+              "decode": 0.0459,
+              "stderr": 0.2654,
+              "total": 16.8701
+            }
+          },
+          {
+            "wall_s": 18.4,
+            "turns": 1062,
+            "p50": 17.02,
+            "p90": 17.5,
+            "p99": 18.64,
+            "forward_mean": 16.7635,
+            "uninstrumented_forward_mean": 16.7635,
+            "step_means": {
+              "parse": 0.0067,
+              "raw": 0.0046,
+              "mask": 0.0044,
+              "augment": 0.0216,
+              "normalize": 0.0011,
+              "forward": 16.7635,
+              "decode": 0.0461,
+              "stderr": 0.2847,
+              "total": 17.1328
+            }
+          },
+          {
+            "wall_s": 18.3,
+            "turns": 1062,
+            "p50": 16.88,
+            "p90": 17.64,
+            "p99": 20.25,
+            "forward_mean": 16.7086,
+            "uninstrumented_forward_mean": 16.7086,
+            "step_means": {
+              "parse": 0.0069,
+              "raw": 0.0045,
+              "mask": 0.0046,
+              "augment": 0.022,
+              "normalize": 0.0011,
+              "forward": 16.7086,
+              "decode": 0.046,
+              "stderr": 0.2735,
+              "total": 17.0673
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

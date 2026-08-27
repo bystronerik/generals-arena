@@ -25,7 +25,7 @@ data/bundles/
 
 # Staged crate copies for the same-host A/B harness
 # (scripts/unclejoe_modal_forward_ab.py). Derived from worktrees and HEAD.
-data/unclejoe_ab_arms/
+data/*_ab_arms/
 
 # Live generals.io session logs (classic rules; not arena Elo)
 data/remote_games/*.json

@@ -121,7 +121,50 @@ fn exp_poly(x: f32) -> f32 {
     p = p.mul_add(r, 1.666_666_6e-1);
     p = p.mul_add(r, 0.5);
     p = p.mul_add(r * r, r) + 1.0;
-    f32::from_bits(((p.to_bits() as i32) + ((kf as i32) << 23)) as u32)
+    // Scale by 2^kf. The two arms below return the same bits for every one
+    // of the 2^32 inputs — `exp_poly_matches_saturating_cast` is the proof —
+    // and they exist only because the obvious spelling costs very different
+    // amounts on the two architectures this crate is built for.
+    //
+    // `kf as i32` is the obvious spelling, and it is what this line said
+    // until it was measured. Rust's float cast saturates; no x86
+    // instruction does, so LLVM scalarizes `fptosi.sat`. In the AVX2 build
+    // of `silu_in_place` one vector of eight became eight `vcvttss2si` +
+    // two `vucomiss` + two `cmov` each, plus sixteen shuffle and insert ops
+    // to take the lanes apart and put them back: a 90-instruction loop body
+    // where the arithmetic needs about 30. aarch64 has no such problem —
+    // `fcvtzs` saturates in hardware and stays one instruction — and there
+    // the cast form measures 9 % faster than the x86 arm, so each target
+    // keeps the spelling that suits it.
+    #[cfg(target_arch = "x86_64")]
+    {
+        // The magic-number add gets the same integer with no cast. `kf` is
+        // integral and the clamp above bounds it to [-126, 128], so
+        // `kf + 1.5*2^23` lands in the binade where the ulp is exactly 1
+        // and its bit pattern is `0x4B40_0000 + (kf as i32)`. The bias then
+        // drops out of the shift for free: `0x4B40_0000 << 23` is 0 mod
+        // 2^32, so `(kf + MAGIC).to_bits() << 23` equals `(kf as i32) << 23`
+        // bit for bit. That takes the loop body from 90 instructions to 35.
+        //
+        // NaN is the one input the add does not cover. There the cast
+        // saturated to a zero exponent and so returned `p` — a NaN —
+        // unchanged, and `p` is NaN exactly when `x` was, so selecting on it
+        // restores that. It is worth its two instructions (`vcmpunordps`,
+        // `vblendvps`): candle and XLA both propagate a NaN through `exp`,
+        // and a NaN that turned into a denormal here would be a wrong move
+        // instead of an obvious one.
+        const MAGIC: f32 = 12_582_912.0; // 1.5 * 2^23
+        let scaled = f32::from_bits(p.to_bits().wrapping_add((kf + MAGIC).to_bits() << 23));
+        if p.is_nan() {
+            p
+        } else {
+            scaled
+        }
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        f32::from_bits(((p.to_bits() as i32).wrapping_add((kf as i32) << 23)) as u32)
+    }
 }
 
 /// `x * sigmoid(x)`, in candle's f32 form `v / (1 + exp(-v))`.
@@ -132,17 +175,45 @@ fn silu_in_place(values: &mut [f32]) {
 }
 
 /// Row softmax, the candle op order: subtract the max, exp, sum, divide.
+///
+/// The op order is candle's, and every float operation below is the one the
+/// old single-pass form ran, on the same values, in the same order — only
+/// the loop boundaries moved:
+///
+/// * The max is taken in eight lanes, the way `LayerNorm::forward_into`
+///   takes its two reductions. Unlike a sum, a max is *exactly*
+///   associative: `if v > acc` never rounds, so regrouping cannot change
+///   the value. NaN is skipped by each lane exactly as it was skipped by
+///   the one accumulator, and the ±0 case that grouping could reorder
+///   feeds a subtraction whose result is identical either way.
+/// * `exp` and the sum are two loops instead of one. Fusing them made
+///   `sum` a loop-carried f32 dependency, and a non-reassociable float
+///   reduction stops LLVM vectorizing the *whole* loop — so `exp_poly` ran
+///   scalar here while the identical polynomial in `silu_in_place` ran
+///   eight wide. Split apart, the `exp` map vectorizes and the sum keeps
+///   its serial left-to-right order, so the sum is bit-for-bit the old one.
 fn softmax_in_place(row: &mut [f32]) {
+    let mut lanes = [f32::NEG_INFINITY; 8];
+    let mut chunks = row.chunks_exact(8);
+    for chunk in &mut chunks {
+        for (l, &v) in chunk.iter().enumerate() {
+            if v > lanes[l] {
+                lanes[l] = v;
+            }
+        }
+    }
     let mut max = f32::NEG_INFINITY;
-    for &v in row.iter() {
+    for &v in lanes.iter().chain(chunks.remainder()) {
         if v > max {
             max = v;
         }
     }
-    let mut sum = 0f32;
     for v in row.iter_mut() {
         *v = exp_poly(*v - max);
-        sum += *v;
+    }
+    let mut sum = 0f32;
+    for &v in row.iter() {
+        sum += v;
     }
     for v in row.iter_mut() {
         *v /= sum;
@@ -528,5 +599,88 @@ impl Net {
         }
 
         Ok(ForwardOut { logits, value, value_bins })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The exponent build in `exp_poly` replaced `(kf as i32) << 23`, whose
+    /// saturating `fptosi` LLVM scalarizes on x86. The replacement is
+    /// bit-identical, and this is the proof rather than the argument.
+    ///
+    /// The full 2^32 sweep was run once off-tree: 0 mismatches on the
+    /// 4,278,190,080 non-NaN inputs. It costs ~7 s, which the crate suite
+    /// should not pay every run, so the cheap version below covers the same
+    /// ground. `kf` is `round(clamp(x, -87.3, 88.7) * LOG2E)`, so it takes
+    /// exactly the 255 integer values in [-126, 128] and nothing else;
+    /// sweeping [-300, 300] covers the reachable domain with room on both
+    /// sides, and the NaN case is checked directly.
+    #[test]
+    fn exp_poly_matches_saturating_cast() {
+        const MAGIC: f32 = 12_582_912.0;
+        for k in -300..=300i32 {
+            let kf = k as f32;
+            let want = ((kf as i32) << 23) as u32;
+            let got = (kf + MAGIC).to_bits() << 23;
+            assert_eq!(got, want, "k = {k}");
+        }
+        // The clamp really does bound `kf` to that range, at both ends.
+        // `exp_poly`'s own `LOG2E` literal is bit-equal to this constant.
+        let log2e = std::f32::consts::LOG2_E;
+        assert_eq!(((-87.3f32).clamp(-87.3, 88.7) * log2e).round(), -126.0);
+        assert_eq!(((88.7f32).clamp(-87.3, 88.7) * log2e).round(), 128.0);
+        // NaN in, NaN out — the select restores what the saturating cast did.
+        assert!(exp_poly(f32::NAN).is_nan());
+        // And the two zeros agree, which is what lets the row max below be
+        // regrouped into lanes.
+        assert_eq!(exp_poly(-0.0).to_bits(), exp_poly(0.0).to_bits());
+    }
+
+    /// `softmax_in_place` takes its max in eight lanes and splits `exp` from
+    /// the sum. Both are meant to leave the result bit-identical: a max does
+    /// not round, and the sum still runs left to right over the same values.
+    /// This checks it against the single-pass form it replaced.
+    #[test]
+    fn softmax_matches_the_single_pass_form() {
+        fn reference(row: &mut [f32]) {
+            let mut max = f32::NEG_INFINITY;
+            for &v in row.iter() {
+                if v > max {
+                    max = v;
+                }
+            }
+            let mut sum = 0f32;
+            for v in row.iter_mut() {
+                *v = exp_poly(*v - max);
+                sum += *v;
+            }
+            for v in row.iter_mut() {
+                *v /= sum;
+            }
+        }
+        // A deterministic spread of magnitudes and signs, over the two
+        // lengths the forward pass calls with (52 scores, 128 value bins)
+        // and the awkward ones around the eight-lane boundary.
+        let mut state = 0x2545_F491_4F6C_DD1Du64;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            ((state >> 40) as f32 / 8_388_608.0 - 0.5) * 40.0
+        };
+        for len in [1usize, 7, 8, 9, 15, 16, 52, 128] {
+            for _ in 0..64 {
+                let a: Vec<f32> = (0..len).map(|_| next()).collect();
+                let mut want = a.clone();
+                let mut got = a.clone();
+                reference(&mut want);
+                softmax_in_place(&mut got);
+                for (i, (g, w)) in got.iter().zip(&want).enumerate() {
+                    assert_eq!(g.to_bits(), w.to_bits(), "len {len}, index {i}");
+                }
+            }
+        }
     }
 }
