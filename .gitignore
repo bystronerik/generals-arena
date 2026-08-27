@@ -23,6 +23,10 @@ data/ratings/leaderboard.md
 # Submission bundles are derived artifacts (python -m arena.bundle <bot>)
 data/bundles/
 
+# Staged crate copies for the same-host A/B harness
+# (scripts/unclejoe_modal_forward_ab.py). Derived from worktrees and HEAD.
+data/unclejoe_ab_arms/
+
 # Live generals.io session logs (classic rules; not arena Elo)
 data/remote_games/*.json
 
@@ -107,3 +111,6 @@ bots/morpheus-rs/vendor/
 # The minifier is a dev-time helper crate with its own build output. Its
 # sources are committed; what it compiles to is not.
 tools/rust-minify/target/
+
+# Agent worktrees (transient, created by the Agent tool)
+.claude/worktrees/
