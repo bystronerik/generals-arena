@@ -1,0 +1,22 @@
+### available XLA gpu flags (sample)
+	--xla_test_add_command_buffer_mode=false	bool	If true, the test launched with ClientLibraryTestBase will use command buffer to execute the computation.
+### FLAG SWEEP (rollout, T=32)
+FLAGBENCH {"label": "baseline", "xla_flags": "", "best_s": 11.1862, "all_s": [11.1862, 11.3349], "compile_s": 32.5, "value_sum": 71.22554016113281, "num_envs": 2048, "num_steps": 32, "device": "cuda:0", "peak_gib": 2.13}
+FLAGBENCH {"label": "triton_gemm_any", "xla_flags": "--xla_gpu_triton_gemm_any=true", "best_s": 11.4228, "all_s": [11.4228, 11.5486], "compile_s": 32.7, "value_sum": 71.22554016113281, "num_envs": 2048, "num_steps": 32, "device": "cuda:0", "peak_gib": 2.13}
+FLAGBENCH {"label": "latency_hiding", "xla_flags": "--xla_gpu_enable_latency_hiding_scheduler=true", "best_s": 11.5125, "all_s": [11.5125, 11.6088], "compile_s": 32.6, "value_sum": 71.22554016113281, "num_envs": 2048, "num_steps": 32, "device": "cuda:0", "peak_gib": 2.13}
+FLAGBENCH {"label": "cmd_buffer", "xla_flags": "--xla_gpu_enable_command_buffer=FUSION,CUBLAS,CUSTOM_CALL", "best_s": 11.4693, "all_s": [11.4693, 11.5452], "compile_s": 32.7, "value_sum": 71.22554016113281, "num_envs": 2048, "num_steps": 32, "device": "cuda:0", "peak_gib": 2.13}
+FLAGBENCH {"label": "triton_plus_lhs", "xla_flags": "--xla_gpu_triton_gemm_any=true --xla_gpu_enable_latency_hiding_scheduler=true", "best_s": 11.6722, "all_s": [11.6722, 11.8101], "compile_s": 33.2, "value_sum": 71.22554016113281, "num_envs": 2048, "num_steps": 32, "device": "cuda:0", "peak_gib": 2.13}
+### cuDNN ON THE PPO BACKWARD
+[ppo-attn] device=cuda:0 cc=12.0 depth=16 embed=384 heads=8 head_dim=48 (cudnn needs hd%8==0 -> True)
+[ppo-attn] 2048 envs x 32 steps
+[ppo-attn] pool in 39.0s
+[ppo-attn] collecting one rollout for PPO input ...
+[ppo-attn] rollout 32.5s
+[ppo-attn] minibatches 16 of 2048
+[ppo-attn] compiling base ...
+[ppo-attn]   base compiled+ran 57.4s  hlo=813b728d51cd cublas_gemm=242 cudnn_fmha=0 value_sum=0.8002
+[ppo-attn] compiling cudnn ...
+[ppo-attn]   cudnn compiled+ran 29.6s  hlo=ccb0e9dc00b5 cublas_gemm=242 cudnn_fmha=32 value_sum=0.8027
+[ppo-attn] guard passed: 2 distinct compiled programs
+Traceback (most recent call last):
+### ALLDONE

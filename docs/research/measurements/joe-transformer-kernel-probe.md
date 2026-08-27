@@ -134,6 +134,57 @@ Caveats: cuDNN changes the numerics (value sum -2800.2151 against
 parity reference. It also needs `head_dim % 8 == 0`, which X16, M and M7F4
 satisfy at 48 but **S tier does not** at 44.
 
+### cuDNN on the PPO backward: +1.1 %, not +5 %
+
+The rollout number is forward-only. The PPO update is where the backward
+runs, and the blocks are 98.3 % of it, so it got the same treatment (vast
+48947776, X16, 2048 envs x 32 steps, 16 minibatches of 2048, three rounds):
+
+| arm | r0 | r1 | r2 | vs base | cublasLt | cuDNN FMHA |
+| --- | --- | --- | --- | --- | --- | --- |
+| base | 9.694 | 9.812 | 9.883 | 1.000x | 241 | 0 |
+| cudnn | 9.585 | 9.664 | 9.724 | **1.011x** | 241 | **32** |
+
+**32** FMHA calls for 16 layers means cuDNN supplies the fused attention
+backward as well as the forward, so the kernel really is in play -- and it
+is still worth only **1.1 %** here against 5.1 % on the rollout. cuDNN's
+advantage is not materializing the score tensor; the backward pass has to
+keep or recompute more regardless, so less of the win survives. Every round
+favours cuDNN by a consistent 0.11-0.16 s, so the sign is solid even though
+the size is small.
+
+Combined, at this box's ratio (rollout ~48 s against a PPO update of ~13.6 s
+at the production T=128), cuDNN is worth roughly **4 % of a training
+iteration**. Worth taking, not transformative, and it moves the numerics.
+
+### XLA flag sweep: no win, and the sweep design was weak
+
+Five configurations, one process each because XLA reads flags at backend
+init (vast 48946477, rollout only, T=32):
+
+| flags | best s |
+| --- | --- |
+| baseline | **11.186** |
+| `--xla_gpu_triton_gemm_any=true` | 11.423 |
+| `--xla_gpu_enable_latency_hiding_scheduler=true` | 11.513 |
+| `--xla_gpu_enable_command_buffer=FUSION,CUBLAS,CUSTOM_CALL` | 11.469 |
+| triton + latency hiding | 11.672 |
+
+No flag helped. Two reasons not to read more into it than that:
+
+1. **The order confounds it.** The arms ran baseline first and the times
+   climb almost monotonically with run order, which is the signature of
+   clock or thermal drift across a sweep. Baseline was not repeated at the
+   end, so drift and flag effect cannot be separated. The spread (<=4.3 %)
+   is the same size as the trend.
+2. **The flags may not exist.** `XLA_FLAGS=--help` on this jaxlib (0.11)
+   listed none of `triton_gemm_any`, `latency_hiding` or `command_buffer`.
+   Identical `value_sum` and near-identical compile times across every arm
+   are consistent with them being ignored.
+
+Redo it, if at all, with the flag list confirmed first and the baseline
+repeated at both ends.
+
 ### How the first attempt got this wrong
 
 The 2026-08-27 A/B reported all arms within 0.16 % and concluded "no
@@ -251,10 +302,17 @@ and network-off together. Until then, "the network" is established and
 1. **The 16 transformer blocks** — 97.4 % of the rollout and 98.3 % of the
    PPO update, so ~97 % of the whole training iteration. There is no second
    target. Attention rewrites (fused cuDNN attention, q/k/v fusion) are
-   measured at **+5.1 % of the rollout for cuDNN flash attention** and
-   **-2.0 % for the q/k/v fusion**, which should be dropped. The cuDNN win
-   is untested on the PPO backward, where the same blocks are 98.3 %.
-   `adv_top_frac` and `minibatch_size` scale the PPO half directly.
+   measured at **+5.1 % of the rollout** and **+1.1 % of the PPO update**
+   for cuDNN flash attention -- roughly **4 % of an iteration**. The q/k/v
+   fusion is -2.0 % and should be dropped. XLA flags produced no win, in a
+   sweep whose design was too weak to rule them out. `adv_top_frac` and
+   `minibatch_size` scale the PPO half directly.
+2. **Untested and higher-leverage than any kernel change**: whether depth 16
+   earns its cost. `joe-m7f4-growth-recruitment.md` found zeroing the whole
+   ff x4 graft cost -1.1 +- 3.8 Elo. If blocks are redundant, removing them
+   takes a proportional slice off 97 % of all training time, which no kernel
+   rewrite approaches. Also untested: f16 against bf16, fp8 on sm_120, a
+   fused LayerNorm for the 33 per sample, and `patch_size`.
 2. **The PPO update is the transformer**, 98.3 % of 13.6 s. The levers that
    scale it directly are `adv_top_frac` (0.25 today, linear in kept samples)
    and `minibatch_size` / epoch count. Kernel-level attention rewrites are
