@@ -60,7 +60,9 @@ ema_decay: 0.999              # EMA is the deployment policy (paper: +~30 Elo)
 # ---- Rollout ----
 num_envs: 2048
 num_steps: 128                # memory ceiling, see header note 2
-num_iters: 30000              # horizon only; the budget/window stops the run
+num_iters: 100000             # from-zero horizon: a net this size needs at
+                              # least 100k iterations; the budget/window can
+                              # still stop the run early
 minibatch_size: 2048
 seed: 49                      # fresh rollout randomness for the new lineage
 
