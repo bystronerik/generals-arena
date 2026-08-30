@@ -86,12 +86,14 @@ ent_power: 0.2
 ent_coef_min: 0.001
 
 # ---- Learning rate ----
-# joe-M's clip(0.5 * t^-1.1, 5e-6, 1e-4) in T=256 iterations. In T=128
-# iterations the same sample schedule is clip(1.07 * t^-1.1, ...): the
-# numerator multiplies by 2^1.1, so the 1e-4 cap holds to iteration
-# ~4,600 (the same ~2.4B samples) and then decays identically.
+# Departure from the lineage schedule (decision 2026-08-30): hold the
+# 1e-4 cap to iteration 10,000, not the sample-equivalent ~4,600 of
+# joe-M's clip(0.5 * t^-1.1, ...) at T=256. The cap ends where
+# N * t^-1.1 = 1e-4: N = 1e-4 * 10000^1.1 = 2.512. The same exponent
+# then decays to ~7.9e-6 at iteration 100,000; the 5e-6 floor is never
+# reached inside the horizon.
 lr_schedule: power_law
-lr_power_law_numerator: 1.07
+lr_power_law_numerator: 2.512
 lr_power_law_exponent: 1.1
 lr_power_law_min: 5e-6
 lr_power_law_max: 1e-4
