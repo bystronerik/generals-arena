@@ -27,22 +27,31 @@ pool_size: 200000
 reset_pool_every: 20
 
 # ---- Curriculum ----
-# M.yaml's from-scratch ladder: win-rate-gated stages (threshold 0.6,
-# evaluated vs random). The final stage equals the competition preset
-# (min 17, max unbounded); the drift test pins that equality.
+# Revision of M.yaml's ladder (2026-08-30): the from-zero run collapsed to
+# a uniform policy right after the old stage 2 (6-13) — the ladder's
+# largest jump, entered at a bare 60% gate. This ladder splits that jump
+# (6-10, 8-13) and the next one (11-15, 14-17), and raises the gate to
+# 0.75 so a stage advances with margin, not at the gate's edge. The final
+# stage still equals the competition preset; the drift test pins it.
 curriculum:
   - min_generals_distance: 2
     max_generals_distance: 6
-  - win_rate_threshold: 0.6
+  - win_rate_threshold: 0.75
     min_generals_distance: 4
     max_generals_distance: 8
-  - win_rate_threshold: 0.6
+  - win_rate_threshold: 0.75
     min_generals_distance: 6
+    max_generals_distance: 10
+  - win_rate_threshold: 0.75
+    min_generals_distance: 8
     max_generals_distance: 13
-  - win_rate_threshold: 0.6
+  - win_rate_threshold: 0.75
     min_generals_distance: 11
+    max_generals_distance: 15
+  - win_rate_threshold: 0.75
+    min_generals_distance: 14
     max_generals_distance: 17
-  - win_rate_threshold: 0.6
+  - win_rate_threshold: 0.75
     min_generals_distance: 17
     max_generals_distance: null   # preset leaves the max unset
 
